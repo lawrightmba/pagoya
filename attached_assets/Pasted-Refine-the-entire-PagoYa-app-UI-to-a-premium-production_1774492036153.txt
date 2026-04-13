@@ -1,0 +1,135 @@
+Refine the entire PagoYa app UI to a premium, production-quality fintech design.
+
+DO NOT change any functionality.
+DO NOT modify the logo file.
+ONLY improve design, layout, spacing, and user experience.
+
+----------------------------------------
+
+GLOBAL DESIGN UPGRADE:
+
+- Increase overall spacing and padding (more breathing room)
+- Improve typography hierarchy:
+  - Large bold headline
+  - Clean medium subheadline
+  - Smaller secondary text
+- Use consistent font sizing across screens
+- Improve alignment (everything should feel grid-based and intentional)
+
+----------------------------------------
+
+HEADER / HERO SECTION:
+
+- Center the PagoYa logo cleanly at the top with proper spacing
+- Add more vertical spacing between:
+  logo → headline → subheadline → buttons
+- Make CTA button more prominent:
+  - Larger
+  - Rounded
+  - Slight shadow
+- Add subtle background gradient using very light green tones
+
+----------------------------------------
+
+BUTTON SYSTEM:
+
+Primary button:
+- Background: #046C2C
+- White text
+- Slight shadow
+- Rounded (pill style)
+
+Secondary button:
+- Outline style (green border)
+- White background
+
+Add hover/press states:
+- Slight scale (1.02)
+- Slight darkening
+
+----------------------------------------
+
+CARDS (How It Works + Review + Receipt):
+
+- Add soft shadow (very subtle)
+- Increase border radius
+- Add padding inside cards
+- Add spacing between cards
+- Make cards feel like iOS-style components
+
+----------------------------------------
+
+FORM IMPROVEMENTS:
+
+- Increase input field height
+- Add rounded corners
+- Add subtle border color (#E5E5E5)
+- On focus:
+  - Border turns green (#39A935)
+  - Soft glow effect
+
+- Improve label spacing above inputs
+- Make form feel clean and premium
+
+----------------------------------------
+
+REVIEW SCREEN:
+
+- Turn summary into a premium card:
+  - Slight shadow
+  - Clean layout
+- Bold the amount so it stands out
+- Improve spacing between rows
+
+----------------------------------------
+
+SUCCESS / RECEIPT SCREEN:
+
+- Add a green success check icon at the top
+- Make “Pago realizado” large and bold
+- Highlight the amount paid
+- Format transaction ID in a subtle monospace or lighter style
+- Add spacing to feel like a real receipt
+
+----------------------------------------
+
+WHATSAPP BUTTON:
+
+- Make it visually distinct (green accent)
+- Add WhatsApp icon if possible
+- Slight elevation/shadow
+
+----------------------------------------
+
+MICRO-INTERACTIONS:
+
+- Add smooth transitions between screens
+- Buttons should animate slightly on click
+- Cards can fade/slide in
+
+----------------------------------------
+
+MOBILE-FIRST POLISH:
+
+- Ensure everything fits perfectly on mobile
+- No cramped spacing
+- Comfortable thumb-friendly buttons
+
+----------------------------------------
+
+FINAL TOUCH:
+
+Make the entire app feel like:
+- A real fintech startup
+- Clean, modern, trustworthy
+- Simple but powerful
+
+Think:
+Stripe, Apple Pay, Cash App level polish
+
+----------------------------------------
+
+IMPORTANT:
+
+Do not overdesign.
+Keep it minimal, clean, and premium.

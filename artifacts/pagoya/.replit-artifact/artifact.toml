@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "PagoYa"
+version = "1.0.0"
+id = "artifacts/pagoya"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20373
+
+[services.development]
+run = "pnpm --filter @workspace/pagoya run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pagoya", "run", "build" ]
+publicDir = "artifacts/pagoya/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20373"
+BASE_PATH = "/"

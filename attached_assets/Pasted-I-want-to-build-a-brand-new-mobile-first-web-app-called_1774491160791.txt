@@ -1,0 +1,174 @@
+I want to build a brand new mobile-first web app called PagoYa.
+
+IMPORTANT BRAND RULES:
+- I have uploaded the official PagoYa logo file named: "pagoya logo web.png"
+- Use this exact file as the ONLY logo in the app
+- Treat this logo as LOCKED:
+  - Do NOT recreate it
+  - Do NOT redesign it
+  - Do NOT crop, recolor, simplify, vectorize, or modify it in any way
+- Only display it as an image from the project assets (e.g. /public/pagoya-logo.png or similar path)
+
+BRAND DIRECTION:
+- App name: PagoYa
+- Tagline: “Paga todo. Sin filas.”
+- Style: Premium, modern fintech app for Mexico
+
+COLOR SYSTEM (match to logo):
+- Deep green (primary): #046C2C
+- Bright green (accent): #39A935
+- Brand red: #E21A0A
+- Background: #F7F7F7 or white
+- Text: #1F1F1F
+
+Use these consistently across:
+- Buttons
+- Highlights
+- Icons
+- Cards
+- Links
+
+DO NOT introduce random colors outside this system.
+
+----------------------------------------
+
+BUILD THE APP WITH THESE FEATURES:
+
+1. LANDING / HOME SCREEN
+- Show the PagoYa logo prominently at the top
+- Tagline: “Paga todo. Sin filas.”
+- Subheadline:
+  “Pay utilities, mobile, internet, and everyday bills from your phone.”
+
+- Primary CTA button:
+  “Pagar un servicio”
+  (use deep green background)
+
+- Secondary CTA:
+  “Ver cómo funciona”
+
+----------------------------------------
+
+2. HOW IT WORKS SECTION
+Display 3 premium cards:
+
+- Ingresa tu servicio
+- Confirma el monto
+- Paga y recibe tu comprobante
+
+Each card should:
+- Have soft shadows
+- Rounded corners
+- Clean icons (simple, minimal)
+
+----------------------------------------
+
+3. BILL PAYMENT FORM SCREEN
+
+Fields:
+- Nombre de la empresa / servicio
+- Categoría del servicio (dropdown)
+- Monto
+- Número de referencia
+- Número de teléfono
+- Notas opcionales
+
+Button:
+- “Continuar al pago”
+
+Categories:
+- Luz
+- Agua
+- Gas
+- Internet
+- Cable
+- Teléfono móvil
+- Streaming
+- Préstamos
+- Seguro
+- Escuela
+- Renta
+- Otro
+
+----------------------------------------
+
+4. PAYMENT REVIEW SCREEN
+
+Show all details in a clean summary card:
+- Empresa
+- Categoría
+- Monto
+- Referencia
+
+Buttons:
+- “Pagar ahora” (green primary)
+- “Editar”
+
+----------------------------------------
+
+5. PAYMENT SUCCESS / RECEIPT SCREEN
+
+Display:
+- Estatus: Pago realizado ✅
+- Empresa / servicio
+- Categoría
+- Monto
+- Referencia
+- Fecha y hora
+- ID de transacción (mock)
+
+Buttons:
+- “Compartir por WhatsApp”
+- “Nuevo pago”
+
+----------------------------------------
+
+6. WHATSAPP SHARE
+
+Button should open WhatsApp with this prefilled message:
+
+“Pago realizado con PagoYa ✅
+Servicio: [empresa]
+Monto: [monto]
+Referencia: [referencia]”
+
+----------------------------------------
+
+DESIGN REQUIREMENTS:
+
+- Mobile-first layout (VERY important)
+- Looks like a real app, not a basic webpage
+- Premium fintech feel (think Stripe / Apple Pay level cleanliness)
+- Rounded buttons and cards
+- Soft shadows
+- Smooth spacing and alignment
+- Clean typography hierarchy
+- Minimal but confident use of color
+- Avoid clutter
+
+----------------------------------------
+
+TECH REQUIREMENTS:
+
+- Build using React
+- Use reusable components
+- No login required
+- No backend required
+- Use mock data only
+- Clean folder structure
+- Keep it easy to expand later into Pago Seguro ecosystem
+
+----------------------------------------
+
+FINAL RULE:
+
+The uploaded file "pagoya logo web.png" is the official brand logo.
+
+NEVER modify it.
+ONLY display it.
+
+----------------------------------------
+
+GOAL:
+
+Produce a clean, demo-ready, visually impressive MVP suitable for a startup pitch and Buildathon judging.

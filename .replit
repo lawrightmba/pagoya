@@ -1,0 +1,38 @@
+modules = ["nodejs-24", "postgresql-16"]
+
+[[artifacts]]
+id = "artifacts/api-server"
+
+[[artifacts]]
+id = "artifacts/mockup-sandbox"
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+integrations = ["github:1.0.0"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.development]
+STRIPE_CLI_WEBHOOK_SECRET = "whsec_3800d8fef3e7262a031587973bc90f916d56f630710ea60f77d016ecd6a53bff"
+
+[userenv.shared]
+VITE_STRIPE_PUBLIC_KEY = "pk_test_51TKikCIIjPdZFNnfnSZfjNTautVdeKNlJIuDBXYOtEGs0ePYmtskHydzTOCsAJ7R9Qeeb0LJ5jr3RIAv1UzY4pH500B4H7hXWC"

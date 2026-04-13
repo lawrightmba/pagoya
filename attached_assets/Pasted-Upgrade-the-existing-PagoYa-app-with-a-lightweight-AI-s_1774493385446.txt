@@ -1,0 +1,154 @@
+Upgrade the existing PagoYa app with a lightweight AI-style assistant and a few final polish improvements.
+
+IMPORTANT:
+- Do NOT break the current app flow
+- Do NOT change the logo
+- Do NOT redesign the whole app from scratch
+- Keep all existing screens and functionality working
+- Add these upgrades cleanly and minimally so the app remains premium, simple, and demo-ready
+
+----------------------------------------
+1) ADD "SMART BILL ASSISTANT" TO THE HOME SCREEN
+----------------------------------------
+
+Add a new premium card near the top of the homepage, below the hero section, titled:
+
+“¿Qué necesitas pagar?”
+
+Subtext:
+“Describe tu pago y te ayudamos a llenar el formulario más rápido.”
+
+Add:
+- A text input field
+- Placeholder examples rotating or shown below:
+  - “Quiero pagar luz CFE”
+  - “Necesito pagar Telcel 500 pesos”
+  - “Voy a pagar internet izzi”
+  - “Quiero pagar renta”
+- A primary button:
+  “Autocompletar con IA”
+
+When the user enters a phrase and clicks the button, simulate an AI assistant by intelligently pre-filling the payment form fields using keyword matching and simple logic.
+
+This does NOT need a real AI backend yet.
+Use frontend logic and keyword detection.
+
+----------------------------------------
+2) AI AUTOFILL LOGIC
+----------------------------------------
+
+Based on the user text, auto-detect and prefill as much as possible:
+
+Service / company examples:
+- If text includes “cfe” or “luz” → category = Luz, empresa = CFE
+- If text includes “agua” → category = Agua
+- If text includes “gas” → category = Gas
+- If text includes “izzi” → category = Internet, empresa = Izzi
+- If text includes “totalplay” → category = Internet, empresa = Totalplay
+- If text includes “telcel” → category = Teléfono móvil, empresa = Telcel
+- If text includes “movistar” → category = Teléfono móvil, empresa = Movistar
+- If text includes “netflix” → category = Streaming, empresa = Netflix
+- If text includes “spotify” → category = Streaming, empresa = Spotify
+- If text includes “seguro” → category = Seguro
+- If text includes “escuela” or “colegiatura” → category = Escuela
+- If text includes “renta” → category = Renta
+- If text includes “préstamo” or “prestamo” → category = Préstamos
+
+Amount detection:
+- If the user includes a number like 500 or 1200, use it as monto
+
+If some fields are missing:
+- Prefill what can be detected
+- Then navigate user to the payment form with detected values already filled in
+
+After autofill, show a subtle success message:
+“Listo. Completamos parte de tu pago.”
+
+----------------------------------------
+3) ADD A SMALL “SUGERENCIAS RÁPIDAS” ROW
+----------------------------------------
+
+Below the AI card, add pill suggestion chips:
+- Luz
+- Internet
+- Celular
+- Renta
+- Streaming
+
+When tapped, they should prefill the assistant input with a sample phrase.
+
+----------------------------------------
+4) SUCCESS SCREEN FALLBACK FIX
+----------------------------------------
+
+If someone reaches the success screen directly without payment data, do NOT redirect abruptly.
+
+Instead show a clean empty state card with:
+
+Title:
+“No hay un pago activo”
+
+Text:
+“Parece que llegaste aquí sin completar un pago. Puedes iniciar uno nuevo en segundos.”
+
+Button:
+“Hacer un nuevo pago”
+
+This button should take the user back to the home screen or payment form.
+
+----------------------------------------
+5) ADD “PAGOS RECIENTES” SECTION ON HOME
+----------------------------------------
+
+Add a small premium section lower on the homepage titled:
+“Pagos recientes”
+
+Show 3 mock recent payments in compact cards, for example:
+- CFE — $850
+- Telcel — $300
+- Izzi — $649
+
+Each row/card should include:
+- Service name
+- Amount
+- Small status badge: “Pagado”
+
+Optional small button or text link:
+“Repetir pago”
+
+If clicked, it can prefill the form with that mock payment's service/category/amount.
+
+----------------------------------------
+6) POLISH THE AI FEATURE VISUALLY
+----------------------------------------
+
+Design the AI assistant card to feel premium and native to the app:
+- Rounded 3xl card
+- Soft shadow
+- Slight tinted background using very light green
+- Strong heading
+- Good spacing
+- Pill input/button styling
+- Keep it elegant and minimal
+
+Use the existing brand colors only:
+- #046C2C
+- #39A935
+- #E21A0A
+- #F7F7F7
+- #1F1F1F
+
+----------------------------------------
+7) KEEP EVERYTHING IN SPANISH
+----------------------------------------
+
+All new visible text must be in natural Mexican Spanish.
+Do not add any English UI text.
+
+----------------------------------------
+8) FINAL GOAL
+----------------------------------------
+
+The app should still feel simple and premium, but now with one standout intelligent feature that makes the demo more impressive and gives the product a stronger startup / AI feel.
+
+Keep the implementation lightweight, reliable, and visually polished.
