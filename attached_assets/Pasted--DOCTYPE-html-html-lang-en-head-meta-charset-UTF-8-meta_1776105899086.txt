@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PagoSeguro Command Center</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Arial', sans-serif; background: #0A2540; color: #F5F5F0; min-height: 100vh; padding: 1.5rem; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #1D9E75; padding-bottom: 1rem; }
+  .logo { font-size: 1.4rem; font-weight: 700; color: #1D9E75; letter-spacing: 0.05em; }
+  .date { font-size: 0.8rem; color: #aaa; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .metric { background: #0d2f50; border: 1px solid #1D9E75; border-radius: 8px; padding: 0.85rem 1rem; }
+  .metric-label { font-size: 0.68rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+  .metric-value { font-size: 1.5rem; font-weight: 700; color: #1D9E75; }
+  .metric-sub { font-size: 0.7rem; color: #888; margin-top: 0.15rem; }
+  .section { margin-bottom: 1.25rem; }
+  .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #1D9E75; margin-bottom: 0.5rem; padding-left: 0.25rem; border-left: 3px solid #1D9E75; padding-left: 0.5rem; }
+  .task { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.85rem; background: #0d2f50; border-radius: 6px; margin-bottom: 0.35rem; cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s; }
+  .task:hover { border-color: #1D9E75; }
+  .task.done { opacity: 0.6; }
+  .task.done .task-text { text-decoration: line-through; color: #888; }
+  .checkbox { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #1D9E75; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+  .task.done .checkbox { background: #1D9E75; }
+  .check-icon { display: none; color: white; font-size: 11px; font-weight: 700; }
+  .task.done .check-icon { display: block; }
+  .task-body { flex: 1; }
+  .task-text { font-size: 0.82rem; color: #F5F5F0; line-height: 1.4; }
+  .task-sub { font-size: 0.72rem; color: #888; margin-top: 0.2rem; }
+  .badge { display: inline-block; font-size: 0.65rem; padding: 1px 7px; border-radius: 10px; font-weight: 600; margin-left: 6px; }
+  .badge-green { background: #1D9E75; color: #fff; }
+  .badge-orange { background: #D85A30; color: #fff; }
+  .badge-blue { background: #378ADD; color: #fff; }
+  .progress-wrap { background: #0d2f50; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; border: 1px solid #1D9E75; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; margin-bottom: 0.5rem; }
+  .progress-bar-bg { background: #0A2540; border-radius: 4px; height: 8px; overflow: hidden; }
+  .progress-bar { height: 8px; background: #1D9E75; border-radius: 4px; transition: width 0.4s ease; }
+  .sequence-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  .sequence-table th { background: #1D9E75; color: #fff; padding: 0.4rem 0.6rem; text-align: left; font-weight: 600; }
+  .sequence-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #0d2f50; background: #0d2f50; color: #F5F5F0; }
+  .sequence-table tr:nth-child(even) td { background: #0a2540; }
+  .status-sent { color: #1D9E75; font-weight: 600; }
+  .status-scheduled { color: #378ADD; }
+  .eod { background: #0d2f50; border: 1px solid #D85A30; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+  .eod-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #D85A30; margin-bottom: 0.6rem; }
+  .eod-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: #ccc; padding: 0.2rem 0; }
+  .eod-dot { width: 5px; height: 5px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+  .win-banner { background: linear-gradient(135deg, #1D9E75, #0F6E56); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  .win-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; opacity: 0.8; margin-bottom: 0.3rem; }
+  .win-text { font-size: 0.85rem; color: #fff; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">⚡ PagoSeguro</div>
+  <div class="date">Command Center — Monday, April 13, 2026</div>
+</div>
+
+<!-- WIN BANNER -->
+
+<div class="win-banner">
+  <div class="win-title">🎯 Today's Big Win</div>
+  <div class="win-text">56 broker contacts enrolled in live 28-day bilingual sequence — Touch 1 firing with 14.71% open rate</div>
+</div>
+
+<!-- METRICS -->
+
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-label">Broker Contacts</div>
+    <div class="metric-value">67</div>
+    <div class="metric-sub">tracker_v4.xlsx</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">HubSpot Enrolled</div>
+    <div class="metric-value">56</div>
+    <div class="metric-sub">Lead Status = NEW</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Brevo List</div>
+    <div class="metric-value">57</div>
+    <div class="metric-sub">PV Broker Outreach</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Open Rate</div>
+    <div class="metric-value">14.7%</div>
+    <div class="metric-sub">Touch 1 — Apr 13</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Emails Left</div>
+    <div class="metric-value">244</div>
+    <div class="metric-sub">of 300 this month</div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span>Daily Tasks Progress</span>
+    <span id="progress-text">0 of 11 complete</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+  </div>
+</div>
+
+<!-- SEQUENCE STATUS -->
+
+<div class="section">
+  <div class="section-title">28-Day Broker Sequence — Live</div>
+  <table class="sequence-table">
+    <thead>
+      <tr><th>Touch</th><th>Date</th><th>Subject</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Touch 1</td><td>Apr 13</td><td>Una herramienta que tus clientes caseros van a agradecer 🏠</td><td class="status-sent">✅ Sent — 14.71% open</td></tr>
+      <tr><td>Touch 2</td><td>Apr 20</td><td>Tus clientes caseros ya no tienen que esperar el pago 💳</td><td class="status-scheduled">⏰ Scheduled</td></tr>
+      <tr><td>Touch 3</td><td>Apr 27</td><td>¿15 minutos para ver PagoSeguro en vivo? 📲</td><td class="status-scheduled">⏰ Scheduled</td></tr>
+      <tr><td>Touch 4</td><td>May 11</td><td>Cerrando el ciclo — y una última cosa 👋</td><td class="status-scheduled">⏰ Scheduled</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- PRIORITY 1 -->
+
+<div class="section">
+  <div class="section-title">Priority 1 — Broker Outreach</div>
+
+  <div class="task done" onclick="toggle(this,0)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Open tracker_v4.xlsx → filter Column H for blanks<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">67 contacts — 9 regions — target exceeded</div>
+    </div>
+  </div>
+
+  <div class="task done" onclick="toggle(this,1)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Run Google Maps queries to find new brokers<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">67 contacts added across 9 regional sections</div>
+    </div>
+  </div>
+
+  <div class="task done" onclick="toggle(this,2)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Enroll contacts into HubSpot + Brevo sequence<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">56 in HubSpot · 57 in Brevo · 4-touch sequence live</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this,3)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Check HubSpot for warm leads (2+ email opens)</div>
+      <div class="task-sub">Check Apr 14–15 for Touch 1 open rate movement</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIORITY 2 -->
+
+<div class="section">
+  <div class="section-title">Priority 2 — Street Team / Rep System</div>
+
+  <div class="task" onclick="toggle(this,4)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Log into /admin — approve pending reps</div>
+      <div class="task-sub">Confirm Twilio WhatsApp fired for each approval</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this,5)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Check payout queue — process 7-day matured commissions</div>
+      <div class="task-sub">Verify audit_log entries clean after bulk payout</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this,6)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Review /rep-signup funnel for drop-offs</div>
+      <div class="task-sub">Note any friction points and flag for dev fix</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIORITY 3 -->
+
+<div class="section">
+  <div class="section-title">Priority 3 — Social / Content</div>
+
+  <div class="task done" onclick="toggle(this,7)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Confirm Buffer queue Tue/Thu/Sat<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">Queue healthy through Saturday</div>
+    </div>
+  </div>
+
+  <div class="task" onclick="toggle(this,8)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Check Instagram DMs and comments</div>
+      <div class="task-sub">Flag warm landlord/tenant leads → add to HubSpot</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIORITY 4 -->
+
+<div class="section">
+  <div class="section-title">Priority 4 — Platform / Tech</div>
+
+  <div class="task done" onclick="toggle(this,9)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">UptimeRobot — confirm pagoseguromx.com is up<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">No overnight alerts — all green</div>
+    </div>
+  </div>
+
+  <div class="task done" onclick="toggle(this,10)">
+    <div class="checkbox"><span class="check-icon">✓</span></div>
+    <div class="task-body">
+      <div class="task-text">Scan Replit — /command-center, /admin, /rep-dashboard live<span class="badge badge-green">Done</span></div>
+      <div class="task-sub">All 3 URLs confirmed live — pagoya.replit.app</div>
+    </div>
+  </div>
+</div>
+
+<!-- EOD -->
+
+<div class="eod">
+  <div class="eod-title">✅ End of Day — April 13</div>
+  <div class="eod-item"><div class="eod-dot"></div>67 broker contacts in tracker_v4.xlsx (target was 50)</div>
+  <div class="eod-item"><div class="eod-dot"></div>56 enrolled in HubSpot + Brevo — sequence firing</div>
+  <div class="eod-item"><div class="eod-dot"></div>Touch 1 sent — 14.71% open rate on Day 1</div>
+  <div class="eod-item"><div class="eod-dot"></div>Touches 2–4 scheduled through May 11</div>
+  <div class="eod-item"><div class="eod-dot"></div>Buffer queue healthy — platform all green</div>
+</div>
+
+<script>
+const total = 11;
+const done = [true, true, true, false, false, false, false, true, false, true, true];
+
+function toggle(el, i) {
+  done[i] = !done[i];
+  el.classList.toggle('done', done[i]);
+  updateProgress();
+}
+
+function updateProgress() {
+  const count = done.filter(Boolean).length;
+  const pct = Math.round((count / total) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = count + ' of ' + total + ' complete' + (count === total ? ' — day complete! 🎉' : '');
+}
+
+updateProgress();
+</script>
+
+</body>
+</html>
