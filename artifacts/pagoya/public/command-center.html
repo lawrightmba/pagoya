@@ -551,66 +551,82 @@
           <div class="pc-title">Mahali</div>
           <div class="pc-sub">AI MLS · DAR ES SALAAM, TANZANIA</div>
         </div>
-        <div class="stage-badge stage-build">BUILDING</div>
+        <div class="stage-badge stage-live">MVP READY</div>
       </div>
       <div class="pc-body">
         <div class="progress-wrap">
           <div class="progress-meta">
             <span class="progress-pct">BUILD PROGRESS</span>
-            <span class="progress-pct" style="color:var(--mahali-color)">60%</span>
+            <span class="progress-pct" style="color:var(--mahali-color)">85%</span>
           </div>
-          <div class="progress-bar"><div class="progress-fill"></div></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
         </div>
         <div class="metrics-row">
           <div class="metric"><div class="metric-val">7</div><div class="metric-label">USER<br>ROLES</div></div>
           <div class="metric"><div class="metric-val">64</div><div class="metric-label">LIVE<br>LISTINGS</div></div>
           <div class="metric"><div class="metric-val">5</div><div class="metric-label">DEMO<br>ACCOUNTS</div></div>
         </div>
-        <div class="today-label">TODAY'S TASKS — tap for context</div>
+        <div class="today-label">APR 14 SPRINT WINS — tap for context</div>
 
         <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb"></div>
+          <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text">Move Selcom mobile money from mock → live API credentials</div>
-            <div class="task-why">→ Rent payment records exist + Selcom integration is coded but in demo/mock mode. This is the #1 revenue blocker for Mahali.</div>
+            <div class="task-text done">✅ All 27 Tanzania regions in location dropdown</div>
+            <div class="task-why">→ Full Tanzania region coverage added. Listings can now be assigned to any of the 27 administrative regions.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb"></div>
+          <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text">Identify 3 Dar es Salaam agencies for first agent outreach</div>
-            <div class="task-why">→ Chen's Cold Start: agents are supply. Get 5 agents in ONE neighborhood (e.g. Kigamboni) before expanding. Demo: demo@mahali.app.</div>
+            <div class="task-text done">✅ Zanzibar added to Popular Neighborhoods</div>
+            <div class="task-why">→ Zanzibar archipelago (Unguja + Pemba) now appears in Popular Neighborhoods for visibility in search and discovery.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb"></div>
+          <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text">Define Tenant Passport go-live requirements list</div>
-            <div class="task-why">→ Tenant Passport (portable renter profile) is built but needs go-live criteria defined. This is a key Thiel network-effect moat.</div>
+            <div class="task-text done">✅ Agent Add Listing fixed (Quick Actions + My Listings)</div>
+            <div class="task-why">→ Agents can now submit listings from both Quick Actions panel and My Listings tab. Form validation and photo upload confirmed working.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb"></div>
+          <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text">Review admin data console — flag any duplicate listings</div>
-            <div class="task-why">→ 64 listings imported from OSM/NBS. Admin console has deduplication tab. Clean data before agent outreach begins.</div>
+            <div class="task-text done">✅ Manager Tenants tab live</div>
+            <div class="task-why">→ Managers can view and manage all tenants from the Tenants tab. Lease status, contact info, and payment history accessible.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb"></div>
+          <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text">Draft 1 LinkedIn post: PropTech opportunity in East Africa</div>
-            <div class="task-why">→ No social automation built yet for Mahali. This is manual for now. Goal: attract agents + investors to the platform story.</div>
+            <div class="task-text done">✅ Manager Invoicing tab live</div>
+            <div class="task-why">→ Rent invoices can be generated, sent, and tracked from the Manager Invoicing tab. TZS + Selcom integration ready for go-live.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Manager Verification + Trust & ID live</div>
+            <div class="task-why">→ ID upload and verification flow live for managers. Trust score visible on profile. Required before first live payment is accepted.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Swahili/English toggle live (Phase 1)</div>
+            <div class="task-why">→ Language toggle implemented. UI switches between Swahili and English. Phase 2 will cover full content translation for all roles.</div>
           </div>
         </div>
 
         <div class="unlock-row">
           <div>🔓</div>
-          <div class="unlock-text"><strong>Next unlock:</strong> First live Selcom payment in TZS → first real tenant transaction</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> Selcom live credentials → first real TZS tenant payment</div>
         </div>
       </div>
     </div>
@@ -837,7 +853,7 @@
   </div>
 
   <footer>
-    LLOYD'S FINTECH COMMAND CENTER · v2.2 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
+    LLOYD'S FINTECH COMMAND CENTER · v2.3 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
   </footer>
 </div>
 
