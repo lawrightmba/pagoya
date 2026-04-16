@@ -1,0 +1,36 @@
+In the PagoYa/PagoSeguro codebase, add a Bill Pay panel to the existing admin dashboard. Find the admin dashboard component or page — likely src/admin/ or a similar path.
+
+Add a new tab or section called "Servicios / Bill Pay" with the following four sections:
+
+PROVIDER HEALTH ROW (top of panel)
+Two status cards side by side:
+- SIPREL: green dot = healthy, red dot = unreachable. Shows current saldo balance in MXN from GET /api/bills/admin/balance. If balance is below 500 MXN show a red warning badge that says "Saldo bajo — recargar".
+- Evoluciona Móvil: green or red health dot. Shows "postpago" mode label when configured.
+Include a Refresh button that calls GET /api/bills/admin/health and updates both cards live.
+
+TRANSACTION SUMMARY ROW
+Four metric cards using the existing admin dashboard metric card style:
+- Today's payments: count of bill_payments where created_at is today and status = confirmed
+- Today's volume: sum of bill_amount_mxn for today's confirmed payments formatted as $X,XXX MXN
+- Failover rate: percentage of today's confirmed payments where failover_used = true, shown as X%
+- Failed today: count of status = failed today, shown in red text if greater than zero
+
+RECENT TRANSACTIONS TABLE
+Last 20 rows from bill_payments ordered by created_at descending. Columns:
+- Time (HH:MM format)
+- Service name
+- Reference number (masked — show only last 4 digits prefixed with ••••, e.g. ••••1234)
+- Bill amount (bill_amount_mxn formatted as $XXX.XX)
+- Provider (SIPREL or Evoluciona as a small colored badge — teal for SIPREL, purple for Evoluciona)
+- Status (confirmed = green badge, failed = red badge, pending = gray badge)
+- Failover indicator (show a small ↩ icon if failover_used = true, empty cell if false)
+Auto-refresh this table every 30 seconds.
+
+SALDO MANAGEMENT CARD (bottom of panel)
+A card showing:
+- Current SIPREL saldo balance (large number, red if below 500 MXN)
+- Low balance threshold: 500 MXN (static label)
+- Instructions: "Recargar vía SPEI a la cuenta SIPREL registrada en .env"
+- A manual Refresh Balance button that re-calls GET /api/bills/admin/balance
+
+Use the existing admin dashboard styling, color scheme, and component patterns throughout. Pull all data from the existing /api/bills/ endpoints already built — do not add new database queries or new API endpoints. The existing /api/bills/admin/health and /api/bills/admin/balance endpoints already exist and should be used as-is.

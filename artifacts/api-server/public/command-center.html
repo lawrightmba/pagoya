@@ -1,1 +1,1267 @@
-/home/runner/workspace/artifacts/pagoya/public/command-center.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CMD CENTER">
+<meta name="theme-color" content="#1D9E75">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23080c10'/><text y='130' x='20' font-size='120' fill='%231D9E75'>⚡</text></svg>">
+<title>Lloyd's Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0e1419;
+    --border: #1e2830;
+    --pago-color: #1D9E75;
+    --mahali-color: #F59E0B;
+    --gura-color: #6366F1;
+    --text: #e8f0f7;
+    --muted: #5a7080;
+    --accent: #d85a30;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 20% 0%, rgba(29,158,117,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99,102,241,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .header-left h1 {
+    font-size: clamp(1.3rem, 5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .header-left h1 span { color: var(--pago-color); }
+
+  .header-left p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 5px;
+    letter-spacing: 0.06em;
+  }
+
+  .header-right { text-align: right; }
+
+  #live-clock {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    font-weight: 700;
+    color: var(--pago-color);
+  }
+
+  #live-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-top: 3px;
+  }
+
+  /* THOUGHT LEADERS */
+  .tl-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  @media (min-width: 700px) {
+    .tl-strip { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .tl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .tl-card .tl-name { font-size: 0.72rem; font-weight: 700; margin-bottom: 3px; }
+  .tl-card .tl-principle { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); line-height: 1.5; }
+  .tl-card.dorsey { border-left: 3px solid #1D9E75; }
+  .tl-card.thiel { border-left: 3px solid #6366F1; }
+  .tl-card.hoffman { border-left: 3px solid #F59E0B; }
+  .tl-card.chen { border-left: 3px solid #d85a30; }
+
+  /* PLATFORM CARDS */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  @media (min-width: 900px) {
+    .platform-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .platform-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .platform-card.pago { border-top: 3px solid var(--pago-color); }
+  .platform-card.mahali { border-top: 3px solid var(--mahali-color); }
+  .platform-card.pagoya { border-top: 3px solid var(--gura-color); }
+
+  .pc-header {
+    padding: 16px 16px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .pc-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
+  .pc-sub { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--muted); margin-top: 2px; }
+
+  .stage-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  .stage-live { background: rgba(29,158,117,0.18); color: #1D9E75; }
+  .stage-build { background: rgba(245,158,11,0.18); color: #F59E0B; }
+  .stage-mvp { background: rgba(99,102,241,0.18); color: #6366F1; }
+
+  .pc-body { padding: 0 16px 16px; }
+
+  .progress-wrap { margin-bottom: 12px; }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .progress-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .progress-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .pago .progress-fill { background: var(--pago-color); width: 72%; }
+  .mahali .progress-fill { background: var(--mahali-color); width: 60%; }
+  .pagoya .progress-fill { background: var(--gura-color); width: 30%; }
+
+  .metrics-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+  .metric {
+    flex: 1;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .metric-val { font-size: 0.95rem; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+  .metric-label { font-family: 'Space Mono', monospace; font-size: 0.5rem; color: var(--muted); }
+
+  .pago .metric-val { color: var(--pago-color); }
+  .mahali .metric-val { color: var(--mahali-color); }
+  .pagoya .metric-val { color: var(--gura-color); }
+
+  /* TASKS */
+  .today-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+
+  .task-cb {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    margin-top: 1px;
+  }
+
+  .task-cb.checked { border-color: transparent; }
+  .pago .task-cb.checked { background: var(--pago-color); }
+  .mahali .task-cb.checked { background: var(--mahali-color); }
+  .pagoya .task-cb.checked { background: var(--gura-color); }
+
+  .task-cb.checked::after { content: '✓'; font-size: 10px; color: #000; font-weight: 900; }
+
+  .task-content {}
+
+  .task-text { font-size: 0.78rem; line-height: 1.4; transition: color 0.15s; }
+  .task-text.done { text-decoration: line-through; color: var(--muted); }
+
+  .task-why {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    margin-top: 2px;
+    line-height: 1.4;
+    display: none;
+  }
+
+  .task-item.expanded .task-why { display: block; }
+
+  .unlock-row {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .unlock-text { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); line-height: 1.5; }
+  .unlock-text strong { color: var(--text); }
+
+  /* BOTTOM PANELS */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  @media (min-width: 700px) {
+    .bottom-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ROUTINE */
+  .routine-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .routine-item:last-child { border-bottom: none; }
+  .routine-time { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--pago-color); width: 48px; flex-shrink: 0; padding-top: 2px; }
+  .routine-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .routine-action { font-size: 0.75rem; font-weight: 600; margin-bottom: 1px; }
+  .routine-detail { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--muted); line-height: 1.4; }
+
+  /* AUTOMATION */
+  .auto-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .auto-row:last-child { border-bottom: none; }
+  .auto-name { font-size: 0.72rem; font-weight: 600; }
+  .auto-platform { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--muted); margin-top: 1px; }
+  .auto-status { font-family: 'Space Mono', monospace; font-size: 0.55rem; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+  .auto-live { background: rgba(29,158,117,0.15); color: #1D9E75; }
+  .auto-needed { background: rgba(245,158,11,0.15); color: #F59E0B; }
+  .auto-future { background: rgba(90,112,128,0.15); color: var(--muted); }
+
+  /* WEEK */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .day-col { text-align: center; }
+  .day-name { font-family: 'Space Mono', monospace; font-size: 0.5rem; color: var(--muted); margin-bottom: 6px; }
+  .day-pip {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    margin-bottom: 4px;
+  }
+
+  .day-pip.pago { background: rgba(29,158,117,0.2); color: #1D9E75; }
+  .day-pip.mahali { background: rgba(245,158,11,0.2); color: #F59E0B; }
+  .day-pip.pagoya { background: rgba(99,102,241,0.2); color: #6366F1; }
+  .day-pip.all { background: rgba(216,90,48,0.2); color: #d85a30; }
+  .day-pip.rest { background: var(--border); color: var(--muted); }
+  .day-pip.today { outline: 2px solid var(--pago-color); outline-offset: 1px; }
+  .day-focus { font-family: 'Space Mono', monospace; font-size: 0.48rem; color: var(--muted); line-height: 1.3; }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    background: rgba(29,158,117,0.1);
+    border: 1px solid rgba(29,158,117,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .install-text { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--pago-color); line-height: 1.5; }
+  .install-text strong { color: var(--text); }
+
+  .install-btn {
+    background: var(--pago-color);
+    color: #000;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .dismiss-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+
+  /* RESET */
+  .actions-row { display: flex; gap: 10px; margin-bottom: 20px; }
+
+  .action-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover { background: var(--border); color: var(--text); }
+
+  footer {
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    padding: 16px 0 8px;
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.06em;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .platform-card { animation: fadeUp 0.35s ease both; }
+  .platform-card:nth-child(1) { animation-delay: 0.05s; }
+  .platform-card:nth-child(2) { animation-delay: 0.1s; }
+  .platform-card:nth-child(3) { animation-delay: 0.15s; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-left">
+      <h1>LLOYD'S <span>CMD</span></h1>
+      <p>PAGOSEGURO · MAHALI · PAGOYA</p>
+    </div>
+    <div class="header-right">
+      <div id="live-clock">--:--:--</div>
+      <div id="live-date">---</div>
+    </div>
+  </header>
+
+  <!-- INSTALL BANNER (shown only on mobile, dismissed after install) -->
+  <div class="install-banner" id="installBanner" style="display:none">
+    <div class="install-text"><strong>Add to iPhone Home Screen</strong><br>Tap Share → "Add to Home Screen" → Add</div>
+    <button class="dismiss-btn" onclick="dismissBanner()">✕</button>
+  </div>
+
+  <!-- THOUGHT LEADERS -->
+  <div class="tl-strip">
+    <div class="tl-card dorsey">
+      <div class="tl-name">⚡ DORSEY</div>
+      <div class="tl-principle">Phone = POS terminal. Zero friction. Every rep is a node.</div>
+    </div>
+    <div class="tl-card thiel">
+      <div class="tl-name">🔷 THIEL</div>
+      <div class="tl-principle">Own one niche completely before expanding. Network effects = monopoly.</div>
+    </div>
+    <div class="tl-card hoffman">
+      <div class="tl-name">🚀 HOFFMAN</div>
+      <div class="tl-principle">Blitzscale: speed over efficiency. Distribution beats product.</div>
+    </div>
+    <div class="tl-card chen">
+      <div class="tl-name">🌐 CHEN</div>
+      <div class="tl-principle">Solve atomic network first. One market, completely, before next.</div>
+    </div>
+  </div>
+
+  <!-- PLATFORM CARDS -->
+  <div class="platform-grid">
+
+    <!-- PAGOSEGURO -->
+    <div class="platform-card pago">
+      <div class="pc-header">
+        <div>
+          <div class="pc-title">PagoSeguro</div>
+          <div class="pc-sub">RENT COLLECTION · PUERTO VALLARTA</div>
+        </div>
+        <div class="stage-badge stage-live">LIVE</div>
+      </div>
+      <div class="pc-body">
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span class="progress-pct">BUILD PROGRESS</span>
+            <span class="progress-pct" style="color:var(--pago-color)">78%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+        </div>
+        <div class="metrics-row">
+          <div class="metric"><div class="metric-val">67</div><div class="metric-label">BROKERS<br>IN TRACKER</div></div>
+          <div class="metric"><div class="metric-val">56</div><div class="metric-label">ENROLLED<br>HUBSPOT+BREVO</div></div>
+          <div class="metric"><div class="metric-val">14.7%</div><div class="metric-label">OPEN RATE<br>TOUCH 1</div></div>
+        </div>
+        <div class="today-label">APR 13 WINS · NEXT ACTIONS</div>
+
+        <div class="task-item checked" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text">✅ 67 brokers in tracker_v4.xlsx — 9 regions — target exceeded</div>
+            <div class="task-why">→ 56 enrolled HubSpot (Lead Status=NEW) + 57 in Brevo PV Broker Outreach list.</div>
+          </div>
+        </div>
+
+        <div class="task-item checked" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text">✅ 28-day bilingual sequence live — Touch 1 sent Apr 13 (14.71% open rate)</div>
+            <div class="task-why">→ Touch 2: Apr 20 · Touch 3: Apr 27 · Touch 4: May 11. 244/300 Brevo emails remaining.</div>
+          </div>
+        </div>
+
+        <div class="task-item checked" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text">✅ Buffer queue healthy through Saturday — platform all green</div>
+            <div class="task-why">→ UptimeRobot no alerts. pagoya.replit.app/admin + /rep-dashboard confirmed live.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">Check Brevo Apr 14–15 for warm opens on Touch 1</div>
+            <div class="task-why">→ 2+ opens = warm lead. Personal WhatsApp follow-up using voice note script in tracker_v4.xlsx Tab 3.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">Check rep dashboard — pending payouts past 7-day hold?</div>
+            <div class="task-why">→ Auto-commissions: 150 MXN signup / 500 MXN first payment / 300 MXN referral. Admin at /admin. Audit log immutable.</div>
+          </div>
+        </div>
+
+        <div class="unlock-row">
+          <div>🔓</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> Stripe OXXO cash payments for tenants (Phase 2 — PagoYa API feeds back in)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAHALI -->
+    <div class="platform-card mahali">
+      <div class="pc-header">
+        <div>
+          <div class="pc-title">Mahali</div>
+          <div class="pc-sub">AI MLS · DAR ES SALAAM, TANZANIA</div>
+        </div>
+        <div class="stage-badge stage-live">MVP READY</div>
+      </div>
+      <div class="pc-body">
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span class="progress-pct">BUILD PROGRESS</span>
+            <span class="progress-pct" style="color:var(--mahali-color)">85%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+        </div>
+        <div class="metrics-row">
+          <div class="metric"><div class="metric-val">7</div><div class="metric-label">USER<br>ROLES</div></div>
+          <div class="metric"><div class="metric-val">64</div><div class="metric-label">LIVE<br>LISTINGS</div></div>
+          <div class="metric"><div class="metric-val">5</div><div class="metric-label">DEMO<br>ACCOUNTS</div></div>
+        </div>
+        <div class="today-label">APR 14 SPRINT WINS — tap for context</div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ All 27 Tanzania regions in location dropdown</div>
+            <div class="task-why">→ Full Tanzania region coverage added. Listings can now be assigned to any of the 27 administrative regions.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Zanzibar added to Popular Neighborhoods</div>
+            <div class="task-why">→ Zanzibar archipelago (Unguja + Pemba) now appears in Popular Neighborhoods for visibility in search and discovery.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Agent Add Listing fixed (Quick Actions + My Listings)</div>
+            <div class="task-why">→ Agents can now submit listings from both Quick Actions panel and My Listings tab. Form validation and photo upload confirmed working.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Manager Tenants tab live</div>
+            <div class="task-why">→ Managers can view and manage all tenants from the Tenants tab. Lease status, contact info, and payment history accessible.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Manager Invoicing tab live</div>
+            <div class="task-why">→ Rent invoices can be generated, sent, and tracked from the Manager Invoicing tab. TZS + Selcom integration ready for go-live.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Manager Verification + Trust & ID live</div>
+            <div class="task-why">→ ID upload and verification flow live for managers. Trust score visible on profile. Required before first live payment is accepted.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Swahili/English toggle live (Phase 1)</div>
+            <div class="task-why">→ Language toggle implemented. UI switches between Swahili and English. Phase 2 will cover full content translation for all roles.</div>
+          </div>
+        </div>
+
+        <div class="unlock-row">
+          <div>🔓</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> Selcom live credentials → first real TZS tenant payment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGOYA -->
+    <div class="platform-card pagoya">
+      <div class="pc-header">
+        <div>
+          <div class="pc-title">PagoYa</div>
+          <div class="pc-sub">PAYMENT INFRA · OXXO + STRIPE · MX</div>
+        </div>
+        <div class="stage-badge stage-mvp">MVP</div>
+      </div>
+      <div class="pc-body">
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span class="progress-pct">BUILD PROGRESS</span>
+            <span class="progress-pct" style="color:var(--gura-color)">90%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
+        </div>
+        <div class="metrics-row">
+          <div class="metric"><div class="metric-val">4</div><div class="metric-label">SCREENS<br>LIVE</div></div>
+          <div class="metric"><div class="metric-val">7</div><div class="metric-label">API<br>ROUTES</div></div>
+          <div class="metric"><div class="metric-val">✅</div><div class="metric-label">STRIPE<br>E2E</div></div>
+        </div>
+        <div class="today-label">TODAY'S TASKS — tap for context</div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">Wire frontend "Pagar ahora" → POST /api/pagoya/payments</div>
+            <div class="task-why">✅ DONE — PaymentContext wired, real Stripe PaymentIntent ID on success screen. Procesando... state + error handling live.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">Confirm Stripe webhook pipeline end-to-end</div>
+            <div class="task-why">✅ DONE — payment_intent.succeeded → 200 → DB updated to succeeded. Dev/prod secret handling solved.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">Add Stripe Elements card entry screen (/tarjeta)</div>
+            <div class="task-why">✅ DONE — Full flow: /pagar → /revisar → /tarjeta → /exito. CardElement live, confirmCardPayment() working, cancel returns to /revisar.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">Design OXXO cash voucher UX — Stripe OXXO source flow</div>
+            <div class="task-why">→ Stripe supports OXXO vouchers natively in MXN. Dorsey POS moment: customer pays cash at OXXO, voucher confirms digitally. This is the core Mexico wedge.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">Add email/password auth for repeat users + payment history</div>
+            <div class="task-why">→ GET /api/pagoya/recent returns last 5 payments from DB. Auth gates history to correct user. Enables loyalty, repeat payments, personalization.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">Run first real card payment end-to-end with Stripe test card</div>
+            <div class="task-why">→ Use Stripe test card 4242 4242 4242 4242, any future date, any CVC. Confirm payment flips to succeeded in dashboard.html DB view.</div>
+          </div>
+        </div>
+
+        <div class="unlock-row">
+          <div>🔓</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> OXXO voucher flow → Dorsey POS moment → fold payment API into PagoSeguro</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SERVICIOS / BILL PAY ADMIN PANEL -->
+  <div class="panel" style="margin-bottom:20px;" id="billpay-panel">
+
+    <!-- Panel header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="panel-title" style="margin-bottom:0">⚡ SERVICIOS / BILL PAY — LIVE ADMIN</div>
+      <button onclick="refreshBillPay()" id="bp-refresh-btn" class="action-btn" style="flex:0;padding:5px 14px;font-size:0.55rem;">↺ REFRESH</button>
+    </div>
+
+    <!-- PROVIDER HEALTH ROW -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+
+      <!-- SIPREL card -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:12px;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+          <div id="siprel-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.3s;"></div>
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;">SIPREL</div>
+        </div>
+        <div id="siprel-balance" style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--pago-color);margin-bottom:5px;">—</div>
+        <div id="siprel-low-badge" style="display:none;font-family:'Space Mono',monospace;font-size:0.5rem;background:rgba(232,42,10,0.15);color:#E21A0A;padding:2px 8px;border-radius:20px;width:fit-content;">Saldo bajo — recargar</div>
+      </div>
+
+      <!-- Evoluciona card -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:12px;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+          <div id="evoluciona-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.3s;"></div>
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;">EVOLUCIONA MÓVIL</div>
+        </div>
+        <div id="evoluciona-mode" style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--muted);">—</div>
+      </div>
+    </div>
+
+    <!-- TRANSACTION SUMMARY ROW -->
+    <div class="metrics-row" style="margin-bottom:16px;">
+      <div class="metric">
+        <div class="metric-val" id="bp-today-count" style="color:var(--pago-color)">—</div>
+        <div class="metric-label">TODAY'S<br>PAYMENTS</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="bp-today-vol" style="color:var(--mahali-color)">—</div>
+        <div class="metric-label">TODAY'S<br>VOLUME</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="bp-failover-rate" style="color:var(--gura-color)">—</div>
+        <div class="metric-label">FAILOVER<br>RATE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="bp-failed-today" style="color:var(--muted)">—</div>
+        <div class="metric-label">FAILED<br>TODAY</div>
+      </div>
+    </div>
+
+    <!-- RECENT TRANSACTIONS TABLE -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="today-label" style="margin-bottom:0;">RECENT TRANSACTIONS (LAST 20)</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.48rem;color:var(--muted);">auto ↺ 30s</div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:0.52rem;min-width:500px;">
+        <thead>
+          <tr style="color:var(--muted);border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:5px 6px 5px 0;font-weight:400;white-space:nowrap;">TIME</th>
+            <th style="text-align:left;padding:5px 6px;font-weight:400;">SERVICE</th>
+            <th style="text-align:left;padding:5px 6px;font-weight:400;white-space:nowrap;">REFERENCE</th>
+            <th style="text-align:right;padding:5px 6px;font-weight:400;white-space:nowrap;">AMOUNT</th>
+            <th style="text-align:left;padding:5px 6px;font-weight:400;">PROVIDER</th>
+            <th style="text-align:left;padding:5px 6px;font-weight:400;">STATUS</th>
+            <th style="text-align:center;padding:5px 0 5px 6px;font-weight:400;">↩</th>
+          </tr>
+        </thead>
+        <tbody id="bp-tx-body">
+          <tr><td colspan="7" style="color:var(--muted);padding:12px 0;text-align:center;">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SALDO MANAGEMENT CARD -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="panel-title" style="margin-bottom:0;">💰 SALDO SIPREL</div>
+        <button onclick="refreshSaldo()" id="bp-saldo-refresh-btn" class="action-btn" style="flex:0;padding:4px 10px;font-size:0.5rem;">↺ BALANCE</button>
+      </div>
+      <div id="bp-saldo-big" style="font-family:'Space Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--pago-color);margin-bottom:6px;">—</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);margin-bottom:3px;">UMBRAL MÍNIMO: $500.00 MXN</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);line-height:1.6;">Recargar vía SPEI a la cuenta SIPREL registrada en .env</div>
+    </div>
+
+    <!-- API links -->
+    <div style="padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/api/bills/catalog" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.52rem;color:var(--pago-color);text-decoration:none;padding:3px 10px;border:1px solid rgba(29,158,117,0.3);border-radius:20px;">→ /api/bills/catalog</a>
+      <a href="/api/bills/history?limit=20" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.52rem;color:var(--gura-color);text-decoration:none;padding:3px 10px;border:1px solid rgba(99,102,241,0.3);border-radius:20px;">→ /api/bills/history</a>
+      <a href="/api/bills/admin/health" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.52rem;color:var(--mahali-color);text-decoration:none;padding:3px 10px;border:1px solid rgba(245,158,11,0.3);border-radius:20px;">→ /api/bills/admin/health</a>
+      <a href="/api/bills/admin/balance" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.52rem;color:var(--accent);text-decoration:none;padding:3px 10px;border:1px solid rgba(216,90,48,0.3);border-radius:20px;">→ /api/bills/admin/balance</a>
+    </div>
+
+    <div class="unlock-row">
+      <div>🔓</div>
+      <div class="unlock-text"><strong>Next unlock:</strong> SIPREL_API_KEY + EVOLUCIONA_API_KEY → first live CFE payment → WhatsApp receipt fires to customer</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM PANELS -->
+  <div class="bottom-grid">
+
+    <div class="panel">
+      <div class="panel-title">⏱ DAILY OPERATING RHYTHM</div>
+      <div class="routine-item">
+        <div class="routine-time">7:00 AM</div>
+        <div class="routine-dot" style="background:#1D9E75"></div>
+        <div>
+          <div class="routine-action">Morning Command Check (15 min)</div>
+          <div class="routine-detail">Open this dashboard · HubSpot stats · WhatsApp scan</div>
+        </div>
+      </div>
+      <div class="routine-item">
+        <div class="routine-time">8:00 AM</div>
+        <div class="routine-dot" style="background:#d85a30"></div>
+        <div>
+          <div class="routine-action">PagoSeguro Growth Block (45 min)</div>
+          <div class="routine-detail">Broker outreach · rep follow-ups · content queue</div>
+        </div>
+      </div>
+      <div class="routine-item">
+        <div class="routine-time">9:00 AM</div>
+        <div class="routine-dot" style="background:#F59E0B"></div>
+        <div>
+          <div class="routine-action">Mahali Build Block (45 min)</div>
+          <div class="routine-detail">Dev task · agent outreach · Tanzania market intel</div>
+        </div>
+      </div>
+      <div class="routine-item">
+        <div class="routine-time">10:00 AM</div>
+        <div class="routine-dot" style="background:#6366F1"></div>
+        <div>
+          <div class="routine-action">PagoYa Sprint Block (45 min)</div>
+          <div class="routine-detail">Dev sprint · Stripe integration · OXXO product design</div>
+        </div>
+      </div>
+      <div class="routine-item">
+        <div class="routine-time">4:00 PM</div>
+        <div class="routine-dot" style="background:#1D9E75"></div>
+        <div>
+          <div class="routine-action">Automation Audit (20 min)</div>
+          <div class="routine-detail">Buffer · HubSpot · Zapier · anything need manual touch?</div>
+        </div>
+      </div>
+      <div class="routine-item">
+        <div class="routine-time">6:00 PM</div>
+        <div class="routine-dot" style="background:#d85a30"></div>
+        <div>
+          <div class="routine-action">End-of-Day Log (10 min)</div>
+          <div class="routine-detail">Tasks done → 3 priorities for tomorrow → 1-line journal</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="panel">
+        <div class="panel-title">⚙ AUTOMATION STACK</div>
+        <div class="auto-row">
+          <div><div class="auto-name">HubSpot 28-Day Sequence</div><div class="auto-platform">PagoSeguro · Broker Outreach</div></div>
+          <div class="auto-status auto-live">LIVE</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Buffer Tue/Thu/Sat Queue</div><div class="auto-platform">PagoSeguro · Instagram</div></div>
+          <div class="auto-status auto-live">LIVE</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Tally → Zapier → HubSpot</div><div class="auto-platform">PagoSeguro · Street Team Leads</div></div>
+          <div class="auto-status auto-live">LIVE</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Twilio WhatsApp Alerts</div><div class="auto-platform">PagoSeguro · Rep Commissions</div></div>
+          <div class="auto-status auto-live">LIVE</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Stripe Webhook → DB</div><div class="auto-platform">PagoYa · Payment Status</div></div>
+          <div class="auto-status auto-live">BUILT</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Frontend → Stripe API</div><div class="auto-platform">PagoYa · Pagar ahora wired</div></div>
+          <div class="auto-status auto-live">LIVE</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">Selcom Live Credentials</div><div class="auto-platform">Mahali · Rent Payments</div></div>
+          <div class="auto-status auto-needed">NEEDED</div>
+        </div>
+        <div class="auto-row">
+          <div><div class="auto-name">PagoYa → PagoSeguro Merge</div><div class="auto-platform">Payment API integration</div></div>
+          <div class="auto-status auto-future">FUTURE</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">📅 WEEKLY FOCUS MAP</div>
+        <div class="week-grid">
+          <div class="day-col">
+            <div class="day-name">MON</div>
+            <div class="day-pip all" id="pip-1">🔥</div>
+            <div class="day-focus">ALL 3<br>REVIEW</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">TUE</div>
+            <div class="day-pip pago" id="pip-2">₱</div>
+            <div class="day-focus">PAGO<br>GROWTH</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">WED</div>
+            <div class="day-pip mahali" id="pip-3">M</div>
+            <div class="day-focus">MAHALI<br>BUILD</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">THU</div>
+            <div class="day-pip pagoya" id="pip-4">Y</div>
+            <div class="day-focus">PAGOYA<br>SPRINT</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">FRI</div>
+            <div class="day-pip all" id="pip-5">🔥</div>
+            <div class="day-focus">OUTREACH<br>DAY</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">SAT</div>
+            <div class="day-pip pago" id="pip-6">₱</div>
+            <div class="day-focus">CONTENT<br>BATCH</div>
+          </div>
+          <div class="day-col">
+            <div class="day-name">SUN</div>
+            <div class="day-pip rest" id="pip-0">—</div>
+            <div class="day-focus">REST +<br>VISION</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <button class="action-btn" onclick="resetAll()">↺ RESET DAILY TASKS</button>
+    <button class="action-btn" onclick="copyProgress()">📋 COPY PROGRESS SUMMARY</button>
+  </div>
+
+  <footer>
+    LLOYD'S FINTECH COMMAND CENTER · v2.4 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
+  </footer>
+</div>
+
+<script>
+  // CLOCK
+  function updateClock() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('live-clock').textContent =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    document.getElementById('live-date').textContent =
+      `${days[now.getDay()]} · ${months[now.getMonth()]} ${now.getDate()}`;
+
+    // Highlight today
+    const pip = document.getElementById(`pip-${now.getDay()}`);
+    if (pip) pip.classList.add('today');
+  }
+
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // TASK TOGGLE — tap expands context, checkbox checks
+  function toggleTask(item) {
+    const cb = item.querySelector('.task-cb');
+    const text = item.querySelector('.task-text');
+    cb.classList.toggle('checked');
+    text.classList.toggle('done');
+    item.classList.toggle('expanded');
+    saveState();
+  }
+
+  // PERSIST
+  function saveState() {
+    const items = document.querySelectorAll('.task-item');
+    const state = Array.from(items).map(item => ({
+      checked: item.querySelector('.task-cb').classList.contains('checked'),
+      expanded: item.classList.contains('expanded')
+    }));
+    try { localStorage.setItem('lloyd_cmd_v2', JSON.stringify(state)); } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lloyd_cmd_v2') || '[]');
+      const items = document.querySelectorAll('.task-item');
+      items.forEach((item, i) => {
+        if (saved[i]) {
+          if (saved[i].checked) {
+            item.querySelector('.task-cb').classList.add('checked');
+            item.querySelector('.task-text').classList.add('done');
+          }
+          if (saved[i].expanded) item.classList.add('expanded');
+        }
+      });
+    } catch(e) {}
+  }
+
+  function resetAll() {
+    if (!confirm('Reset all daily tasks?')) return;
+    document.querySelectorAll('.task-cb').forEach(cb => cb.classList.remove('checked'));
+    document.querySelectorAll('.task-text').forEach(t => t.classList.remove('done'));
+    document.querySelectorAll('.task-item').forEach(i => i.classList.remove('expanded'));
+    try { localStorage.removeItem('lloyd_cmd_v2'); } catch(e) {}
+  }
+
+  // COPY SUMMARY
+  function copyProgress() {
+    const platforms = ['PagoSeguro','Mahali','PagoYa'];
+    const cards = document.querySelectorAll('.platform-card');
+    let summary = `LLOYD CMD CENTER — ${new Date().toDateString()}\n\n`;
+    cards.forEach((card, i) => {
+      const tasks = card.querySelectorAll('.task-item');
+      const done = card.querySelectorAll('.task-cb.checked').length;
+      summary += `${platforms[i]}: ${done}/${tasks.length} tasks done\n`;
+      tasks.forEach(task => {
+        const checked = task.querySelector('.task-cb').classList.contains('checked') ? '✓' : '○';
+        summary += `  ${checked} ${task.querySelector('.task-text').textContent.trim()}\n`;
+      });
+      summary += '\n';
+    });
+    try {
+      navigator.clipboard.writeText(summary);
+      alert('Progress copied to clipboard!');
+    } catch(e) { alert(summary); }
+  }
+
+  // PWA INSTALL BANNER (show on mobile if not installed)
+  function showInstallBanner() {
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    const dismissed = localStorage.getItem('banner_dismissed');
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && !isStandalone && !dismissed) {
+      document.getElementById('installBanner').style.display = 'flex';
+    }
+  }
+
+  function dismissBanner() {
+    document.getElementById('installBanner').style.display = 'none';
+    try { localStorage.setItem('banner_dismissed', '1'); } catch(e) {}
+  }
+
+  loadState();
+  showInstallBanner();
+
+  // ================================================================
+  // BILL PAY ADMIN PANEL
+  // ================================================================
+  let bpAutoRefreshTimer = null;
+
+  // --- Provider Health ---
+  async function loadProviderHealth() {
+    try {
+      const res = await fetch('/api/bills/admin/health');
+      if (!res.ok) throw new Error('health API error');
+      const data = await res.json();
+      const siprel = data.providers && data.providers.siprel;
+      const evo   = data.providers && data.providers.evoluciona;
+
+      const siprelDot = document.getElementById('siprel-dot');
+      if (siprelDot) siprelDot.style.background = siprel && siprel.configured ? '#1D9E75' : '#E21A0A';
+
+      const evoDot = document.getElementById('evoluciona-dot');
+      if (evoDot) evoDot.style.background = evo && evo.configured ? '#1D9E75' : '#E21A0A';
+
+      const evoMode = document.getElementById('evoluciona-mode');
+      if (evoMode) {
+        evoMode.textContent = evo && evo.configured
+          ? 'postpago · ' + (evo.mode || 'postpago')
+          : 'not configured';
+        evoMode.style.color = evo && evo.configured ? 'var(--pago-color)' : 'var(--muted)';
+      }
+    } catch(e) {
+      const siprelDot = document.getElementById('siprel-dot');
+      const evoDot   = document.getElementById('evoluciona-dot');
+      if (siprelDot) siprelDot.style.background = '#E21A0A';
+      if (evoDot)   evoDot.style.background   = '#E21A0A';
+    }
+  }
+
+  // --- SIPREL Saldo Balance ---
+  async function refreshSaldo() {
+    const btn     = document.getElementById('bp-saldo-refresh-btn');
+    const bigEl   = document.getElementById('bp-saldo-big');
+    const balEl   = document.getElementById('siprel-balance');
+    const lowBadge = document.getElementById('siprel-low-badge');
+
+    if (btn) { btn.textContent = '↺ Loading…'; btn.disabled = true; }
+
+    try {
+      const res  = await fetch('/api/bills/admin/balance');
+      const data = await res.json();
+      const bal  = data.balance;
+
+      if (bal === null || bal === undefined) {
+        if (bigEl)    { bigEl.textContent  = '—'; bigEl.style.color = 'var(--muted)'; }
+        if (balEl)    balEl.textContent  = 'not configured';
+        if (lowBadge) lowBadge.style.display = 'none';
+      } else {
+        const fmt   = '$' + Number(bal).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN';
+        const isLow = bal < 500;
+        if (bigEl)    { bigEl.textContent  = fmt; bigEl.style.color = isLow ? '#E21A0A' : 'var(--pago-color)'; }
+        if (balEl)    { balEl.textContent  = fmt; balEl.style.color = isLow ? '#E21A0A' : 'var(--pago-color)'; }
+        if (lowBadge)   lowBadge.style.display = isLow ? 'block' : 'none';
+      }
+    } catch(e) {
+      if (bigEl) { bigEl.textContent = 'Error'; bigEl.style.color = '#E21A0A'; }
+    } finally {
+      if (btn) { btn.textContent = '↺ BALANCE'; btn.disabled = false; }
+    }
+  }
+
+  // --- Transaction Helpers ---
+  function maskRef(ref) {
+    if (!ref || ref.length <= 4) return ref || '—';
+    return '••••' + String(ref).slice(-4);
+  }
+
+  function providerBadge(provider) {
+    const p = (provider || '').toLowerCase();
+    if (p === 'siprel')     return '<span style="font-family:\'Space Mono\',monospace;font-size:0.46rem;background:rgba(29,158,117,0.15);color:#1D9E75;padding:2px 7px;border-radius:20px;white-space:nowrap;">SIPREL</span>';
+    if (p === 'evoluciona') return '<span style="font-family:\'Space Mono\',monospace;font-size:0.46rem;background:rgba(99,102,241,0.15);color:#6366F1;padding:2px 7px;border-radius:20px;white-space:nowrap;">EVOLUCIONA</span>';
+    return '<span style="color:var(--muted);">' + (provider || '—') + '</span>';
+  }
+
+  function statusBadge(status) {
+    if (status === 'confirmed') return '<span style="font-family:\'Space Mono\',monospace;font-size:0.46rem;background:rgba(29,158,117,0.15);color:#1D9E75;padding:2px 7px;border-radius:20px;">CONFIRMED</span>';
+    if (status === 'failed')    return '<span style="font-family:\'Space Mono\',monospace;font-size:0.46rem;background:rgba(232,42,10,0.15);color:#E21A0A;padding:2px 7px;border-radius:20px;">FAILED</span>';
+    return '<span style="font-family:\'Space Mono\',monospace;font-size:0.46rem;background:rgba(90,112,128,0.15);color:var(--muted);padding:2px 7px;border-radius:20px;">' + (status || 'PENDING').toUpperCase() + '</span>';
+  }
+
+  // --- Transaction Summary (derived from history data) ---
+  function updateTransactionSummary(payments) {
+    const todayStr = new Date().toDateString();
+    const todayAll       = payments.filter(p => new Date(p.createdAt).toDateString() === todayStr);
+    const confirmedToday = todayAll.filter(p => p.status === 'confirmed');
+    const failedToday    = todayAll.filter(p => p.status === 'failed');
+    const vol            = confirmedToday.reduce((s, p) => s + parseFloat(p.monto || '0'), 0);
+    const failoverCount  = confirmedToday.filter(p => p.failoverUsed).length;
+    const failoverPct    = confirmedToday.length > 0 ? Math.round(failoverCount / confirmedToday.length * 100) : 0;
+
+    const countEl    = document.getElementById('bp-today-count');
+    const volEl      = document.getElementById('bp-today-vol');
+    const failoverEl = document.getElementById('bp-failover-rate');
+    const failedEl   = document.getElementById('bp-failed-today');
+
+    if (countEl)    countEl.textContent    = confirmedToday.length;
+    if (volEl)      volEl.textContent      = vol > 0 ? '$' + vol.toLocaleString('es-MX', { maximumFractionDigits: 0 }) : '$0';
+    if (failoverEl) failoverEl.textContent = failoverPct + '%';
+    if (failedEl) {
+      failedEl.textContent = failedToday.length;
+      failedEl.style.color = failedToday.length > 0 ? '#E21A0A' : 'var(--muted)';
+    }
+  }
+
+  // --- Transaction Table ---
+  function updateTransactionTable(payments) {
+    const tbody = document.getElementById('bp-tx-body');
+    if (!tbody) return;
+
+    if (!payments || payments.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="font-family:\'Space Mono\',monospace;font-size:0.55rem;color:var(--muted);padding:14px 0;text-align:center;">No hay transacciones aún — esperando credenciales SIPREL / Evoluciona</td></tr>';
+      return;
+    }
+
+    const pad = n => String(n).padStart(2, '0');
+    tbody.innerHTML = payments.slice(0, 20).map(p => {
+      const d    = new Date(p.createdAt);
+      const time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+      const amt  = '$' + parseFloat(p.monto || '0').toFixed(2);
+      const fo   = p.failoverUsed ? '<span style="color:var(--gura-color);font-weight:700;">↩</span>' : '';
+      const svc  = (p.serviceName || '—').slice(0, 14);
+      return '<tr style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:7px 6px 7px 0;color:var(--pago-color);white-space:nowrap;">' + time + '</td>' +
+        '<td style="padding:7px 6px;font-size:0.58rem;font-weight:600;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + svc + '</td>' +
+        '<td style="padding:7px 6px;color:var(--muted);letter-spacing:0.04em;white-space:nowrap;">' + maskRef(p.referencia) + '</td>' +
+        '<td style="padding:7px 6px;text-align:right;color:var(--text);font-weight:700;white-space:nowrap;">' + amt + '</td>' +
+        '<td style="padding:7px 6px;">' + providerBadge(p.providerUsed || p.provider) + '</td>' +
+        '<td style="padding:7px 6px;">' + statusBadge(p.status) + '</td>' +
+        '<td style="padding:7px 0 7px 6px;text-align:center;">' + fo + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // --- Main Data Loader ---
+  async function loadBillPayData() {
+    try {
+      const histRes = await fetch('/api/bills/history?limit=20');
+      if (!histRes.ok) throw new Error('history API error');
+      const hist = await histRes.json();
+      const payments = hist.payments || [];
+      updateTransactionSummary(payments);
+      updateTransactionTable(payments);
+    } catch(e) {
+      const tbody = document.getElementById('bp-tx-body');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="font-family:\'Space Mono\',monospace;font-size:0.55rem;color:#E21A0A;padding:10px 0;">Error al conectar con /api/bills/history</td></tr>';
+    }
+  }
+
+  // --- Refresh All ---
+  function refreshBillPay() {
+    const btn = document.getElementById('bp-refresh-btn');
+    if (btn) { btn.textContent = '↺ …'; btn.disabled = true; }
+    Promise.all([loadProviderHealth(), loadBillPayData(), refreshSaldo()]).finally(() => {
+      if (btn) { btn.textContent = '↺ REFRESH'; btn.disabled = false; }
+    });
+  }
+
+  // --- Auto-refresh (30s) ---
+  function startBpAutoRefresh() {
+    if (bpAutoRefreshTimer) clearInterval(bpAutoRefreshTimer);
+    bpAutoRefreshTimer = setInterval(loadBillPayData, 30000);
+  }
+
+  // Initial load
+  loadProviderHealth();
+  loadBillPayData();
+  refreshSaldo();
+  startBpAutoRefresh();
+
+function syncLatest() {
+  const btn = document.getElementById('sync-btn');
+  btn.textContent = '⟳ Syncing...';
+  btn.style.opacity = '0.7';
+  btn.disabled = true;
+  fetch('/api/sync', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.textContent = data.message.includes('up to date') ? '✓ Already latest' : '✓ Updated!';
+      btn.style.background = '#0F6E56';
+      setTimeout(() => {
+        if (!data.message.includes('up to date')) location.reload();
+        btn.textContent = '⟳ Sync Latest';
+        btn.style.background = '#1D9E75';
+        btn.style.opacity = '1';
+        btn.disabled = false;
+      }, 1800);
+    })
+    .catch(() => {
+      btn.textContent = '✗ Failed';
+      btn.style.background = '#D85A30';
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = '⟳ Sync Latest'; btn.style.background = '#1D9E75'; }, 2000);
+    });
+}
+
+</script>
+</body>
+</html>

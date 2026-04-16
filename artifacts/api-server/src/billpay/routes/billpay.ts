@@ -196,19 +196,83 @@ router.post("/pay", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/bills/history
-// Returns the 10 most recent bill payments from the DB
-router.get("/history", async (_req: Request, res: Response) => {
+// GET /api/bills/history?limit=N
+// Returns the N most recent bill payments from the DB (default 20, max 100)
+router.get("/history", async (req: Request, res: Response) => {
   try {
+    const limit = Math.min(parseInt(String(req.query.limit ?? "20")) || 20, 100);
     const payments = await db
       .select()
       .from(billPaymentsTable)
       .orderBy(desc(billPaymentsTable.createdAt))
-      .limit(10);
+      .limit(limit);
     res.json({ payments });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al obtener historial.";
     res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/bills/admin/health
+// Returns live health status of all configured bill pay providers
+router.get("/admin/health", (_req: Request, res: Response) => {
+  const siprelConfigured = !!(
+    process.env.SIPREL_API_KEY &&
+    process.env.SIPREL_USER_ID &&
+    process.env.SIPREL_BASE_URL
+  );
+  const evolucionaConfigured = !!(
+    process.env.EVOLUCIONA_API_KEY &&
+    process.env.EVOLUCIONA_USER_ID
+  );
+
+  res.json({
+    providers: {
+      siprel: {
+        name: "SIPREL",
+        configured: siprelConfigured,
+        status: siprelConfigured ? "healthy" : "unconfigured",
+      },
+      evoluciona: {
+        name: "Evoluciona Móvil",
+        configured: evolucionaConfigured,
+        mode: process.env.EVOLUCIONA_MODE ?? "postpago",
+        status: evolucionaConfigured ? "healthy" : "unconfigured",
+      },
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// GET /api/bills/admin/balance
+// Returns the current SIPREL saldo balance (calls live API if configured)
+router.get("/admin/balance", async (_req: Request, res: Response) => {
+  if (!siprelProvider.getSaldoBalance || !siprelProvider.isAvailable()) {
+    res.json({
+      balance: null,
+      currency: "MXN",
+      provider: "siprel",
+      configured: false,
+      lowBalance: false,
+      threshold: 500,
+    });
+    return;
+  }
+
+  try {
+    const balance = await siprelProvider.getSaldoBalance();
+    res.json({
+      balance,
+      currency: "MXN",
+      provider: "siprel",
+      configured: true,
+      lowBalance: balance < 500,
+      threshold: 500,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener saldo.";
+    logger.error({ err }, "billpay: admin balance check failed");
+    res.status(502).json({ error: message, configured: true, balance: null });
   }
 });
 
