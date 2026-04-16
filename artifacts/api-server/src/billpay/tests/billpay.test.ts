@@ -660,4 +660,95 @@ describe("9. Wallet", () => {
       .where(eq(walletTransactionsTable.walletId, wallet.id));
     expect(debits).toHaveLength(0);
   });
+
+  it("Conekta webhook charge.expired sets status to 'failed' and sends WhatsApp failure notification", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
+    const [wallet] = await db
+      .insert(walletsTable)
+      .values({ userId: "3221234567", balanceMxn: "200.00" })
+      .returning();
+
+    const [pendingTx] = await db
+      .insert(walletTransactionsTable)
+      .values({
+        walletId: wallet.id,
+        type: "load_oxxo",
+        amountMxn: "200.00",
+        status: "pending",
+        conektaOrderId: "ord_expired_test_001",
+        description: "Carga PagoYa — $200 MXN",
+      })
+      .returning();
+
+    const res = await request(app)
+      .post("/api/wallet/webhook/conekta")
+      .send({ type: "charge.expired", data: { object: { id: "ord_expired_test_001" } } });
+
+    expect(res.status).toBe(200);
+
+    await tick(800);
+
+    // Status must flip to "failed"
+    const [updatedTx] = await db
+      .select()
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.id, pendingTx.id));
+    expect(updatedTx.status).toBe("failed");
+
+    // Balance must remain unchanged — no credit was issued
+    const [updatedWallet] = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.id, wallet.id));
+    expect(parseFloat(updatedWallet.balanceMxn)).toBe(200);
+
+    // WhatsApp failure message must have been dispatched to the wa.me URL
+    const waCall = fetchSpy.mock.calls.find(
+      ([url]) => typeof url === "string" && (url as string).startsWith("https://wa.me/"),
+    );
+    expect(waCall).toBeDefined();
+    const waUrl = decodeURIComponent(waCall![0] as string);
+    expect(waUrl).toContain("venci");
+
+    fetchSpy.mockRestore();
+  });
+
+  it("GET /api/wallet/transactions returns results in descending order and respects limit param", async () => {
+    await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
+    const [wallet] = await db
+      .insert(walletsTable)
+      .values({ userId: "3221234567", balanceMxn: "0.00" })
+      .returning();
+
+    // Insert 3 transactions with explicit timestamps so ordering is deterministic
+    const t1 = new Date("2025-01-01T10:00:00Z");
+    const t2 = new Date("2025-01-02T10:00:00Z");
+    const t3 = new Date("2025-01-03T10:00:00Z");
+
+    await db.insert(walletTransactionsTable).values([
+      { walletId: wallet.id, type: "load_oxxo", amountMxn: "100.00", status: "confirmed", description: "Oldest", createdAt: t1 },
+      { walletId: wallet.id, type: "load_oxxo", amountMxn: "200.00", status: "confirmed", description: "Middle", createdAt: t2 },
+      { walletId: wallet.id, type: "load_oxxo", amountMxn: "300.00", status: "confirmed", description: "Newest", createdAt: t3 },
+    ]);
+
+    // Request only 2 records — should get the 2 newest in descending order
+    const res = await request(app).get(
+      `/api/wallet/transactions?telefono=3221234567&limit=2`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.transactions).toHaveLength(2);
+
+    // First must be newest ($300)
+    expect(parseFloat(res.body.transactions[0].amountMXN)).toBe(300);
+    expect(res.body.transactions[0].description).toBe("Newest");
+
+    // Second must be middle ($200)
+    expect(parseFloat(res.body.transactions[1].amountMXN)).toBe(200);
+    expect(res.body.transactions[1].description).toBe("Middle");
+  });
 });

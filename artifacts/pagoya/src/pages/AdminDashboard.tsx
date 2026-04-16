@@ -1,4 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+interface WalletStats {
+  walletCount: number;
+  totalBalanceMXN: number;
+  pendingLoads: { count: number; amountMXN: number };
+  confirmedLoads: { count: number; amountMXN: number };
+  failedLoads: { count: number };
+}
 
 interface RepRow {
   id: string;
@@ -17,6 +25,16 @@ export default function AdminDashboard() {
   const [reps, setReps] = useState<RepRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [wallet, setWallet] = useState<WalletStats | null>(null);
+  const [walletLoading, setWalletLoading] = useState(true);
+
+  const loadWallet = useCallback(() => {
+    setWalletLoading(true);
+    fetch(`${window.location.origin}/api/wallet/admin/stats`)
+      .then((r) => r.json())
+      .then((d: WalletStats) => { setWallet(d); setWalletLoading(false); })
+      .catch(() => setWalletLoading(false));
+  }, []);
 
   useEffect(() => {
     fetch("/api/bills/admin/reps")
@@ -32,7 +50,8 @@ export default function AdminDashboard() {
         setError(e instanceof Error ? e.message : "Error desconocido");
         setLoading(false);
       });
-  }, []);
+    loadWallet();
+  }, [loadWallet]);
 
   const fmt = (n: string) =>
     "$" + parseFloat(n).toLocaleString("es-MX", { minimumFractionDigits: 2 });
@@ -61,6 +80,97 @@ export default function AdminDashboard() {
           </div>
           <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "#5a7080", marginTop: 4 }}>
             Comisiones de pagos de servicios · $5.00 MXN por transacción · 7 días retención
+          </div>
+        </div>
+
+        {/* ── Wallet Command Center Panel ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px 10px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <div style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.52rem",
+              letterSpacing: "0.08em",
+              color: "#5a7080",
+              textTransform: "uppercase",
+            }}>
+              Monedero · Panel de Control
+            </div>
+            <button
+              onClick={loadWallet}
+              disabled={walletLoading}
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.44rem",
+                color: "#39A935",
+                background: "rgba(57,169,53,0.12)",
+                border: "1px solid rgba(57,169,53,0.3)",
+                borderRadius: 20,
+                padding: "3px 10px",
+                cursor: "pointer",
+                opacity: walletLoading ? 0.5 : 1,
+              }}
+            >
+              {walletLoading ? "actualizando…" : "↻ actualizar"}
+            </button>
+          </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: 0,
+          }}>
+            {[
+              {
+                label: "Monederos Activos",
+                value: walletLoading ? "…" : String(wallet?.walletCount ?? 0),
+                color: "#e8f0f7",
+              },
+              {
+                label: "Saldo Total en Circulación",
+                value: walletLoading ? "…" : `$${(wallet?.totalBalanceMXN ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                color: "#39A935",
+              },
+              {
+                label: "Cargas Pendientes (OXXO)",
+                value: walletLoading ? "…" : `${wallet?.pendingLoads.count ?? 0} · $${(wallet?.pendingLoads.amountMXN ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                color: "#F59E0B",
+              },
+              {
+                label: "Cargas Confirmadas",
+                value: walletLoading ? "…" : `${wallet?.confirmedLoads.count ?? 0} · $${(wallet?.confirmedLoads.amountMXN ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                color: "#6366F1",
+              },
+              {
+                label: "Cargas Vencidas",
+                value: walletLoading ? "…" : String(wallet?.failedLoads.count ?? 0),
+                color: "#E21A0A",
+              },
+            ].map((card) => (
+              <div key={card.label} style={{
+                padding: "14px 12px",
+                borderRight: "1px solid rgba(255,255,255,0.05)",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: card.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>
+                  {card.value}
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", lineHeight: 1.5, textTransform: "uppercase" }}>
+                  {card.label}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql as drizzleSql, count, sum } from "drizzle-orm";
 import { db, walletsTable, walletTransactionsTable } from "@workspace/db";
 import {
   getOrCreateWallet,
@@ -114,34 +114,66 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
         data: { object: { id: string; amount?: number } };
       };
 
-      if (event.type !== "charge.paid") return;
-
       const conektaOrderId = event.data.object.id;
-      const [tx] = await db
-        .select()
-        .from(walletTransactionsTable)
-        .where(eq(walletTransactionsTable.conektaOrderId, conektaOrderId))
-        .limit(1);
 
-      if (!tx || tx.status !== "pending") return;
+      if (event.type === "charge.paid") {
+        const [tx] = await db
+          .select()
+          .from(walletTransactionsTable)
+          .where(eq(walletTransactionsTable.conektaOrderId, conektaOrderId))
+          .limit(1);
 
-      await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
+        if (!tx || tx.status !== "pending") return;
 
-      const telefono = await getUserTelefonoByWalletId(tx.walletId);
-      const newBalance = await getBalance(telefono);
+        await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
 
-      const msg =
-        `✅ Tu saldo PagoYa fue acreditado\n\n` +
-        `Monto: $${parseFloat(tx.amountMxn).toFixed(2)} MXN\n` +
-        `Nuevo saldo: $${newBalance.toFixed(2)} MXN\n\n` +
-        `Ya puedes pagar tus servicios.\n_PagoYa — pagoseguromx.com_`;
+        const telefono = await getUserTelefonoByWalletId(tx.walletId);
+        const newBalance = await getBalance(telefono);
 
-      const encoded = encodeURIComponent(msg);
-      fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
-        signal: AbortSignal.timeout(4_000),
-      }).catch(() => {});
+        const msg =
+          `✅ Tu saldo PagoYa fue acreditado\n\n` +
+          `Monto: $${parseFloat(tx.amountMxn).toFixed(2)} MXN\n` +
+          `Nuevo saldo: $${newBalance.toFixed(2)} MXN\n\n` +
+          `Ya puedes pagar tus servicios.\n_PagoYa — pagoseguromx.com_`;
 
-      logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: credited via Conekta webhook");
+        const encoded = encodeURIComponent(msg);
+        fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
+          signal: AbortSignal.timeout(4_000),
+        }).catch(() => {});
+
+        logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: credited via Conekta webhook");
+
+      } else if (event.type === "charge.expired") {
+        const [tx] = await db
+          .select()
+          .from(walletTransactionsTable)
+          .where(eq(walletTransactionsTable.conektaOrderId, conektaOrderId))
+          .limit(1);
+
+        if (!tx || tx.status !== "pending") return;
+
+        await db
+          .update(walletTransactionsTable)
+          .set({ status: "failed" })
+          .where(eq(walletTransactionsTable.id, tx.id));
+
+        const telefono = await getUserTelefonoByWalletId(tx.walletId);
+
+        const msg =
+          `❌ Tu carga OXXO venció sin acreditarse\n\n` +
+          `Monto: $${parseFloat(tx.amountMxn).toFixed(2)} MXN\n\n` +
+          `Si pagaste en OXXO y no se acreditó, contáctanos. De lo contrario puedes generar una nueva carga.\n_PagoYa — pagoseguromx.com_`;
+
+        const encoded = encodeURIComponent(msg);
+        fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
+          signal: AbortSignal.timeout(4_000),
+        }).catch(() => {});
+
+        logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: transaction expired via Conekta webhook");
+
+      } else {
+        return;
+      }
     } catch (err: unknown) {
       logger.error({ err }, "wallet: webhook processing error (non-fatal)");
     }
@@ -202,6 +234,55 @@ router.get("/transactions", async (req: Request, res: Response) => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al consultar transacciones.";
+    res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/wallet/admin/stats
+// Summary stats for the admin command center wallet panel.
+router.get("/admin/stats", async (_req: Request, res: Response) => {
+  try {
+    const [[walletCount], [txStats], [pendingStats]] = await Promise.all([
+      db.select({ total: count() }).from(walletsTable),
+      db.select({
+        totalBalance: drizzleSql<string>`COALESCE(SUM(balance_mxn::numeric), 0)`,
+      }).from(walletsTable),
+      db.select({
+        pendingCount: count(),
+        pendingAmount: drizzleSql<string>`COALESCE(SUM(amount_mxn::numeric), 0)`,
+      }).from(walletTransactionsTable).where(eq(walletTransactionsTable.status, "pending")),
+    ]);
+
+    const [confirmedStats] = await db
+      .select({
+        confirmedCount: count(),
+        confirmedAmount: drizzleSql<string>`COALESCE(SUM(amount_mxn::numeric), 0)`,
+      })
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.status, "confirmed"));
+
+    const [failedStats] = await db
+      .select({ failedCount: count() })
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.status, "failed"));
+
+    res.json({
+      walletCount: walletCount.total,
+      totalBalanceMXN: parseFloat(txStats.totalBalance),
+      pendingLoads: {
+        count: pendingStats.pendingCount,
+        amountMXN: parseFloat(pendingStats.pendingAmount),
+      },
+      confirmedLoads: {
+        count: confirmedStats.confirmedCount,
+        amountMXN: parseFloat(confirmedStats.confirmedAmount),
+      },
+      failedLoads: {
+        count: failedStats.failedCount,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener estadísticas.";
     res.status(500).json({ error: message });
   }
 });
