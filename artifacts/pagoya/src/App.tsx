@@ -11,6 +11,7 @@ import PaymentForm from "@/pages/PaymentForm";
 import PaymentReview from "@/pages/PaymentReview";
 import CardEntry from "@/pages/CardEntry";
 import PaymentSuccess from "@/pages/PaymentSuccess";
+import BillPaySelector from "@/pages/BillPaySelector";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -20,6 +21,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/servicios" component={BillPaySelector} />
       <Route path="/pagar" component={PaymentForm} />
       <Route path="/revisar" component={PaymentReview} />
       <Route path="/tarjeta" component={CardEntry} />

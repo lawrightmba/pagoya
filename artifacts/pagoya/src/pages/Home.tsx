@@ -127,24 +127,24 @@ export default function Home() {
 
           <div className="w-full max-w-sm flex flex-col gap-3">
             <button
-              onClick={() => navigate("/pagar")}
+              onClick={() => navigate("/servicios")}
               className="w-full py-5 px-8 rounded-full text-white text-base font-bold flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
               style={{
                 background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
                 boxShadow: "0 6px 20px rgba(4,108,44,0.40)",
               }}
             >
-              Pagar un servicio
+              Ver todos los servicios
               <ArrowRight className="w-5 h-5" />
             </button>
 
             <p className="text-xs text-gray-400 font-medium text-center -mt-1">Seguro. Rápido. Sin filas.</p>
 
             <button
-              onClick={() => document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() => navigate("/pagar")}
               className="w-full py-5 px-8 rounded-full text-[#046C2C] text-base font-bold border-2 border-[#046C2C] bg-white transition-all duration-150 active:scale-[0.97] hover:bg-[#F0FAF3]"
             >
-              Ver cómo funciona
+              Pagar un servicio
             </button>
           </div>
         </section>
