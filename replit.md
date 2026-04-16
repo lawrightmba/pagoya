@@ -91,6 +91,15 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/pagoya` (`@workspace/pagoya`)
+
+Mobile-first React + Vite PWA for paying utilities and bills in Mexico (fully in Spanish). Uses wouter for client-side routing.
+
+- Routes: `/` (Home/AI input), `/servicios` (BillPaySelector), `/pagar` (PaymentForm), `/revisar` (PaymentReview), `/tarjeta` (CardEntry/Stripe), `/exito` (PaymentSuccess), `/rep-dashboard?repId=X` (RepDashboard), `/admin` (AdminDashboard)
+- Brand: dark navy `#0A2540`, teal `#39A935`, monospace `Space Mono`
+- Stripe Elements integration with MXN PaymentIntents
+- API calls go to `localhost:8080` (API server) via the shared Replit proxy
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import { db, billPaymentsTable, billPaymentAuditTable } from "@workspace/db";
+import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -359,5 +359,97 @@ describe("7. History endpoint", () => {
   it("history returns at most 10 records", async () => {
     const res = await request(app).get("/api/bills/history");
     expect(res.body.payments.length).toBeLessThanOrEqual(10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. REP COMMISSIONS
+// ---------------------------------------------------------------------------
+describe("8. Rep Commissions", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+  });
+
+  it("successful payment with rep_id in body creates a commission record (amount=5, type=bill_pay, status=pending)", async () => {
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload,
+      rep_id: "REP001",
+    });
+    expect(res.status).toBe(201);
+
+    // Commission is non-blocking — wait for it to settle
+    await tick(120);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEST-FOLIO-001"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.repId).toBe("REP001");
+
+    const commissions = await db
+      .select()
+      .from(repCommissionsTable)
+      .where(eq(repCommissionsTable.billPaymentId, payment.id));
+
+    expect(commissions).toHaveLength(1);
+    expect(parseFloat(commissions[0].amount)).toBe(5);
+    expect(commissions[0].type).toBe("bill_pay");
+    expect(commissions[0].status).toBe("pending");
+    expect(commissions[0].repId).toBe("REP001");
+    // hold_until must be in the future (7 days out)
+    expect(commissions[0].holdUntil.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("successful payment by a user referred by a rep auto-attributes the commission to the referring rep", async () => {
+    // Insert a user who was referred by REP002
+    await db.insert(usersTable).values({
+      telefono: validCfePayload.telefono,
+      referredByRepId: "REP002",
+    });
+
+    // No rep_id in body — should be auto-resolved from user record
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(201);
+
+    await tick(120);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEST-FOLIO-001"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.repId).toBe("REP002");
+
+    const commissions = await db
+      .select()
+      .from(repCommissionsTable)
+      .where(eq(repCommissionsTable.billPaymentId, payment.id));
+
+    expect(commissions).toHaveLength(1);
+    expect(commissions[0].repId).toBe("REP002");
+    expect(commissions[0].type).toBe("bill_pay");
+    expect(commissions[0].status).toBe("pending");
+  });
+
+  it("failed payment does not create any commission record", async () => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+    vi.mocked(evolucionaProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload,
+      rep_id: "REP003",
+    });
+    expect(res.status).toBe(502);
+
+    await tick(120);
+
+    const commissions = await db.select().from(repCommissionsTable);
+    expect(commissions).toHaveLength(0);
   });
 });

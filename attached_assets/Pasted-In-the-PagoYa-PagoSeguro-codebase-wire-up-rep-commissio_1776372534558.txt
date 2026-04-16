@@ -1,0 +1,33 @@
+In the PagoYa/PagoSeguro codebase, wire up rep commissions for bill payments. The rep_id column already exists in the bill_payments table. Study the existing commission system thoroughly before writing any code — find how signup commissions (150 MXN), first payment commissions (500 MXN), and referral commissions (300 MXN) are currently recorded, held, and paid out. Match that pattern exactly for bill pay commissions.
+
+1. UPDATE THE PAY ROUTE
+In src/billpay/routes/billpay.ts, the POST /api/bills/pay endpoint should accept an optional rep_id in the request body. When present, store it in the bill_payments row.
+
+Also check: if the request does not include a rep_id, look up the authenticated user in the users table. If they were referred by a rep (check the existing rep attribution column — likely ref_code, referred_by_rep_id, or similar), use that rep's ID automatically. This means every bill payment by a rep-referred user earns the rep a commission without the user needing to pass anything.
+
+2. ADD COMMISSION TRIGGER
+After a successful payment (result.success = true), if rep_id is present on the bill_payments row, insert a commission record using the exact same pattern as the existing commission system.
+
+Commission amount: 5 MXN per confirmed bill payment.
+Commission type: use a new type string 'bill_pay' — add it to whatever enum or type list the existing system uses.
+Hold period: apply the same 7-day hold already used for other commission types.
+Do not trigger a commission on failed payments or on payments that are still pending.
+
+3. UPDATE REP DASHBOARD
+Find the rep dashboard component (the /rep-dashboard route). Add a "Pagos de Servicios" section that shows:
+- Total bill pay commissions earned lifetime (confirmed + paid out)
+- Bill pay commissions currently pending (in 7-day hold)
+- Last 10 bill payments attributed to this rep: service name, date, amount paid, commission earned ($5.00 MXN each)
+
+Use the existing rep dashboard styling and data-fetching patterns exactly. Extend existing rep commission API endpoints if they accept a type filter — do not create new standalone endpoints unless the existing ones cannot support it.
+
+4. UPDATE ADMIN REP DETAIL VIEW
+In the admin dashboard, the existing rep detail view shows commission totals by type. Add bill_pay as a third commission type column or row alongside the existing signup and referral commission totals. Show: count of bill pay transactions attributed to this rep, total bill pay commission earned, and total pending.
+
+5. ADD TO THE 21-TEST SUITE
+Add 3 new tests to src/billpay/tests/billpay.test.ts in a new group called "Rep Commissions":
+- Successful payment with rep_id in request body creates a commission record with amount=5, type=bill_pay, status=pending
+- Successful payment where user was referred by a rep (no rep_id in body) auto-attributes the commission to the referring rep
+- Failed payment does not create any commission record
+
+Run pnpm --filter @workspace/api-server run test:bills after adding the tests and confirm all pass before finishing.

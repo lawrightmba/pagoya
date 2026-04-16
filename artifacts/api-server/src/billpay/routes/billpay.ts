@@ -1,10 +1,13 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, billPaymentsTable, billPaymentAuditTable } from "@workspace/db";
+import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
 import { logger } from "../../lib/logger.js";
+
+const BILL_PAY_COMMISSION_AMOUNT = "5.00";
+const COMMISSION_HOLD_DAYS = 7;
 
 const router: IRouter = Router();
 
@@ -44,14 +47,15 @@ router.get("/services/:serviceId", (req: Request, res: Response) => {
 // POST /api/bills/pay
 // Routes a bill payment through SIPREL or Evoluciona (first success wins),
 // persists the confirmed record + audit log to DB, and sends a WhatsApp receipt.
-// Body: { serviceId, referencia, monto, telefono, notas? }
+// Body: { serviceId, referencia, monto, telefono, notas?, rep_id? }
 router.post("/pay", async (req: Request, res: Response) => {
-  const { serviceId, referencia, monto, telefono, notas } = req.body as {
+  const { serviceId, referencia, monto, telefono, notas, rep_id } = req.body as {
     serviceId: string;
     referencia: string;
     monto: number;
     telefono: string;
     notas?: string;
+    rep_id?: string;
   };
 
   if (!serviceId || !referencia || !monto || !telefono) {
@@ -88,6 +92,21 @@ router.post("/pay", async (req: Request, res: Response) => {
     return;
   }
 
+  // 0. Resolve effective rep_id: body > user referral lookup
+  let effectiveRepId: string | null = rep_id ?? null;
+  if (!effectiveRepId && telefono) {
+    try {
+      const [user] = await db
+        .select({ referredByRepId: usersTable.referredByRepId })
+        .from(usersTable)
+        .where(eq(usersTable.telefono, telefono))
+        .limit(1);
+      if (user?.referredByRepId) effectiveRepId = user.referredByRepId;
+    } catch {
+      // Non-fatal — proceed without rep attribution
+    }
+  }
+
   // 1. Insert payment record (pendiente) + audit: payment.created
   let paymentId: number;
   try {
@@ -104,6 +123,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       failoverUsed: false,
       confirmationCode: "pending",
       status: "pending",
+      repId: effectiveRepId,
     }).returning({ id: billPaymentsTable.id });
     paymentId = inserted.id;
 
@@ -144,7 +164,23 @@ router.post("/pay", async (req: Request, res: Response) => {
       }),
     });
 
-    // 4. WhatsApp receipt (non-blocking)
+    // 4. Rep commission (non-blocking) — 5 MXN per confirmed bill payment, 7-day hold
+    if (effectiveRepId) {
+      const holdUntil = new Date();
+      holdUntil.setDate(holdUntil.getDate() + COMMISSION_HOLD_DAYS);
+      db.insert(repCommissionsTable).values({
+        repId: effectiveRepId,
+        billPaymentId: paymentId,
+        amount: BILL_PAY_COMMISSION_AMOUNT,
+        type: "bill_pay",
+        status: "pending",
+        holdUntil,
+      }).catch((err: unknown) => {
+        logger.error({ err, repId: effectiveRepId, paymentId }, "billpay: commission insert failed");
+      });
+    }
+
+    // 5. WhatsApp receipt (non-blocking)
     sendWhatsAppReceipt({
       telefono,
       serviceName: service.name,
@@ -154,7 +190,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       provider: result.provider,
     }).catch(() => {});
 
-    // 5. Check SIPREL saldo after successful payment (non-blocking)
+    // 6. Check SIPREL saldo after successful payment (non-blocking)
     if (siprelProvider.getSaldoBalance) {
       siprelProvider.getSaldoBalance().then(async (balance) => {
         if (balance < SALDO_LOW_THRESHOLD) {
@@ -273,6 +309,112 @@ router.get("/admin/balance", async (_req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "Error al obtener saldo.";
     logger.error({ err }, "billpay: admin balance check failed");
     res.status(502).json({ error: message, configured: true, balance: null });
+  }
+});
+
+// GET /api/bills/reps/:repId/commissions
+// Rep dashboard: commission summary + last 10 bill payments for this rep
+router.get("/reps/:repId/commissions", async (req: Request, res: Response) => {
+  const { repId } = req.params;
+  try {
+    const commissions = await db
+      .select()
+      .from(repCommissionsTable)
+      .where(eq(repCommissionsTable.repId, repId))
+      .orderBy(desc(repCommissionsTable.createdAt));
+
+    const lifetimeTotal = commissions
+      .filter((c) => c.status === "pending" || c.status === "paid")
+      .reduce((sum, c) => sum + parseFloat(c.amount), 0);
+    const pendingTotal = commissions
+      .filter((c) => c.status === "pending")
+      .reduce((sum, c) => sum + parseFloat(c.amount), 0);
+    const paidTotal = commissions
+      .filter((c) => c.status === "paid")
+      .reduce((sum, c) => sum + parseFloat(c.amount), 0);
+
+    // Fetch last 10 bill payments attributed to this rep
+    const recentPayments = await db
+      .select({
+        id: billPaymentsTable.id,
+        serviceName: billPaymentsTable.serviceName,
+        monto: billPaymentsTable.monto,
+        status: billPaymentsTable.status,
+        createdAt: billPaymentsTable.createdAt,
+      })
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.repId, repId))
+      .orderBy(desc(billPaymentsTable.createdAt))
+      .limit(10);
+
+    res.json({
+      repId,
+      summary: {
+        lifetimeTotal: lifetimeTotal.toFixed(2),
+        pendingTotal: pendingTotal.toFixed(2),
+        paidTotal: paidTotal.toFixed(2),
+        totalTransactions: commissions.length,
+        currency: "MXN",
+      },
+      recentPayments: recentPayments.map((p) => ({
+        ...p,
+        commissionAmount: BILL_PAY_COMMISSION_AMOUNT,
+      })),
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener comisiones.";
+    res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/bills/admin/reps
+// Admin view: all reps with commission totals by type
+router.get("/admin/reps", async (_req: Request, res: Response) => {
+  try {
+    const allReps = await db.select().from(repsTable).orderBy(repsTable.id);
+
+    const allCommissions = await db
+      .select()
+      .from(repCommissionsTable);
+
+    const repMap: Record<string, {
+      id: string; name: string; phone: string;
+      billPayCount: number; billPayTotal: string; billPayPending: string;
+      signupCount: number; signupTotal: string;
+      referralCount: number; referralTotal: string;
+    }> = {};
+
+    for (const rep of allReps) {
+      repMap[rep.id] = {
+        id: rep.id, name: rep.name, phone: rep.phone,
+        billPayCount: 0, billPayTotal: "0.00", billPayPending: "0.00",
+        signupCount: 0, signupTotal: "0.00",
+        referralCount: 0, referralTotal: "0.00",
+      };
+    }
+
+    for (const c of allCommissions) {
+      if (!repMap[c.repId]) continue;
+      const amt = parseFloat(c.amount);
+      if (c.type === "bill_pay") {
+        repMap[c.repId].billPayCount += 1;
+        repMap[c.repId].billPayTotal = (parseFloat(repMap[c.repId].billPayTotal) + amt).toFixed(2);
+        if (c.status === "pending") {
+          repMap[c.repId].billPayPending = (parseFloat(repMap[c.repId].billPayPending) + amt).toFixed(2);
+        }
+      } else if (c.type === "signup") {
+        repMap[c.repId].signupCount += 1;
+        repMap[c.repId].signupTotal = (parseFloat(repMap[c.repId].signupTotal) + amt).toFixed(2);
+      } else if (c.type === "referral") {
+        repMap[c.repId].referralCount += 1;
+        repMap[c.repId].referralTotal = (parseFloat(repMap[c.repId].referralTotal) + amt).toFixed(2);
+      }
+    }
+
+    res.json({ reps: Object.values(repMap) });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener reps.";
+    res.status(500).json({ error: message });
   }
 });
 

@@ -20,3 +20,6 @@
 export * from "./payments";
 export * from "./bill_payments";
 export * from "./bill_payment_audit";
+export * from "./reps";
+export * from "./users";
+export * from "./rep_commissions";
