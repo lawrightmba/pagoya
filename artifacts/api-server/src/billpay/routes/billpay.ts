@@ -11,24 +11,43 @@ async function sendWhatsAppReceipt(params: {
   telefono: string;
   serviceName: string;
   monto: number;
+  referencia: string;
   confirmationCode: string;
   provider: string;
 }): Promise<void> {
   const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
-  if (!adminNumber) return;
 
   const msg =
     `✅ *PagoYa — Pago Confirmado*\n` +
     `Servicio: ${params.serviceName}\n` +
     `Monto: $${params.monto.toFixed(2)} MXN\n` +
+    `Referencia: ${params.referencia}\n` +
     `Folio: ${params.confirmationCode}\n` +
     `Proveedor: ${params.provider.toUpperCase()}\n` +
     `Tel cliente: ${params.telefono}`;
 
-  try {
-    await fetch(`https://api.whatsapp.com/send?phone=${adminNumber}&text=${encodeURIComponent(msg)}`);
-  } catch (err) {
-    logger.warn({ err }, "billpay: WhatsApp receipt send failed (non-fatal)");
+  const encoded = encodeURIComponent(msg);
+  const targets: string[] = [];
+
+  // Send to customer phone
+  const cleanTel = params.telefono.replace(/\D/g, "");
+  if (cleanTel) targets.push(cleanTel);
+
+  // Also notify admin if configured
+  if (adminNumber) {
+    const cleanAdmin = adminNumber.replace(/\D/g, "");
+    if (cleanAdmin && cleanAdmin !== cleanTel) targets.push(cleanAdmin);
+  }
+
+  for (const number of targets) {
+    try {
+      await fetch(`https://wa.me/${number}?text=${encoded}`, {
+        method: "GET",
+        signal: AbortSignal.timeout(4000),
+      });
+    } catch (err) {
+      logger.warn({ number, err }, "billpay: WhatsApp receipt send failed (non-fatal)");
+    }
   }
 }
 
@@ -114,6 +133,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       telefono,
       serviceName: service.name,
       monto: montoNum,
+      referencia,
       confirmationCode: result.confirmationCode,
       provider: result.provider,
     }).catch(() => {});

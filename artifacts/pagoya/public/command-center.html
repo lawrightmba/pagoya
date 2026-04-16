@@ -712,6 +712,49 @@
 
   </div>
 
+  <!-- BILL PAY LIVE PANEL -->
+  <div class="panel" style="margin-bottom:20px;" id="billpay-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="panel-title" style="margin-bottom:0">⚡ BILL PAY INFRASTRUCTURE — LIVE STATUS</div>
+      <div id="billpay-status-badge" class="stage-badge stage-mvp">LOADING…</div>
+    </div>
+
+    <div class="metrics-row" style="margin-bottom:14px;">
+      <div class="metric">
+        <div class="metric-val" id="bp-total" style="color:var(--pago-color)">—</div>
+        <div class="metric-label">PAYMENTS<br>PROCESSED</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" style="color:var(--mahali-color)">26</div>
+        <div class="metric-label">SERVICES<br>IN CATALOG</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="bp-providers" style="color:var(--gura-color)">—</div>
+        <div class="metric-label">PROVIDERS<br>CONFIGURED</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="bp-mxn" style="color:var(--accent)">—</div>
+        <div class="metric-label">TOTAL MXN<br>PROCESSED</div>
+      </div>
+    </div>
+
+    <div class="today-label">RECENT BILL PAYMENTS</div>
+    <div id="billpay-rows">
+      <div style="font-family:'Space Mono',monospace;font-size:0.58rem;color:var(--muted);padding:10px 0;">Cargando datos…</div>
+    </div>
+
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/api/bills/catalog" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--pago-color);text-decoration:none;padding:3px 10px;border:1px solid rgba(29,158,117,0.3);border-radius:20px;">→ /api/bills/catalog</a>
+      <a href="/api/bills/history" target="_blank" style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--gura-color);text-decoration:none;padding:3px 10px;border:1px solid rgba(99,102,241,0.3);border-radius:20px;">→ /api/bills/history</a>
+      <span style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--muted);padding:3px 10px;">POST /api/bills/pay · WhatsApp receipt → customer + admin</span>
+    </div>
+
+    <div class="unlock-row">
+      <div>🔓</div>
+      <div class="unlock-text"><strong>Next unlock:</strong> SIPREL_API_KEY + EVOLUCIONA_API_KEY → first live CFE payment → WhatsApp receipt fires to customer</div>
+    </div>
+  </div>
+
   <!-- BOTTOM PANELS -->
   <div class="bottom-grid">
 
@@ -853,7 +896,7 @@
   </div>
 
   <footer>
-    LLOYD'S FINTECH COMMAND CENTER · v2.3 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
+    LLOYD'S FINTECH COMMAND CENTER · v2.4 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
   </footer>
 </div>
 
@@ -959,6 +1002,66 @@
 
   loadState();
   showInstallBanner();
+
+  // BILL PAY LIVE DATA
+  async function loadBillPayData() {
+    const badge = document.getElementById('billpay-status-badge');
+    const rowsEl = document.getElementById('billpay-rows');
+    const totalEl = document.getElementById('bp-total');
+    const mxnEl = document.getElementById('bp-mxn');
+    const providersEl = document.getElementById('bp-providers');
+
+    try {
+      // Fetch history + catalog in parallel
+      const [histRes, catRes] = await Promise.all([
+        fetch('/api/bills/history'),
+        fetch('/api/bills/catalog')
+      ]);
+
+      if (!histRes.ok || !catRes.ok) throw new Error('API error');
+      const hist = await histRes.json();
+      const cat = await catRes.json();
+
+      const payments = hist.payments || [];
+      const total = payments.length;
+      const totalMxn = payments.reduce((sum, p) => sum + parseFloat(p.monto || '0'), 0);
+      const availProviders = (cat.providers && cat.providers.available) ? cat.providers.available.length : 0;
+
+      totalEl.textContent = total;
+      mxnEl.textContent = total > 0 ? '$' + totalMxn.toFixed(0) : '$0';
+      providersEl.textContent = availProviders + '/2';
+
+      badge.textContent = availProviders > 0 ? 'LIVE' : 'READY';
+      badge.className = 'stage-badge ' + (availProviders > 0 ? 'stage-live' : 'stage-mvp');
+
+      if (total === 0) {
+        rowsEl.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:0.58rem;color:var(--muted);padding:10px 0;">No hay pagos aún — esperando credenciales SIPREL / Evoluciona</div>';
+      } else {
+        rowsEl.innerHTML = payments.slice(0, 5).map(p => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:28px;height:28px;border-radius:7px;background:rgba(29,158,117,0.12);display:flex;align-items:center;justify-content:center;font-size:0.7rem;">⚡</div>
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;">${p.service_name || p.serviceName}</div>
+                <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);">${p.referencia} · ${p.provider.toUpperCase()}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Space Mono',monospace;font-size:0.72rem;font-weight:700;color:var(--pago-color);">$${parseFloat(p.monto).toFixed(2)}</div>
+              <div style="font-family:'Space Mono',monospace;font-size:0.48rem;color:var(--muted);">${p.status.toUpperCase()}</div>
+            </div>
+          </div>`).join('');
+      }
+    } catch(e) {
+      badge.textContent = 'API ERROR';
+      badge.className = 'stage-badge';
+      badge.style.background = 'rgba(232,42,10,0.15)';
+      badge.style.color = '#E21A0A';
+      rowsEl.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:0.58rem;color:#E21A0A;padding:8px 0;">Error al conectar con /api/bills — verifica que el API server esté corriendo</div>';
+    }
+  }
+
+  loadBillPayData();
 
 function syncLatest() {
   const btn = document.getElementById('sync-btn');
