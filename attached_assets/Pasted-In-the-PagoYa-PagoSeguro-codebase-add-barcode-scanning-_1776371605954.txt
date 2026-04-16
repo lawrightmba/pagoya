@@ -1,0 +1,23 @@
+In the PagoYa/PagoSeguro codebase, add barcode scanning to the bill pay reference number input in src/billpay/BillPaySelector.tsx (the reference entry step).
+
+Use the @zxing/library package for barcode scanning (install if not present). It reads Code 128 barcodes (used by CFE and Telmex bills) via the device camera and works in mobile browsers without requiring an app install.
+
+Add a scan button next to the reference number input field. When tapped:
+1. Open a camera preview overlay (modal-style, full-width, uses the existing PagoYa navy #0A2540 and teal #1D9E75 color scheme)
+2. Show a scanning viewfinder rectangle in the center with animated corner brackets
+3. When a barcode is detected, extract the numeric portion, populate the reference input, and close the overlay automatically
+4. Show a brief success animation — the input field border flashes teal for 1 second so the user knows it worked
+5. Include a "Cancelar / Cancel" button to close without scanning
+
+CFE barcode format: CFE Code 128 barcodes encode a string that contains the 12-digit service number (No. de Servicio). Extract only the first 12 consecutive digits found in the decoded string. Add a comment in the code noting this so it can be adjusted if the format varies.
+
+For services where referenceDigits is not defined (variable length), accept the full decoded barcode string trimmed of whitespace.
+
+Add a small "📷 Escanear / Scan" text button below the reference input as a secondary option. Keep the manual text input as the primary so users without camera permission or on desktop are never blocked.
+
+Handle these edge cases gracefully:
+- Camera permission denied: show inline message "Activa el acceso a la cámara en tu navegador / Enable camera access in your browser" with a dismiss button, fall back to manual entry silently
+- No barcode detected after 15 seconds: show "No se detectó código — intenta manualmente / No barcode detected — try manually" and close the overlay
+- Multiple rapid detections: debounce so only the first result is used, prevent duplicate fills
+
+Keep all styles consistent with the existing BillPaySelector.tsx brand colors and component patterns. Do not change anything outside of BillPaySelector.tsx and package.json.

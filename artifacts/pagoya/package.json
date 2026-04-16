@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.1.0",
-    "@stripe/stripe-js": "^9.1.0"
+    "@stripe/stripe-js": "^9.1.0",
+    "@zxing/library": "^0.21.3"
   }
 }
