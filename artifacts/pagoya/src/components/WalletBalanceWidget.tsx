@@ -96,7 +96,7 @@ export default function WalletBalanceWidget() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-gray-400 font-semibold mb-0.5">Saldo PagoYa</p>
-          <p className="text-sm font-bold text-[#1D9E75]">Configura tu monedero →</p>
+          <p className="text-sm font-bold" style={{ color: "#1D9E75" }}>Configura tu monedero →</p>
         </div>
       </button>
     );
@@ -138,16 +138,20 @@ export default function WalletBalanceWidget() {
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
       }}
     >
-      {/* Icon */}
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+      {/* Icon — taps to historial */}
+      <button
+        onClick={() => navigate("/wallet/historial")}
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-[0.92]"
         style={{ background: "#F0FAF3" }}
       >
         <Wallet className="w-5 h-5" style={{ color: "#1D9E75" }} />
-      </div>
+      </button>
 
-      {/* Label + balance */}
-      <div className="flex-1 min-w-0">
+      {/* Label + balance — taps to historial */}
+      <button
+        onClick={() => navigate("/wallet/historial")}
+        className="flex-1 min-w-0 text-left"
+      >
         <div className="flex items-center gap-2 mb-0.5">
           <p className="text-xs text-gray-400 font-semibold">Saldo PagoYa</p>
           {state.hasPending && (
@@ -160,9 +164,9 @@ export default function WalletBalanceWidget() {
           )}
         </div>
         <p className="text-lg font-black text-[#1F1F1F] leading-tight">{formatted}</p>
-      </div>
+      </button>
 
-      {/* CTA */}
+      {/* CTA — navigates to /cargar */}
       <button
         onClick={() => navigate("/cargar")}
         className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-all active:scale-[0.95] hover:scale-[1.02]"

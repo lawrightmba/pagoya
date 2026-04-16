@@ -16,6 +16,7 @@ export const billPaymentsTable = pgTable("bill_payments", {
   failoverUsed: boolean("failover_used").default(false),
   confirmationCode: text("confirmation_code").notNull(),
   status: text("status").notNull().default("confirmed"),
+  paymentMethod: text("payment_method").default("card"),
   repId: text("rep_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

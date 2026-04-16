@@ -147,6 +147,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       failoverUsed: false,
       confirmationCode: "pending",
       status: "pending",
+      paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
       repId: effectiveRepId,
     }).returning({ id: billPaymentsTable.id });
     paymentId = inserted.id;
@@ -206,10 +207,11 @@ router.post("/pay", async (req: Request, res: Response) => {
 
     // 5. Wallet debit — only after provider confirms; non-fatal on failure
     if (walletId) {
+      const maskedRef = `••••${referencia.slice(-4)}`;
       debitWallet(
         walletId,
         montoNum,
-        `Pago ${service.name} ref ${referencia}`,
+        `Pago ${service.name} — ref ${maskedRef}`,
       ).catch((walletErr: unknown) => {
         const msg = walletErr instanceof Error ? walletErr.message : String(walletErr);
         logger.error(

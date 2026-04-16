@@ -575,4 +575,89 @@ describe("9. Wallet", () => {
     expect(res.body).toHaveProperty("currentBalance");
     expect(res.body.currentBalance).toBe(0);
   });
+
+  it("wallet bill pay: balance is checked before provider, bill_payments.payment_method = 'wallet', debit inserted after confirm", async () => {
+    // Fund the wallet
+    await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
+    const [wallet] = await db
+      .insert(walletsTable)
+      .values({ userId: "3221234567", balanceMxn: "1000.00" })
+      .returning();
+
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload, // monto: 850
+      paymentSource: "wallet",
+    });
+
+    expect(res.status).toBe(201);
+
+    // Give the non-blocking debitWallet time to complete
+    await tick(400);
+
+    // bill_payments row must record payment_method = 'wallet'
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEST-FOLIO-WALLET"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.paymentMethod).toBe("wallet");
+
+    // A debit wallet_transaction must be inserted with bill_pay type
+    const debits = await db
+      .select()
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.walletId, wallet.id));
+
+    expect(debits).toHaveLength(1);
+    expect(debits[0].type).toBe("bill_pay");
+    expect(debits[0].status).toBe("confirmed");
+    expect(parseFloat(debits[0].amountMxn)).toBe(850);
+
+    // Description must mask all but last 4 digits of referencia ("123456789012" → "9012")
+    expect(debits[0].description).toMatch(/••••9012/);
+    expect(debits[0].description).toContain("CFE");
+
+    // Wallet balance must drop by 850
+    const [updated] = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.id, wallet.id));
+    expect(parseFloat(updated.balanceMxn)).toBe(150);
+  });
+
+  it("wallet bill pay: provider failure does NOT debit the wallet", async () => {
+    vi.mocked(siprelProvider.pay).mockRejectedValueOnce(new Error("PROVIDER_DOWN"));
+    vi.mocked(evolucionaProvider.pay).mockRejectedValueOnce(new Error("PROVIDER_DOWN"));
+
+    await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
+    const [wallet] = await db
+      .insert(walletsTable)
+      .values({ userId: "3221234567", balanceMxn: "1000.00" })
+      .returning();
+
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload,
+      paymentSource: "wallet",
+    });
+
+    expect(res.status).toBe(502);
+
+    await tick(200);
+
+    // Balance must remain unchanged
+    const [checked] = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.id, wallet.id));
+    expect(parseFloat(checked.balanceMxn)).toBe(1000);
+
+    // No debit transaction must exist
+    const debits = await db
+      .select()
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.walletId, wallet.id));
+    expect(debits).toHaveLength(0);
+  });
 });
