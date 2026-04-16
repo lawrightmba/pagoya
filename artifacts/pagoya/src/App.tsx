@@ -14,6 +14,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import BillPaySelector from "@/pages/BillPaySelector";
 import RepDashboard from "@/pages/RepDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import CashLoad from "@/pages/CashLoad";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/revisar" component={PaymentReview} />
       <Route path="/tarjeta" component={CardEntry} />
       <Route path="/exito" component={PaymentSuccess} />
+      <Route path="/cargar" component={CashLoad} />
       <Route path="/rep-dashboard" component={RepDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

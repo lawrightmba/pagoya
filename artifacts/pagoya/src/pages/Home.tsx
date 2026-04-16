@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { ArrowRight, Zap, CheckCircle, FileText, Sparkles, RotateCcw } from "lucide-react";
 import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
 import { usePayment } from "@/context/PaymentContext";
+import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 
 const HINTS = [
   "Quiero pagar luz CFE",
@@ -149,8 +150,15 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Wallet Balance Widget */}
+        <section className="px-5 pt-5 pb-1">
+          <div className="max-w-sm mx-auto">
+            <WalletBalanceWidget />
+          </div>
+        </section>
+
         {/* AI Assistant Card */}
-        <section className="px-5 pt-8 pb-2">
+        <section className="px-5 pt-6 pb-2">
           <div
             className="rounded-3xl p-6 max-w-sm mx-auto"
             style={{
