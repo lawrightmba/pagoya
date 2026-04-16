@@ -1,0 +1,92 @@
+In the PagoYa/PagoSeguro codebase, build the wallet backend. Study the existing database schema, Drizzle setup, and Conekta integration patterns thoroughly before writing any code — the Conekta credentials and client are already configured in the codebase for PagoSeguro rent payments, reuse that exact pattern.
+
+1. DATABASE — add two new tables to the Drizzle schema and run the migration:
+
+wallets table:
+- id: uuid primary key default random
+- user_id: text not null unique (one wallet per user, FK to users)
+- balance_mxn: numeric(10,2) not null default 0.00 (never allow negative — enforce with a check constraint)
+- currency: text not null default 'MXN'
+- created_at: timestamptz not null default now()
+- updated_at: timestamptz not null default now()
+- Index on user_id
+
+wallet_transactions table:
+- id: uuid primary key default random
+- wallet_id: uuid not null FK to wallets
+- type: enum ('load_oxxo', 'load_card', 'load_spei', 'bill_pay', 'refund')
+- amount_mxn: numeric(10,2) not null
+- status: enum ('pending', 'confirmed', 'failed')
+- conekta_order_id: text (nullable — populated for load_oxxo type)
+- stripe_payment_intent_id: text (nullable — populated for load_card type)
+- voucher_url: text (nullable — the Conekta hosted voucher URL for OXXO loads)
+- voucher_expires_at: timestamptz (nullable)
+- description: text (nullable — human readable e.g. "Carga OXXO $200 MXN")
+- created_at: timestamptz not null default now()
+- confirmed_at: timestamptz (nullable)
+- Index on wallet_id, index on conekta_order_id, index on status
+
+Auto-create a wallet row for every new user on signup — find where users are created and add wallet creation there. Also add a migration helper that creates wallets for any existing users who don't have one yet.
+
+2. WALLET SERVICE — create src/wallet/services/wallet.ts with these functions:
+
+getOrCreateWallet(userId: string): Promise<Wallet>
+getBalance(userId: string): Promise<number>
+creditWallet(walletId: string, amountMXN: number, txId: string): Promise<void>
+  — increments balance_mxn atomically using a Postgres transaction
+  — updates wallet_transactions status to confirmed and sets confirmed_at
+  — never allows balance to go negative
+  — throws if the wallet_transaction row doesn't exist or is already confirmed
+debitWallet(walletId: string, amountMXN: number, description: string): Promise<string>
+  — creates a wallet_transactions row of type bill_pay with status confirmed
+  — decrements balance_mxn atomically
+  — throws with error 'INSUFFICIENT_BALANCE' if balance would go negative
+  — returns the new wallet_transaction id
+
+3. OXXO LOAD ENDPOINTS — create src/wallet/routes/wallet.ts and mount at /api/wallet in app.ts:
+
+POST /api/wallet/load/oxxo
+  Request body: { amountMXN: number }
+  Validation: min 50 MXN, max 10000 MXN (Conekta OXXO limits)
+  Flow:
+    - Get or create wallet for authenticated user
+    - Call Conekta API to create an OXXO charge for amountMXN
+      Use expires_after_days: 5
+      customer email from user record
+      description: "Carga PagoYa — $X MXN"
+    - Create wallet_transactions row: type=load_oxxo, status=pending, store conekta_order_id and voucher_url and voucher_expires_at
+    - Return: { voucherUrl, barcodeReference, expiresAt, transactionId, amountMXN }
+
+POST /api/wallet/webhook/conekta
+  — Receives Conekta payment webhooks (charge.paid event)
+  — Verify the webhook signature using the existing Conekta webhook verification pattern in the codebase
+  — Find the wallet_transactions row by conekta_order_id
+  — If found and status is pending: call creditWallet() to confirm it
+  — Send WhatsApp to user: "✅ Tu saldo PagoYa fue acreditado\n\nMonto: $XXX MXN\nNuevo saldo: $XXX MXN\n\nYa puedes pagar tus servicios.\n_PagoYa — pagoseguromx.com_"
+  — Return 200 immediately (Conekta requires fast webhook response)
+  — All processing after the 200 is non-blocking
+
+GET /api/wallet/balance
+  — Returns { balanceMXN, currency, lastUpdated } for authenticated user
+
+GET /api/wallet/transactions?limit=N
+  — Returns last N wallet transactions (default 10, max 50) ordered by created_at desc
+  — Include type, amount, status, description, created_at, confirmed_at
+
+4. UPDATE /api/bills/pay TO SUPPORT WALLET PAYMENTS
+In src/billpay/routes/billpay.ts, the POST /api/bills/pay endpoint currently only handles card payments via Conekta/Stripe. Add wallet as a payment source option:
+  - Accept paymentSource: 'wallet' | 'card' in the request body
+  - When paymentSource is 'wallet':
+    - Check wallet balance before calling the provider
+    - If insufficient: return 400 with error 'INSUFFICIENT_BALANCE' and current balance
+    - Call debitWallet() AFTER the bill payment succeeds (not before — never debit if the bill pay fails)
+    - If debitWallet throws, log the error but do not fail the response — flag for manual reconciliation
+  - When paymentSource is 'card': existing flow unchanged
+
+5. ADD 4 TESTS to the existing test suite at src/billpay/tests/billpay.test.ts in a new group "Wallet":
+  - POST /api/wallet/load/oxxo with amount 200 returns voucherUrl and pending transaction
+  - POST /api/wallet/load/oxxo with amount 49 returns 400 (below minimum)
+  - Conekta webhook with valid charge.paid event credits wallet and sends WhatsApp
+  - POST /api/bills/pay with paymentSource=wallet and insufficient balance returns 400 INSUFFICIENT_BALANCE
+
+Run pnpm --filter @workspace/api-server run test:bills after and confirm all pass.

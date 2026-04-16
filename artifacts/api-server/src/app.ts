@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { handlePagoyaWebhook } from "./routes/pagoya";
+import { handleConektaWebhook } from "./wallet/routes/wallet.js";
 import { logger } from "./lib/logger";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,12 +34,18 @@ app.use(
 );
 app.use(cors());
 
-// Webhook must be mounted with raw body parser BEFORE express.json()
-// so Stripe signature verification receives the unmodified payload.
+// Webhooks must be mounted with raw body parser BEFORE express.json()
+// so signature verification receives the unmodified payload.
 app.post(
   "/api/pagoya/webhook",
   express.raw({ type: "application/json" }),
   handlePagoyaWebhook,
+);
+
+app.post(
+  "/api/wallet/webhook/conekta",
+  express.raw({ type: "application/json" }),
+  handleConektaWebhook,
 );
 
 app.use(express.json());

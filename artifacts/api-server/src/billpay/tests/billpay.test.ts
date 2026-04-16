@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable } from "@workspace/db";
+import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, walletsTable, walletTransactionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -29,10 +29,21 @@ vi.mock("../lib/notifications.js", () => ({
   SALDO_LOW_THRESHOLD: 500,
 }));
 
+vi.mock("../../wallet/lib/conekta.js", () => ({
+  createOxxoOrder: vi.fn().mockResolvedValue({
+    orderId: "ord_test_oxxo_001",
+    reference: "93000012345678",
+    voucherUrl: "https://test.conekta.io/barcode/ord_test_oxxo_001.png",
+    expiresAt: new Date(Date.now() + 5 * 86_400_000),
+  }),
+  verifyConektaWebhookSignature: vi.fn().mockReturnValue(true),
+}));
+
 // Import mocked modules AFTER vi.mock declarations (hoisting makes order safe)
 import { siprelProvider } from "../providers/siprel.js";
 import { evolucionaProvider } from "../providers/evoluciona.js";
 import { sendLowSaldoAlert } from "../lib/notifications.js";
+import { createOxxoOrder } from "../../wallet/lib/conekta.js";
 import app from "../../app.js";
 
 // ---------------------------------------------------------------------------
@@ -451,5 +462,117 @@ describe("8. Rep Commissions", () => {
 
     const commissions = await db.select().from(repCommissionsTable);
     expect(commissions).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. Wallet
+// ---------------------------------------------------------------------------
+describe("9. Wallet", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue({
+      success: true,
+      confirmationCode: "TEST-FOLIO-WALLET",
+      provider: "siprel" as const,
+      timestamp: new Date().toISOString(),
+      failoverUsed: false,
+      rawResponse: { folio: "TEST-FOLIO-WALLET" },
+    });
+  });
+
+  it("POST /api/wallet/load/oxxo with amount 200 returns voucherUrl and a pending transaction", async () => {
+    const res = await request(app)
+      .post("/api/wallet/load/oxxo")
+      .send({ telefono: "3221234567", amountMXN: 200 });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty("voucherUrl");
+    expect(res.body).toHaveProperty("barcodeReference");
+    expect(res.body).toHaveProperty("expiresAt");
+    expect(res.body).toHaveProperty("transactionId");
+    expect(res.body.amountMXN).toBe(200);
+    expect(vi.mocked(createOxxoOrder)).toHaveBeenCalledOnce();
+
+    const transactions = await db
+      .select()
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.conektaOrderId, "ord_test_oxxo_001"));
+
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0].status).toBe("pending");
+    expect(transactions[0].type).toBe("load_oxxo");
+    expect(parseFloat(transactions[0].amountMxn)).toBe(200);
+  });
+
+  it("POST /api/wallet/load/oxxo with amount 49 returns 400 (below minimum)", async () => {
+    const res = await request(app)
+      .post("/api/wallet/load/oxxo")
+      .send({ telefono: "3221234567", amountMXN: 49 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/50/);
+  });
+
+  it("Conekta webhook charge.paid credits the wallet and confirms the transaction", async () => {
+    // Setup: create user, wallet, and a pending OXXO transaction
+    await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
+    const [wallet] = await db
+      .insert(walletsTable)
+      .values({ userId: "3221234567", balanceMxn: "0.00" })
+      .returning();
+
+    const [pendingTx] = await db
+      .insert(walletTransactionsTable)
+      .values({
+        walletId: wallet.id,
+        type: "load_oxxo",
+        amountMxn: "300.00",
+        status: "pending",
+        conektaOrderId: "ord_webhook_test_001",
+        description: "Carga PagoYa — $300 MXN",
+      })
+      .returning();
+
+    const webhookBody = {
+      type: "charge.paid",
+      data: { object: { id: "ord_webhook_test_001" } },
+    };
+
+    const res = await request(app)
+      .post("/api/wallet/webhook/conekta")
+      .send(webhookBody);
+
+    expect(res.status).toBe(200);
+
+    // Give setImmediate callback time to complete all DB round-trips (~6 ops)
+    await tick(800);
+
+    const [updatedTx] = await db
+      .select()
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.id, pendingTx.id));
+
+    expect(updatedTx.status).toBe("confirmed");
+    expect(updatedTx.confirmedAt).not.toBeNull();
+
+    const [updatedWallet] = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.id, wallet.id));
+
+    expect(parseFloat(updatedWallet.balanceMxn)).toBe(300);
+  });
+
+  it("POST /api/bills/pay with paymentSource=wallet and insufficient balance returns 400 INSUFFICIENT_BALANCE", async () => {
+    // No wallet row — balance defaults to 0, which is less than the 850 MXN payment
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload,
+      paymentSource: "wallet",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("INSUFFICIENT_BALANCE");
+    expect(res.body).toHaveProperty("currentBalance");
+    expect(res.body.currentBalance).toBe(0);
   });
 });

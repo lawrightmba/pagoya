@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
+import { getOrCreateWallet, getBalance, debitWallet } from "../../wallet/services/wallet.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -47,15 +48,16 @@ router.get("/services/:serviceId", (req: Request, res: Response) => {
 // POST /api/bills/pay
 // Routes a bill payment through SIPREL or Evoluciona (first success wins),
 // persists the confirmed record + audit log to DB, and sends a WhatsApp receipt.
-// Body: { serviceId, referencia, monto, telefono, notas?, rep_id? }
+// Body: { serviceId, referencia, monto, telefono, notas?, rep_id?, paymentSource? }
 router.post("/pay", async (req: Request, res: Response) => {
-  const { serviceId, referencia, monto, telefono, notas, rep_id } = req.body as {
+  const { serviceId, referencia, monto, telefono, notas, rep_id, paymentSource } = req.body as {
     serviceId: string;
     referencia: string;
     monto: number;
     telefono: string;
     notas?: string;
     rep_id?: string;
+    paymentSource?: "wallet" | "card";
   };
 
   if (!serviceId || !referencia || !monto || !telefono) {
@@ -92,7 +94,29 @@ router.post("/pay", async (req: Request, res: Response) => {
     return;
   }
 
-  // 0. Resolve effective rep_id: body > user referral lookup
+  // 0a. Wallet balance pre-check (before we touch the DB or provider)
+  let walletId: string | null = null;
+  if (paymentSource === "wallet") {
+    try {
+      const wallet = await getOrCreateWallet(telefono);
+      const balance = parseFloat(wallet.balanceMxn ?? "0");
+      if (balance < montoNum) {
+        res.status(400).json({
+          error: "INSUFFICIENT_BALANCE",
+          currentBalance: balance,
+          required: montoNum,
+        });
+        return;
+      }
+      walletId = wallet.id;
+    } catch (walletErr: unknown) {
+      const message = walletErr instanceof Error ? walletErr.message : "Error al verificar saldo.";
+      res.status(500).json({ error: message });
+      return;
+    }
+  }
+
+  // 0b. Resolve effective rep_id: body > user referral lookup
   let effectiveRepId: string | null = rep_id ?? null;
   if (!effectiveRepId && telefono) {
     try {
@@ -180,7 +204,22 @@ router.post("/pay", async (req: Request, res: Response) => {
       });
     }
 
-    // 5. WhatsApp receipt (non-blocking)
+    // 5. Wallet debit — only after provider confirms; non-fatal on failure
+    if (walletId) {
+      debitWallet(
+        walletId,
+        montoNum,
+        `Pago ${service.name} ref ${referencia}`,
+      ).catch((walletErr: unknown) => {
+        const msg = walletErr instanceof Error ? walletErr.message : String(walletErr);
+        logger.error(
+          { walletId, paymentId, amount: montoNum, err: msg },
+          "wallet: debit failed after confirmed bill pay — flag for reconciliation",
+        );
+      });
+    }
+
+    // 6. WhatsApp receipt (non-blocking)
     sendWhatsAppReceipt({
       telefono,
       serviceName: service.name,
