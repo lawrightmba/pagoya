@@ -26,17 +26,23 @@ export async function routePayment(req: BillPayRequest): Promise<BillPayResult> 
     );
   }
 
-  // Try each provider in order, first success wins.
   const errors: string[] = [];
-  for (const provider of candidates) {
+  let failoverUsed = false;
+
+  for (let i = 0; i < candidates.length; i++) {
+    const provider = candidates[i];
     try {
       const result = await provider.pay(service, req);
-      return result;
+      return { ...result, failoverUsed };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push(`[${provider.name}] ${msg}`);
+      // If first provider failed and we're about to try a fallback, mark failover
+      if (i === 0 && candidates.length > 1) failoverUsed = true;
     }
   }
 
   throw new Error(`Todos los proveedores fallaron:\n${errors.join("\n")}`);
 }
+
+export { siprelProvider };

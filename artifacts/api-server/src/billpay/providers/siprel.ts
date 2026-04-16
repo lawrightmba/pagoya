@@ -47,7 +47,22 @@ export const siprelProvider: ProviderAdapter = {
       confirmationCode,
       provider: "siprel",
       timestamp: new Date().toISOString(),
+      failoverUsed: false,
       rawResponse: data,
     };
+  },
+
+  async getSaldoBalance(): Promise<number> {
+    const apiKey = process.env.SIPREL_API_KEY!;
+    const userId = process.env.SIPREL_USER_ID!;
+    const baseUrl = process.env.SIPREL_BASE_URL!;
+
+    const response = await fetch(`${baseUrl}/balance?user_id=${userId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!response.ok) throw new Error(`SIPREL balance error ${response.status}`);
+    const data = (await response.json()) as { balance?: number; saldo?: number };
+    return data.balance ?? data.saldo ?? 0;
   },
 };

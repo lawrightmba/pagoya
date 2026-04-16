@@ -22,6 +22,8 @@ export interface BillService {
   logoEmoji: string;
   siprelServiceId?: string;
   evolucionaServiceId?: string;
+  minReferencia?: number;
+  minAmount?: number;
 }
 
 export interface BillPayRequest {
@@ -37,6 +39,7 @@ export interface BillPayResult {
   confirmationCode: string;
   provider: ProviderName;
   timestamp: string;
+  failoverUsed: boolean;
   rawResponse?: unknown;
 }
 
@@ -44,4 +47,5 @@ export interface ProviderAdapter {
   name: ProviderName;
   isAvailable(): boolean;
   pay(service: BillService, req: BillPayRequest): Promise<BillPayResult>;
+  getSaldoBalance?(): Promise<number>;
 }

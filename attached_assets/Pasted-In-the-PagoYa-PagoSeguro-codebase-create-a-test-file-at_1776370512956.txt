@@ -1,0 +1,45 @@
+In the PagoYa/PagoSeguro codebase, create a test file at src/billpay/tests/billpay.test.ts using whichever test framework is already configured (check package.json — likely vitest or jest).
+
+The tests should mock the SIPREL and Evoluciona provider HTTP calls using the existing mock/stub pattern in the codebase. Do not make real HTTP requests.
+
+Write the following test cases:
+
+1. CATALOG ENDPOINT
+   - GET /api/bills/catalog returns 200 with categories array
+   - Each category has labelEs, labelEn, and services array
+   - CFE, Telcel recarga, and Telmex are present in the response
+
+2. REFERENCE VALIDATION
+   - POST /api/bills/pay with a CFE reference shorter than 12 digits returns 400
+   - POST /api/bills/pay with a Telcel recarga amount below 30 MXN returns 400
+   - POST /api/bills/pay with an unknown serviceId returns 404
+
+3. HAPPY PATH — SIPREL SUCCESS
+   - Mock SIPREL payBill to return { success: true, externalTxId: 'TEST-FOLIO-001', receiptData: { folio: 'TEST-FOLIO-001', authCode: 'AUTH123' } }
+   - POST /api/bills/pay with valid CFE payload returns 200 with folio and authCode
+   - Verify bill_payments table row has status = 'confirmed' and provider_used = 'siprel'
+   - Verify bill_payment_audit has two rows: payment.created and payment.confirmed
+
+4. FAILOVER — SIPREL FAILS, EVOLUCIONA SUCCEEDS
+   - Mock SIPREL payBill to return { success: false, errorCode: 'NETWORK_ERROR' }
+   - Mock Evoluciona payBill to return { success: true, externalTxId: 'EVOL-001', receiptData: { folio: 'EVOL-001', authCode: 'EVAUTH1' } }
+   - POST /api/bills/pay with valid CFE payload returns 200
+   - Verify bill_payments row has failover_used = true and provider_used = 'evoluciona'
+
+5. BOTH PROVIDERS FAIL
+   - Mock both providers to return { success: false, errorCode: 'NETWORK_ERROR' }
+   - POST /api/bills/pay returns 502
+   - Verify bill_payments row has status = 'failed'
+   - Verify bill_payment_audit has payment.created and payment.failed rows
+
+6. SALDO LOW-BALANCE ALERT
+   - Mock SIPREL getSaldoBalance to return 400 (below 500 MXN threshold)
+   - Mock SIPREL payBill to return success
+   - Verify the Twilio WhatsApp alert fires to ADMIN_WHATSAPP_NUMBER after a successful payment
+
+7. HISTORY ENDPOINT
+   - GET /api/bills/history returns 200 with payments array for authenticated user
+   - Payments are ordered by created_at descending
+   - Only returns payments belonging to the authenticated user (not other users)
+
+Use the existing test database setup pattern in the codebase for DB assertions. After all tests, add a script to package.json: "test:bills": "vitest run src/billpay/tests/billpay.test.ts" (or jest equivalent).

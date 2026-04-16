@@ -1,8 +1,23 @@
-import type { BillService } from "../types/billpay.js";
+import type { BillService, BillCategory } from "../types/billpay.js";
+
+export const CATEGORY_LABELS: Record<BillCategory, { labelEs: string; labelEn: string }> = {
+  "Luz":           { labelEs: "Luz",             labelEn: "Electricity" },
+  "Agua":          { labelEs: "Agua",             labelEn: "Water" },
+  "Gas":           { labelEs: "Gas",              labelEn: "Gas" },
+  "Internet":      { labelEs: "Internet",         labelEn: "Internet" },
+  "Cable":         { labelEs: "Cable / Satélite", labelEn: "Cable / Satellite" },
+  "Teléfono móvil":{ labelEs: "Teléfono Móvil",  labelEn: "Mobile Phone" },
+  "Streaming":     { labelEs: "Streaming",        labelEn: "Streaming" },
+  "Préstamos":     { labelEs: "Préstamos",        labelEn: "Loans" },
+  "Seguro":        { labelEs: "Seguros",          labelEn: "Insurance" },
+  "Escuela":       { labelEs: "Educación",        labelEn: "Education" },
+  "Renta":         { labelEs: "Renta",            labelEn: "Rent" },
+  "Otro":          { labelEs: "Otro",             labelEn: "Other" },
+};
 
 export const BILL_CATALOG: BillService[] = [
   // LUZ
-  { id: "cfe", name: "CFE", category: "Luz", providers: ["siprel", "evoluciona"], logoEmoji: "⚡", siprelServiceId: "CFE", evolucionaServiceId: "CFE_LUZ" },
+  { id: "cfe", name: "CFE", category: "Luz", providers: ["siprel", "evoluciona"], logoEmoji: "⚡", siprelServiceId: "CFE", evolucionaServiceId: "CFE_LUZ", minReferencia: 12 },
 
   // AGUA
   { id: "sacmex", name: "SACMEX", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SACMEX" },
@@ -25,9 +40,10 @@ export const BILL_CATALOG: BillService[] = [
 
   // TELÉFONO MÓVIL
   { id: "telcel", name: "Telcel", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "TELCEL", evolucionaServiceId: "TELCEL" },
+  { id: "telcel_recarga", name: "Telcel Recarga", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "TELCEL_RECARGA", evolucionaServiceId: "TELCEL_RECARGA", minAmount: 30 },
   { id: "at_and_t", name: "AT&T", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "ATT", evolucionaServiceId: "ATT" },
   { id: "movistar", name: "Movistar", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOVISTAR", evolucionaServiceId: "MOVISTAR" },
-  { id: "telmex_fijo", name: "Telmex Fijo", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "☎️", siprelServiceId: "TELMEX_FIJO", evolucionaServiceId: "TELMEX_FIJO" },
+  { id: "telmex_fijo", name: "Telmex", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "☎️", siprelServiceId: "TELMEX_FIJO", evolucionaServiceId: "TELMEX_FIJO" },
 
   // STREAMING
   { id: "netflix", name: "Netflix", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎬", evolucionaServiceId: "NETFLIX" },
@@ -65,4 +81,18 @@ export function getCatalogSummary() {
     categories[svc.category].push({ id: svc.id, name: svc.name, logoEmoji: svc.logoEmoji, providers: svc.providers });
   }
   return categories;
+}
+
+export function getCategoriesWithTranslations() {
+  const grouped: Record<string, { id: string; name: string; logoEmoji: string; providers: string[] }[]> = {};
+  for (const svc of BILL_CATALOG) {
+    if (!grouped[svc.category]) grouped[svc.category] = [];
+    grouped[svc.category].push({ id: svc.id, name: svc.name, logoEmoji: svc.logoEmoji, providers: svc.providers });
+  }
+  return (Object.keys(grouped) as BillCategory[]).map((cat) => ({
+    id: cat.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+    labelEs: CATEGORY_LABELS[cat]?.labelEs ?? cat,
+    labelEn: CATEGORY_LABELS[cat]?.labelEn ?? cat,
+    services: grouped[cat],
+  }));
 }

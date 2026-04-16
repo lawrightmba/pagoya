@@ -47,6 +47,7 @@ export const evolucionaProvider: ProviderAdapter = {
       confirmationCode,
       provider: "evoluciona",
       timestamp: new Date().toISOString(),
+      failoverUsed: false,
       rawResponse: data,
     };
   },

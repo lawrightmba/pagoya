@@ -1,0 +1,363 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import request from "supertest";
+import { db, billPaymentsTable, billPaymentAuditTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+
+// ---------------------------------------------------------------------------
+// Mock provider modules — vi.mock is hoisted above imports by vitest
+// ---------------------------------------------------------------------------
+vi.mock("../providers/siprel.js", () => ({
+  siprelProvider: {
+    name: "siprel" as const,
+    isAvailable: vi.fn().mockReturnValue(true),
+    pay: vi.fn(),
+    getSaldoBalance: vi.fn(),
+  },
+}));
+
+vi.mock("../providers/evoluciona.js", () => ({
+  evolucionaProvider: {
+    name: "evoluciona" as const,
+    isAvailable: vi.fn().mockReturnValue(true),
+    pay: vi.fn(),
+  },
+}));
+
+vi.mock("../lib/notifications.js", () => ({
+  sendWhatsAppReceipt: vi.fn().mockResolvedValue(undefined),
+  sendLowSaldoAlert: vi.fn().mockResolvedValue(undefined),
+  SALDO_LOW_THRESHOLD: 500,
+}));
+
+// Import mocked modules AFTER vi.mock declarations (hoisting makes order safe)
+import { siprelProvider } from "../providers/siprel.js";
+import { evolucionaProvider } from "../providers/evoluciona.js";
+import { sendLowSaldoAlert } from "../lib/notifications.js";
+import app from "../../app.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const validCfePayload = {
+  serviceId: "cfe",
+  referencia: "123456789012", // 12 digits — meets minReferencia requirement
+  monto: 850,
+  telefono: "3221234567",
+};
+
+const siprelSuccess = {
+  success: true,
+  confirmationCode: "TEST-FOLIO-001",
+  provider: "siprel" as const,
+  timestamp: new Date().toISOString(),
+  failoverUsed: false,
+  rawResponse: { folio: "TEST-FOLIO-001", authCode: "AUTH123" },
+};
+
+const evolucionaSuccess = {
+  success: true,
+  confirmationCode: "EVOL-001",
+  provider: "evoluciona" as const,
+  timestamp: new Date().toISOString(),
+  failoverUsed: false,
+  rawResponse: { folio: "EVOL-001", authCode: "EVAUTH1" },
+};
+
+/** Wait a tick so non-blocking async side-effects (saldo check, etc.) can settle */
+const tick = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+
+// ---------------------------------------------------------------------------
+// 1. CATALOG ENDPOINT
+// ---------------------------------------------------------------------------
+describe("1. Catalog endpoint", () => {
+  it("GET /api/bills/catalog returns 200 with a categories array", async () => {
+    const res = await request(app).get("/api/bills/catalog");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.categories)).toBe(true);
+    expect(res.body.categories.length).toBeGreaterThan(0);
+  });
+
+  it("each category has labelEs, labelEn, and a services array", async () => {
+    const res = await request(app).get("/api/bills/catalog");
+    for (const cat of res.body.categories) {
+      expect(cat).toHaveProperty("labelEs");
+      expect(cat).toHaveProperty("labelEn");
+      expect(Array.isArray(cat.services)).toBe(true);
+    }
+  });
+
+  it("CFE is present in the catalog", async () => {
+    const res = await request(app).get("/api/bills/catalog");
+    const allServices = res.body.categories.flatMap((c: { services: { id: string }[] }) => c.services);
+    const ids = allServices.map((s: { id: string }) => s.id);
+    expect(ids).toContain("cfe");
+  });
+
+  it("Telcel recarga is present in the catalog", async () => {
+    const res = await request(app).get("/api/bills/catalog");
+    const allServices = res.body.categories.flatMap((c: { services: { id: string }[] }) => c.services);
+    const ids = allServices.map((s: { id: string }) => s.id);
+    expect(ids).toContain("telcel_recarga");
+  });
+
+  it("Telmex (telmex_fijo) is present in the catalog", async () => {
+    const res = await request(app).get("/api/bills/catalog");
+    const allServices = res.body.categories.flatMap((c: { services: { id: string }[] }) => c.services);
+    const ids = allServices.map((s: { id: string }) => s.id);
+    expect(ids).toContain("telmex_fijo");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 2. REFERENCE & AMOUNT VALIDATION
+// ---------------------------------------------------------------------------
+describe("2. Reference and amount validation", () => {
+  it("POST /api/bills/pay with CFE reference shorter than 12 digits returns 400", async () => {
+    const res = await request(app).post("/api/bills/pay").send({
+      ...validCfePayload,
+      referencia: "12345", // only 5 digits — too short
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/12 dígitos/i);
+  });
+
+  it("POST /api/bills/pay with Telcel recarga amount below 30 MXN returns 400", async () => {
+    const res = await request(app).post("/api/bills/pay").send({
+      serviceId: "telcel_recarga",
+      referencia: "3221234567",
+      monto: 20, // below 30 MXN minimum
+      telefono: "3221234567",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/30 MXN/i);
+  });
+
+  it("POST /api/bills/pay with an unknown serviceId returns 404", async () => {
+    const res = await request(app).post("/api/bills/pay").send({
+      serviceId: "servicio_inexistente",
+      referencia: "123456789012",
+      monto: 100,
+      telefono: "3221234567",
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3. HAPPY PATH — SIPREL SUCCESS
+// ---------------------------------------------------------------------------
+describe("3. Happy path — SIPREL success", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500); // above threshold
+  });
+
+  it("POST /api/bills/pay returns 201 with folio and authCode", async () => {
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(201);
+    expect(res.body.folio).toBe("TEST-FOLIO-001");
+    expect(res.body.authCode).toBe("AUTH123");
+    expect(res.body.provider).toBe("siprel");
+    expect(res.body.failoverUsed).toBe(false);
+  });
+
+  it("bill_payments row has status=confirmed and provider_used=siprel", async () => {
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEST-FOLIO-001"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.status).toBe("confirmed");
+    expect(payment.providerUsed).toBe("siprel");
+    expect(payment.failoverUsed).toBe(false);
+  });
+
+  it("bill_payment_audit has two rows: payment.created and payment.confirmed", async () => {
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEST-FOLIO-001"))
+      .limit(1);
+
+    const auditRows = await db
+      .select()
+      .from(billPaymentAuditTable)
+      .where(eq(billPaymentAuditTable.paymentId, payment.id))
+      .orderBy(billPaymentAuditTable.createdAt);
+
+    expect(auditRows).toHaveLength(2);
+    expect(auditRows[0].event).toBe("payment.created");
+    expect(auditRows[1].event).toBe("payment.confirmed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. FAILOVER — SIPREL FAILS, EVOLUCIONA SUCCEEDS
+// ---------------------------------------------------------------------------
+describe("4. Failover — SIPREL fails, Evoluciona succeeds", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+    vi.mocked(evolucionaProvider.pay).mockResolvedValue(evolucionaSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+  });
+
+  it("POST /api/bills/pay returns 201 via Evoluciona after SIPREL failure", async () => {
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(201);
+    expect(res.body.provider).toBe("evoluciona");
+    expect(res.body.confirmationCode).toBe("EVOL-001");
+  });
+
+  it("bill_payments row has failover_used=true and provider_used=evoluciona", async () => {
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "EVOL-001"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.failoverUsed).toBe(true);
+    expect(payment.providerUsed).toBe("evoluciona");
+    expect(payment.status).toBe("confirmed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. BOTH PROVIDERS FAIL
+// ---------------------------------------------------------------------------
+describe("5. Both providers fail", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+    vi.mocked(evolucionaProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+  });
+
+  it("POST /api/bills/pay returns 502 when all providers fail", async () => {
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(502);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("bill_payments row has status=failed", async () => {
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+
+    const payments = await db
+      .select()
+      .from(billPaymentsTable)
+      .orderBy(desc(billPaymentsTable.createdAt))
+      .limit(1);
+
+    expect(payments).toHaveLength(1);
+    expect(payments[0].status).toBe("failed");
+  });
+
+  it("bill_payment_audit has payment.created and payment.failed rows", async () => {
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .orderBy(desc(billPaymentsTable.createdAt))
+      .limit(1);
+
+    const auditRows = await db
+      .select()
+      .from(billPaymentAuditTable)
+      .where(eq(billPaymentAuditTable.paymentId, payment.id))
+      .orderBy(billPaymentAuditTable.createdAt);
+
+    expect(auditRows.length).toBeGreaterThanOrEqual(2);
+    expect(auditRows[0].event).toBe("payment.created");
+    expect(auditRows[auditRows.length - 1].event).toBe("payment.failed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. SALDO LOW-BALANCE ALERT
+// ---------------------------------------------------------------------------
+describe("6. Saldo low-balance alert", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(400); // below 500 threshold
+    vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
+  });
+
+  it("sendLowSaldoAlert fires to ADMIN_WHATSAPP_NUMBER when saldo < 500 after success", async () => {
+    process.env.ADMIN_WHATSAPP_NUMBER = "523221234567";
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(201);
+
+    // Wait for the non-blocking saldo check to resolve
+    await tick();
+
+    expect(vi.mocked(sendLowSaldoAlert)).toHaveBeenCalledWith(400);
+    delete process.env.ADMIN_WHATSAPP_NUMBER;
+  });
+
+  it("sendLowSaldoAlert is NOT called when saldo >= 500", async () => {
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.clearAllMocks();
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
+
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+    await tick();
+
+    expect(vi.mocked(sendLowSaldoAlert)).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. HISTORY ENDPOINT
+// ---------------------------------------------------------------------------
+describe("7. History endpoint", () => {
+  beforeEach(() => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+  });
+
+  it("GET /api/bills/history returns 200 with a payments array", async () => {
+    const res = await request(app).get("/api/bills/history");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.payments)).toBe(true);
+  });
+
+  it("payments are ordered by created_at descending", async () => {
+    // Create two payments so we can verify ordering
+    const p1 = { ...siprelSuccess, confirmationCode: "FOLIO-A" };
+    const p2 = { ...siprelSuccess, confirmationCode: "FOLIO-B" };
+    vi.mocked(siprelProvider.pay)
+      .mockResolvedValueOnce(p1)
+      .mockResolvedValueOnce(p2);
+
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+    // Small delay so timestamps differ
+    await tick(20);
+    await request(app).post("/api/bills/pay").send({ ...validCfePayload, referencia: "999999999999" });
+
+    const res = await request(app).get("/api/bills/history");
+    expect(res.status).toBe(200);
+
+    const payments = res.body.payments as { confirmationCode: string; createdAt: string }[];
+    expect(payments.length).toBeGreaterThanOrEqual(2);
+
+    // Most recent should be first
+    const times = payments.map((p) => new Date(p.createdAt).getTime());
+    for (let i = 0; i < times.length - 1; i++) {
+      expect(times[i]).toBeGreaterThanOrEqual(times[i + 1]);
+    }
+  });
+
+  it("history returns at most 10 records", async () => {
+    const res = await request(app).get("/api/bills/history");
+    expect(res.body.payments.length).toBeLessThanOrEqual(10);
+  });
+});
