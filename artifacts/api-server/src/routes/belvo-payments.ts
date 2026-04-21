@@ -12,8 +12,8 @@ const router = Router();
 
 // Belvo Direct Debit uses a SEPARATE base URL and API keys from aggregation
 const DD_BASE_URL = process.env.BELVO_DD_ENV === "production"
-  ? "https://api.belvo.com"
-  : "https://sandbox.belvo.com";
+  ? "https://api.directdebit.belvo.com"
+  : "https://api.sandbox.directdebit.belvo.com";
 
 // Direct Debit uses api-key-id / api-key-secret headers (not Basic auth)
 function ddHeaders() {
