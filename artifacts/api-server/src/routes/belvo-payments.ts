@@ -292,11 +292,14 @@ router.get("/payment-requests/:paymentRequestId", async (req: Request, res: Resp
 router.post("/webhook", async (req: Request, res: Response) => {
   try {
     const event = req.body;
-    const eventType = event?.event_type || event?.type;
+    const eventType = event?.eventCode || event?.event_type || event?.type;
+    const paymentMethodId = event?.details?.id || event?.paymentMethodId;
+    const paymentRequestId = event?.details?.id || event?.paymentRequestId;
+    const amount = event?.details?.amount || event?.amount;
+    const reason = event?.details?.failedReason || event?.details?.failedMessage || event?.reason;
     logger.info({ eventType, payload: event }, "Belvo DD webhook received");
 
     if (eventType === "payment_method_registration_successful") {
-      const { paymentMethodId } = event;
       logger.info({ paymentMethodId }, "Payment method registered — ready to charge");
       await db.update(belvoDdPaymentMethodsTable)
         .set({ status: "active" })
@@ -304,7 +307,6 @@ router.post("/webhook", async (req: Request, res: Response) => {
     }
 
     if (eventType === "payment_request_successful") {
-      const { paymentRequestId, paymentMethodId, amount } = event;
       logger.info({ paymentRequestId, paymentMethodId, amount }, "Payment request successful — funds debited");
       await db.update(belvoDdPaymentRequestsTable)
         .set({ status: "successful", settledAt: new Date() })
@@ -312,7 +314,6 @@ router.post("/webhook", async (req: Request, res: Response) => {
     }
 
     if (eventType === "payment_request_failed") {
-      const { paymentRequestId, reason } = event;
       logger.warn({ paymentRequestId, reason }, "Payment request failed");
       await db.update(belvoDdPaymentRequestsTable)
         .set({ status: "failed", failureReason: reason || "unknown" })
