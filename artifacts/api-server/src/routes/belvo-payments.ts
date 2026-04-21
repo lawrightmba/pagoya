@@ -1,5 +1,12 @@
 import { Router, Request, Response } from "express";
+import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import {
+  db,
+  belvoDdCustomersTable,
+  belvoDdPaymentMethodsTable,
+  belvoDdPaymentRequestsTable,
+} from "@workspace/db";
 
 const router = Router();
 
@@ -49,6 +56,12 @@ router.post("/customers", async (req: Request, res: Response) => {
       body: JSON.stringify(payload),
     });
     logger.info({ customerId: data.customerId }, "Belvo DD customer created");
+    await db.insert(belvoDdCustomersTable).values({
+      userId: (req as any).user?.id || 0,
+      belvoCustomerId: data.customerId,
+      documentType,
+      documentNumber,
+    }).onConflictDoNothing();
     res.json({ customerId: data.customerId });
   } catch (err: any) {
     logger.error({ err }, "Belvo DD customer creation failed");
@@ -88,6 +101,14 @@ router.post("/payment-methods", async (req: Request, res: Response) => {
       body: JSON.stringify(payload),
     });
     logger.info({ paymentMethodId: data.paymentMethodId, customerId }, "Belvo DD payment method created");
+    await db.insert(belvoDdPaymentMethodsTable).values({
+      userId: (req as any).user?.id || 0,
+      belvoCustomerId: customerId,
+      belvoPaymentMethodId: data.paymentMethodId,
+      accountType,
+      bank,
+      accountLast4: String(accountNumber).slice(-4),
+    }).onConflictDoNothing();
     res.json({ paymentMethodId: data.paymentMethodId });
   } catch (err: any) {
     logger.error({ err }, "Belvo DD payment method creation failed");
@@ -123,6 +144,9 @@ router.post("/consents", async (req: Request, res: Response) => {
       body: JSON.stringify({ paymentMethodId }),
     });
     logger.info({ consentId: data.consentId, paymentMethodId }, "Belvo DD consent initialized");
+    await db.update(belvoDdPaymentMethodsTable)
+      .set({ consentId: data.consentId, consentStatus: "awaiting_information" })
+      .where(eq(belvoDdPaymentMethodsTable.belvoPaymentMethodId, paymentMethodId));
     res.json({ consentId: data.consentId, status: data.status });
   } catch (err: any) {
     logger.error({ err }, "Belvo DD consent creation failed");
@@ -218,6 +242,18 @@ router.post("/payment-requests", async (req: Request, res: Response) => {
       body: JSON.stringify({ paymentMethodId, currency, amount: String(amount), reference }),
     });
     logger.info({ paymentRequestId: data.paymentRequestId, paymentMethodId, amount }, "Belvo DD payment request created");
+    const category = req.body.category || "general";
+    const leaseId = req.body.leaseId || null;
+    await db.insert(belvoDdPaymentRequestsTable).values({
+      userId: (req as any).user?.id || 0,
+      belvoPaymentMethodId: paymentMethodId,
+      belvoPaymentRequestId: data.paymentRequestId,
+      leaseId,
+      category,
+      amountCentavos: parseInt(String(amount)),
+      currency: currency || "mxn",
+      reference,
+    }).onConflictDoNothing();
     res.json({ paymentRequestId: data.paymentRequestId });
   } catch (err: any) {
     logger.error({ err }, "Belvo DD payment request failed");
@@ -262,21 +298,25 @@ router.post("/webhook", async (req: Request, res: Response) => {
     if (eventType === "payment_method_registration_successful") {
       const { paymentMethodId } = event;
       logger.info({ paymentMethodId }, "Payment method registered — ready to charge");
-      // TODO: update belvo_payment_methods table status = 'active' where paymentMethodId matches
+      await db.update(belvoDdPaymentMethodsTable)
+        .set({ status: "active" })
+        .where(eq(belvoDdPaymentMethodsTable.belvoPaymentMethodId, paymentMethodId));
     }
 
     if (eventType === "payment_request_successful") {
       const { paymentRequestId, paymentMethodId, amount } = event;
       logger.info({ paymentRequestId, paymentMethodId, amount }, "Payment request successful — funds debited");
-      // TODO: update payment_records table status = 'confirmed' where paymentRequestId matches
-      // TODO: send Twilio WhatsApp confirmation to landlord and tenant
+      await db.update(belvoDdPaymentRequestsTable)
+        .set({ status: "successful", settledAt: new Date() })
+        .where(eq(belvoDdPaymentRequestsTable.belvoPaymentRequestId, paymentRequestId));
     }
 
     if (eventType === "payment_request_failed") {
       const { paymentRequestId, reason } = event;
       logger.warn({ paymentRequestId, reason }, "Payment request failed");
-      // TODO: update payment_records table status = 'failed'
-      // TODO: send Twilio WhatsApp failure alert
+      await db.update(belvoDdPaymentRequestsTable)
+        .set({ status: "failed", failureReason: reason || "unknown" })
+        .where(eq(belvoDdPaymentRequestsTable.belvoPaymentRequestId, paymentRequestId));
     }
 
     res.json({ received: true });

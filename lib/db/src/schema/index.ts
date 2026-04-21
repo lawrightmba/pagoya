@@ -25,3 +25,7 @@ export * from "./users";
 export * from "./rep_commissions";
 export * from "./wallets";
 export * from "./wallet_transactions";
+export * from "./belvo_links";
+export * from "./belvo_dd_customers";
+export * from "./belvo_dd_payment_methods";
+export * from "./belvo_dd_payment_requests";

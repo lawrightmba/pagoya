@@ -1,0 +1,152 @@
+Do all of the following automatically in one go. Make every change, run the migration, restart the server, and confirm everything is working. Do not stop and ask me anything. Do not modify any existing files except to add new tables to the existing Drizzle schema file.
+
+1. Find the existing Drizzle schema file (wherever pgTable definitions for users, leases, payments etc. live). Add these four new tables at the bottom of that file — do not touch any existing table definitions:
+
+export const belvoLinks = pgTable("belvo_links", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  linkId: text("link_id").notNull().unique(),
+  institution: text("institution"),
+  accountVerified: boolean("account_verified").default(false),
+  kycVerified: boolean("kyc_verified").default(false),
+  kycName: text("kyc_name"),
+  kycDocumentId: text("kyc_document_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const belvoDdCustomers = pgTable("belvo_dd_customers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  belvoCustomerId: text("belvo_customer_id").notNull().unique(),
+  documentType: text("document_type"),
+  documentNumber: text("document_number"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const belvoDdPaymentMethods = pgTable("belvo_dd_payment_methods", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  belvoCustomerId: text("belvo_customer_id").notNull(),
+  belvoPaymentMethodId: text("belvo_payment_method_id").notNull().unique(),
+  accountType: text("account_type"),
+  bank: text("bank"),
+  accountLast4: text("account_last_4"),
+  status: text("status").default("pending"),
+  consentId: text("consent_id"),
+  consentStatus: text("consent_status").default("awaiting_information"),
+  consentSubmittedAt: timestamp("consent_submitted_at"),
+  consentConfirmedAt: timestamp("consent_confirmed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const belvoDdPaymentRequests = pgTable("belvo_dd_payment_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  belvoPaymentMethodId: text("belvo_payment_method_id").notNull(),
+  belvoPaymentRequestId: text("belvo_payment_request_id").notNull().unique(),
+  leaseId: integer("lease_id").references(() => leases.id),
+  category: text("category").notNull(),
+  amountCentavos: integer("amount_centavos").notNull(),
+  currency: text("currency").default("mxn"),
+  reference: text("reference").notNull(),
+  status: text("status").default("initial"),
+  failureReason: text("failure_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  settledAt: timestamp("settled_at"),
+});
+
+2. Run drizzle-kit push to apply all four tables to the live Postgres database.
+
+3. Confirm all four tables exist in the database:
+   SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'belvo%';
+
+4. Update artifacts/api-server/src/routes/belvo-payments.ts to wire in real DB writes at the three TODO comments. Find these three TODO blocks and replace them:
+
+Replace this TODO:
+// TODO: update belvo_payment_methods table status = 'active' where paymentMethodId matches
+
+With this:
+await db.update(belvoDdPaymentMethods)
+  .set({ status: "active" })
+  .where(eq(belvoDdPaymentMethods.belvoPaymentMethodId, paymentMethodId));
+
+Replace this TODO:
+// TODO: update payment_records table status = 'confirmed' where paymentRequestId matches
+// TODO: send Twilio WhatsApp confirmation to landlord and tenant
+
+With this:
+await db.update(belvoDdPaymentRequests)
+  .set({ status: "successful", settledAt: new Date() })
+  .where(eq(belvoDdPaymentRequests.belvoPaymentRequestId, paymentRequestId));
+
+Replace this TODO:
+// TODO: update payment_records table status = 'failed'
+// TODO: send Twilio WhatsApp failure alert
+
+With this:
+await db.update(belvoDdPaymentRequests)
+  .set({ status: "failed", failureReason: reason || "unknown" })
+  .where(eq(belvoDdPaymentRequests.belvoPaymentRequestId, paymentRequestId));
+
+Make sure to add the necessary imports at the top of belvo-payments.ts:
+import { db } from "../db";
+import { belvoDdPaymentMethods, belvoDdPaymentRequests } from "../schema";
+import { eq } from "drizzle-orm";
+
+5. Update artifacts/api-server/src/routes/belvo-payments.ts POST /customers endpoint to also write to the database after a successful Belvo API response. After the line:
+logger.info({ customerId: data.customerId }, "Belvo DD customer created");
+
+Add:
+await db.insert(belvoDdCustomers).values({
+  userId: (req as any).user?.id || 0,
+  belvoCustomerId: data.customerId,
+  documentType,
+  documentNumber,
+}).onConflictDoNothing();
+
+Add belvoDdCustomers to the imports from schema.
+
+6. Update POST /payment-methods to write to the database after successful Belvo response. After:
+logger.info({ paymentMethodId: data.paymentMethodId, customerId }, "Belvo DD payment method created");
+
+Add:
+await db.insert(belvoDdPaymentMethods).values({
+  userId: (req as any).user?.id || 0,
+  belvoCustomerId: customerId,
+  belvoPaymentMethodId: data.paymentMethodId,
+  accountType,
+  bank,
+  accountLast4: String(accountNumber).slice(-4),
+}).onConflictDoNothing();
+
+Add belvoDdPaymentMethods to the imports from schema.
+
+7. Update POST /payment-requests to write to the database after successful Belvo response. After:
+logger.info({ paymentRequestId: data.paymentRequestId, paymentMethodId, amount }, "Belvo DD payment request created");
+
+Add:
+const category = req.body.category || "general";
+const leaseId = req.body.leaseId || null;
+await db.insert(belvoDdPaymentRequests).values({
+  userId: (req as any).user?.id || 0,
+  belvoPaymentMethodId: paymentMethodId,
+  belvoPaymentRequestId: data.paymentRequestId,
+  leaseId,
+  category,
+  amountCentavos: parseInt(String(amount)),
+  currency: currency || "mxn",
+  reference,
+}).onConflictDoNothing();
+
+Add belvoDdPaymentRequests to the imports from schema.
+
+8. Update POST /consents endpoint to write the consentId back to the payment method record. After:
+logger.info({ consentId: data.consentId, paymentMethodId }, "Belvo DD consent initialized");
+
+Add:
+await db.update(belvoDdPaymentMethods)
+  .set({ consentId: data.consentId, consentStatus: "awaiting_information" })
+  .where(eq(belvoDdPaymentMethods.belvoPaymentMethodId, paymentMethodId));
+
+9. Restart the server and confirm it starts cleanly with no TypeScript errors.
