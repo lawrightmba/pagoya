@@ -4,6 +4,7 @@ import pagoyaRouter from "./pagoya";
 import billPayRouter from "../billpay/routes/billpay.js";
 import walletRouter from "../wallet/routes/wallet.js";
 import { belvoPaymentsRouter } from "./belvo-payments";
+import proxyRouter from "./proxy";
 
 const router: IRouter = Router();
 
@@ -12,6 +13,7 @@ router.use("/pagoya", pagoyaRouter);
 router.use("/bills", billPayRouter);
 router.use("/wallet", walletRouter);
 router.use("/belvo-payments", belvoPaymentsRouter);
+router.use("/", proxyRouter);
 
 // POST /api/sync
 // Called by the "Sync Latest" button on the command center dashboard.

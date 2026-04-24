@@ -1,0 +1,110 @@
+Rebuild the command center at artifacts/pagoya/public/command-center.html 
+to pull live stats from real data sources instead of hardcoded values. 
+The dashboard should self-update every time it loads and every 60 seconds.
+
+─────────────────────────────────────────
+PAGOSEGURO CARD — Live Data Sources
+─────────────────────────────────────────
+
+1. HubSpot Contact Count (broker outreach list size)
+   - On page load, call GET /api/hubspot/contacts/count
+   - Create this endpoint in server/routes.ts:
+     • Calls HubSpot CRM Search API:
+       POST https://api.hubapi.com/crm/v3/objects/contacts/search
+       Headers: Authorization: Bearer {HUBSPOT_ACCESS_TOKEN}
+       Body: { "filterGroups": [{"filters": [{"propertyName": "industry", 
+               "operator": "EQ", "value": "Real Estate"}]}], "limit": 1 }
+     • Returns { count: total } from response.total
+   - Display as "X Broker Contacts" on the PagoSeguro card
+   - HUBSPOT_ACCESS_TOKEN is already in Replit Secrets
+
+2. Touch Sequence Status (hardcoded schedule — these dates don't change)
+   - Touch 1: Apr 13 ✅ Sent
+   - Touch 2: Apr 20 — show as UPCOMING if today < Apr 20, SENT if today >= Apr 20
+   - Touch 3: Apr 27 — same logic
+   - Touch 4: May 11 — same logic
+   - Show the next upcoming touch highlighted in teal
+
+3. PagoSeguro platform status — keep as LIVE (hardcoded, doesn't change)
+4. PagoSeguro progress — keep as 82% (hardcoded)
+
+─────────────────────────────────────────
+MAHALI CARD — Live Data Sources
+─────────────────────────────────────────
+
+1. Property/Listing Count
+   - Call GET /api/mahali/stats on page load
+   - Create this endpoint in server/routes.ts:
+     • Makes a fetch to:
+       https://tanzania-homes-lawrightmba.replit.app/api/v1/properties?limit=1
+     • Returns { listingCount: total } from response
+   - Display as "X Listings" on the Mahali card
+
+2. Selcom Payment Status
+   - Call GET /api/mahali/selcom-status on page load
+   - Create this endpoint:
+     • Makes a fetch to:
+       https://tanzania-homes-lawrightmba.replit.app/api/payments/status
+     • Returns the mode field: AWAITING_CREDENTIALS | SANDBOX | LIVE
+   - Display on Mahali card:
+     • AWAITING_CREDENTIALS → amber badge "Selcom: Pending"
+     • SANDBOX → blue badge "Selcom: Sandbox"  
+     • LIVE → green badge "Selcom: Live"
+
+3. Mahali status — show as MVP READY (hardcoded)
+4. Mahali progress — show as 85% (hardcoded)
+
+─────────────────────────────────────────
+PAGOYA CARD — Live Data Sources
+─────────────────────────────────────────
+
+1. Stripe payment status
+   - Call GET /api/stripe/status on page load
+   - Create this endpoint:
+     • Checks if STRIPE_SECRET_KEY env var is set
+     • If set, calls Stripe API: GET https://api.stripe.com/v1/balance
+       with Bearer auth
+     • Returns { live: true/false, currency: "mxn" }
+   - Display as "Stripe: Live MXN" (green) or "Stripe: Not Configured" (amber)
+
+2. PagoYa status — show as MVP (hardcoded)
+3. PagoYa progress — show as 90% (hardcoded)
+
+─────────────────────────────────────────
+IMPLEMENTATION REQUIREMENTS
+─────────────────────────────────────────
+
+1. All three proxy endpoints (/api/hubspot/contacts/count, 
+   /api/mahali/stats, /api/mahali/selcom-status, /api/stripe/status) 
+   must be added to the PagoYa Express server (server/index.ts or 
+   wherever routes are registered)
+
+2. Each endpoint must:
+   - Return JSON
+   - Handle errors gracefully — if the external call fails, return 
+     { error: true, fallback: LAST_KNOWN_VALUE } so the dashboard 
+     shows the last known value instead of breaking
+   - Log errors to console but never crash
+
+3. In the command center HTML:
+   - On DOMContentLoaded, call all 4 endpoints simultaneously using 
+     Promise.allSettled()
+   - Update each stat element by ID when data returns
+   - Show a subtle animated pulse on each stat while loading
+   - After load, set a 60-second interval to refresh all stats
+   - If a stat fails to load, show the last cached value with a 
+     small grey "~" prefix to indicate it may be stale
+
+4. Add a "Live Data" indicator in the footer next to the version number:
+   - Green dot + "Live" when last refresh was < 2 minutes ago
+   - Amber dot + "Stale" when last refresh was > 2 minutes ago
+   - Shows time of last successful refresh e.g. "Last updated 14:32"
+
+5. Bump version to v2.4
+
+After all changes are complete, run:
+git add -A && git commit -m "Command center v2.4 — live data dashboard" && git push origin main
+
+Do not change any visual styling, layout, animations, or PWA 
+configuration. Only update the data sources and add the 4 new 
+proxy API endpoints.

@@ -184,7 +184,7 @@
 
   .progress-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 3px; }
-  .pago .progress-fill { background: var(--pago-color); width: 72%; }
+  .pago .progress-fill { background: var(--pago-color); width: 82%; }
   .mahali .progress-fill { background: var(--mahali-color); width: 60%; }
   .pagoya .progress-fill { background: var(--gura-color); width: 30%; }
 
@@ -486,15 +486,16 @@
         <div class="progress-wrap">
           <div class="progress-meta">
             <span class="progress-pct">BUILD PROGRESS</span>
-            <span class="progress-pct" style="color:var(--pago-color)">78%</span>
+            <span class="progress-pct" style="color:var(--pago-color)">82%</span>
           </div>
           <div class="progress-bar"><div class="progress-fill"></div></div>
         </div>
         <div class="metrics-row">
-          <div class="metric"><div class="metric-val">67</div><div class="metric-label">BROKERS<br>IN TRACKER</div></div>
+          <div class="metric"><div class="metric-val" id="pago-broker-count">—</div><div class="metric-label">BROKER<br>CONTACTS</div></div>
           <div class="metric"><div class="metric-val">56</div><div class="metric-label">ENROLLED<br>HUBSPOT+BREVO</div></div>
           <div class="metric"><div class="metric-val">14.7%</div><div class="metric-label">OPEN RATE<br>TOUCH 1</div></div>
         </div>
+        <div id="touch-sequence" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
         <div class="today-label">APR 13 WINS · NEXT ACTIONS</div>
 
         <div class="task-item checked" onclick="toggleTask(this)">
@@ -563,9 +564,10 @@
         </div>
         <div class="metrics-row">
           <div class="metric"><div class="metric-val">7</div><div class="metric-label">USER<br>ROLES</div></div>
-          <div class="metric"><div class="metric-val">64</div><div class="metric-label">LIVE<br>LISTINGS</div></div>
+          <div class="metric"><div class="metric-val" id="mahali-listing-count">—</div><div class="metric-label">LIVE<br>LISTINGS</div></div>
           <div class="metric"><div class="metric-val">5</div><div class="metric-label">DEMO<br>ACCOUNTS</div></div>
         </div>
+        <div style="margin-bottom:12px;"><span id="mahali-selcom-badge" style="font-family:'Space Mono',monospace;font-size:0.55rem;padding:3px 10px;border-radius:20px;font-weight:700;background:rgba(245,158,11,0.18);color:#F59E0B;">Selcom: Cargando…</span></div>
         <div class="today-label">APR 14 SPRINT WINS — tap for context</div>
 
         <div class="task-item" onclick="toggleTask(this)">
@@ -651,7 +653,7 @@
         <div class="metrics-row">
           <div class="metric"><div class="metric-val">4</div><div class="metric-label">SCREENS<br>LIVE</div></div>
           <div class="metric"><div class="metric-val">7</div><div class="metric-label">API<br>ROUTES</div></div>
-          <div class="metric"><div class="metric-val">✅</div><div class="metric-label">STRIPE<br>E2E</div></div>
+          <div class="metric"><div class="metric-val" id="pagoya-stripe-val">—</div><div class="metric-label">STRIPE<br>STATUS</div></div>
         </div>
         <div class="today-label">TODAY'S TASKS — tap for context</div>
 
@@ -896,7 +898,13 @@
   </div>
 
   <footer>
-    LLOYD'S FINTECH COMMAND CENTER · v2.4 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
+    LLOYD'S FINTECH COMMAND CENTER · v2.4 · PAGOSEGURO · MAHALI · PAGOYA
+    &nbsp;&nbsp;<span id="live-data-indicator" style="display:inline-flex;align-items:center;gap:4px;font-size:0.55rem;">
+      <span id="live-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#1D9E75;"></span>
+      <span id="live-label">Live</span>
+      <span id="live-time" style="color:#5a7080;margin-left:2px;"></span>
+    </span>
+    &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
   </footer>
 </div>
 
@@ -1088,6 +1096,178 @@ function syncLatest() {
       setTimeout(() => { btn.textContent = '⟳ Sync Latest'; btn.style.background = '#1D9E75'; }, 2000);
     });
 }
+
+// ─── LIVE DATA ────────────────────────────────────────────────────────────────
+(function () {
+  // Cache last known good values
+  const cache = { brokerCount: null, listingCount: null, selcomMode: null, stripeLive: null };
+  let lastRefresh = null;
+
+  // Touch sequence dates (year-agnostic — compare month+day against current year)
+  function renderTouchSequence() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const touches = [
+      { label: 'Touch 1', date: new Date(y, 3, 13), sent: true },   // Apr 13 — always sent
+      { label: 'Touch 2', date: new Date(y, 3, 20) },
+      { label: 'Touch 3', date: new Date(y, 3, 27) },
+      { label: 'Touch 4', date: new Date(y, 4, 11) },               // May 11
+    ];
+
+    const el = document.getElementById('touch-sequence');
+    if (!el) return;
+    const todayMs = now.setHours(0, 0, 0, 0);
+    let nextUpcomingIdx = -1;
+
+    const html = touches.map((t, i) => {
+      const isSent = t.sent || t.date.getTime() <= todayMs;
+      const isNext = !isSent && nextUpcomingIdx === -1;
+      if (isNext) nextUpcomingIdx = i;
+      const bg = isSent
+        ? 'rgba(29,158,117,0.18)'
+        : isNext
+          ? 'rgba(29,158,117,0.35)'
+          : 'rgba(90,112,128,0.12)';
+      const color = isSent ? '#1D9E75' : isNext ? '#1D9E75' : '#5a7080';
+      const border = isNext ? '1px solid rgba(29,158,117,0.6)' : '1px solid transparent';
+      const label = t.label + ' ' + (isSent ? '✅' : isNext ? '↑ NEXT' : '·');
+      return `<span style="font-family:'Space Mono',monospace;font-size:0.52rem;padding:3px 8px;border-radius:20px;font-weight:700;background:${bg};color:${color};border:${border};white-space:nowrap;">${label}</span>`;
+    }).join('');
+    el.innerHTML = html;
+  }
+
+  // Start pulsing an element while loading
+  function pulse(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = '0.4';
+  }
+  function unpulse(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = '1';
+    if (val !== undefined && val !== null) el.textContent = val;
+  }
+
+  function updateLiveIndicator(success) {
+    const dot = document.getElementById('live-dot');
+    const label = document.getElementById('live-label');
+    const time = document.getElementById('live-time');
+    if (!dot || !label || !time) return;
+    if (success) {
+      lastRefresh = new Date();
+      dot.style.background = '#1D9E75';
+      label.textContent = 'Live';
+      const hh = lastRefresh.getHours().toString().padStart(2, '0');
+      const mm = lastRefresh.getMinutes().toString().padStart(2, '0');
+      time.textContent = `· Last updated ${hh}:${mm}`;
+    }
+  }
+
+  function checkStale() {
+    if (!lastRefresh) return;
+    const ageMs = Date.now() - lastRefresh.getTime();
+    const dot = document.getElementById('live-dot');
+    const label = document.getElementById('live-label');
+    if (!dot || !label) return;
+    if (ageMs > 120_000) {
+      dot.style.background = '#F59E0B';
+      label.textContent = 'Stale';
+    }
+  }
+
+  async function loadLiveStats() {
+    // Pulse all live fields while loading
+    ['pago-broker-count', 'mahali-listing-count', 'pagoya-stripe-val'].forEach(pulse);
+
+    const [hubspot, mahaliStats, mahaliSelcom, stripe] = await Promise.allSettled([
+      fetch('/api/hubspot/contacts/count').then(r => r.json()),
+      fetch('/api/mahali/stats').then(r => r.json()),
+      fetch('/api/mahali/selcom-status').then(r => r.json()),
+      fetch('/api/stripe/status').then(r => r.json()),
+    ]);
+
+    let anySuccess = false;
+
+    // ── HubSpot broker count ─────────────────────────────────────────────────
+    if (hubspot.status === 'fulfilled' && !hubspot.value.error) {
+      cache.brokerCount = hubspot.value.count;
+      unpulse('pago-broker-count', cache.brokerCount);
+      anySuccess = true;
+    } else {
+      const stale = cache.brokerCount !== null;
+      unpulse('pago-broker-count', stale ? '~' + cache.brokerCount : '—');
+    }
+
+    // ── Mahali listing count ──────────────────────────────────────────────────
+    if (mahaliStats.status === 'fulfilled' && !mahaliStats.value.error) {
+      cache.listingCount = mahaliStats.value.listingCount;
+      unpulse('mahali-listing-count', cache.listingCount ?? '—');
+      anySuccess = true;
+    } else {
+      const stale = cache.listingCount !== null;
+      unpulse('mahali-listing-count', stale ? '~' + cache.listingCount : '—');
+    }
+
+    // ── Mahali Selcom status ──────────────────────────────────────────────────
+    const selcomBadge = document.getElementById('mahali-selcom-badge');
+    if (selcomBadge) {
+      if (mahaliSelcom.status === 'fulfilled' && !mahaliSelcom.value.error) {
+        cache.selcomMode = mahaliSelcom.value.mode;
+        anySuccess = true;
+      }
+      const mode = cache.selcomMode;
+      if (mode === 'LIVE') {
+        selcomBadge.textContent = 'Selcom: Live';
+        selcomBadge.style.background = 'rgba(29,158,117,0.18)';
+        selcomBadge.style.color = '#1D9E75';
+      } else if (mode === 'SANDBOX') {
+        selcomBadge.textContent = 'Selcom: Sandbox';
+        selcomBadge.style.background = 'rgba(99,102,241,0.18)';
+        selcomBadge.style.color = '#6366F1';
+      } else {
+        selcomBadge.textContent = mode === null ? '~Selcom: Pending' : 'Selcom: Pending';
+        selcomBadge.style.background = 'rgba(245,158,11,0.18)';
+        selcomBadge.style.color = '#F59E0B';
+      }
+    }
+
+    // ── Stripe status ────────────────────────────────────────────────────────
+    if (stripe.status === 'fulfilled') {
+      cache.stripeLive = stripe.value.live;
+      anySuccess = true;
+    }
+    const stripeEl = document.getElementById('pagoya-stripe-val');
+    if (stripeEl) {
+      const live = cache.stripeLive;
+      if (live === true) {
+        stripeEl.textContent = '✅';
+        stripeEl.style.color = '#1D9E75';
+        stripeEl.title = 'Stripe: Live MXN';
+      } else if (live === false) {
+        stripeEl.textContent = '⚠';
+        stripeEl.style.color = '#F59E0B';
+        stripeEl.title = 'Stripe: Not Configured';
+      } else {
+        stripeEl.textContent = '—';
+        stripeEl.style.opacity = '1';
+      }
+    }
+
+    updateLiveIndicator(anySuccess);
+  }
+
+  // Render touch sequence immediately (no API needed — date-based)
+  renderTouchSequence();
+
+  // Load all live stats on page load
+  document.addEventListener('DOMContentLoaded', loadLiveStats);
+  // Also fire immediately if DOM is already ready
+  if (document.readyState !== 'loading') loadLiveStats();
+
+  // Refresh every 60 seconds; check for stale every 30s
+  setInterval(loadLiveStats, 60_000);
+  setInterval(checkStale, 30_000);
+})();
 
 </script>
 </body>
