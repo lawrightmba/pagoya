@@ -1,0 +1,315 @@
+In the PagoYa/PagoSeguro codebase, completely rewrite 
+src/billpay/providers/siprel.ts from scratch. The current 
+implementation uses wrong authentication and wrong content-type.
+Delete all existing HTTP request logic and replace entirely.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL API FACTS — READ FIRST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Base URL:     https://app.taecel.com/api/
+All requests: POST only
+Content-type: application/x-www-form-urlencoded (NOT JSON)
+Auth method:  key + nip as POST body params on EVERY request
+              (NOT Bearer token, NOT Authorization header)
+
+ENV VARS already set in Replit Secrets:
+  SIPREL_BASE_URL = https://app.taecel.com/api/
+  SIPREL_API_KEY  = the KEY from Oyuki's email
+  SIPREL_NIP      = the NIP from Oyuki's email
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONFIRMED SKU CODES — hardcode these now
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+These are confirmed from the official Taecel test matrix.
+Do NOT call getProducts to get these — use them directly.
+
+Bill payments (Pago de Servicios — requires monto param):
+  cfe:        'CFE000'
+  telmex:     'TMX001'
+  telmex_fijo:'TMX001'
+  sky:        'SKY000'
+  megacable:  'MEG000'
+  dish:       'DSH000'
+  maxcom:     'MAX000'
+
+Mobile top-ups (Tiempo Aire — NO monto param):
+  telcel_recarga_10:  'TEL010'  ($10)
+  telcel_recarga_50:  'TEL050'  ($50)
+  telcel_recarga_100: 'TEL100'  ($100)
+  telcel_recarga_150: 'TEL150'  ($150)
+  telcel_recarga_200: 'TEL200'  ($200)
+  att_recarga_10:     'MOV010'  ($10)
+  att_recarga_50:     'MOV050'  ($50)
+  att_recarga_100:    'MOV100'  ($100)
+  att_recarga_120:    'MOV120'  ($120)
+  att_recarga_150:    'MOV150'  ($150)
+
+Note: Telmex, Izzi, Totalplay, Gas Natural SKU codes are NOT
+in the test matrix. These will be fetched via getProducts
+once sandbox testing is complete. Leave them as null for now
+and handle gracefully with 'SKU_PENDING' error.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METHOD 1: requestTXN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Endpoint: POST /api/requestTXN
+Content-type: application/x-www-form-urlencoded
+
+Request body for BILL PAYMENTS:
+  key        = SIPREL_API_KEY
+  nip        = SIPREL_NIP
+  producto   = SKU code (e.g. 'CFE000')
+  referencia = service reference number
+  monto      = amount as integer string (e.g. '260')
+
+Request body for MOBILE TOP-UPS:
+  key        = SIPREL_API_KEY
+  nip        = SIPREL_NIP
+  producto   = SKU code (e.g. 'TEL010')
+  referencia = phone number
+  (DO NOT include monto for top-ups)
+
+Success response:
+{
+  "success": true,
+  "error": 0,
+  "message": "Consulta Exitosa",
+  "data": { "transID": "250700000002", "fecha": "2025-07-04 18:50:23" },
+  "extra": null
+}
+
+Failure response:
+{
+  "success": false,
+  "error": 8888,
+  "message": "Ocurrió un error en su solicitud",
+  "data": [],
+  "extra": null
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METHOD 2: statusTXN — with polling loop
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Endpoint: POST /api/statusTXN
+Content-type: application/x-www-form-urlencoded
+
+Request body:
+  key     = SIPREL_API_KEY
+  nip     = SIPREL_NIP
+  transID = 12-digit transaction ID from requestTXN
+
+POLLING RULES (implement exactly per docs):
+  - Call statusTXN immediately after getting transID
+  - If no success response: retry every 5 seconds
+  - Total timeout: 60 seconds from when requestTXN was called
+  - If "En Proceso" received: saldo already charged — keep polling
+  - Stop on: success response OR 60-second timeout
+  - If timeout: return status 'pending' (NOT failed) — store
+    transID for background reconciliation cron job
+
+Success response from statusTXN:
+{
+  "success": true,
+  "error": 0,
+  "message": "Recarga Exitosa",
+  "data": {
+    "TransID": "250700000002",
+    "Fecha": "2025-07-04 18:50:23",
+    "Carrier": "CFE",
+    "Referencia": "125478965412",
+    "Folio": "765181",
+    "Status": "Exitosa",
+    "Monto": "$260.00",
+    "Cargo": "$5.00",
+    "Bolsa": "Pago de servicios",
+    "Saldo Final": "$100,000.00"
+  },
+  "extra": null
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METHOD 3: getBalance
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Endpoint: POST /api/getBalance
+
+Request body: key + nip only
+
+Response has TWO separate bolsas:
+{
+  "data": [
+    { "ID": "1", "Bolsa": "Tiempo Aire",       "Saldo": "104,020.97" },
+    { "ID": "2", "Bolsa": "Pago de Servicios", "Saldo": "590.00" }
+  ]
+}
+
+Return BOTH balances separately. Parse "Saldo" as float
+(strip commas). The existing getSaldoBalance() function
+should return an object: { tiempoAire: number, pagoServicios: number }
+Low-balance alert fires when pagoServicios drops below 500 MXN.
+Mobile top-ups consume tiempoAire.
+Bill payments consume pagoServicios.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METHOD 4: getProducts (daily cache only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Endpoint: POST /api/getProducts
+
+IMPORTANT: Call ONCE DAILY maximum. Taecel docs explicitly
+warn against frequent calls — can cause account blocking.
+
+Store result in database with a 24-hour TTL.
+Add a taecel_product_cache table:
+  id, cached_at (timestamp), data (text/JSON), expires_at
+
+On each getProducts call:
+1. Check cache — if fresh (< 24 hours) return cached data
+2. If stale or missing: call API, store result, return it
+3. Extract SKU codes and update SIPREL_SERVICE_MAP for any
+   services currently set to 'SKU_PENDING'
+
+Add GET /api/bills/admin/products endpoint that:
+- Shows the cached product list
+- Shows cache age
+- Has a "Refresh now" button (manual override, admin only)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METHOD 5: getSales (reconciliation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Endpoint: POST /api/getSales
+
+Request body:
+  key   = SIPREL_API_KEY
+  nip   = SIPREL_NIP
+  fecha = date in YYYY-MM-DD format
+
+Use for:
+1. Daily reconciliation cron job (runs at 11 PM Mexico time)
+2. Background reconciliation of 'pending' transactions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HTTP HELPER — exact implementation required
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every request MUST use this exact pattern:
+
+const body = new URLSearchParams({
+  key: this.config.apiKey,
+  nip: this.config.nip,
+  // ...additional params
+});
+
+const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: body.toString()
+});
+
+DO NOT use JSON.stringify for the body.
+DO NOT use any Authorization headers.
+DO log every request method + response status for debugging.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMPLETE payBill FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Implement this exact sequence from the Taecel docs:
+
+async payBill(req):
+  1. Look up SKU code for req.serviceId
+     - If SKU is null or 'SKU_PENDING': return error
+       'SKU_NOT_CONFIGURED' (don't attempt the API call)
+  2. Call requestTXN with correct params
+     - Bill payments: include monto
+     - Mobile top-ups: omit monto
+  3. If requestTXN success === false: return failure immediately
+     - Do NOT proceed to statusTXN
+     - Map error codes: 403=invalid_credentials, 405=bad_params,
+       3133=sku_not_found, 8888=communication_error
+  4. If requestTXN success === true: store transID, start polling
+  5. Poll statusTXN every 5 seconds, max 60 seconds total
+  6. If statusTXN success === true: return confirmed result with
+     Folio, TransID, Carrier, Monto, Cargo from response data
+  7. If statusTXN times out (60 sec): return pending result
+     - Store transID in bill_payments.external_tx_id
+     - Status = 'pending' not 'failed'
+  8. If statusTXN success === false with data: return failed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERROR CODE MAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Map these in the provider response:
+
+Provider codes (carrier errors):
+  1    → INVALID_PHONE
+  2    → DESTINATION_UNAVAILABLE
+  3    → NO_CARRIER_RESPONSE (suggest retry)
+  4    → INACTIVE_LINE
+  5, 6 → NO_CARRIER_RESPONSE
+  7    → TRANSACTION_TABLE_FULL
+  8    → INTERNAL_TIMEOUT
+  9    → AUTHORIZER_UNAVAILABLE
+
+Service web codes:
+  0    → SUCCESS
+  403  → INVALID_CREDENTIALS — fire admin WhatsApp alert immediately
+  405  → INCORRECT_PARAMS
+  3133 → PRODUCT_NOT_FOUND — trigger getProducts refresh
+  8888 → COMMUNICATION_ERROR — trigger Evoluciona failover
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKGROUND CRON JOBS TO ADD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add these to the existing cron job setup in the codebase:
+
+1. Pending transaction reconciliation (every 10 minutes):
+   - Find all bill_payments where status='pending'
+     AND provider_used='siprel' AND created_at > 5 min ago
+   - Call statusTXN for each pending external_tx_id
+   - Update status to confirmed or failed
+   - Send WhatsApp receipt if newly confirmed
+   - Send failure notice if newly failed with refund note
+
+2. Daily product cache refresh (once daily at 6 AM Mexico time):
+   - Call getProducts and update taecel_product_cache table
+   - Update any SKU_PENDING entries in service map
+
+3. Daily sales reconciliation (11 PM Mexico time):
+   - Call getSales for yesterday's date
+   - Compare with bill_payments records for that date
+   - Log any discrepancies for manual review
+   - Store reconciliation result in a new daily_reconciliation table
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DB CHANGES NEEDED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add to Drizzle schema and run migration:
+
+1. taecel_product_cache table:
+   id, cached_at, expires_at, data (text — JSON string)
+
+2. daily_reconciliation table:
+   id, fecha (date), total_taecel (int), total_pagoya (int),
+   discrepancies (text JSON), created_at
+
+3. Update bill_payments table:
+   Add: taecel_trans_id (text) — the 12-digit transID from Taecel
+   Add: taecel_folio (text) — the Folio from statusTXN response
+   Add: taecel_carrier (text) — Carrier from statusTXN response
+   Add: taecel_cargo_mxn (numeric 10,2) — the $5.00 Cargo charge
+   Add: bolsa_type (text) — 'Tiempo Aire' or 'Pago de servicios'
+
+Run: npx drizzle-kit push after schema changes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADMIN DASHBOARD UPDATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Update the existing SIPREL saldo card in the command center
+to show TWO balances from getBalance:
+
+  "Bolsa Tiempo Aire:        $XXX,XXX.XX MXN"
+  "Bolsa Pago de Servicios:  $XXX.XX MXN" ← red if < 500 MXN
+
+Both balances refresh when the existing Refresh Balance
+button is clicked.
+
+After all code is written, confirm the server starts
+without errors and report any TypeScript compilation issues.
+Do NOT run the test suite yet — that comes in the next prompt.
