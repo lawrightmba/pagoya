@@ -9,7 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:bills": "vitest run src/billpay/tests/billpay.test.ts",
-    "test:sandbox": "tsx src/billpay/scripts/sandbox-test.ts"
+    "test:sandbox": "ts-node src/billpay/scripts/sandbox-test.ts"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
