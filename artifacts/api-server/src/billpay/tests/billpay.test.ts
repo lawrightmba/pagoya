@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll, afterEach } from "vitest";
 import request from "supertest";
-import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, walletsTable, walletTransactionsTable } from "@workspace/db";
+import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, walletsTable, walletTransactionsTable, taecelProductCacheTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ vi.mock("../../wallet/lib/conekta.js", () => ({
 // Import mocked modules AFTER vi.mock declarations (hoisting makes order safe)
 import { siprelProvider } from "../providers/siprel.js";
 import { evolucionaProvider } from "../providers/evoluciona.js";
-import { sendLowSaldoAlert } from "../lib/notifications.js";
+import { sendLowSaldoAlert, sendWhatsAppReceipt } from "../lib/notifications.js";
 import { createOxxoOrder } from "../../wallet/lib/conekta.js";
 import app from "../../app.js";
 
@@ -104,11 +104,14 @@ describe("1. Catalog endpoint", () => {
     expect(ids).toContain("cfe");
   });
 
-  it("Telcel recarga is present in the catalog", async () => {
+  it("Telcel recarga denominations are present in the catalog", async () => {
     const res = await request(app).get("/api/bills/catalog");
     const allServices = res.body.categories.flatMap((c: { services: { id: string }[] }) => c.services);
     const ids = allServices.map((s: { id: string }) => s.id);
-    expect(ids).toContain("telcel_recarga");
+    // Catalog now uses denomination-based IDs (TEL010 … TEL200)
+    expect(ids).toContain("telcel_recarga_10");
+    expect(ids).toContain("telcel_recarga_100");
+    expect(ids).toContain("telcel_recarga_200");
   });
 
   it("Telmex (telmex_fijo) is present in the catalog", async () => {
@@ -132,15 +135,15 @@ describe("2. Reference and amount validation", () => {
     expect(res.body.error).toMatch(/12 dígitos/i);
   });
 
-  it("POST /api/bills/pay with Telcel recarga amount below 30 MXN returns 400", async () => {
+  it("POST /api/bills/pay with Telcel Recarga $50 and monto below minimum returns 400", async () => {
     const res = await request(app).post("/api/bills/pay").send({
-      serviceId: "telcel_recarga",
+      serviceId: "telcel_recarga_50",
       referencia: "3221234567",
-      monto: 20, // below 30 MXN minimum
+      monto: 20, // below 50 MXN minimum for this denomination
       telefono: "3221234567",
     });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/30 MXN/i);
+    expect(res.body.error).toMatch(/50 MXN/i);
   });
 
   it("POST /api/bills/pay with an unknown serviceId returns 404", async () => {
@@ -160,7 +163,7 @@ describe("2. Reference and amount validation", () => {
 describe("3. Happy path — SIPREL success", () => {
   beforeEach(() => {
     vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500); // above threshold
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
   });
 
   it("POST /api/bills/pay returns 201 with folio and authCode", async () => {
@@ -215,7 +218,7 @@ describe("4. Failover — SIPREL fails, Evoluciona succeeds", () => {
   beforeEach(() => {
     vi.mocked(siprelProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
     vi.mocked(evolucionaProvider.pay).mockResolvedValue(evolucionaSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
   });
 
   it("POST /api/bills/pay returns 201 via Evoluciona after SIPREL failure", async () => {
@@ -296,7 +299,7 @@ describe("5. Both providers fail", () => {
 describe("6. Saldo low-balance alert", () => {
   beforeEach(() => {
     vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(400); // below 500 threshold
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 400 }); // pagoServicios below 500 threshold
     vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
   });
 
@@ -313,10 +316,9 @@ describe("6. Saldo low-balance alert", () => {
   });
 
   it("sendLowSaldoAlert is NOT called when saldo >= 500", async () => {
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
     vi.clearAllMocks();
     vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
     vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
 
     await request(app).post("/api/bills/pay").send(validCfePayload);
@@ -332,7 +334,7 @@ describe("6. Saldo low-balance alert", () => {
 describe("7. History endpoint", () => {
   beforeEach(() => {
     vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
   });
 
   it("GET /api/bills/history returns 200 with a payments array", async () => {
@@ -379,7 +381,7 @@ describe("7. History endpoint", () => {
 describe("8. Rep Commissions", () => {
   beforeEach(() => {
     vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
-    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue(1500);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
   });
 
   it("successful payment with rep_id in body creates a commission record (amount=5, type=bill_pay, status=pending)", async () => {
@@ -750,5 +752,702 @@ describe("9. Wallet", () => {
     // Second must be middle ($200)
     expect(parseFloat(res.body.transactions[1].amountMXN)).toBe(200);
     expect(res.body.transactions[1].description).toBe("Middle");
+  });
+});
+
+// ===========================================================================
+// TAECEL / SIPREL PROVIDER TESTS
+// The following groups test the actual siprelProvider implementation using
+// vi.importActual to bypass the module-level mock. All HTTP calls are
+// intercepted via vi.spyOn(globalThis, 'fetch').
+// ===========================================================================
+
+// Shared test credentials / base URL
+const TAECEL_TEST_KEY = "TEST_KEY_123";
+const TAECEL_TEST_NIP = "TEST_NIP_456";
+const TAECEL_TEST_BASE = "https://test.taecel.com/api/";
+
+/** Set env vars needed for the real Taecel provider to initialise */
+function setTaecelEnv() {
+  process.env.SIPREL_API_KEY  = TAECEL_TEST_KEY;
+  process.env.SIPREL_NIP      = TAECEL_TEST_NIP;
+  process.env.SIPREL_BASE_URL = TAECEL_TEST_BASE;
+}
+
+/** Remove test env vars so they don't leak into other suites */
+function clearTaecelEnv() {
+  delete process.env.SIPREL_API_KEY;
+  delete process.env.SIPREL_NIP;
+  delete process.env.SIPREL_BASE_URL;
+}
+
+/** Build a minimal Taecel requestTXN success response */
+function reqTxnOk(transID = "TX_TEST_001") {
+  return new Response(
+    JSON.stringify({ success: true, error: 0, message: "Exitosa", data: { transID, fecha: "2024-01-15" }, extra: null }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a Taecel requestTXN failure response */
+function reqTxnErr(code: number, msg: string) {
+  return new Response(
+    JSON.stringify({ success: false, error: code, message: msg, data: [], extra: null }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a Taecel statusTXN "Exitosa" response */
+function statusTxnOk(transID: string, overrides: Record<string, string> = {}) {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      error: 0,
+      message: "Exitosa",
+      data: {
+        TransID: transID,
+        Fecha: "2024-01-15 10:30:00",
+        Carrier: "CFE",
+        Referencia: "125478965412",
+        Folio: "CFE-FOLIO-001",
+        Status: "Exitosa",
+        Monto: "$260.00",
+        Cargo: "$260.00",
+        Bolsa: "Pago de Servicios",
+        "Saldo Final": "$1,500.00",
+        ...overrides,
+      },
+      extra: null,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a "En Proceso" statusTXN response (keep polling) */
+function statusTxnEnProceso() {
+  return new Response(
+    JSON.stringify({ success: false, error: 0, message: "En Proceso", data: [], extra: null }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a statusTXN provider-error response (stops polling) */
+function statusTxnErr(code: number, msg: string) {
+  return new Response(
+    JSON.stringify({ success: false, error: code, message: msg, data: [], extra: null }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a Taecel getBalance response with two bolsas */
+function balanceResp(tiempoAire: number, pagoServicios: number) {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: [
+        { ID: "1", Bolsa: "Tiempo Aire",       Saldo: String(tiempoAire) },
+        { ID: "2", Bolsa: "Pago de Servicios", Saldo: String(pagoServicios) },
+      ],
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/** Build a getProducts success response */
+function productsResp() {
+  return new Response(
+    JSON.stringify({ success: true, data: [{ producto: "CFE000", descripcion: "CFE", precio: 1.0 }] }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 10. Taecel API Format
+// ---------------------------------------------------------------------------
+describe("10. Taecel API Format", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realPay: SiprelMod["siprelProvider"]["pay"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realPay = mod.siprelProvider.pay.bind(mod.siprelProvider);
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Create a fetch spy that handles requestTXN and statusTXN calls */
+  function mockBillPayFetch(transID = "TX_FORMAT_001") {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk(transID);
+      if (u.includes("statusTXN"))  return statusTxnOk(transID);
+      return new Response("{}", { status: 200 });
+    });
+  }
+
+  it("1. requestTXN sends Content-Type: application/x-www-form-urlencoded (NOT application/json)", async () => {
+    const spy = mockBillPayFetch();
+    await realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    const reqTxnCall = spy.mock.calls.find(([url]) => url.toString().includes("requestTXN"));
+    expect(reqTxnCall).toBeDefined();
+    const headers = reqTxnCall![1]?.headers as Record<string, string>;
+    expect(headers["Content-Type"]).toBe("application/x-www-form-urlencoded");
+  });
+
+  it("2. requestTXN sends key and nip in POST body (NOT in Authorization header)", async () => {
+    const spy = mockBillPayFetch();
+    await realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    const reqTxnCall = spy.mock.calls.find(([url]) => url.toString().includes("requestTXN"));
+    expect(reqTxnCall).toBeDefined();
+    const bodyStr = String(reqTxnCall![1]?.body ?? "");
+    expect(bodyStr).toContain(`key=${TAECEL_TEST_KEY}`);
+    expect(bodyStr).toContain(`nip=${TAECEL_TEST_NIP}`);
+    // Must NOT use Authorization header
+    const headers = reqTxnCall![1]?.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBeUndefined();
+  });
+
+  it("3. Bill payment requestTXN includes monto in body", async () => {
+    const spy = mockBillPayFetch();
+    await realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    const reqTxnCall = spy.mock.calls.find(([url]) => url.toString().includes("requestTXN"));
+    const bodyStr = String(reqTxnCall![1]?.body ?? "");
+    expect(bodyStr).toContain("monto=260");
+  });
+
+  it("4. Mobile top-up requestTXN does NOT include monto in body", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_TA_001");
+      if (u.includes("statusTXN"))  return statusTxnOk("TX_TA_001", { Bolsa: "Tiempo Aire", Carrier: "Telcel", Folio: "TEL-010-FOLIO" });
+      return new Response("{}", { status: 200 });
+    });
+    await realPay({ id: "telcel_recarga_10" } as never, { serviceId: "telcel_recarga_10", referencia: "5555555505", monto: 10, telefono: "5555555505" });
+
+    const reqTxnCall = spy.mock.calls.find(([url]) => url.toString().includes("requestTXN"));
+    const bodyStr = String(reqTxnCall![1]?.body ?? "");
+    expect(bodyStr).not.toContain("monto=");
+  });
+
+  it("5. statusTXN sends key, nip, and transID in body", async () => {
+    const spy = mockBillPayFetch("TX_STATUS_CHK");
+    await realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    const statusCall = spy.mock.calls.find(([url]) => url.toString().includes("statusTXN"));
+    expect(statusCall).toBeDefined();
+    const bodyStr = String(statusCall![1]?.body ?? "");
+    expect(bodyStr).toContain(`key=${TAECEL_TEST_KEY}`);
+    expect(bodyStr).toContain(`nip=${TAECEL_TEST_NIP}`);
+    expect(bodyStr).toContain("transID=TX_STATUS_CHK");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. SKU Code Map
+// ---------------------------------------------------------------------------
+describe("11. SKU Code Map", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realPay: SiprelMod["siprelProvider"]["pay"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realPay = mod.siprelProvider.pay.bind(mod.siprelProvider);
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Assert that the requestTXN body contains the expected 'producto' param */
+  async function assertProducto(serviceId: string, expectedSku: string, isTopup = false) {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_SKU_001");
+      if (u.includes("statusTXN"))
+        return statusTxnOk("TX_SKU_001", { Bolsa: isTopup ? "Tiempo Aire" : "Pago de Servicios" });
+      return new Response("{}", { status: 200 });
+    });
+    const spy = vi.mocked(globalThis.fetch as ReturnType<typeof vi.fn>);
+    await realPay({ id: serviceId } as never, { serviceId, referencia: "125478965412", monto: 100, telefono: "3221234567" });
+    const reqTxnCall = (spy.mock.calls as Parameters<typeof fetch>[][]).find(([url]) =>
+      url.toString().includes("requestTXN"),
+    );
+    const bodyStr = String(reqTxnCall![1]?.body ?? "");
+    expect(bodyStr).toContain(`producto=${expectedSku}`);
+  }
+
+  it("6. CFE service maps to producto 'CFE000'", () => assertProducto("cfe", "CFE000"));
+
+  it("7. Telmex service maps to producto 'TMX001'", () => assertProducto("telmex_fijo", "TMX001"));
+
+  it("8. Sky service maps to producto 'SKY000'", () => assertProducto("sky", "SKY000"));
+
+  it("9. Megacable service maps to producto 'MEG000'", () => assertProducto("megacable", "MEG000"));
+
+  it("10. Service with SKU_PENDING (izzi) returns SKU_NOT_CONFIGURED error WITHOUT calling the API", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await expect(
+      realPay({ id: "izzi" } as never, { serviceId: "izzi", referencia: "125478965412", monto: 100, telefono: "3221234567" }),
+    ).rejects.toThrow(/SKU/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. Taecel Payment Flow
+// ---------------------------------------------------------------------------
+describe("12. Taecel Payment Flow", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  /** Rich siprelProvider.pay mock for a confirmed payment */
+  function mockSiprelSuccess(overrides: Record<string, unknown> = {}) {
+    vi.mocked(siprelProvider.pay).mockResolvedValue({
+      success: true,
+      confirmationCode: "CFE-FOLIO-001",
+      provider: "siprel",
+      timestamp: new Date().toISOString(),
+      failoverUsed: false,
+      status: "confirmed",
+      rawResponse: {
+        transID: "TX12345",
+        folio: "CFE-FOLIO-001",
+        carrier: "CFE",
+        cargoMxn: 260,
+        bolsaType: "Pago de Servicios",
+        ...overrides,
+      },
+    });
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
+  }
+
+  it("11. CFE payment: bill_payments row has status=confirmed and taecel_folio set", async () => {
+    mockSiprelSuccess();
+    const res = await request(app)
+      .post("/api/bills/pay")
+      .send({ serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.folio).toBe("CFE-FOLIO-001");
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "CFE-FOLIO-001"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.status).toBe("confirmed");
+    expect(payment.taecelFolio).toBe("CFE-FOLIO-001");
+    expect(payment.taecelTransId).toBe("TX12345");
+    expect(payment.bolsaType).toBe("Pago de Servicios");
+  });
+
+  it("12. Telcel top-up: bill_payments row has bolsa_type='Tiempo Aire'", async () => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue({
+      success: true,
+      confirmationCode: "TEL-010-FOLIO",
+      provider: "siprel",
+      timestamp: new Date().toISOString(),
+      failoverUsed: false,
+      status: "confirmed",
+      rawResponse: { transID: "TX_TEL_001", folio: "TEL-010-FOLIO", carrier: "Telcel", cargoMxn: 10, bolsaType: "Tiempo Aire" },
+    });
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 1500 });
+
+    const res = await request(app)
+      .post("/api/bills/pay")
+      .send({ serviceId: "telcel_recarga_10", referencia: "5555555505", monto: 10, telefono: "5555555505" });
+
+    expect(res.status).toBe(201);
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.confirmationCode, "TEL-010-FOLIO"))
+      .limit(1);
+
+    expect(payment).toBeDefined();
+    expect(payment.bolsaType).toBe("Tiempo Aire");
+
+    // WhatsApp receipt must have been dispatched (mocked to no-op)
+    await tick(50);
+    expect(vi.mocked(sendWhatsAppReceipt)).toHaveBeenCalledWith(
+      expect.objectContaining({ confirmationCode: "TEL-010-FOLIO" }),
+    );
+  });
+
+  it("13. Error code 1 (INVALID_PHONE) — provider throws INVALID_PHONE, route returns 502", async () => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(
+      new Error("Taecel statusTXN failed [INVALID_PHONE]: Celular incorrecto"),
+    );
+    vi.mocked(evolucionaProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+
+    const res = await request(app)
+      .post("/api/bills/pay")
+      .send({ serviceId: "telcel_recarga_50", referencia: "5555555510", monto: 50, telefono: "5555555510" });
+
+    expect(res.status).toBe(502);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("14. Error code 2 (DESTINATION_UNAVAILABLE) — provider throws, bill_payments row status=failed", async () => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(
+      new Error("Taecel statusTXN failed [DESTINATION_UNAVAILABLE]: Destino no disponible"),
+    );
+    vi.mocked(evolucionaProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+
+    await request(app)
+      .post("/api/bills/pay")
+      .send({ serviceId: "telcel_recarga_200", referencia: "5555555525", monto: 200, telefono: "5555555525" });
+
+    const [payment] = await db
+      .select()
+      .from(billPaymentsTable)
+      .orderBy(desc(billPaymentsTable.createdAt))
+      .limit(1);
+
+    expect(payment.status).toBe("failed");
+  });
+
+  it("15. Error code 3129 (TRANSACTION_TABLE_FULL) — provider throws expected message", async () => {
+    vi.mocked(siprelProvider.pay).mockRejectedValue(
+      new Error("Taecel requestTXN failed [TRANSACTION_TABLE_FULL]: Tabla de transacciones llena"),
+    );
+    vi.mocked(evolucionaProvider.pay).mockRejectedValue(new Error("NETWORK_ERROR"));
+
+    const res = await request(app)
+      .post("/api/bills/pay")
+      .send({ serviceId: "att_recarga_150", referencia: "5555555200", monto: 150, telefono: "5555555200" });
+
+    expect(res.status).toBe(502);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 13. StatusTXN Polling
+// ---------------------------------------------------------------------------
+describe("13. StatusTXN Polling", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realPay: SiprelMod["siprelProvider"]["pay"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realPay = mod.siprelProvider.pay.bind(mod.siprelProvider);
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("16. Polling stops immediately on first success (statusTXN called exactly once)", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_FAST");
+      if (u.includes("statusTXN"))  return statusTxnOk("TX_FAST");
+      return new Response("{}", { status: 200 });
+    });
+
+    await realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" });
+
+    const statusCalls = spy.mock.calls.filter(([url]) => url.toString().includes("statusTXN"));
+    expect(statusCalls).toHaveLength(1); // stopped on the first success
+  });
+
+  it("17. Polling retries when first statusTXN returns 'En Proceso'", async () => {
+    vi.useFakeTimers();
+
+    let statusCallCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_RETRY");
+      if (u.includes("statusTXN")) {
+        statusCallCount++;
+        return statusCallCount === 1 ? statusTxnEnProceso() : statusTxnOk("TX_RETRY");
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "cfe" } as never,
+      { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" },
+    );
+
+    // Advance past the 5-second poll interval to allow the second statusTXN call
+    await vi.advanceTimersByTimeAsync(5_500);
+    const result = await payPromise;
+
+    expect(statusCallCount).toBeGreaterThanOrEqual(2); // En Proceso → retry → Exitosa
+    expect(result.status).toBe("confirmed");
+  });
+
+  it("18. Polling stops after 60 seconds and returns status='pending'", async () => {
+    vi.useFakeTimers();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_TIMEOUT");
+      if (u.includes("statusTXN"))  return statusTxnEnProceso(); // always En Proceso
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "cfe" } as never,
+      { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" },
+    );
+
+    // Advance past the 60-second timeout
+    await vi.advanceTimersByTimeAsync(65_000);
+    const result = await payPromise;
+
+    expect(result.status).toBe("pending");
+  });
+
+  it("19. 'En Proceso' response triggers continued polling", async () => {
+    vi.useFakeTimers();
+
+    let statusCallCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EN_PROCESO");
+      if (u.includes("statusTXN")) {
+        statusCallCount++;
+        // First two calls: En Proceso; third call: Exitosa
+        if (statusCallCount < 3) return statusTxnEnProceso();
+        return statusTxnOk("TX_EN_PROCESO");
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "cfe" } as never,
+      { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" },
+    );
+
+    await vi.advanceTimersByTimeAsync(11_000); // advance past two 5s intervals
+    const result = await payPromise;
+
+    expect(statusCallCount).toBeGreaterThanOrEqual(3);
+    expect(result.status).toBe("confirmed");
+  });
+
+  it("20. Timeout result has the original transID preserved in rawResponse", async () => {
+    vi.useFakeTimers();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_PRESERVED_ID");
+      if (u.includes("statusTXN"))  return statusTxnEnProceso();
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "cfe" } as never,
+      { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" },
+    );
+
+    await vi.advanceTimersByTimeAsync(65_000);
+    const result = await payPromise;
+
+    expect(result.status).toBe("pending");
+    const raw = result.rawResponse as Record<string, unknown>;
+    expect(raw.transID).toBe("TX_PRESERVED_ID");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. Error Code 403 — Credential Alert
+// ---------------------------------------------------------------------------
+describe("14. Error Code 403 — Credential Alert", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realPay: SiprelMod["siprelProvider"]["pay"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realPay = mod.siprelProvider.pay.bind(mod.siprelProvider);
+    setTaecelEnv();
+    process.env.ADMIN_WHATSAPP_NUMBER = "523221234567";
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    delete process.env.ADMIN_WHATSAPP_NUMBER;
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("21. Error 403 from requestTXN fires an admin WhatsApp alert about invalid credentials", async () => {
+    const calls: string[] = [];
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      calls.push(u);
+      if (u.includes("requestTXN")) {
+        return new Response(
+          JSON.stringify({ success: false, error: 403, message: "Credenciales invalidas", data: [], extra: null }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      // wa.me alert URL — return 200 so it doesn't throw
+      return new Response(null, { status: 200 });
+    });
+
+    await expect(
+      realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" }),
+    ).rejects.toThrow(/INVALID_CREDENTIALS/i);
+
+    // Allow the non-blocking fireAdminAlert fetch to resolve
+    await tick(100);
+
+    const waCall = calls.find((u) => u.startsWith("https://wa.me/"));
+    expect(waCall).toBeDefined();
+    const decoded = decodeURIComponent(waCall!);
+    expect(decoded.toLowerCase()).toMatch(/siprel|credencial/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15. Two Bolsa Balance
+// ---------------------------------------------------------------------------
+describe("15. Two Bolsa Balance", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realGetBalance: SiprelMod["taecelGetBalance"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realGetBalance = mod.taecelGetBalance;
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("22. getBalance returns both Tiempo Aire and Pago de Servicios", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(balanceResp(2500.50, 1200.75));
+
+    const balance = await realGetBalance();
+
+    expect(balance.tiempoAire).toBeCloseTo(2500.5, 2);
+    expect(balance.pagoServicios).toBeCloseTo(1200.75, 2);
+  });
+
+  it("23. Low balance alert fires when Pago de Servicios < 500 MXN (route-level)", async () => {
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 1500, pagoServicios: 350 });
+    vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
+    process.env.ADMIN_WHATSAPP_NUMBER = "523221234567";
+
+    const res = await request(app).post("/api/bills/pay").send(validCfePayload);
+    expect(res.status).toBe(201);
+    await tick();
+
+    expect(vi.mocked(sendLowSaldoAlert)).toHaveBeenCalledWith(350);
+    delete process.env.ADMIN_WHATSAPP_NUMBER;
+  });
+
+  it("24. Low balance alert does NOT fire when only Tiempo Aire < 500 MXN (pagoServicios is fine)", async () => {
+    // Reset call counts from previous test so this test has a clean slate
+    vi.clearAllMocks();
+
+    vi.mocked(siprelProvider.pay).mockResolvedValue(siprelSuccess);
+    // tiempoAire low (300), pagoServicios healthy (1500)
+    vi.mocked(siprelProvider.getSaldoBalance!).mockResolvedValue({ tiempoAire: 300, pagoServicios: 1500 });
+    vi.mocked(sendLowSaldoAlert).mockResolvedValue(undefined);
+
+    await request(app).post("/api/bills/pay").send(validCfePayload);
+    await tick();
+
+    expect(vi.mocked(sendLowSaldoAlert)).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16. Product Cache
+// ---------------------------------------------------------------------------
+describe("16. Product Cache", () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realGetProducts: SiprelMod["taecelGetProducts"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realGetProducts = mod.taecelGetProducts;
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await db.delete(taecelProductCacheTable);
+  });
+
+  it("25. getProducts result cached — second call within 24h returns without hitting API", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(productsResp());
+
+    await realGetProducts(); // first call — hits API, stores in cache
+
+    const callsAfterFirst = spy.mock.calls.filter(([url]) => url.toString().includes("getProducts")).length;
+    expect(callsAfterFirst).toBe(1);
+
+    await realGetProducts(); // second call — should use cache
+
+    const callsAfterSecond = spy.mock.calls.filter(([url]) => url.toString().includes("getProducts")).length;
+    expect(callsAfterSecond).toBe(1); // still 1 — second call was served from cache
+  });
+
+  it("26. Expired cache (> 24h) triggers a fresh API call", async () => {
+    // Insert a stale cache entry (expired 1 hour ago)
+    const pastDate = new Date(Date.now() - 25 * 60 * 60 * 1_000); // 25 hours ago
+    await db.insert(taecelProductCacheTable).values({
+      cachedAt: pastDate,
+      expiresAt: pastDate, // already expired
+      data: JSON.stringify([{ producto: "OLD_PRODUCT" }]),
+    });
+
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(productsResp());
+
+    await realGetProducts();
+
+    const productCalls = spy.mock.calls.filter(([url]) => url.toString().includes("getProducts"));
+    expect(productCalls).toHaveLength(1); // stale cache forced a fresh fetch
   });
 });

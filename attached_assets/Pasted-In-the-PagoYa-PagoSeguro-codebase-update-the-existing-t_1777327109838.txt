@@ -1,0 +1,101 @@
+In the PagoYa/PagoSeguro codebase, update the existing
+test suite at src/billpay/tests/billpay.test.ts to test
+the rewritten SIPREL provider with the real Taecel API
+format and the official test matrix data.
+
+Do NOT make real HTTP requests — mock all Taecel API calls.
+The mocks should return the exact response shapes from
+the Taecel documentation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OFFICIAL TEST MATRIX DATA
+Use these exact values from the Taecel test matrix:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Mobile top-up successes:
+  { referencia: '5555555505', producto: 'TEL010', monto: null }
+  { referencia: '5555555515', producto: 'TEL100', monto: null }
+  { referencia: '5555555530', producto: 'MOV010', monto: null }
+
+Mobile top-up failures (specific error codes):
+  { referencia: '5555555510', producto: 'TEL050', expected_error: 1 }
+  { referencia: '5555555525', producto: 'TEL200', expected_error: 2 }
+  { referencia: '5555555540', producto: 'MOV050', expected_error: 3 }
+  { referencia: '5555555565', producto: 'MOV120', expected_error: 4 }
+  { referencia: '5555555200', producto: 'MOV150', expected_error: 3129 }
+
+Bill payment successes:
+  { referencia: '871235412635',   producto: 'SKY000', monto: '95'  }
+  { referencia: '6589745213',     producto: 'TMX001', monto: '100' }
+  { referencia: '125478965412',   producto: 'CFE000', monto: '260' }
+  { referencia: '9854123547',     producto: 'MEG000', monto: '131' }
+  { referencia: '27458965324125', producto: 'DSH000', monto: '103' }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TEST GROUPS TO ADD/UPDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Group: "Taecel API Format"
+  1. requestTXN sends content-type: application/x-www-form-urlencoded
+     (NOT application/json)
+  2. requestTXN sends key and nip in POST body
+     (NOT in Authorization header)
+  3. Bill payment requestTXN includes monto in body
+  4. Mobile top-up requestTXN does NOT include monto in body
+  5. statusTXN sends key, nip, transID in body
+
+Group: "SKU Code Map"
+  6. CFE service maps to producto 'CFE000'
+  7. Telmex service maps to producto 'TMX001'
+  8. Sky service maps to producto 'SKY000'
+  9. Megacable service maps to producto 'MEG000'
+  10. Service with SKU_PENDING returns SKU_NOT_CONFIGURED error
+      without calling the API
+
+Group: "Taecel Payment Flow"
+  11. Successful CFE payment: referencia 125478965412, monto 260
+      - requestTXN returns transID
+      - statusTXN returns Exitosa with Folio
+      - bill_payments row has status=confirmed, taecel_folio set
+      - WhatsApp receipt sent with Folio number
+
+  12. Successful Telcel top-up: referencia 5555555505, TEL010
+      - requestTXN returns transID (no monto sent)
+      - statusTXN returns Exitosa
+      - bill_payments row has bolsa_type='Tiempo Aire'
+
+  13. Failed top-up error code 1 (invalid phone): 5555555510
+      - requestTXN returns success=true with transID
+      - statusTXN returns error code 1
+      - bill_payments status=failed with error code 1
+      - Returns INVALID_PHONE error to caller
+
+  14. Error code 2 (destination unavailable): 5555555525
+      - Returns DESTINATION_UNAVAILABLE
+
+  15. Error code 3129 (transaction table full): 5555555200
+      - Returns TRANSACTION_TABLE_FULL
+
+Group: "StatusTXN Polling"
+  16. Polling stops immediately on first success (no unnecessary retries)
+  17. Polling retries every 5 seconds when no response
+  18. Polling stops after 60 seconds and returns 'pending' status
+  19. 'En Proceso' response triggers continued polling
+  20. Timeout result stored as status='pending' with transID preserved
+
+Group: "Error Code 403 — Credential Alert"
+  21. Error 403 from any Taecel call fires an admin WhatsApp alert
+      with message about invalid key/nip credentials
+
+Group: "Two Bolsa Balance"
+  22. getBalance returns both Tiempo Aire and Pago de Servicios
+  23. Low balance alert fires when Pago de Servicios < 500 MXN
+  24. Low balance alert does NOT fire for Tiempo Aire < 500 MXN
+      (different threshold — only alert on pagoServicios)
+
+Group: "Product Cache"
+  25. getProducts result is cached — second call within 24h
+      returns cached data without hitting the API
+  26. Expired cache (> 24h) triggers a fresh API call
+
+Run pnpm --filter @workspace/api-server run test:bills
+and confirm all tests pass. Report final test count.

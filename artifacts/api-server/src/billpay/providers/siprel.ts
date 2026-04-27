@@ -112,6 +112,7 @@ const PROVIDER_ERROR_CODES: Record<number, string> = {
   7: "TRANSACTION_TABLE_FULL",
   8: "INTERNAL_TIMEOUT",
   9: "AUTHORIZER_UNAVAILABLE",
+  3129: "TRANSACTION_TABLE_FULL",
 };
 
 const SERVICE_WEB_ERROR_CODES: Record<number, string> = {
@@ -191,6 +192,12 @@ async function pollStatusTXN(
 
     if (res.success === true && !Array.isArray(res.data)) {
       return { timedOut: false, data: res.data as TaecelStatusData, raw: res };
+    }
+
+    // Non-zero error code — definitive failure, stop polling immediately
+    if (res.error !== undefined && res.error !== 0) {
+      logger.warn({ transID, error: res.error, message: res.message }, "taecel: statusTXN error — stopping poll");
+      return { timedOut: false, data: undefined, raw: res };
     }
 
     // "En Proceso" — saldo charged, keep polling
