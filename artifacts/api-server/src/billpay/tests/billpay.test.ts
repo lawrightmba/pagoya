@@ -977,19 +977,18 @@ describe("11. SKU Code Map", () => {
 
   /** Assert that the requestTXN body contains the expected 'producto' param */
   async function assertProducto(serviceId: string, expectedSku: string, isTopup = false) {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       const u = url.toString();
       if (u.includes("requestTXN")) return reqTxnOk("TX_SKU_001");
       if (u.includes("statusTXN"))
         return statusTxnOk("TX_SKU_001", { Bolsa: isTopup ? "Tiempo Aire" : "Pago de Servicios" });
       return new Response("{}", { status: 200 });
     });
-    const spy = vi.mocked(globalThis.fetch as ReturnType<typeof vi.fn>);
     await realPay({ id: serviceId } as never, { serviceId, referencia: "125478965412", monto: 100, telefono: "3221234567" });
-    const reqTxnCall = (spy.mock.calls as Parameters<typeof fetch>[][]).find(([url]) =>
+    const reqTxnCall = spy.mock.calls.find(([url]) =>
       url.toString().includes("requestTXN"),
-    );
-    const bodyStr = String(reqTxnCall![1]?.body ?? "");
+    ) as [string, RequestInit] | undefined;
+    const bodyStr = String(reqTxnCall?.[1]?.body ?? "");
     expect(bodyStr).toContain(`producto=${expectedSku}`);
   }
 

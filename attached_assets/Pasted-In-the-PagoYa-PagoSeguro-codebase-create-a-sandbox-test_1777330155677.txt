@@ -1,0 +1,125 @@
+In the PagoYa/PagoSeguro codebase, create a sandbox test
+runner script at src/billpay/scripts/sandbox-test.ts
+
+This script makes REAL API calls to Taecel sandbox using
+the test matrix data. It is NOT part of the automated test
+suite — it is a manual script run from the Replit shell
+to verify the real API connection before production.
+
+Usage: npx ts-node src/billpay/scripts/sandbox-test.ts
+
+Add a script to package.json:
+  "test:sandbox": "ts-node src/billpay/scripts/sandbox-test.ts"
+
+The script must:
+
+1. PREFLIGHT CHECK
+   - Verify SIPREL_API_KEY, SIPREL_NIP, SIPREL_BASE_URL
+     are set in environment
+   - If any missing: print clear error and exit
+   - Call getBalance first to confirm credentials work
+   - Print both bolsa balances
+   - If getBalance fails with 403: print "Invalid credentials.
+     Check SIPREL_API_KEY and SIPREL_NIP in Replit Secrets"
+     and exit
+
+2. RUN TEST MATRIX — BILL PAYMENTS
+   Run these in sequence with a 3-second delay between each:
+
+   Test BP-01: SKY payment
+     producto=SKY000, referencia=871235412635, monto=95
+     Expected: Transacción exitosa
+
+   Test BP-02: Telmex payment
+     producto=TMX001, referencia=6589745213, monto=100
+     Expected: Transacción exitosa
+
+   Test BP-03: CFE payment
+     producto=CFE000, referencia=125478965412, monto=260
+     Expected: Transacción exitosa
+
+   Test BP-04: Megacable payment
+     producto=MEG000, referencia=9854123547, monto=131
+     Expected: Transacción exitosa
+
+   Test BP-05: Dish payment
+     producto=DSH000, referencia=27458965324125, monto=103
+     Expected: Transacción exitosa
+
+3. RUN TEST MATRIX — MOBILE TOP-UPS
+   Run these in sequence with a 3-second delay between each:
+
+   Test TU-01: Telcel success
+     producto=TEL010, referencia=5555555505
+     Expected: Transacción exitosa
+
+   Test TU-02: Telcel error code 1
+     producto=TEL050, referencia=5555555510
+     Expected: Error code 1 — Teléfono no válido
+
+   Test TU-03: Telcel success
+     producto=TEL100, referencia=5555555515
+     Expected: Transacción exitosa
+
+   Test TU-04: Movistar success
+     producto=MOV010, referencia=5555555530
+     Expected: Transacción exitosa
+
+   Test TU-05: Movistar error code 3
+     producto=MOV050, referencia=5555555540
+     Expected: Error code 3 — Sin respuesta del carrier
+
+4. OUTPUT FORMAT
+   For each test print:
+   ✅ BP-01 SKY   | TransID: 250700000001 | Folio: 765181 | Status: Exitosa
+   ❌ TU-02 TEL050 | Error: 1 | Teléfono no válido (EXPECTED — test passed)
+   ⚠️  BP-03 CFE   | Status: pending | TransID stored for reconciliation
+
+   At the end print a summary table:
+   ══════════════════════════════════
+   SANDBOX TEST RESULTS
+   Bill Payments:    5/5 passed
+   Mobile Top-ups:   5/5 passed (includes expected error codes)
+   Total:           10/10
+   ══════════════════════════════════
+   Bolsa Pago de Servicios remaining: $XXX.XX MXN
+   Bolsa Tiempo Aire remaining:       $XXX,XXX.XX MXN
+   ══════════════════════════════════
+
+5. RESULTS FILE
+   Write the full results to:
+   src/billpay/scripts/sandbox-results-[YYYY-MM-DD].json
+
+   Format:
+   {
+     "date": "2026-04-27",
+     "total": 10,
+     "passed": 10,
+     "failed": 0,
+     "tests": [
+       {
+         "id": "BP-01",
+         "service": "SKY",
+         "producto": "SKY000",
+         "referencia": "871235412635",
+         "monto": "95",
+         "transID": "...",
+         "folio": "...",
+         "status": "Exitosa",
+         "passed": true
+       }
+     ],
+     "balances": {
+       "tiempoAire": 104020.97,
+       "pagoServicios": 590.00
+     }
+   }
+
+   This JSON file is what you send to Oyuki as the
+   "tabla de resultados" to request production access.
+   Taecel requires: folio, monto, carrier, fecha,
+   número de transacción, and tipo for each test.
+
+Add "test:sandbox" to package.json scripts.
+Do NOT run the script automatically — just create it.
+Confirm no TypeScript compilation errors.
