@@ -7,6 +7,7 @@ import router from "./routes";
 import { handlePagoyaWebhook } from "./routes/pagoya";
 import { handleConektaWebhook } from "./wallet/routes/wallet.js";
 import { logger } from "./lib/logger";
+import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,5 +68,8 @@ app.get("/command-center.html", (req, res) => {
 });
 
 app.use("/api", router);
+
+// Start background Taecel cron jobs (pending reconciliation, product cache, sales recon)
+startTaecelCrons();
 
 export default app;

@@ -727,7 +727,7 @@
         <div class="metric-label">PAYMENTS<br>PROCESSED</div>
       </div>
       <div class="metric">
-        <div class="metric-val" style="color:var(--mahali-color)">26</div>
+        <div class="metric-val" style="color:var(--mahali-color)">35</div>
         <div class="metric-label">SERVICES<br>IN CATALOG</div>
       </div>
       <div class="metric">
@@ -738,6 +738,19 @@
         <div class="metric-val" id="bp-mxn" style="color:var(--accent)">—</div>
         <div class="metric-label">TOTAL MXN<br>PROCESSED</div>
       </div>
+    </div>
+
+    <!-- SIPREL Dual Balance -->
+    <div id="siprel-balance-row" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;background:rgba(29,158,117,0.07);border:1px solid rgba(29,158,117,0.2);border-radius:8px;padding:8px 10px;">
+        <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);margin-bottom:3px;">BOLSA TIEMPO AIRE</div>
+        <div id="siprel-ta" style="font-family:'Space Mono',monospace;font-size:0.78rem;font-weight:700;color:#1D9E75;">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;" id="siprel-ps-wrap">
+        <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);margin-bottom:3px;">BOLSA PAGO DE SERVICIOS</div>
+        <div id="siprel-ps" style="font-family:'Space Mono',monospace;font-size:0.78rem;font-weight:700;color:var(--pago-color);">—</div>
+      </div>
+      <button onclick="refreshSiprelBalance()" style="align-self:center;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:0.55rem;padding:6px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;" id="siprel-refresh-btn">↺ Refresh Balance</button>
     </div>
 
     <div class="today-label">RECENT BILL PAYMENTS</div>
@@ -1070,6 +1083,39 @@
   }
 
   loadBillPayData();
+
+async function refreshSiprelBalance() {
+  const btn = document.getElementById('siprel-refresh-btn');
+  const taEl = document.getElementById('siprel-ta');
+  const psEl = document.getElementById('siprel-ps');
+  const psWrap = document.getElementById('siprel-ps-wrap');
+  if (btn) { btn.textContent = '↺ Loading…'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/bills/admin/balance');
+    const d = await r.json();
+    if (d.configured === false) {
+      if (taEl) taEl.textContent = 'No configurado';
+      if (psEl) psEl.textContent = 'No configurado';
+      if (btn) { btn.textContent = '↺ Refresh Balance'; btn.disabled = false; }
+      return;
+    }
+    const ta = typeof d.tiempoAire === 'number' ? d.tiempoAire : null;
+    const ps = typeof d.pagoServicios === 'number' ? d.pagoServicios : null;
+    if (taEl) taEl.textContent = ta !== null ? '$' + ta.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' MXN' : '—';
+    if (psEl) {
+      psEl.textContent = ps !== null ? '$' + ps.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' MXN' : '—';
+      const low = d.lowBalance === true;
+      psEl.style.color = low ? '#E21A0A' : 'var(--pago-color)';
+      if (psWrap) psWrap.style.borderColor = low ? 'rgba(232,42,10,0.4)' : 'var(--border)';
+    }
+  } catch (e) {
+    if (taEl) taEl.textContent = 'Error';
+    if (psEl) psEl.textContent = 'Error';
+  }
+  if (btn) { btn.textContent = '↺ Refresh Balance'; btn.disabled = false; }
+}
+
+refreshSiprelBalance();
 
 function syncLatest() {
   const btn = document.getElementById('sync-btn');

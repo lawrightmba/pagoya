@@ -16,53 +16,95 @@ export const CATEGORY_LABELS: Record<BillCategory, { labelEs: string; labelEn: s
 };
 
 export const BILL_CATALOG: BillService[] = [
-  // LUZ
-  { id: "cfe", name: "CFE", category: "Luz", providers: ["siprel", "evoluciona"], logoEmoji: "⚡", siprelServiceId: "CFE", evolucionaServiceId: "CFE_LUZ", minReferencia: 12 },
+  // ── LUZ ──────────────────────────────────────────────────────────────────
+  {
+    id: "cfe", name: "CFE", category: "Luz",
+    providers: ["siprel", "evoluciona"], logoEmoji: "⚡",
+    siprelServiceId: "CFE000", evolucionaServiceId: "CFE_LUZ", minReferencia: 12,
+  },
 
-  // AGUA
+  // ── AGUA ─────────────────────────────────────────────────────────────────
   { id: "sacmex", name: "SACMEX", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SACMEX" },
   { id: "agua_jalisco", name: "SIAPA Jalisco", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SIAPA" },
 
-  // GAS
-  { id: "gas_natural", name: "Gas Natural Fenosa", category: "Gas", providers: ["evoluciona"], logoEmoji: "🔥", evolucionaServiceId: "GAS_NATURAL" },
+  // ── GAS ───────────────────────────────────────────────────────────────────
+  { id: "gas_natural", name: "Gas Natural Fenosa", category: "Gas", providers: ["siprel", "evoluciona"], logoEmoji: "🔥", siprelServiceId: undefined, evolucionaServiceId: "GAS_NATURAL" },
   { id: "zeta_gas", name: "Zeta Gas", category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "ZETA_GAS" },
 
-  // INTERNET
-  { id: "izzi", name: "Izzi", category: "Internet", providers: ["siprel", "evoluciona"], logoEmoji: "📡", siprelServiceId: "IZZI", evolucionaServiceId: "IZZI_INTERNET" },
-  { id: "totalplay", name: "Totalplay", category: "Internet", providers: ["siprel"], logoEmoji: "📡", siprelServiceId: "TOTALPLAY" },
-  { id: "megacable", name: "Megacable", category: "Internet", providers: ["siprel", "evoluciona"], logoEmoji: "📡", siprelServiceId: "MEGACABLE", evolucionaServiceId: "MEGACABLE" },
-  { id: "telmex_internet", name: "Telmex Internet", category: "Internet", providers: ["siprel", "evoluciona"], logoEmoji: "📡", siprelServiceId: "TELMEX_INFINITUM", evolucionaServiceId: "TELMEX_INTERNET" },
+  // ── INTERNET ─────────────────────────────────────────────────────────────
+  { id: "izzi", name: "Izzi", category: "Internet", providers: ["siprel", "evoluciona"], logoEmoji: "📡", siprelServiceId: undefined, evolucionaServiceId: "IZZI_INTERNET" },
+  { id: "totalplay", name: "Totalplay", category: "Internet", providers: ["siprel"], logoEmoji: "📡", siprelServiceId: undefined },
+  {
+    id: "megacable", name: "Megacable", category: "Internet",
+    providers: ["siprel", "evoluciona"], logoEmoji: "📡",
+    siprelServiceId: "MEG000", evolucionaServiceId: "MEGACABLE",
+  },
+  {
+    id: "telmex_internet", name: "Telmex Internet", category: "Internet",
+    providers: ["siprel", "evoluciona"], logoEmoji: "📡",
+    siprelServiceId: "TMX001", evolucionaServiceId: "TELMEX_INTERNET",
+  },
   { id: "starlink", name: "Starlink", category: "Internet", providers: ["evoluciona"], logoEmoji: "🛰️", evolucionaServiceId: "STARLINK" },
 
-  // CABLE
-  { id: "sky", name: "Sky", category: "Cable", providers: ["siprel", "evoluciona"], logoEmoji: "📺", siprelServiceId: "SKY", evolucionaServiceId: "SKY_TV" },
-  { id: "dish", name: "Dish", category: "Cable", providers: ["siprel"], logoEmoji: "📺", siprelServiceId: "DISH" },
+  // ── CABLE ─────────────────────────────────────────────────────────────────
+  {
+    id: "sky", name: "Sky", category: "Cable",
+    providers: ["siprel", "evoluciona"], logoEmoji: "📺",
+    siprelServiceId: "SKY000", evolucionaServiceId: "SKY_TV",
+  },
+  {
+    id: "dish", name: "Dish", category: "Cable",
+    providers: ["siprel"], logoEmoji: "📺",
+    siprelServiceId: "DSH000",
+  },
+  {
+    id: "maxcom", name: "Maxcom", category: "Cable",
+    providers: ["siprel"], logoEmoji: "📺",
+    siprelServiceId: "MAX000",
+  },
 
-  // TELÉFONO MÓVIL
-  { id: "telcel", name: "Telcel", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "TELCEL", evolucionaServiceId: "TELCEL" },
-  { id: "telcel_recarga", name: "Telcel Recarga", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "TELCEL_RECARGA", evolucionaServiceId: "TELCEL_RECARGA", minAmount: 30 },
-  { id: "at_and_t", name: "AT&T", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "ATT", evolucionaServiceId: "ATT" },
+  // ── TELÉFONO FIJO ─────────────────────────────────────────────────────────
+  {
+    id: "telmex_fijo", name: "Telmex (Fijo)", category: "Teléfono móvil",
+    providers: ["siprel", "evoluciona"], logoEmoji: "☎️",
+    siprelServiceId: "TMX001", evolucionaServiceId: "TELMEX_FIJO",
+  },
+
+  // ── MÓVIL — Telcel Recargas (Tiempo Aire) ────────────────────────────────
+  { id: "telcel_recarga_10",  name: "Telcel Recarga $10",  category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "TEL010", minAmount: 10,  isTopup: true },
+  { id: "telcel_recarga_50",  name: "Telcel Recarga $50",  category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "TEL050", minAmount: 50,  isTopup: true },
+  { id: "telcel_recarga_100", name: "Telcel Recarga $100", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "TEL100", minAmount: 100, isTopup: true },
+  { id: "telcel_recarga_150", name: "Telcel Recarga $150", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "TEL150", minAmount: 150, isTopup: true },
+  { id: "telcel_recarga_200", name: "Telcel Recarga $200", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "TEL200", minAmount: 200, isTopup: true },
+
+  // ── MÓVIL — AT&T Recargas (Tiempo Aire) ──────────────────────────────────
+  { id: "att_recarga_10",  name: "AT&T Recarga $10",  category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV010", minAmount: 10,  isTopup: true },
+  { id: "att_recarga_50",  name: "AT&T Recarga $50",  category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV050", minAmount: 50,  isTopup: true },
+  { id: "att_recarga_100", name: "AT&T Recarga $100", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV100", minAmount: 100, isTopup: true },
+  { id: "att_recarga_120", name: "AT&T Recarga $120", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV120", minAmount: 120, isTopup: true },
+  { id: "att_recarga_150", name: "AT&T Recarga $150", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV150", minAmount: 150, isTopup: true },
+
+  // ── MÓVIL — Other carriers ────────────────────────────────────────────────
   { id: "movistar", name: "Movistar", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOVISTAR", evolucionaServiceId: "MOVISTAR" },
-  { id: "telmex_fijo", name: "Telmex", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "☎️", siprelServiceId: "TELMEX_FIJO", evolucionaServiceId: "TELMEX_FIJO" },
 
-  // STREAMING
-  { id: "netflix", name: "Netflix", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎬", evolucionaServiceId: "NETFLIX" },
-  { id: "spotify", name: "Spotify", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎵", evolucionaServiceId: "SPOTIFY" },
-  { id: "disney_plus", name: "Disney+", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🏰", evolucionaServiceId: "DISNEY_PLUS" },
-  { id: "hbo_max", name: "Max (HBO)", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎭", evolucionaServiceId: "HBO_MAX" },
+  // ── STREAMING ─────────────────────────────────────────────────────────────
+  { id: "netflix",    name: "Netflix",    category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎬", evolucionaServiceId: "NETFLIX" },
+  { id: "spotify",    name: "Spotify",    category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎵", evolucionaServiceId: "SPOTIFY" },
+  { id: "disney_plus",name: "Disney+",   category: "Streaming", providers: ["evoluciona"], logoEmoji: "🏰", evolucionaServiceId: "DISNEY_PLUS" },
+  { id: "hbo_max",    name: "Max (HBO)", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎭", evolucionaServiceId: "HBO_MAX" },
 
-  // PRÉSTAMOS
+  // ── PRÉSTAMOS ─────────────────────────────────────────────────────────────
   { id: "kueski", name: "Kueski", category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KUESKI" },
-  { id: "konfio", name: "Konfío", category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KONFIO" },
+  { id: "konfio",  name: "Konfío",  category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KONFIO" },
 
-  // SEGURO
+  // ── SEGUROS ───────────────────────────────────────────────────────────────
   { id: "gnp", name: "GNP Seguros", category: "Seguro", providers: ["siprel"], logoEmoji: "🛡️", siprelServiceId: "GNP" },
   { id: "hdi", name: "HDI Seguros", category: "Seguro", providers: ["siprel"], logoEmoji: "🛡️", siprelServiceId: "HDI" },
 
-  // ESCUELA
+  // ── EDUCACIÓN ─────────────────────────────────────────────────────────────
   { id: "sep", name: "SEP / IMSS", category: "Escuela", providers: ["siprel"], logoEmoji: "🎓", siprelServiceId: "SEP" },
 
-  // RENTA
+  // ── RENTA ─────────────────────────────────────────────────────────────────
   { id: "renta_pagoseguro", name: "PagoSeguro (Renta)", category: "Renta", providers: ["siprel"], logoEmoji: "🏠", siprelServiceId: "PAGOSEGURO_RENTA" },
 ];
 

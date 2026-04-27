@@ -18,6 +18,12 @@ export const billPaymentsTable = pgTable("bill_payments", {
   status: text("status").notNull().default("confirmed"),
   paymentMethod: text("payment_method").default("card"),
   repId: text("rep_id"),
+  // Taecel / SIPREL enrichment fields (added v2.4)
+  taecelTransId: text("taecel_trans_id"),
+  taecelFolio: text("taecel_folio"),
+  taecelCarrier: text("taecel_carrier"),
+  taecelCargoMxn: numeric("taecel_cargo_mxn", { precision: 10, scale: 2 }),
+  bolsaType: text("bolsa_type"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -2,6 +2,8 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
+import { taecelGetProducts } from "../providers/siprel.js";
+import { taecelProductCacheTable } from "@workspace/db";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
 import { getOrCreateWallet, getBalance, debitWallet } from "../../wallet/services/wallet.js";
@@ -168,14 +170,20 @@ router.post("/pay", async (req: Request, res: Response) => {
   try {
     const result = await routePayment({ serviceId, referencia, monto: montoNum, telefono, notas });
 
-    // 3. Update record with success
+    // 3. Update record with success + Taecel enrichment fields
+    const raw = result.rawResponse as Record<string, unknown> | undefined;
     await db.update(billPaymentsTable)
       .set({
         provider: result.provider,
         providerUsed: result.provider,
         failoverUsed: result.failoverUsed,
         confirmationCode: result.confirmationCode,
-        status: "confirmed",
+        status: result.status ?? "confirmed",
+        taecelTransId: typeof raw?.transID === "string" ? raw.transID : null,
+        taecelFolio: typeof raw?.folio === "string" ? raw.folio : null,
+        taecelCarrier: typeof raw?.carrier === "string" ? raw.carrier : null,
+        taecelCargoMxn: typeof raw?.cargoMxn === "number" ? String(raw.cargoMxn) : null,
+        bolsaType: typeof raw?.bolsaType === "string" ? raw.bolsaType : null,
       })
       .where(eq(billPaymentsTable.id, paymentId));
 
@@ -233,9 +241,9 @@ router.post("/pay", async (req: Request, res: Response) => {
 
     // 6. Check SIPREL saldo after successful payment (non-blocking)
     if (siprelProvider.getSaldoBalance) {
-      siprelProvider.getSaldoBalance().then(async (balance) => {
-        if (balance < SALDO_LOW_THRESHOLD) {
-          await sendLowSaldoAlert(balance);
+      siprelProvider.getSaldoBalance().then(async ({ pagoServicios }) => {
+        if (pagoServicios < SALDO_LOW_THRESHOLD) {
+          await sendLowSaldoAlert(pagoServicios);
         }
       }).catch(() => {});
     }
@@ -295,7 +303,7 @@ router.get("/history", async (req: Request, res: Response) => {
 router.get("/admin/health", (_req: Request, res: Response) => {
   const siprelConfigured = !!(
     process.env.SIPREL_API_KEY &&
-    process.env.SIPREL_USER_ID &&
+    process.env.SIPREL_NIP &&
     process.env.SIPREL_BASE_URL
   );
   const evolucionaConfigured = !!(
@@ -322,11 +330,12 @@ router.get("/admin/health", (_req: Request, res: Response) => {
 });
 
 // GET /api/bills/admin/balance
-// Returns the current SIPREL saldo balance (calls live API if configured)
+// Returns SIPREL saldo balances (Tiempo Aire + Pago de Servicios)
 router.get("/admin/balance", async (_req: Request, res: Response) => {
   if (!siprelProvider.getSaldoBalance || !siprelProvider.isAvailable()) {
     res.json({
-      balance: null,
+      tiempoAire: null,
+      pagoServicios: null,
       currency: "MXN",
       provider: "siprel",
       configured: false,
@@ -337,19 +346,20 @@ router.get("/admin/balance", async (_req: Request, res: Response) => {
   }
 
   try {
-    const balance = await siprelProvider.getSaldoBalance();
+    const { tiempoAire, pagoServicios } = await siprelProvider.getSaldoBalance();
     res.json({
-      balance,
+      tiempoAire,
+      pagoServicios,
       currency: "MXN",
       provider: "siprel",
       configured: true,
-      lowBalance: balance < 500,
+      lowBalance: pagoServicios < 500,
       threshold: 500,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al obtener saldo.";
     logger.error({ err }, "billpay: admin balance check failed");
-    res.status(502).json({ error: message, configured: true, balance: null });
+    res.status(502).json({ error: message, configured: true, tiempoAire: null, pagoServicios: null });
   }
 });
 
@@ -456,6 +466,44 @@ router.get("/admin/reps", async (_req: Request, res: Response) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al obtener reps.";
     res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/bills/admin/products
+// Returns the cached Taecel product list. Admin can force a refresh via ?refresh=1
+router.get("/admin/products", async (req: Request, res: Response) => {
+  try {
+    const forceRefresh = req.query.refresh === "1";
+
+    // Show cache metadata
+    const [cached] = await db
+      .select()
+      .from(taecelProductCacheTable)
+      .orderBy(desc(taecelProductCacheTable.cachedAt))
+      .limit(1);
+
+    const cacheAge = cached
+      ? Math.round((Date.now() - new Date(cached.cachedAt).getTime()) / 1000 / 60)
+      : null;
+    const isFresh = cached ? cached.expiresAt > new Date() : false;
+
+    if (forceRefresh || !isFresh) {
+      logger.info({ forceRefresh }, "billpay: admin/products fetching live from Taecel");
+      const data = await taecelGetProducts();
+      res.json({ source: "live", cacheAgeMinutes: null, products: data });
+    } else {
+      res.json({
+        source: "cache",
+        cacheAgeMinutes: cacheAge,
+        cachedAt: cached?.cachedAt,
+        expiresAt: cached?.expiresAt,
+        products: JSON.parse(cached?.data ?? "null"),
+      });
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener productos.";
+    logger.error({ err }, "billpay: admin/products failed");
+    res.status(502).json({ error: message });
   }
 });
 

@@ -24,6 +24,7 @@ export interface BillService {
   evolucionaServiceId?: string;
   minReferencia?: number;
   minAmount?: number;
+  isTopup?: boolean;
 }
 
 export interface BillPayRequest {
@@ -40,12 +41,18 @@ export interface BillPayResult {
   provider: ProviderName;
   timestamp: string;
   failoverUsed: boolean;
+  status?: "confirmed" | "pending" | "failed";
   rawResponse?: unknown;
+}
+
+export interface TaecelBalance {
+  tiempoAire: number;
+  pagoServicios: number;
 }
 
 export interface ProviderAdapter {
   name: ProviderName;
   isAvailable(): boolean;
   pay(service: BillService, req: BillPayRequest): Promise<BillPayResult>;
-  getSaldoBalance?(): Promise<number>;
+  getSaldoBalance?(): Promise<TaecelBalance>;
 }
