@@ -1,0 +1,72 @@
+In the PagoYa/PagoSeguro codebase, do the following
+AFTER sandbox testing is complete and results exist
+at src/billpay/scripts/sandbox-results-[date].json:
+
+1. READ THE RESULTS FILE
+   Load the most recent sandbox-results-[date].json file.
+   Verify it contains at least these completed tests:
+   BP-01 through BP-05 (bill payments)
+   TU-01 through TU-05 (mobile top-ups)
+
+2. GENERATE THE TABLA DE RESULTADOS
+   Create a filled-out Excel-compatible results table
+   at src/billpay/scripts/tabla-resultados-pagoya.xlsx
+
+   The table must match the format Taecel provided in
+   their "Tabla de resultados de las pruebas" template
+   with these columns:
+   Referencia | Carrier | Código | Monto | Folio |
+   TransID | Fecha | Status | Tipo
+
+   Fill in the actual values from sandbox-results JSON.
+   For the "expected failure" tests (error codes 1, 2, 3, 3129)
+   mark them as passed with the expected error code noted.
+
+3. GENERATE THE PRODUCTION REQUEST EMAIL DRAFT
+   Create a file at src/billpay/scripts/production-request-email.txt
+
+   Content:
+   To: integraciones@taecel.com
+   CC: oyuki (her direct email from the integration email)
+   Subject: Solicitud de acceso a producción — PagoYa / ID373554
+
+   Body:
+   Hola Oyuki y equipo de integraciones,
+
+   Adjunto la Tabla de Resultados de las Pruebas completada
+   para la integración de PagoYa con el servicio web de Taecel.
+
+   Resumen de pruebas completadas:
+   — Recargas electrónicas: [X] pruebas exitosas
+   — Pago de servicios: [X] pruebas exitosas
+   — Total: [X]/[X] pruebas aprobadas
+
+   Detalles del sistema integrado:
+   — Plataforma: PagoYa — pagoseguromx.com
+   — ID cuenta SIPREL: ID373554
+   — Lenguaje: TypeScript / Node.js
+   — Protocolo: REST, application/x-www-form-urlencoded
+   — Flujo implementado: requestTXN → statusTXN (polling
+     cada 5 segundos, timeout 60 segundos)
+
+   Solicitamos el acceso al ambiente de producción para
+   comenzar operaciones en Puerto Vallarta y Guadalajara.
+
+   Quedamos a sus órdenes para cualquier información adicional.
+
+   Lloyd Wright
+   Fundador — PagoYa
+   lloyd@pagoseguromx.com
+   +52 322 230 4213
+
+4. PRINT NEXT STEPS to console:
+   ══════════════════════════════════
+   READY FOR PRODUCTION
+   ══════════════════════════════════
+   1. Attach tabla-resultados-pagoya.xlsx to the email
+   2. Send to integraciones@taecel.com
+   3. Production access expected within 24 hours per Oyuki
+   4. When production confirmed: update SIPREL_BASE_URL
+      in Replit Secrets to the production URL they provide
+   5. Run one final live test with a real CFE bill
+   ══════════════════════════════════
