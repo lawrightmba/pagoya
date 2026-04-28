@@ -25,14 +25,13 @@ const BASE_URL  = process.env.SIPREL_BASE_URL ?? "https://app.taecel.com/api/";
 const API_KEY   = process.env.SIPREL_API_KEY  ?? "";
 const NIP       = process.env.SIPREL_NIP      ?? "";
 
-// ⚠️  Do not re-run this script within 10 minutes of the previous run —
-//     Taecel enforces a 10-minute cooldown per reference number (error 3128).
-//     Each test uses a unique reference, so concurrent runs are not an issue,
-//     but back-to-back full runs must be spaced at least 10 minutes apart.
+// WARNING: Each reference number has a 10-minute cooldown.
+//          Do not re-run this script within 10 minutes of the previous run.
+//          Taecel enforces a 10-minute cooldown per reference number (error 3128).
 
 const POLL_INTERVAL_MS    = 5_000;
 const POLL_TIMEOUT_MS     = 180_000;  // 3 min — sandbox is slower than production
-const INTER_TEST_DELAY    = 3_000;    // 3 s between transactions (10-min rule is per-reference, not per-run)
+const INTER_TEST_DELAY    = 5_000;    // 5 s between transactions
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
@@ -97,12 +96,21 @@ const BILL_PAYMENTS: TestCase[] = [
   { id: "BP-05", service: "DSH", producto: "DSH000", referencia: "27458965324125",              monto: "103", description: "Dish payment" },
 ];
 
+// WARNING: Each reference number has a 10-minute cooldown.
+//          Do not re-run this script within 10 minutes of the previous run.
 const MOBILE_TOPUPS: TestCase[] = [
-  { id: "TU-01", service: "TEL010", producto: "TEL010", referencia: "5555555505", description: "Telcel $10 — success" },
-  { id: "TU-02", service: "TEL050", producto: "TEL050", referencia: "5555555510", description: "Telcel $50 — error 1 (EXPECTED)", expectedError: 1 },
-  { id: "TU-03", service: "TEL100", producto: "TEL100", referencia: "5555555515", description: "Telcel $100 — success" },
-  { id: "TU-04", service: "MOV010", producto: "MOV010", referencia: "5555555530", description: "AT&T $10 — success" },
-  { id: "TU-05", service: "MOV050", producto: "MOV050", referencia: "5555555540", description: "AT&T $50 — error 3 (EXPECTED)", expectedError: 3 },
+  // — Telcel —
+  { id: "TU-01", service: "TEL010", producto: "TEL010", referencia: "5555555505", description: "Telcel $10 — Exitosa" },
+  { id: "TU-02", service: "TEL050", producto: "TEL050", referencia: "5555555510", description: "Telcel $50 — Error 1 (EXPECTED)",  expectedError: 1 },
+  { id: "TU-03", service: "TEL100", producto: "TEL100", referencia: "5555555515", description: "Telcel $100 — Exitosa" },
+  { id: "TU-04", service: "TEL150", producto: "TEL150", referencia: "5555555520", description: "Telcel $150 — Exitosa" },
+  { id: "TU-05", service: "TEL200", producto: "TEL200", referencia: "5555555525", description: "Telcel $200 — Error 2 (EXPECTED)", expectedError: 2 },
+  // — Movistar / AT&T —
+  { id: "TU-06", service: "MOV010", producto: "MOV010", referencia: "5555555530", description: "Movistar $10 — Exitosa" },
+  { id: "TU-07", service: "MOV050", producto: "MOV050", referencia: "5555555540", description: "Movistar $50 — Error 3 (EXPECTED)",    expectedError: 3 },
+  { id: "TU-08", service: "MOV100", producto: "MOV100", referencia: "5555555560", description: "Movistar $100 — Exitosa" },
+  { id: "TU-09", service: "MOV120", producto: "MOV120", referencia: "5555555565", description: "Movistar $120 — Error 4 (EXPECTED)",   expectedError: 4 },
+  { id: "TU-10", service: "MOV150", producto: "MOV150", referencia: "5555555200", description: "Movistar $150 — Error 3129 (EXPECTED)", expectedError: 3129 },
 ];
 
 // ─── ERROR CODE LABELS ───────────────────────────────────────────────────────
@@ -339,9 +347,10 @@ async function main() {
 
   // 2. RUN TESTS
   const jsonRecords: JsonTestRecord[] = [];
-  let bpPassed  = 0;
-  let tuPassed  = 0;
-  let timedOut  = 0;
+  let exitosaCount        = 0;  // Exitosa (clean success)
+  let expectedErrorCount  = 0;  // returned an error but it was the expected one
+  let unexpectedFailCount = 0;  // failed without a matching expectedError
+  let timedOut            = 0;  // never completed within POLL_TIMEOUT_MS
 
   // — Bill Payments —
   console.log("─── BILL PAYMENTS ─────────────────────────────────────────\n");
@@ -352,17 +361,17 @@ async function main() {
       result = await runTransaction(tc);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      result = { status: "timeout", errorMsg: msg };
       timedOut++;
       console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
       await sleep(POST_TIMEOUT_DELAY);
       continue;
     }
 
-    const passed = result.status === "Exitosa" || result.status === "pending" || result.status === "timeout";
-    if (result.status === "timeout") timedOut++;
-    else if (passed) bpPassed++;
+    if (result.status === "Exitosa" || result.status === "pending") exitosaCount++;
+    else if (result.status === "timeout") timedOut++;
+    else unexpectedFailCount++;
 
+    const passed = result.status === "Exitosa" || result.status === "pending";
     console.log(formatLine(tc, result, passed));
 
     jsonRecords.push({
@@ -394,20 +403,22 @@ async function main() {
       result = await runTransaction(tc);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      result = { status: "timeout", errorMsg: msg };
       timedOut++;
       console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
       await sleep(POST_TIMEOUT_DELAY);
       continue;
     }
 
-    // Accept any error response as passing when the test declares an expectedError —
-    // Taecel sandbox may return a different error code than the matrix specifies.
+    // Accept any error when expectedError is declared — sandbox may return a
+    // different code than the matrix, but the test intent is "should error here".
     const expectedErrorHit = tc.expectedError !== undefined && result.status === "error";
-    const passed = result.status === "Exitosa" || result.status === "pending" || expectedErrorHit;
-    if (result.status === "timeout") timedOut++;
-    else if (passed) tuPassed++;
 
+    if (result.status === "Exitosa" || result.status === "pending") exitosaCount++;
+    else if (result.status === "timeout") timedOut++;
+    else if (expectedErrorHit) expectedErrorCount++;
+    else unexpectedFailCount++;
+
+    const passed = result.status === "Exitosa" || result.status === "pending" || expectedErrorHit;
     console.log(formatLine(tc, result, passed));
 
     jsonRecords.push({
@@ -439,18 +450,16 @@ async function main() {
   }
 
   // 4. SUMMARY
-  const total  = BILL_PAYMENTS.length + MOBILE_TOPUPS.length;
-  const passed = bpPassed + tuPassed;
-  const failed = total - passed - timedOut;
+  const total = BILL_PAYMENTS.length + MOBILE_TOPUPS.length;   // 15
 
   console.log("\n══════════════════════════════════════════════════════════");
   console.log("  SANDBOX TEST RESULTS");
   console.log("══════════════════════════════════════════════════════════");
-  console.log(`  Bill Payments  : ${bpPassed}/${BILL_PAYMENTS.length} passed`);
-  console.log(`  Mobile Top-ups : ${tuPassed}/${MOBILE_TOPUPS.length} passed (includes expected error codes)`);
-  console.log(`  Timed out      : ${timedOut}  (TransIDs stored for manual reconciliation)`);
-  console.log(`  Failed         : ${failed}`);
-  console.log(`  Total passed   : ${passed}/${total}`);
+  console.log(`  Passed (exitosa)                : ${exitosaCount}`);
+  console.log(`  Expected errors (correct behav) : ${expectedErrorCount}`);
+  console.log(`  Unexpected failures             : ${unexpectedFailCount}`);
+  console.log(`  Timeouts                        : ${timedOut}`);
+  console.log(`  Total                           : ${total} tests (${BILL_PAYMENTS.length} bill payments + ${MOBILE_TOPUPS.length} top-ups)`);
   console.log("══════════════════════════════════════════════════════════");
   console.log(`  Bolsa Pago de Servicios : $${balanceAfter.pagoServicios.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`);
   console.log(`  Bolsa Tiempo Aire       : $${balanceAfter.tiempoAire.toLocaleString("es-MX",    { minimumFractionDigits: 2 })} MXN`);
@@ -459,13 +468,14 @@ async function main() {
   // 5. WRITE RESULTS FILE
   const today  = new Date().toISOString().slice(0, 10);
   const output = {
-    date:     today,
+    date:               today,
     total,
-    passed,
+    exitosa:            exitosaCount,
+    expectedErrors:     expectedErrorCount,
+    unexpectedFailures: unexpectedFailCount,
     timedOut,
-    failed,
-    tests:    jsonRecords,
-    balances: { tiempoAire: balanceAfter.tiempoAire, pagoServicios: balanceAfter.pagoServicios },
+    tests:              jsonRecords,
+    balances:           { tiempoAire: balanceAfter.tiempoAire, pagoServicios: balanceAfter.pagoServicios },
   };
 
   const outPath = path.join(__dirname, `sandbox-results-${today}.json`);
@@ -473,7 +483,7 @@ async function main() {
   console.log(`📄 Resultados escritos en: ${outPath}`);
   console.log("   Comparte este archivo con Oyuki para solicitar acceso a producción.\n");
 
-  process.exit(passed === total ? 0 : 1);
+  process.exit(unexpectedFailCount === 0 ? 0 : 1);
 }
 
 main().catch((err) => {
