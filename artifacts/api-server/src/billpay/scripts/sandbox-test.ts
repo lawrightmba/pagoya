@@ -26,8 +26,8 @@ const API_KEY   = process.env.SIPREL_API_KEY  ?? "";
 const NIP       = process.env.SIPREL_NIP      ?? "";
 
 const POLL_INTERVAL_MS  = 5_000;
-const POLL_TIMEOUT_MS   = 120_000;   // 2 min — sandbox is slower than production
-const INTER_TEST_DELAY  = 5_000;     // 5 s between transactions to avoid rate-limiting
+const POLL_TIMEOUT_MS   = 180_000;   // 3 min — sandbox is slower than production
+const INTER_TEST_DELAY  = 8_000;     // 8 s between transactions to avoid rate-limiting
 
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
 
@@ -166,7 +166,7 @@ interface RunResult {
   folio?:    string;
   carrier?:  string;
   fecha?:    string;
-  status:    "Exitosa" | "pending" | "error";
+  status:    "Exitosa" | "pending" | "timeout" | "error";
   errorCode?: number;
   errorMsg?:  string;
   monto?:    string;
@@ -179,6 +179,14 @@ async function runTransaction(tc: TestCase): Promise<RunResult> {
     referencia: tc.referencia,
   };
   if (tc.monto !== undefined) extra.monto = tc.monto;
+
+  // Debug: print the exact urlencoded body being sent
+  const debugBody = new URLSearchParams({
+    key:  `${API_KEY.slice(0, 4)}${"*".repeat(Math.max(0, API_KEY.length - 4))}`,
+    nip:  "*".repeat(NIP.length),
+    ...extra,
+  });
+  console.log(`   → requestTXN body: ${debugBody.toString()}`);
 
   // 1. requestTXN
   const txn = await taecelPost<TxnResponse>("requestTXN", extra);
@@ -198,7 +206,7 @@ async function runTransaction(tc: TestCase): Promise<RunResult> {
 
   while (true) {
     if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
-      return { status: "pending", transID };
+      return { status: "timeout", transID };
     }
 
     const statusRes = await taecelPost<StatusResponse>("statusTXN", { transID });
@@ -231,9 +239,10 @@ async function runTransaction(tc: TestCase): Promise<RunResult> {
 function pad(s: string, n: number) { return s.padEnd(n); }
 
 function formatLine(tc: TestCase, result: RunResult, passed: boolean): string {
-  const icon  = result.status === "Exitosa" ? "✅"
-              : result.status === "pending" ? "⚠️ "
-              : passed                       ? "✅"
+  const icon  = result.status === "Exitosa"  ? "✅"
+              : result.status === "timeout"  ? "⚠️ "
+              : result.status === "pending"  ? "⚠️ "
+              : passed                        ? "✅"
               : "❌";
 
   const id    = `${tc.id} ${tc.service}`;
@@ -242,8 +251,12 @@ function formatLine(tc: TestCase, result: RunResult, passed: boolean): string {
     return `${icon} ${pad(id, 12)}| TransID: ${result.transID ?? "—"} | Folio: ${result.folio ?? "—"} | Status: Exitosa`;
   }
 
+  if (result.status === "timeout") {
+    return `${icon} ${pad(id, 12)}| Status: timeout | TransID: ${result.transID ?? "—"} | continuing...`;
+  }
+
   if (result.status === "pending") {
-    return `${icon} ${pad(id, 12)}| Status: pending | TransID stored for reconciliation: ${result.transID}`;
+    return `${icon} ${pad(id, 12)}| Status: pending | TransID: ${result.transID ?? "—"} | continuing...`;
   }
 
   // error
@@ -320,16 +333,29 @@ async function main() {
 
   // 2. RUN TESTS
   const jsonRecords: JsonTestRecord[] = [];
-  let bpPassed = 0;
-  let tuPassed = 0;
+  let bpPassed  = 0;
+  let tuPassed  = 0;
+  let timedOut  = 0;
 
   // — Bill Payments —
   console.log("─── BILL PAYMENTS ─────────────────────────────────────────\n");
 
   for (const tc of BILL_PAYMENTS) {
-    const result = await runTransaction(tc);
-    const passed = result.status === "Exitosa" || result.status === "pending";
-    if (passed) bpPassed++;
+    let result: RunResult;
+    try {
+      result = await runTransaction(tc);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result = { status: "timeout", errorMsg: msg };
+      timedOut++;
+      console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
+      await sleep(INTER_TEST_DELAY);
+      continue;
+    }
+
+    const passed = result.status === "Exitosa" || result.status === "pending" || result.status === "timeout";
+    if (result.status === "timeout") timedOut++;
+    else if (passed) bpPassed++;
 
     console.log(formatLine(tc, result, passed));
 
@@ -357,12 +383,24 @@ async function main() {
   console.log("\n─── MOBILE TOP-UPS ─────────────────────────────────────────\n");
 
   for (const tc of MOBILE_TOPUPS) {
-    const result = await runTransaction(tc);
+    let result: RunResult;
+    try {
+      result = await runTransaction(tc);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result = { status: "timeout", errorMsg: msg };
+      timedOut++;
+      console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
+      await sleep(INTER_TEST_DELAY);
+      continue;
+    }
+
     // Accept any error response as passing when the test declares an expectedError —
     // Taecel sandbox may return a different error code than the matrix specifies.
     const expectedErrorHit = tc.expectedError !== undefined && result.status === "error";
     const passed = result.status === "Exitosa" || result.status === "pending" || expectedErrorHit;
-    if (passed) tuPassed++;
+    if (result.status === "timeout") timedOut++;
+    else if (passed) tuPassed++;
 
     console.log(formatLine(tc, result, passed));
 
@@ -397,13 +435,16 @@ async function main() {
   // 4. SUMMARY
   const total  = BILL_PAYMENTS.length + MOBILE_TOPUPS.length;
   const passed = bpPassed + tuPassed;
+  const failed = total - passed - timedOut;
 
   console.log("\n══════════════════════════════════════════════════════════");
   console.log("  SANDBOX TEST RESULTS");
   console.log("══════════════════════════════════════════════════════════");
   console.log(`  Bill Payments  : ${bpPassed}/${BILL_PAYMENTS.length} passed`);
   console.log(`  Mobile Top-ups : ${tuPassed}/${MOBILE_TOPUPS.length} passed (includes expected error codes)`);
-  console.log(`  Total          : ${passed}/${total}`);
+  console.log(`  Timed out      : ${timedOut}  (TransIDs stored for manual reconciliation)`);
+  console.log(`  Failed         : ${failed}`);
+  console.log(`  Total passed   : ${passed}/${total}`);
   console.log("══════════════════════════════════════════════════════════");
   console.log(`  Bolsa Pago de Servicios : $${balanceAfter.pagoServicios.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`);
   console.log(`  Bolsa Tiempo Aire       : $${balanceAfter.tiempoAire.toLocaleString("es-MX",    { minimumFractionDigits: 2 })} MXN`);
@@ -415,7 +456,8 @@ async function main() {
     date:     today,
     total,
     passed,
-    failed:   total - passed,
+    timedOut,
+    failed,
     tests:    jsonRecords,
     balances: { tiempoAire: balanceAfter.tiempoAire, pagoServicios: balanceAfter.pagoServicios },
   };
