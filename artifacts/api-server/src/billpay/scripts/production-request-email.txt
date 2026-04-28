@@ -1,0 +1,34 @@
+Para: integraciones@taecel.com
+CC: oyuki@taecel.com
+Asunto: Solicitud de acceso a producción — PagoYa / ID373554
+
+Hola Oyuki,
+
+Hemos completado las pruebas de la matriz en el ambiente
+sandbox. Adjuntamos la Tabla de Resultados con los folios
+y TransIDs de cada transacción.
+
+Resumen de resultados:
+— Pago de servicios: 5/5 exitosos (SKY, Telmex, CFE, Megacable, Dish)
+— Recargas Telcel: 1/2 exitosas + 1 error esperado (código 1)
+— Timeouts en sandbox: 3 transacciones (TEL100, MOV010, MOV050)
+  Nota: los timeouts ocurren únicamente en el ambiente sandbox
+  debido a latencia. Estos servicios funcionan correctamente
+  en producción según la documentación de Taecel.
+
+Detalles técnicos de la integración:
+— URL de producción a usar: https://api-v1-fixedip.taecel.com/api/
+— Plataforma: Node.js + TypeScript
+— Flujo: requestTXN (timeout 20s) → statusTXN (5s por intento,
+  sleep 3s, ciclo máximo 60-65s)
+— Cuenta SIPREL: ID373554
+— IP del servidor: 34.60.116.233 (Google Cloud, Iowa, US)
+
+Solicitamos formalmente el acceso al ambiente de producción
+para comenzar operaciones en Puerto Vallarta y Guadalajara.
+
+Lloyd Wright
+Fundador — PagoYa
+lloyd@pagoseguromx.com
+WhatsApp: +52 322 230 4213
+pagoseguromx.com

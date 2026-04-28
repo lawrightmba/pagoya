@@ -1,0 +1,79 @@
+In the PagoYa/PagoSeguro codebase, run the production 
+request generator. The sandbox results file exists at 
+src/billpay/scripts/sandbox-results-2026-04-28.json 
+with 7 passed tests and 3 timeouts.
+
+Read that file and do the following:
+
+1. GENERATE THE TABLA DE RESULTADOS
+   Create a filled Excel file at:
+   src/billpay/scripts/tabla-resultados-pagoya.xlsx
+   
+   Include ALL 10 test rows using this data:
+
+   PASSED TESTS:
+   BP-01 | SKY     | SKY000 | 871235412635          | $95   | Folio: 864198  | TransID: 260401736740 | Exitosa
+   BP-02 | TELMEX  | TMX001 | 6589745213            | $100  | Folio: 657803  | TransID: 260401736745 | Exitosa
+   BP-03 | CFE     | CFE000 | 125478965412365478965230126654 | $260 | Folio: 330813 | TransID: 260401736751 | Exitosa
+   BP-04 | MEGACABLE | MEG000 | 9854123547          | $131  | Folio: 273761  | TransID: 260401736759 | Exitosa
+   BP-05 | DISH    | DSH000 | 27458965324125        | $103  | Folio: 289558  | TransID: 260401736766 | Exitosa
+   TU-01 | TELCEL  | TEL010 | 5555555505            | $10   | Folio: 322787  | TransID: 260401736770 | Exitosa
+   TU-02 | TELCEL  | TEL050 | 5555555510            | $0    | Folio: —       | TransID: 260401736779 | Error 1 (Teléfono no válido — EXPECTED)
+
+   TIMEOUT TESTS (sandbox only — note these clearly):
+   TU-03 | TELCEL  | TEL100 | 5555555515 | $100 | Timeout en sandbox — se espera Exitosa en producción
+   TU-04 | AT&T    | MOV010 | 5555555530 | $10  | Timeout en sandbox — se espera Exitosa en producción
+   TU-05 | AT&T    | MOV050 | 5555555540 | $50  | Timeout en sandbox — se espera Exitosa en producción
+
+   Columns: Referencia | Carrier | Código | Monto | Folio | TransID | Fecha | Status | Tipo | Notas
+   Date for all rows: 2026-04-28
+   Tipo: "Pago de Servicios" for BP tests, "Tiempo Aire" for TU tests
+
+2. GENERATE PRODUCTION REQUEST EMAIL
+   Create src/billpay/scripts/production-request-email.txt
+
+   Content:
+   Asunto: Solicitud de acceso a producción — PagoYa / ID373554
+
+   Hola Oyuki,
+
+   Hemos completado las pruebas de la matriz en el ambiente 
+   sandbox. Adjuntamos la Tabla de Resultados con los folios 
+   y TransIDs de cada transacción.
+
+   Resumen de resultados:
+   — Pago de servicios: 5/5 exitosos (SKY, Telmex, CFE, Megacable, Dish)
+   — Recargas Telcel: 1/2 exitosas + 1 error esperado (código 1)
+   — Timeouts en sandbox: 3 transacciones (TEL100, MOV010, MOV050)
+     Nota: los timeouts ocurren únicamente en el ambiente sandbox
+     debido a latencia. Estos servicios funcionan correctamente
+     en producción según la documentación de Taecel.
+
+   Detalles técnicos de la integración:
+   — URL de producción a usar: https://api-v1-fixedip.taecel.com/api/
+   — Plataforma: Node.js + TypeScript
+   — Flujo: requestTXN (timeout 20s) → statusTXN (5s por intento, 
+     sleep 3s, ciclo máximo 60-65s)
+   — Cuenta SIPREL: ID373554
+   — IP del servidor: 34.60.116.233 (Google Cloud, Iowa, US)
+
+   Solicitamos formalmente el acceso al ambiente de producción 
+   para comenzar operaciones en Puerto Vallarta y Guadalajara.
+
+   Lloyd Wright
+   Fundador — PagoYa
+   lloyd@pagoseguromx.com
+   WhatsApp: +52 322 230 4213
+   pagoseguromx.com
+
+3. PRINT NEXT STEPS to console when complete:
+   ══════════════════════════════════════════
+   LISTO PARA PRODUCCIÓN
+   ══════════════════════════════════════════
+   1. Adjuntar tabla-resultados-pagoya.xlsx al email
+   2. Enviar a integraciones@taecel.com con CC a Oyuki
+   3. Acceso a producción esperado en menos de 24 horas
+   4. Cuando confirmen: SIPREL_BASE_URL ya está configurada
+      correctamente — no hay cambios de código necesarios
+   5. Fondear saldo vía SPEI a la cuenta SIPREL
+   ══════════════════════════════════════════
