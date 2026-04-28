@@ -25,9 +25,14 @@ const BASE_URL  = process.env.SIPREL_BASE_URL ?? "https://app.taecel.com/api/";
 const API_KEY   = process.env.SIPREL_API_KEY  ?? "";
 const NIP       = process.env.SIPREL_NIP      ?? "";
 
+// ⚠️  Do not re-run this script within 10 minutes of the previous run —
+//     Taecel enforces a 10-minute cooldown per reference number (error 3128).
+//     Each test uses a unique reference, so concurrent runs are not an issue,
+//     but back-to-back full runs must be spaced at least 10 minutes apart.
+
 const POLL_INTERVAL_MS    = 5_000;
 const POLL_TIMEOUT_MS     = 180_000;  // 3 min — sandbox is slower than production
-const INTER_TEST_DELAY    = 8_000;    // 8 s between normal transactions
+const INTER_TEST_DELAY    = 3_000;    // 3 s between transactions (10-min rule is per-reference, not per-run)
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
@@ -85,12 +90,11 @@ interface TestCase {
 }
 
 const BILL_PAYMENTS: TestCase[] = [
-  { id: "BP-01",  service: "SKY",   producto: "SKY000", referencia: "871235412635",   monto: "95",  description: "SKY payment" },
-  { id: "BP-02",  service: "TMX",   producto: "TMX001", referencia: "6589745213",     monto: "100", description: "Telmex payment" },
-  { id: "BP-03",  service: "CFE-A", producto: "CFE000", referencia: "0126654",        monto: "260", description: "CFE payment — 7-digit reference" },
-  { id: "BP-03b", service: "CFE-B", producto: "CFE000", referencia: "36547896523",    monto: "260", description: "CFE payment — 11-digit reference (alt)" },
-  { id: "BP-04",  service: "MEG",   producto: "MEG000", referencia: "9854123547",     monto: "131", description: "Megacable payment" },
-  { id: "BP-05",  service: "DSH",   producto: "DSH000", referencia: "27458965324125", monto: "103", description: "Dish payment" },
+  { id: "BP-01", service: "SKY", producto: "SKY000", referencia: "871235412635",                monto: "95",  description: "SKY payment" },
+  { id: "BP-02", service: "TMX", producto: "TMX001", referencia: "6589745213",                  monto: "100", description: "Telmex payment" },
+  { id: "BP-03", service: "CFE", producto: "CFE000", referencia: "125478965412365478965230126654", monto: "260", description: "CFE payment — 30-char full reference per Taecel support" },
+  { id: "BP-04", service: "MEG", producto: "MEG000", referencia: "9854123547",                  monto: "131", description: "Megacable payment" },
+  { id: "BP-05", service: "DSH", producto: "DSH000", referencia: "27458965324125",              monto: "103", description: "Dish payment" },
 ];
 
 const MOBILE_TOPUPS: TestCase[] = [

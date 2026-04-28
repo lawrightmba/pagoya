@@ -128,6 +128,7 @@ async function taecelPost<T>(
   endpoint: string,
   config: TaecelConfig,
   extraParams: Record<string, string> = {},
+  timeoutMs = 20_000,  // requestTXN: 20 s max per Taecel support; statusTXN: 5 s
 ): Promise<T> {
   const body = new URLSearchParams({
     key: config.apiKey,
@@ -142,7 +143,7 @@ async function taecelPost<T>(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   logger.info({ endpoint, status: response.status }, "taecel: response received");
@@ -172,22 +173,29 @@ async function requestTXN(
 }
 
 // ─── METHOD 2: statusTXN with polling loop ────────────────────────────────────
+// Per Taecel support guidance:
+//   • Total cycle timeout : 60 s counted from when requestTXN was first called
+//   • Per-call timeout    : 5 s per statusTXN HTTP request
+//   • Sleep between polls : 3 s
+//   • Stop immediately    : on Exitosa, Fracasada, or any non-zero error code
 async function pollStatusTXN(
   config: TaecelConfig,
   transID: string,
   startedAt: number,
 ): Promise<{ timedOut: boolean; data?: TaecelStatusData; raw?: TaecelStatusTXNResponse }> {
-  const TIMEOUT_MS = 60_000;
-  const POLL_INTERVAL_MS = 5_000;
+  const CYCLE_TIMEOUT_MS    = 60_000;  // total from requestTXN call
+  const STATUS_CALL_TIMEOUT = 5_000;   // per individual statusTXN HTTP call
+  const POLL_INTERVAL_MS    = 3_000;   // sleep between attempts
 
   while (true) {
     const elapsed = Date.now() - startedAt;
-    if (elapsed >= TIMEOUT_MS) {
-      logger.warn({ transID, elapsedMs: elapsed }, "taecel: statusTXN polling timed out after 60s");
+    if (elapsed >= CYCLE_TIMEOUT_MS) {
+      logger.warn({ transID, elapsedMs: elapsed }, "taecel: statusTXN polling timed out — 60 s cycle elapsed");
       return { timedOut: true };
     }
 
-    const res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID });
+    // Each statusTXN call is limited to 5 s per Taecel support guidance
+    const res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID }, STATUS_CALL_TIMEOUT);
     logger.info({ transID, success: res.success, error: res.error, message: res.message }, "taecel: statusTXN poll");
 
     if (res.success === true && !Array.isArray(res.data)) {
@@ -205,7 +213,7 @@ async function pollStatusTXN(
       logger.info({ transID }, "taecel: transaction en proceso — continuing poll");
     }
 
-    // Wait before next poll
+    // Wait 3 s before next poll per Taecel support guidance
     await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }
