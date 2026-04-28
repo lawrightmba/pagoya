@@ -1,9 +1,9 @@
 {
   "date": "2026-04-28",
-  "total": 10,
-  "passed": 6,
-  "timedOut": 3,
-  "failed": 1,
+  "total": 11,
+  "passed": 1,
+  "timedOut": 1,
+  "failed": 9,
   "tests": [
     {
       "id": "BP-01",
@@ -11,13 +11,10 @@
       "producto": "SKY000",
       "referencia": "871235412635",
       "monto": "95",
-      "transID": "260401729192",
-      "folio": "976803",
-      "carrier": "SKY",
-      "fecha": "2026-04-28 14:45:48",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     },
     {
       "id": "BP-02",
@@ -25,19 +22,27 @@
       "producto": "TMX001",
       "referencia": "6589745213",
       "monto": "100",
-      "transID": "260401729216",
-      "folio": "741193",
-      "carrier": "Telmex",
-      "fecha": "2026-04-28 14:46:01",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     },
     {
       "id": "BP-03",
-      "service": "CFE",
+      "service": "CFE-A",
       "producto": "CFE000",
-      "referencia": "125478965412",
+      "referencia": "0126654",
+      "monto": "260",
+      "status": "error",
+      "errorCode": 405,
+      "errorMsg": "El campo referencia debe ser de al menos 30 caracteres de longitud.",
+      "passed": false
+    },
+    {
+      "id": "BP-03b",
+      "service": "CFE-B",
+      "producto": "CFE000",
+      "referencia": "36547896523",
       "monto": "260",
       "status": "error",
       "errorCode": 405,
@@ -50,13 +55,10 @@
       "producto": "MEG000",
       "referencia": "9854123547",
       "monto": "131",
-      "transID": "260401729233",
-      "folio": "747317",
-      "carrier": "Megacable",
-      "fecha": "2026-04-28 14:46:18",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     },
     {
       "id": "BP-05",
@@ -64,38 +66,52 @@
       "producto": "DSH000",
       "referencia": "27458965324125",
       "monto": "103",
-      "transID": "260401729249",
-      "folio": "877950",
-      "carrier": "Dish",
-      "fecha": "2026-04-28 14:46:30",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     },
     {
       "id": "TU-01",
       "service": "TEL010",
       "producto": "TEL010",
       "referencia": "5555555505",
-      "transID": "260401729260",
-      "folio": "407262",
-      "carrier": "Telcel",
-      "fecha": "2026-04-28 14:46:44",
-      "bolsa": "Tiempo Aire",
-      "status": "Exitosa",
-      "passed": true
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     },
     {
       "id": "TU-02",
       "service": "TEL050",
       "producto": "TEL050",
       "referencia": "5555555510",
-      "transID": "260401729271",
+      "transID": "260401729699",
       "status": "Error 1 (EXPECTED)",
       "errorCode": "1",
       "errorMsg": "Teléfono no valido",
       "passed": true,
       "expected": "Error code 1"
+    },
+    {
+      "id": "TU-03",
+      "service": "TEL100",
+      "producto": "TEL100",
+      "referencia": "5555555515",
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
+    },
+    {
+      "id": "TU-04",
+      "service": "MOV010",
+      "producto": "MOV010",
+      "referencia": "5555555530",
+      "status": "error",
+      "errorCode": "3128",
+      "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente",
+      "passed": false
     }
   ],
   "balances": {
