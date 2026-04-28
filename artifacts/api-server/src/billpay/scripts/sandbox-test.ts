@@ -25,9 +25,10 @@ const BASE_URL  = process.env.SIPREL_BASE_URL ?? "https://app.taecel.com/api/";
 const API_KEY   = process.env.SIPREL_API_KEY  ?? "";
 const NIP       = process.env.SIPREL_NIP      ?? "";
 
-const POLL_INTERVAL_MS  = 5_000;
-const POLL_TIMEOUT_MS   = 180_000;   // 3 min — sandbox is slower than production
-const INTER_TEST_DELAY  = 8_000;     // 8 s between transactions to avoid rate-limiting
+const POLL_INTERVAL_MS    = 5_000;
+const POLL_TIMEOUT_MS     = 180_000;  // 3 min — sandbox is slower than production
+const INTER_TEST_DELAY    = 8_000;    // 8 s between normal transactions
+const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
 
@@ -84,11 +85,12 @@ interface TestCase {
 }
 
 const BILL_PAYMENTS: TestCase[] = [
-  { id: "BP-01", service: "SKY",      producto: "SKY000", referencia: "871235412635",   monto: "95",  description: "SKY payment" },
-  { id: "BP-02", service: "TMX",      producto: "TMX001", referencia: "6589745213",     monto: "100", description: "Telmex payment" },
-  { id: "BP-03", service: "CFE",      producto: "CFE000", referencia: "125478965412",   monto: "260", description: "CFE payment" },
-  { id: "BP-04", service: "MEG",      producto: "MEG000", referencia: "9854123547",     monto: "131", description: "Megacable payment" },
-  { id: "BP-05", service: "DSH",      producto: "DSH000", referencia: "27458965324125", monto: "103", description: "Dish payment" },
+  { id: "BP-01",  service: "SKY",   producto: "SKY000", referencia: "871235412635",   monto: "95",  description: "SKY payment" },
+  { id: "BP-02",  service: "TMX",   producto: "TMX001", referencia: "6589745213",     monto: "100", description: "Telmex payment" },
+  { id: "BP-03",  service: "CFE-A", producto: "CFE000", referencia: "0126654",        monto: "260", description: "CFE payment — 7-digit reference" },
+  { id: "BP-03b", service: "CFE-B", producto: "CFE000", referencia: "36547896523",    monto: "260", description: "CFE payment — 11-digit reference (alt)" },
+  { id: "BP-04",  service: "MEG",   producto: "MEG000", referencia: "9854123547",     monto: "131", description: "Megacable payment" },
+  { id: "BP-05",  service: "DSH",   producto: "DSH000", referencia: "27458965324125", monto: "103", description: "Dish payment" },
 ];
 
 const MOBILE_TOPUPS: TestCase[] = [
@@ -349,7 +351,7 @@ async function main() {
       result = { status: "timeout", errorMsg: msg };
       timedOut++;
       console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
-      await sleep(INTER_TEST_DELAY);
+      await sleep(POST_TIMEOUT_DELAY);
       continue;
     }
 
@@ -391,7 +393,7 @@ async function main() {
       result = { status: "timeout", errorMsg: msg };
       timedOut++;
       console.log(`⚠️  ${pad(`${tc.id} ${tc.service}`, 12)}| Status: timeout | ${msg} | continuing...`);
-      await sleep(INTER_TEST_DELAY);
+      await sleep(POST_TIMEOUT_DELAY);
       continue;
     }
 
