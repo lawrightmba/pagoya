@@ -1,4 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import fs from "fs";
+import path from "path";
 import healthRouter from "./health";
 import pagoyaRouter from "./pagoya";
 import billPayRouter from "../billpay/routes/billpay.js";
@@ -14,6 +16,29 @@ router.use("/bills", billPayRouter);
 router.use("/wallet", walletRouter);
 router.use("/belvo-payments", belvoPaymentsRouter);
 router.use("/", proxyRouter);
+
+// POST /api/upload-logo  — DEV TOOL: replaces pagoya-logo.png via base64 upload
+// Protected by X-Upload-Token header. Remove this endpoint once the real logo is in place.
+router.post("/upload-logo", (req: Request, res: Response) => {
+  const token = req.headers["x-upload-token"];
+  if (token !== "pagoya-dev-only") {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { image } = req.body as { image?: string };
+  if (!image) {
+    res.status(400).json({ error: "Missing 'image' field (base64 PNG)" });
+    return;
+  }
+  try {
+    const buf = Buffer.from(image, "base64");
+    const dest = path.resolve(process.cwd(), "../pagoya/public/pagoya-logo.png");
+    fs.writeFileSync(dest, buf);
+    res.json({ success: true, path: "/pagoya-logo.png", bytes: buf.length });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
 
 // POST /api/sync
 // Called by the "Sync Latest" button on the command center dashboard.
