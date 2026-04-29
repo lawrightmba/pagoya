@@ -1,0 +1,168 @@
+In the PagoYa/PagoSeguro codebase, make the following 
+changes to the PagoYa home page only. Read the existing 
+file completely before making any changes. Do NOT touch 
+routes, auth, backend, wallet logic, or any other page.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — REMOVE BROKER BANNER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Remove the "¿Eres agente inmobiliario?" teal banner 
+entirely. Do not replace it with anything.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — ADD PAGOYA LOGO TO NAV
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In the navigation bar, add the PagoYa logo on the 
+left side. Text-based logo:
+  "Pago" in white bold + "Ya" in teal #1D9E75
+  Font size: 24px, font-weight: 800
+Keep all existing nav items unchanged.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — MARQUEE INSIDE HERO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Move the service logo marquee INSIDE the navy hero 
+section, directly after the subheadline and before 
+the CTA buttons. The hero flow becomes:
+
+  [Headline] ¿Se cerró tu OXXO? Paga aquí.
+  [Subheadline] Paga tu luz, internet, celular...
+  [MARQUEE — logos scrolling on dark background]
+  [CTA buttons]
+  [Trust line]
+
+Marquee styling inside the hero:
+- Background: rgba(255,255,255,0.08) — subtle 
+  frosted strip against the navy
+- Badge pills: dark navy background #0D2F4A, 
+  white text, teal circle initials
+- Keep the two-row opposite-direction scroll
+- Add top and bottom padding of 12px
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 4 — UNIFIED COLOR SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Replace all alternating color blocks with a single 
+unified visual system:
+
+Global body background: white #FFFFFF
+
+Section treatments below the hero:
+- Use LEFT BORDER ACCENT on section headings 
+  instead of background color blocks:
+  4px solid teal #1D9E75 on the left of each 
+  section title — this creates visual hierarchy 
+  without heavy background blocks
+
+- Card elements (wallet widget, quick access grid, 
+  how it works steps): white cards with subtle 
+  box-shadow: 0 2px 12px rgba(10,37,64,0.08) 
+  and border: 1px solid #E8F5F0
+
+- Section dividers: a single 1px teal #1D9E75 
+  line at 20% opacity between major sections
+
+- The only background color variation allowed:
+  Quick access grid container: #F0FAF6 
+  (very light teal tint — not brown, not gray)
+
+Remove ALL brown, amber, off-white #F5F5F0 
+backgrounds from body sections. Clean white 
+with teal accents only.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 5 — DYNAMIC VISUAL STANDOUTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add these visual elements to make the page feel 
+more alive and professional:
+
+A. Animated counter strip — add a stats bar 
+   immediately below the hero (above the wallet):
+   Three numbers side by side:
+   "35+ Servicios disponibles" | 
+   "$0 Comisión para el usuario" | 
+   "WhatsApp Comprobante instantáneo"
+   
+   Style: white background, teal number/icon, 
+   navy label text. Numbers animate up from 0 
+   when the section scrolls into view using 
+   CSS animation — no JS libraries.
+   Dividers between the three stats.
+
+B. Teal accent glow on primary CTA button —
+   The "Pagar un servicio →" coral button gets:
+   box-shadow: 0 4px 20px rgba(29,158,117,0.4)
+   This creates a subtle teal glow that makes 
+   the CTA pop against the navy background.
+
+C. Quick access grid cards — add a teal top 
+   border (3px solid #1D9E75) to each service 
+   card on hover. Add a subtle scale transform 
+   on hover: transform: scale(1.03)
+   Smooth transition: 0.2s ease.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 6 — SOFT REGISTRATION CTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add a new section ABOVE the footer, BELOW the 
+existing content. This captures users who are 
+interested but not ready to pay yet.
+
+Section background: navy #0A2540
+Layout: centered, max-width 480px
+
+Content:
+  Small eyebrow (teal): 
+    "¿Todavía no estás listo?"
+    / "Not ready yet?"
+
+  Headline (white, bold):
+    "Regístrate gratis y te avisamos"
+    / "Register free and we'll notify you"
+
+  Subheadline (white/70%):
+    "Crea tu cuenta en 30 segundos. 
+     Te notificamos por WhatsApp cuando 
+     quieras pagar tu próximo servicio."
+    / "Create your account in 30 seconds. 
+       We'll notify you on WhatsApp when 
+       you're ready to pay."
+
+  Single input + button row:
+    Input: phone number, placeholder 
+      "+52 XXX XXX XXXX"
+    Button (teal #1D9E75, white text): 
+      "Avisarme / Notify me"
+    
+    On submit: show a success message:
+      "✅ ¡Listo! Te contactaremos por 
+       WhatsApp cuando estés listo."
+    
+    The form should POST to 
+    /api/notifications/register-interest
+    with body: { phone, language }
+    
+    If the endpoint doesn't exist yet, 
+    submit the form locally and just show 
+    the success message — add a TODO comment:
+    // TODO: wire to backend notification 
+    // system when ready
+
+  Below the form (small, white/50%):
+    "Sin spam. Sin contratos. 
+     Cancela cuando quieras."
+    / "No spam. No contracts. 
+       Cancel anytime."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Mobile-first: verify all changes at 375px
+- Bilingual: respect existing ES/EN toggle
+- Zero new JS libraries or dependencies
+- Zero backend or route changes
+- Floating WhatsApp button unchanged
+- UTM broker headline swap unchanged
+- After all changes confirm home page 
+  loads without errors and report what 
+  changed in each section top to bottom
