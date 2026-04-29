@@ -163,8 +163,8 @@ export default function Home() {
         @keyframes pgStatReveal  { 0% { opacity:0; transform:translateY(14px); } 100% { opacity:1; transform:translateY(0); } }
         .pg-qa-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
         .pg-qa-card:hover { transform: scale(1.03); border-top: 3px solid #1D9E75 !important; box-shadow: 0 6px 20px rgba(10,37,64,0.12) !important; }
-        .pg-nav-logo { height: 44px; }
-        @media (min-width: 640px) { .pg-nav-logo { height: 56px; } }
+        .pg-nav-logo { height: 56px; max-width: 220px; }
+        @media (min-width: 640px) { .pg-nav-logo { height: 72px; max-width: 280px; } }
       `}</style>
 
       {/* ── 1. HEADER — navy ── */}
@@ -185,13 +185,11 @@ export default function Home() {
             alt="PagoYa"
             className="pg-nav-logo"
             style={{
-              height: "48px",
               width: "auto",
-              maxWidth: "200px",
               objectFit: "cover",
               objectPosition: "left center",
               mixBlendMode: "multiply",
-              clipPath: "inset(0 32% 0 0)",
+              clipPath: "inset(0 20% 10% 0)",
             }}
             onError={(e) => {
               e.currentTarget.style.display = "none";
