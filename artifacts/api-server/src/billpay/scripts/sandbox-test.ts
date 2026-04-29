@@ -29,8 +29,8 @@ const NIP       = process.env.SIPREL_NIP      ?? "";
 //          Do not re-run this script within 10 minutes of the previous run.
 //          Taecel enforces a 10-minute cooldown per reference number (error 3128).
 
-const POLL_INTERVAL_MS    = 5_000;
-const POLL_TIMEOUT_MS     = 90_000;   // 90 s total cycle per transaction (sandbox latency buffer)
+const POLL_INTERVAL_MS    = 3_000;   // sleep between statusTXN retries per Taecel docs
+const POLL_TIMEOUT_MS     = 65_000;  // 65 s total cycle per transaction (60-65 s per Taecel docs)
 const INTER_TEST_DELAY    = 5_000;    // 5 s between transactions
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
@@ -140,7 +140,11 @@ function errorLabel(code: number): string {
 
 // ─── HTTP HELPER ─────────────────────────────────────────────────────────────
 
-async function taecelPost<T>(endpoint: string, extra: Record<string, string> = {}): Promise<T> {
+async function taecelPost<T>(
+  endpoint: string,
+  extra:     Record<string, string> = {},
+  timeoutMs = 25_000,  // requestTXN/getBalance default; statusTXN passes 5_000 explicitly
+): Promise<T> {
   const body = new URLSearchParams({ key: API_KEY, nip: NIP, ...extra });
   const url  = `${BASE_URL}${endpoint}`;
 
@@ -148,14 +152,20 @@ async function taecelPost<T>(endpoint: string, extra: Record<string, string> = {
     method:  "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body:    body.toString(),
-    signal:  AbortSignal.timeout(25_000),  // 25 s — sandbox can take up to 15 s per call
+    signal:  AbortSignal.timeout(timeoutMs),
   });
 
+  const text = await response.text();
+
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Non-JSON response: ${text.slice(0, 120)}`);
+  }
 }
 
 // ─── TAECEL OPERATIONS ───────────────────────────────────────────────────────
@@ -218,16 +228,31 @@ async function runTransaction(tc: TestCase): Promise<RunResult> {
     return { status: "error", errorMsg: "requestTXN returned no transID" };
   }
 
-  // 2. Poll statusTXN
-  const startedAt = Date.now();
+  // 2. Poll statusTXN — per Taecel docs: 5 s per call, 3 s sleep, 60-65 s total cycle
+  //   Type 1 { success: true }         → stop, confirmed success
+  //   Type 2 { success: false, error } → stop, confirmed failure
+  //   Type 3 everything else           → DO NOT abort, sleep & retry
+  const startedAt           = Date.now();
+  const STATUS_CALL_TIMEOUT = 5_000;  // per individual statusTXN call
 
   while (true) {
     if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
       return { status: "timeout", transID };
     }
 
-    const statusRes = await taecelPost<StatusResponse>("statusTXN", { transID });
+    // Wrap in try/catch — any network error, HTTP error, or JSON parse failure
+    // is a Type 3 response and must be retried, not treated as fatal.
+    let statusRes: StatusResponse;
+    try {
+      statusRes = await taecelPost<StatusResponse>("statusTXN", { transID }, STATUS_CALL_TIMEOUT);
+    } catch (callErr) {
+      const msg = callErr instanceof Error ? callErr.message : String(callErr);
+      console.log(`   ↻ statusTXN Type 3 (call error — retrying in ${POLL_INTERVAL_MS / 1000}s): ${msg}`);
+      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      continue;
+    }
 
+    // Type 1: valid success
     if (statusRes.success === true && !Array.isArray(statusRes.data)) {
       const d = statusRes.data as StatusData;
       return {
@@ -241,12 +266,14 @@ async function runTransaction(tc: TestCase): Promise<RunResult> {
       };
     }
 
-    // Non-zero error — stop polling
+    // Type 2: valid failure — non-zero error code, stop immediately
     if (statusRes.error !== undefined && statusRes.error !== 0) {
       return { status: "error", transID, errorCode: statusRes.error, errorMsg: statusRes.message };
     }
 
-    // En Proceso — wait before next poll
+    // Type 3: "En Proceso", error 0, or unrecognised — sleep and retry
+    const reason = statusRes.message ?? "en proceso";
+    console.log(`   ↻ statusTXN Type 3 (${reason}) — retrying in ${POLL_INTERVAL_MS / 1000}s`);
     await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }

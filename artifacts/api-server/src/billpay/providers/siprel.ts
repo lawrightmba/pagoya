@@ -148,12 +148,17 @@ async function taecelPost<T>(
 
   logger.info({ endpoint, status: response.status }, "taecel: response received");
 
+  const text = await response.text();
+
   if (!response.ok) {
-    const text = await response.text();
     throw new Error(`Taecel HTTP ${response.status}: ${text}`);
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Taecel non-JSON response: ${text.slice(0, 200)}`);
+  }
 }
 
 // ─── METHOD 1: requestTXN ─────────────────────────────────────────────────────
@@ -173,19 +178,23 @@ async function requestTXN(
 }
 
 // ─── METHOD 2: statusTXN with polling loop ────────────────────────────────────
-// Per Taecel support guidance:
-//   • Total cycle timeout : 60 s counted from when requestTXN was first called
-//   • Per-call timeout    : 20 s per statusTXN HTTP request (sandbox can take up to 15 s)
-//   • Sleep between polls : 5 s
-//   • Stop immediately    : on Exitosa, Fracasada, or any non-zero error code
+// Per Taecel support guidance — three response types:
+//   Type 1 { success: true, ... }                → stop, confirmed success
+//   Type 2 { success: false, error: N (N≠0), … } → stop, confirmed failure
+//   Type 3 anything else (parse error, timeout,
+//           HTTP error, "En Proceso", error: 0)   → DO NOT abort, sleep & retry
+//
+//   • Total cycle timeout : 60 s from requestTXN
+//   • Per-call timeout    : 5 s per statusTXN call
+//   • Sleep between polls : 3 s
 async function pollStatusTXN(
   config: TaecelConfig,
   transID: string,
   startedAt: number,
 ): Promise<{ timedOut: boolean; data?: TaecelStatusData; raw?: TaecelStatusTXNResponse }> {
   const CYCLE_TIMEOUT_MS    = 60_000;  // total from requestTXN call
-  const STATUS_CALL_TIMEOUT = 20_000;  // per individual statusTXN HTTP call (sandbox up to 15 s)
-  const POLL_INTERVAL_MS    = 5_000;   // sleep between attempts
+  const STATUS_CALL_TIMEOUT = 5_000;   // per individual statusTXN HTTP call
+  const POLL_INTERVAL_MS    = 3_000;   // sleep between attempts (Type 3 retry)
 
   while (true) {
     const elapsed = Date.now() - startedAt;
@@ -194,26 +203,33 @@ async function pollStatusTXN(
       return { timedOut: true };
     }
 
-    // Each statusTXN call is limited to 20 s (sandbox can take up to 15 s)
-    const res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID }, STATUS_CALL_TIMEOUT);
+    // Attempt statusTXN — wrap in try/catch so Type 3 network/parse errors retry
+    let res: TaecelStatusTXNResponse;
+    try {
+      res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID }, STATUS_CALL_TIMEOUT);
+    } catch (callErr) {
+      // Type 3: network timeout, HTTP error, or non-JSON body — sleep and retry
+      const msg = callErr instanceof Error ? callErr.message : String(callErr);
+      logger.warn({ transID, error: msg }, "taecel: statusTXN Type 3 (call error) — retrying");
+      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      continue;
+    }
+
     logger.info({ transID, success: res.success, error: res.error, message: res.message }, "taecel: statusTXN poll");
 
+    // Type 1: valid success
     if (res.success === true && !Array.isArray(res.data)) {
       return { timedOut: false, data: res.data as TaecelStatusData, raw: res };
     }
 
-    // Non-zero error code — definitive failure, stop polling immediately
+    // Type 2: valid failure — non-zero error code, stop immediately
     if (res.error !== undefined && res.error !== 0) {
-      logger.warn({ transID, error: res.error, message: res.message }, "taecel: statusTXN error — stopping poll");
+      logger.warn({ transID, error: res.error, message: res.message }, "taecel: statusTXN Type 2 (error) — stopping poll");
       return { timedOut: false, data: undefined, raw: res };
     }
 
-    // "En Proceso" — saldo charged, keep polling
-    if (res.message?.includes("En Proceso") || res.message?.includes("Proceso")) {
-      logger.info({ transID }, "taecel: transaction en proceso — continuing poll");
-    }
-
-    // Wait 3 s before next poll per Taecel support guidance
+    // Type 3: "En Proceso", success:false with error 0, or unrecognised — sleep and retry
+    logger.info({ transID, message: res.message }, "taecel: statusTXN Type 3 (en proceso) — retrying");
     await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }
