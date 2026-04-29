@@ -1,0 +1,73 @@
+In the PagoYa/PagoSeguro codebase, make these three 
+targeted fixes to Home.tsx only. Read the file before 
+making any changes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — REMOVE DUPLICATE PAGOYA TEXT FROM NAV
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In the nav bar there are two PagoYa brand elements:
+1. A text logo on the left ("Pago" white + "Ya" teal)
+2. The centered image logo (pagoya-logo.png)
+
+Remove the left text logo entirely — the span or 
+div that says "Pago" + "Ya" in the nav left column.
+Keep only the centered image logo.
+
+The nav should have three columns:
+Left: empty or nav links (no logo text)
+Center: pagoya-logo.png image only
+Right: EN/ES toggle
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — CONSOLIDATE TO ONE CTA BUTTON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Currently there are two CTA buttons:
+"Ver todos los servicios →" (green)
+"Pagar un servicio" (outline)
+
+Remove both and replace with a single button:
+
+  Text: "Pagar un servicio →"
+  Background: coral #D85A30
+  Text color: white
+  Font: bold
+  Padding: 16px 40px
+  Border radius: 50px (pill shape)
+  Font size: 18px
+  Box shadow: 0 4px 20px rgba(216,90,48,0.4)
+  Hover: brightness(1.1), scale(1.02), transition 0.2s
+
+On click: navigate to /pagar (existing route)
+
+Keep the trust line below the button:
+"Seguro. Rápido. Sin filas." in white/50% opacity
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — MARQUEE CONTRAST IMPROVEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The service badge pills in the marquee need 
+more contrast against the dark hero background.
+
+Update the marquee badge pills to:
+  Background: rgba(255,255,255,0.12) 
+  Border: 1px solid rgba(255,255,255,0.25)
+  Text color: white
+  The colored initial circle: keep brand colors 
+  but increase opacity to 1.0 (fully opaque)
+  Font weight: 600
+  Letter spacing: 0.02em
+
+The marquee container background:
+  Background: rgba(255,255,255,0.06)
+  Backdrop-filter: blur(4px)
+  Border top and bottom: 1px solid rgba(255,255,255,0.1)
+
+This gives the marquee a frosted glass effect 
+that reads clearly against the navy hero.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Zero new dependencies. Zero backend changes.
+Zero changes to any other page or route.
+After changes confirm no TypeScript errors.

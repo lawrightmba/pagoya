@@ -67,14 +67,18 @@ function HeroMarqueeRow({ direction }: { direction: "left" | "right" }) {
             key={`${name}-${i}`}
             style={{
               display: "inline-flex", alignItems: "center", gap: "7px",
-              background: "#0D2F4A", borderRadius: "999px",
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              borderRadius: "999px",
               padding: "6px 14px 6px 8px",
-              whiteSpace: "nowrap", fontSize: "13px", fontWeight: 600, color: "white",
+              whiteSpace: "nowrap", fontSize: "13px", fontWeight: 600,
+              color: "white", letterSpacing: "0.02em",
             }}
           >
             <span style={{
               width: "22px", height: "22px", borderRadius: "50%",
               background: BRAND_COLORS[i % BRAND_COLORS.length],
+              opacity: 1,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               color: "white", fontSize: "11px", fontWeight: 800, flexShrink: 0,
             }}>
@@ -171,11 +175,8 @@ export default function Home() {
         background: "#0A2540", padding: "10px 20px",
         display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: "8px",
       }}>
-        {/* left — text logo */}
-        <span style={{ fontSize: "22px", fontWeight: 800, lineHeight: 1, userSelect: "none" }}>
-          <span style={{ color: "white" }}>Pago</span>
-          <span style={{ color: "#1D9E75" }}>Ya</span>
-        </span>
+        {/* left — empty */}
+        <span />
 
         {/* center — image logo; no transform on parent so mix-blend-mode sees the navy bg */}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
@@ -238,7 +239,10 @@ export default function Home() {
           {/* Marquee inside hero */}
           <div style={{
             width: "100vw", maxWidth: "600px",
-            background: "rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.06)",
+            backdropFilter: "blur(4px)",
+            borderTop: "1px solid rgba(255,255,255,0.10)",
+            borderBottom: "1px solid rgba(255,255,255,0.10)",
             padding: "12px 0", marginBottom: "28px",
             display: "flex", flexDirection: "column", gap: "10px", overflow: "hidden",
           }}>
@@ -246,36 +250,26 @@ export default function Home() {
             <HeroMarqueeRow direction="right" />
           </div>
 
-          {/* CTA buttons */}
-          <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <button
-              onClick={() => navigate("/servicios")}
-              style={{
-                width: "100%", padding: "17px 32px", borderRadius: "999px", border: "none",
-                color: "white", fontSize: "16px", fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                boxShadow: "0 4px 20px rgba(29,158,117,0.40)",
-              }}
-            >
-              {es ? "Ver todos los servicios" : "Browse all services"}
-              <ArrowRight style={{ width: "18px", height: "18px" }} />
-            </button>
-
-            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.45)", fontWeight: 500, textAlign: "center", margin: "-2px 0" }}>
-              {es ? "Seguro. Rápido. Sin filas." : "Secure. Fast. No lines."}
-            </p>
-
+          {/* CTA button */}
+          <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
             <button
               onClick={() => navigate("/pagar")}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.1)"; e.currentTarget.style.transform = "scale(1.02)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; e.currentTarget.style.transform = ""; }}
               style={{
-                width: "100%", padding: "17px 32px", borderRadius: "999px", cursor: "pointer",
-                color: "white", fontSize: "16px", fontWeight: 700,
-                background: "transparent", border: "2px solid rgba(255,255,255,0.40)",
+                width: "100%", padding: "16px 40px", borderRadius: "50px", border: "none",
+                color: "white", fontSize: "18px", fontWeight: 700, cursor: "pointer",
+                background: "#D85A30",
+                boxShadow: "0 4px 20px rgba(216,90,48,0.4)",
+                transition: "filter 0.2s, transform 0.2s",
               }}
             >
-              {es ? "Pagar un servicio" : "Pay a service"}
+              {es ? "Pagar un servicio →" : "Pay a service →"}
             </button>
+
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.50)", fontWeight: 500, textAlign: "center", margin: 0 }}>
+              {es ? "Seguro. Rápido. Sin filas." : "Secure. Fast. No lines."}
+            </p>
           </div>
         </section>
 
