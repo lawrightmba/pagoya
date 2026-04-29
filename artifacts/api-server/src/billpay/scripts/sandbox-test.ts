@@ -35,7 +35,7 @@ const INTER_TEST_DELAY    = 5_000;    // 5 s between transactions
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
 // TEMPORARY: set to false once Oyuki recharges the Pago de Servicios saldo
-const SKIP_BILL_PAYMENTS  = true;
+const SKIP_BILL_PAYMENTS  = false;
 
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
 
