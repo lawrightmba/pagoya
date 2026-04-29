@@ -1,0 +1,54 @@
+In the PagoYa/PagoSeguro codebase, read the most recent 
+sandbox results file at:
+src/billpay/scripts/sandbox-results-2026-04-29.json
+
+Generate a filled Excel results table at:
+src/billpay/scripts/tabla-resultados-final-pagoya.xlsx
+
+Include ALL 15 test rows with this exact data:
+
+BILL PAYMENTS:
+BP-01 | SKY      | SKY000 | 871235412635                   | $95  | TransID: 260401775299 | Folio: 135477 | 2026-04-29 | Exitosa
+BP-02 | TELMEX   | TMX001 | 6589745213                     | $100 | TransID: 260401775305 | Folio: 293170 | 2026-04-29 | Exitosa
+BP-03 | CFE      | CFE000 | 125478965412365478965230126654 | $260 | TransID: 260401775321 | Folio: 671654 | 2026-04-29 | Exitosa
+BP-04 | MEGACABLE| MEG000 | 9854123547                     | $131 | TransID: 260401775333 | Folio: 705466 | 2026-04-29 | Exitosa
+BP-05 | DISH     | DSH000 | 27458965324125                 | $103 | TransID: 260401775348 | Folio: 543083 | 2026-04-29 | Exitosa
+
+MOBILE TOP-UPS:
+TU-01 | TELCEL  | TEL010 | 5555555505 | $10  | TransID: 260401775368 | Folio: 767435 | 2026-04-29 | Exitosa
+TU-02 | TELCEL  | TEL050 | 5555555510 | $50  | TransID: 260401775400 | —             | 2026-04-29 | Exitosa
+TU-03 | TELCEL  | TEL100 | 5555555515 | $100 | TransID: 260401775427 | —             | 2026-04-29 | Exitosa
+TU-04 | TELCEL  | TEL150 | 5555555520 | $150 | TransID: 260401775442 | —             | 2026-04-29 | Exitosa
+TU-05 | TELCEL  | TEL200 | 5555555525 | $200 | TransID: 260401775460 | —             | 2026-04-29 | Exitosa
+TU-06 | MOVISTAR| MOV010 | 5555555530 | $10  | TransID: 260401775474 | —             | 2026-04-29 | Exitosa
+TU-07 | MOVISTAR| MOV050 | 5555555540 | $50  | TransID: 260401775493 | —             | 2026-04-29 | Exitosa
+TU-08 | MOVISTAR| MOV100 | 5555555560 | $100 | TransID: 260401775507 | —             | 2026-04-29 | Exitosa
+TU-09 | MOVISTAR| MOV120 | 5555555565 | $120 | TransID: 260401775523 | —             | 2026-04-29 | Exitosa
+TU-10 | MOVISTAR| MOV150 | 5555555200 | $150 | —                     | —             | 2026-04-29 | Error 3129 (ESPERADO)
+
+Columns:
+ID | Servicio | Código (SKU) | Referencia | Monto (MXN) | 
+TransID | Folio | Fecha | Status | Tipo | Notas
+
+Tipo column:
+- BP tests = "Pago de Servicios"
+- TU tests = "Tiempo Aire"
+
+Notas column:
+- TU-10 = "Error 3129 esperado — resultado correcto según matriz"
+- All others = blank
+
+Summary row at bottom:
+Passed exitosa: 14 | Expected errors: 1 | 
+Failures: 0 | Timeouts: 0 | Total: 15/15
+
+Header row in navy #0A2540 white text.
+Passed rows in light green background.
+TU-10 in light amber background.
+Freeze the header row.
+Title row at top: 
+"TABLA DE RESULTADOS — PagoYa / Taecel | 
+Cuenta: ID373554 | Fecha: 2026-04-29 | 
+URL: https://api-v1-fixedip.taecel.com/api/"
+
+Save the file and confirm it was written successfully.

@@ -12,3 +12,9 @@ id = "FF6EbR3VQtT-J_NgqO4nF"
 uri = "file://artifacts/api-server/src/billpay/scripts/production-request-email.txt"
 type = "text"
 title = "Email borrador — Solicitud de acceso a producción"
+
+[[outputs]]
+id = "hLmCfhZ2cJh8gIa3223fN"
+uri = "file://artifacts/api-server/src/billpay/scripts/tabla-resultados-final-pagoya.xlsx"
+type = "table"
+title = "Tabla de Resultados Final — PagoYa / Taecel / ID373554"
