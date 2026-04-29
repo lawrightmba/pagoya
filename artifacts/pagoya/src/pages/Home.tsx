@@ -163,6 +163,8 @@ export default function Home() {
         @keyframes pgStatReveal  { 0% { opacity:0; transform:translateY(14px); } 100% { opacity:1; transform:translateY(0); } }
         .pg-qa-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
         .pg-qa-card:hover { transform: scale(1.03); border-top: 3px solid #1D9E75 !important; box-shadow: 0 6px 20px rgba(10,37,64,0.12) !important; }
+        .pg-nav-logo { height: 44px; }
+        @media (min-width: 640px) { .pg-nav-logo { height: 56px; } }
       `}</style>
 
       {/* ── 1. HEADER — navy ── */}
@@ -176,29 +178,35 @@ export default function Home() {
           <span style={{ color: "#1D9E75" }}>Ya</span>
         </span>
 
-        {/* image logo center — mix-blend-mode removes white background on navy */}
-        <img
-          src="/pagoya-logo.png"
-          height={40}
-          alt="PagoYa"
-          style={{
-            height: "40px", objectFit: "contain", mixBlendMode: "multiply",
-            position: "absolute", left: "50%", transform: "translateX(-50%)",
-          }}
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-            const sib = e.currentTarget.nextSibling as HTMLElement | null;
-            if (sib) sib.style.display = "block";
-          }}
-        />
-        {/* fallback text logo shown only if image fails to load */}
-        <span style={{
-          display: "none", color: "white", fontWeight: 800, fontSize: "22px",
+        {/* image logo center — wrapper handles centering; img handles crop */}
+        <div style={{
           position: "absolute", left: "50%", transform: "translateX(-50%)",
-          whiteSpace: "nowrap",
+          overflow: "hidden", display: "flex", alignItems: "center",
+          maxWidth: "200px",
         }}>
-          Pago<span style={{ color: "#1D9E75" }}>Ya</span>
-        </span>
+          <img
+            src="/pagoya-logo.png"
+            alt="PagoYa"
+            className="pg-nav-logo"
+            style={{
+              width: "auto",
+              objectFit: "contain",
+              objectPosition: "0% center",
+              transform: "scale(1.2)",
+              transformOrigin: "left center",
+              maxWidth: "180px",
+            }}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              const sib = e.currentTarget.nextSibling as HTMLElement | null;
+              if (sib) sib.style.display = "inline";
+            }}
+          />
+          {/* fallback shown only if image fails */}
+          <span style={{ display: "none", color: "white", fontWeight: 800, fontSize: "22px", whiteSpace: "nowrap" }}>
+            Pago<span style={{ color: "#1D9E75" }}>Ya</span>
+          </span>
+        </div>
 
         {/* lang toggle right */}
         <button
@@ -220,15 +228,6 @@ export default function Home() {
           background: "#0A2540", padding: "40px 24px 48px",
           display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
         }}>
-          <div style={{
-            width: "72px", height: "72px", borderRadius: "18px", marginBottom: "28px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-            boxShadow: "0 8px 24px rgba(4,108,44,0.40)",
-          }}>
-            <Zap style={{ width: "36px", height: "36px", color: "white" }} strokeWidth={2.5} />
-          </div>
-
           <h1 style={{ fontSize: "36px", fontWeight: 900, color: "white", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "12px" }}>
             {es ? "¿Se cerró tu OXXO?" : "No OXXO nearby?"}
             <br />
