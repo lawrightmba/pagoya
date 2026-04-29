@@ -10,6 +10,11 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2025-03-31.basil" });
 }
 
+const PLATFORM_FEE_MXN = 8.00;
+const PLATFORM_FEE_DESCRIPTION = "Tarifa de plataforma";
+const TAECEL_COST_PER_TXN_MXN = 5.00;
+const NET_MARGIN_PER_TXN_MXN = 3.00;
+
 const router: IRouter = Router();
 
 // GET /api/pagoya/categories
@@ -55,12 +60,19 @@ router.post("/payments", async (req: Request, res: Response) => {
   try {
     const stripe = getStripe();
 
-    // 1. Create Stripe PaymentIntent
+    const totalMxn = montoNum + PLATFORM_FEE_MXN;
+
+    // 1. Create Stripe PaymentIntent — charge bill amount + platform fee
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(montoNum * 100), // Stripe expects centavos
+      amount: Math.round(totalMxn * 100), // Stripe expects centavos
       currency: "mxn",
-      metadata: { empresa, categoria, referencia, telefono, notas: notas ?? "" },
-      description: `PagoYa — ${empresa} (${categoria})`,
+      metadata: {
+        empresa, categoria, referencia, telefono, notas: notas ?? "",
+        billAmountMxn: montoNum.toFixed(2),
+        platformFeeMxn: PLATFORM_FEE_MXN.toFixed(2),
+        platformFeeDesc: PLATFORM_FEE_DESCRIPTION,
+      },
+      description: `PagoYa — ${empresa} (${categoria}) + ${PLATFORM_FEE_DESCRIPTION}`,
     });
 
     // 2. Persist to database

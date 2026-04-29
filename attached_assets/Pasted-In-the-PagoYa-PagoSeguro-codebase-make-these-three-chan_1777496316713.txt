@@ -1,0 +1,131 @@
+In the PagoYa/PagoSeguro codebase make these three 
+changes. Read each file before editing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — UPDATE STATS BAR ON HOME PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In src/pages/Home.tsx find the stats bar section
+that shows three stats. Currently shows:
+"35+ Servicios | $0 Comisión | WhatsApp Comprobante"
+
+Replace the middle stat "$0 Comisión para el usuario"
+with:
+  Number/icon: "2 min"
+  Label: "Tiempo promedio de pago"
+  
+  English version:
+  Number/icon: "2 min"
+  Label: "Average payment time"
+
+Keep the other two stats unchanged.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — ADD $8 MXN PLATFORM FEE AT CHECKOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add a flat $8.00 MXN platform fee to ALL bill 
+payment transactions. This applies to all 35 
+service types including CFE, Telmex, Telcel, 
+Izzi, Megacable, Sky, Dish, AT&T, Gas Natural, 
+and all mobile top-ups.
+
+Find the payment review/confirmation page 
+(likely src/pages/Review.tsx or similar — 
+the page where user confirms before paying).
+
+Add a fee line item to the order summary:
+
+  Service amount:     $XXX.00 MXN
+  ─────────────────────────────
+  Tarifa de plataforma: $8.00 MXN
+  ─────────────────────────────
+  Total:              $XXX+8.00 MXN
+
+Style the fee line in small muted text so it 
+doesn't dominate — it should be transparent 
+but not prominent. Something like:
+  font-size: 13px
+  color: #888888
+  
+The total line should be bold and clear.
+
+Also add the fee to the backend payment 
+processing:
+- Find where the payment amount is calculated 
+  before charging the user
+- Add PLATFORM_FEE_MXN = 8.00 as a constant
+- The user is charged: bill_amount + 8.00
+- The 8.00 is retained as platform revenue
+- The bill_amount only is sent to Taecel/SIPREL
+  (Taecel gets the bill amount, we keep the $8)
+
+Store the platform fee in the bill_payments 
+table:
+- Add column: platform_fee_mxn (numeric 10,2) 
+  default 8.00
+- Run the migration with drizzle-kit push
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — WIRE FEE INTO ADMIN REVENUE REPORTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+In the admin dashboard (command center) update 
+the revenue reporting to track platform fees:
+
+1. Add a new revenue card to the admin Overview tab:
+   
+   "Ingresos por Plataforma"
+   
+   Shows:
+   - Hoy: $X.XX MXN (sum of platform_fee_mxn 
+     for confirmed transactions today)
+   - Este mes: $X.XX MXN (current month)
+   - Total acumulado: $X.XX MXN (all time)
+   
+   Color: teal #1D9E75
+   Updates with the existing 30-second auto-refresh
+
+2. Add a new backend endpoint:
+   GET /api/bills/admin/revenue
+   
+   Returns:
+   {
+     today: number,
+     thisMonth: number, 
+     allTime: number,
+     transactionCount: {
+       today: number,
+       thisMonth: number,
+       allTime: number
+     },
+     avgFeePerTransaction: 8.00,
+     projectedMonthlyRevenue: number
+       (based on daily average × 30)
+   }
+
+3. Update the existing transaction list in admin 
+   to show a "Tarifa" column with the $8.00 fee 
+   on each confirmed transaction row.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONSTANTS TO ADD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add these to a shared constants file or at the 
+top of the relevant service file:
+
+  PLATFORM_FEE_MXN = 8.00
+  PLATFORM_FEE_DESCRIPTION = "Tarifa de plataforma"
+  TAECEL_COST_PER_TXN_MXN = 5.00
+  NET_MARGIN_PER_TXN_MXN = 3.00
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- The $8 fee applies to ALL transaction types 
+  equally — no exceptions for any of the 35 
+  services
+- The fee is always flat $8.00 MXN — never 
+  percentage based
+- Taecel always receives only the bill amount 
+  — never the fee
+- Run drizzle-kit push after schema changes
+- Confirm all TypeScript errors are zero
+- Do not change any Taecel API integration code

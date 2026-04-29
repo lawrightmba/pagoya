@@ -15,10 +15,15 @@ export default function PaymentReview() {
     }
   }, []);
 
+  const PLATFORM_FEE = 8.00;
+
   const formatMonto = (monto: string) => {
     const num = parseFloat(monto);
     return isNaN(num) ? monto : `$${num.toFixed(2)} MXN`;
   };
+
+  const montoNum = parseFloat(paymentData.monto) || 0;
+  const total = montoNum + PLATFORM_FEE;
 
   const handlePagar = async () => {
     setLoading(true);
@@ -92,10 +97,19 @@ export default function PaymentReview() {
               <Row label="Empresa" value={paymentData.empresa} />
               <Row label="Categoría" value={paymentData.categoria} highlight />
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Monto del servicio</span>
+                <span className="text-sm font-semibold text-[#1F1F1F]">{formatMonto(paymentData.monto)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span style={{ fontSize: "13px", color: "#888888" }}>Tarifa de plataforma</span>
+                <span style={{ fontSize: "13px", color: "#888888" }}>$8.00 MXN</span>
+              </div>
+              <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
               <div className="flex items-center justify-between py-2">
-                <span className="text-sm font-semibold text-gray-500">Monto total</span>
+                <span className="text-sm font-semibold text-gray-500">Total</span>
                 <span className="text-2xl font-black" style={{ color: "#046C2C" }}>
-                  {formatMonto(paymentData.monto)}
+                  ${total.toFixed(2)} MXN
                 </span>
               </div>
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />

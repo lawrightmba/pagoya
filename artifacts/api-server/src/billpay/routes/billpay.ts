@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql, and, gte } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
 import { taecelGetProducts } from "../providers/siprel.js";
 import { taecelProductCacheTable } from "@workspace/db";
@@ -11,6 +11,9 @@ import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
 const COMMISSION_HOLD_DAYS = 7;
+const PLATFORM_FEE_MXN = "8.00";
+const TAECEL_COST_PER_TXN_MXN = 5.00;
+const NET_MARGIN_PER_TXN_MXN = 3.00;
 
 const router: IRouter = Router();
 
@@ -151,6 +154,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       status: "pending",
       paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
       repId: effectiveRepId,
+      platformFeeMxn: PLATFORM_FEE_MXN,
     }).returning({ id: billPaymentsTable.id });
     paymentId = inserted.id;
 
@@ -465,6 +469,70 @@ router.get("/admin/reps", async (_req: Request, res: Response) => {
     res.json({ reps: Object.values(repMap) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al obtener reps.";
+    res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/bills/admin/revenue
+// Platform fee revenue reporting: today / this month / all-time
+router.get("/admin/revenue", async (_req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [allTime] = await db
+      .select({
+        totalFee: sql<string>`COALESCE(SUM(platform_fee_mxn), 0)`,
+        txCount: sql<string>`COUNT(*)`,
+      })
+      .from(billPaymentsTable)
+      .where(eq(billPaymentsTable.status, "confirmed"));
+
+    const [thisMonth] = await db
+      .select({
+        totalFee: sql<string>`COALESCE(SUM(platform_fee_mxn), 0)`,
+        txCount: sql<string>`COUNT(*)`,
+      })
+      .from(billPaymentsTable)
+      .where(and(
+        eq(billPaymentsTable.status, "confirmed"),
+        gte(billPaymentsTable.createdAt, monthStart),
+      ));
+
+    const [today] = await db
+      .select({
+        totalFee: sql<string>`COALESCE(SUM(platform_fee_mxn), 0)`,
+        txCount: sql<string>`COUNT(*)`,
+      })
+      .from(billPaymentsTable)
+      .where(and(
+        eq(billPaymentsTable.status, "confirmed"),
+        gte(billPaymentsTable.createdAt, todayStart),
+      ));
+
+    const todayTxCount = parseInt(today.txCount ?? "0");
+    const daysIntoMonth = now.getDate();
+    const dailyAvg = daysIntoMonth > 0 ? parseFloat(thisMonth.totalFee ?? "0") / daysIntoMonth : 0;
+    const projectedMonthly = dailyAvg * 30;
+
+    res.json({
+      today: parseFloat(today.totalFee ?? "0"),
+      thisMonth: parseFloat(thisMonth.totalFee ?? "0"),
+      allTime: parseFloat(allTime.totalFee ?? "0"),
+      transactionCount: {
+        today: todayTxCount,
+        thisMonth: parseInt(thisMonth.txCount ?? "0"),
+        allTime: parseInt(allTime.txCount ?? "0"),
+      },
+      avgFeePerTransaction: parseFloat(PLATFORM_FEE_MXN),
+      taecelCostPerTxn: TAECEL_COST_PER_TXN_MXN,
+      netMarginPerTxn: NET_MARGIN_PER_TXN_MXN,
+      projectedMonthlyRevenue: projectedMonthly,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al obtener ingresos.";
+    logger.error({ err }, "billpay: admin/revenue failed");
     res.status(500).json({ error: message });
   }
 });

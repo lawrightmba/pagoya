@@ -8,6 +8,15 @@ interface WalletStats {
   failedLoads: { count: number };
 }
 
+interface RevenueData {
+  today: number;
+  thisMonth: number;
+  allTime: number;
+  transactionCount: { today: number; thisMonth: number; allTime: number };
+  avgFeePerTransaction: number;
+  projectedMonthlyRevenue: number;
+}
+
 interface RepRow {
   id: string;
   name: string;
@@ -27,6 +36,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [wallet, setWallet] = useState<WalletStats | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
+  const [revenue, setRevenue] = useState<RevenueData | null>(null);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   const loadWallet = useCallback(() => {
     setWalletLoading(true);
@@ -34,6 +45,14 @@ export default function AdminDashboard() {
       .then((r) => r.json())
       .then((d: WalletStats) => { setWallet(d); setWalletLoading(false); })
       .catch(() => setWalletLoading(false));
+  }, []);
+
+  const loadRevenue = useCallback(() => {
+    setRevenueLoading(true);
+    fetch(`${window.location.origin}/api/bills/admin/revenue`)
+      .then((r) => r.json())
+      .then((d: RevenueData) => { setRevenue(d); setRevenueLoading(false); })
+      .catch(() => setRevenueLoading(false));
   }, []);
 
   useEffect(() => {
@@ -51,7 +70,14 @@ export default function AdminDashboard() {
         setLoading(false);
       });
     loadWallet();
-  }, [loadWallet]);
+    loadRevenue();
+
+    const interval = setInterval(() => {
+      loadWallet();
+      loadRevenue();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [loadWallet, loadRevenue]);
 
   const fmt = (n: string) =>
     "$" + parseFloat(n).toLocaleString("es-MX", { minimumFractionDigits: 2 });
@@ -168,6 +194,65 @@ export default function AdminDashboard() {
                 </div>
                 <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", lineHeight: 1.5, textTransform: "uppercase" }}>
                   {card.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Ingresos por Plataforma Panel ── */}
+        <div style={{
+          background: "rgba(29,158,117,0.06)",
+          border: "1px solid rgba(29,158,117,0.18)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 16px 10px",
+            borderBottom: "1px solid rgba(29,158,117,0.12)",
+          }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#1D9E75", textTransform: "uppercase" }}>
+              Ingresos por Plataforma · $8.00 MXN / transacción
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+            {[
+              {
+                label: "Hoy",
+                value: revenueLoading ? "…" : `$${(revenue?.today ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                sub: revenueLoading ? "" : `${revenue?.transactionCount.today ?? 0} txn`,
+                color: "#1D9E75",
+              },
+              {
+                label: "Este mes",
+                value: revenueLoading ? "…" : `$${(revenue?.thisMonth ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                sub: revenueLoading ? "" : `${revenue?.transactionCount.thisMonth ?? 0} txn`,
+                color: "#1D9E75",
+              },
+              {
+                label: "Total acumulado",
+                value: revenueLoading ? "…" : `$${(revenue?.allTime ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                sub: revenueLoading ? "" : `${revenue?.transactionCount.allTime ?? 0} txn`,
+                color: "#1D9E75",
+              },
+              {
+                label: "Proyección mensual",
+                value: revenueLoading ? "…" : `$${(revenue?.projectedMonthlyRevenue ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+                sub: "basado en promedio diario",
+                color: "#39A935",
+              },
+            ].map((card) => (
+              <div key={card.label} style={{ padding: "14px 12px", borderRight: "1px solid rgba(29,158,117,0.10)", textAlign: "center" }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: card.color, marginBottom: 2, fontFamily: "'Space Mono', monospace" }}>
+                  {card.value}
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#1D9E75", opacity: 0.7, marginBottom: 2, textTransform: "uppercase" }}>
+                  {card.label}
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.38rem", color: "#5a7080" }}>
+                  {card.sub}
                 </div>
               </div>
             ))}

@@ -280,9 +280,9 @@ export default function Home() {
           borderBottom: "1px solid rgba(29,158,117,0.20)",
         }}>
           {[
-            { num: "35+",      label: es ? "Servicios disponibles"   : "Services available" },
-            { num: "$0",       label: es ? "Comisión para el usuario" : "User commission"   },
-            { num: "WhatsApp", label: es ? "Comprobante instantáneo"  : "Instant receipt"   },
+            { num: "35+",      label: es ? "Servicios disponibles"    : "Services available"      },
+            { num: "2 min",    label: es ? "Tiempo promedio de pago"  : "Average payment time"    },
+            { num: "WhatsApp", label: es ? "Comprobante instantáneo"  : "Instant receipt"         },
           ].map((stat, i) => (
             <div key={stat.num} style={{ display: "contents" }}>
               {i > 0 && (
