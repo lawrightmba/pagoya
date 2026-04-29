@@ -1,0 +1,104 @@
+In the PagoYa/PagoSeguro codebase, make three targeted 
+visual improvements to the PagoYa home page only. 
+Read the existing home page file before making any 
+changes. Do NOT touch any routes, auth, backend code, 
+wallet logic, or any page other than the home page.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — HERO HEADLINE PUNCH-UP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Find the existing hero headline on the home page.
+Replace the current headline and subheadline with:
+
+Spanish:
+  Headline: "¿Se cerró tu OXXO?"
+  Second line: "Paga aquí."
+  Subheadline: "Paga tu luz, internet, celular y más 
+  — desde tu cel, sin filas, sin efectivo."
+
+English (when EN selected):
+  Headline: "No OXXO nearby?"
+  Second line: "Pay here."
+  Subheadline: "Pay your electricity, internet, phone 
+  and more — from your phone, no lines, no cash."
+
+Keep the existing CTA buttons and trust line unchanged.
+Keep the UTM-aware broker headline swap unchanged —
+if utm_campaign contains "broker" the existing broker 
+headline still shows instead.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — SERVICE LOGOS MARQUEE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add an animated scrolling marquee section 
+immediately below the hero section and above 
+the existing wallet balance widget.
+
+Small label above (muted text, centered):
+  Spanish: "Paga estos servicios y más"
+  English: "Pay these services and more"
+
+Two rows of service badges scrolling in 
+opposite directions using CSS keyframes only 
+— no JavaScript animation libraries.
+
+Row 1 scrolls LEFT. Row 2 scrolls RIGHT.
+Both loop seamlessly.
+
+Each badge is a rounded pill with:
+  - A small colored circle with the service 
+    initial (use rotating brand colors: 
+    teal #1D9E75, coral #D85A30, purple #7F77DD, 
+    navy #0A2540)
+  - Service name in dark text
+  - White background, subtle box shadow
+  - Slight border in #E2E8F0
+
+Services to include (duplicate the list so 
+the loop is seamless with no gap):
+  CFE, Telmex, Telcel, AT&T, Izzi, 
+  Megacable, Sky, Dish, Gas Natural, 
+  Totalplay, Maxcom
+
+Add overflow: hidden to the marquee container 
+so badges don't show outside the strip.
+
+The section background should be white or 
+off-white #F5F5F0.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — BROKER CTA BANNER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add a full-width banner section below the 
+marquee and above the existing content.
+
+Background: teal #1D9E75
+Text color: white
+
+Left side:
+  Headline (bold, large): 
+    "¿Eres agente inmobiliario?"
+  Subheadline:
+    "Gana $500 MXN por cada propietario 
+     que registres. Sin límite."
+
+Right side:
+  Single button (navy background, white text):
+    "Ver comisiones →"
+  Links to /brokers
+
+On mobile: stack vertically, center aligned, 
+button full width.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Mobile-first: test all three changes at 375px
+- Bilingual: respect the existing ES/EN toggle
+- CSS keyframes for marquee animation only
+- Zero changes to any backend, routes, auth, 
+  wallet, or other pages
+- Zero new dependencies
+- The floating WhatsApp button stays unchanged
+- After changes, confirm the home page still 
+  loads without errors

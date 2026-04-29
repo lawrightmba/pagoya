@@ -5,6 +5,17 @@ import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 
+// ─── MARQUEE DATA ─────────────────────────────────────────────────────────────
+
+const SERVICES = [
+  "CFE", "Telmex", "Telcel", "AT&T", "Izzi",
+  "Megacable", "Sky", "Dish", "Gas Natural", "Totalplay", "Maxcom",
+];
+
+const BADGE_COLORS = ["#1D9E75", "#D85A30", "#7F77DD", "#0A2540"];
+
+// ─── QUICK CHIPS / HINTS ──────────────────────────────────────────────────────
+
 const HINTS = [
   "Quiero pagar luz CFE",
   "Necesito pagar Telcel 500 pesos",
@@ -13,39 +24,41 @@ const HINTS = [
 ];
 
 const QUICK_CHIPS = [
-  { label: "Luz", phrase: "Quiero pagar luz CFE" },
-  { label: "Internet", phrase: "Voy a pagar internet izzi" },
-  { label: "Celular", phrase: "Necesito pagar Telcel 300 pesos" },
-  { label: "Renta", phrase: "Quiero pagar mi renta" },
+  { label: "Luz",       phrase: "Quiero pagar luz CFE" },
+  { label: "Internet",  phrase: "Voy a pagar internet izzi" },
+  { label: "Celular",   phrase: "Necesito pagar Telcel 300 pesos" },
+  { label: "Renta",     phrase: "Quiero pagar mi renta" },
   { label: "Streaming", phrase: "Quiero pagar Netflix" },
 ];
 
 const RECENT_PAYMENTS = [
-  { empresa: "CFE", categoria: "Luz", monto: "850" },
-  { empresa: "Telcel", categoria: "Teléfono móvil", monto: "300" },
-  { empresa: "Izzi", categoria: "Internet", monto: "649" },
+  { empresa: "CFE",    categoria: "Luz",             monto: "850" },
+  { empresa: "Telcel", categoria: "Teléfono móvil",  monto: "300" },
+  { empresa: "Izzi",   categoria: "Internet",        monto: "649" },
 ];
+
+// ─── AI PARSE ─────────────────────────────────────────────────────────────────
 
 function parseAIInput(text: string): { empresa: string; categoria: string; monto: string } {
   const t = text.toLowerCase();
   let empresa = "";
   let categoria = "";
 
-  if (t.includes("cfe") || t.includes("luz")) { empresa = "CFE"; categoria = "Luz"; }
-  else if (t.includes("agua")) { categoria = "Agua"; }
-  else if (t.includes("gas")) { categoria = "Gas"; }
-  else if (t.includes("izzi")) { empresa = "Izzi"; categoria = "Internet"; }
-  else if (t.includes("totalplay")) { empresa = "Totalplay"; categoria = "Internet"; }
-  else if (t.includes("internet")) { categoria = "Internet"; }
-  else if (t.includes("telcel")) { empresa = "Telcel"; categoria = "Teléfono móvil"; }
-  else if (t.includes("movistar")) { empresa = "Movistar"; categoria = "Teléfono móvil"; }
-  else if (t.includes("netflix")) { empresa = "Netflix"; categoria = "Streaming"; }
-  else if (t.includes("spotify")) { empresa = "Spotify"; categoria = "Streaming"; }
-  else if (t.includes("streaming")) { categoria = "Streaming"; }
-  else if (t.includes("seguro")) { categoria = "Seguro"; }
-  else if (t.includes("escuela") || t.includes("colegiatura")) { categoria = "Escuela"; }
-  else if (t.includes("renta")) { categoria = "Renta"; }
-  else if (t.includes("préstamo") || t.includes("prestamo")) { categoria = "Préstamos"; }
+  if (t.includes("cfe") || t.includes("luz"))                             { empresa = "CFE";      categoria = "Luz"; }
+  else if (t.includes("agua"))                                             {                        categoria = "Agua"; }
+  else if (t.includes("gas"))                                              {                        categoria = "Gas"; }
+  else if (t.includes("izzi"))                                             { empresa = "Izzi";     categoria = "Internet"; }
+  else if (t.includes("totalplay"))                                        { empresa = "Totalplay"; categoria = "Internet"; }
+  else if (t.includes("internet"))                                         {                        categoria = "Internet"; }
+  else if (t.includes("telcel"))                                           { empresa = "Telcel";   categoria = "Teléfono móvil"; }
+  else if (t.includes("movistar"))                                         { empresa = "Movistar"; categoria = "Teléfono móvil"; }
+  else if (t.includes("netflix"))                                          { empresa = "Netflix";  categoria = "Streaming"; }
+  else if (t.includes("spotify"))                                          { empresa = "Spotify";  categoria = "Streaming"; }
+  else if (t.includes("streaming"))                                        {                        categoria = "Streaming"; }
+  else if (t.includes("seguro"))                                           {                        categoria = "Seguro"; }
+  else if (t.includes("escuela") || t.includes("colegiatura"))            {                        categoria = "Escuela"; }
+  else if (t.includes("renta"))                                            {                        categoria = "Renta"; }
+  else if (t.includes("préstamo") || t.includes("prestamo"))              {                        categoria = "Préstamos"; }
 
   const montoMatch = text.match(/\b(\d{2,6})\b/);
   const monto = montoMatch ? montoMatch[1] : "";
@@ -53,55 +66,148 @@ function parseAIInput(text: string): { empresa: string; categoria: string; monto
   return { empresa, categoria, monto };
 }
 
+// ─── MARQUEE ROW ──────────────────────────────────────────────────────────────
+
+function MarqueeRow({ direction }: { direction: "left" | "right" }) {
+  const list = [...SERVICES, ...SERVICES];
+  const animName = direction === "left" ? "pgScrollLeft" : "pgScrollRight";
+
+  return (
+    <div style={{ overflow: "hidden", width: "100%" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          width: "max-content",
+          animation: `${animName} 28s linear infinite`,
+        }}
+      >
+        {list.map((name, i) => {
+          const color = BADGE_COLORS[i % BADGE_COLORS.length];
+          return (
+            <span
+              key={`${name}-${i}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                background: "white",
+                border: "1px solid #E2E8F0",
+                borderRadius: "999px",
+                padding: "6px 14px 6px 8px",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                whiteSpace: "nowrap",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#1F1F1F",
+              }}
+            >
+              <span
+                style={{
+                  width: "22px",
+                  height: "22px",
+                  borderRadius: "50%",
+                  background: color,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  flexShrink: 0,
+                }}
+              >
+                {name[0]}
+              </span>
+              {name}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+
 export default function Home() {
   const [, navigate] = useLocation();
   const { setPaymentData, paymentData } = usePayment();
-  const [aiInput, setAiInput] = useState("");
-  const [aiDone, setAiDone] = useState(false);
+  const [aiInput, setAiInput]   = useState("");
+  const [aiDone, setAiDone]     = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const [lang, setLang]         = useState<"es" | "en">("es");
+
+  const es = lang === "es";
 
   const handleAutofill = () => {
     if (!aiInput.trim()) return;
     const parsed = parseAIInput(aiInput);
     setPaymentData({
       ...paymentData,
-      empresa: parsed.empresa || paymentData.empresa,
-      categoria: parsed.categoria || paymentData.categoria,
-      monto: parsed.monto || paymentData.monto,
+      empresa:    parsed.empresa    || paymentData.empresa,
+      categoria:  parsed.categoria  || paymentData.categoria,
+      monto:      parsed.monto      || paymentData.monto,
       referencia: paymentData.referencia,
-      telefono: paymentData.telefono,
-      notas: paymentData.notas,
+      telefono:   paymentData.telefono,
+      notas:      paymentData.notas,
     });
     setAiDone(true);
-    setTimeout(() => {
-      navigate("/pagar");
-    }, 900);
+    setTimeout(() => { navigate("/pagar"); }, 900);
   };
 
-  const handleChip = (phrase: string) => {
-    setAiInput(phrase);
-    setAiDone(false);
-  };
-
+  const handleChip   = (phrase: string) => { setAiInput(phrase); setAiDone(false); };
   const handleRepeat = (payment: typeof RECENT_PAYMENTS[0]) => {
-    setPaymentData({
-      ...paymentData,
-      empresa: payment.empresa,
-      categoria: payment.categoria,
-      monto: payment.monto,
-    });
+    setPaymentData({ ...paymentData, empresa: payment.empresa, categoria: payment.categoria, monto: payment.monto });
     navigate("/pagar");
   };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
+
+      {/* ── Keyframes (CSS-only marquee, no JS libs) ── */}
+      <style>{`
+        @keyframes pgScrollLeft {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes pgScrollRight {
+          0%   { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
+        }
+      `}</style>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-center" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
-        <img src={logoUrl} alt="PagoYa" className="w-64 h-auto object-contain" />
+      <header
+        className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between"
+        style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}
+      >
+        <div className="w-14" />
+        <img src={logoUrl} alt="PagoYa" className="w-56 h-auto object-contain" />
+        {/* Language toggle */}
+        <button
+          onClick={() => setLang(es ? "en" : "es")}
+          style={{
+            fontSize: "12px",
+            fontWeight: 700,
+            color: "#046C2C",
+            border: "1.5px solid #D4EDDA",
+            borderRadius: "999px",
+            padding: "4px 10px",
+            background: "#F0FAF3",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {es ? "EN" : "ES"}
+        </button>
       </header>
 
       <main className="flex-1 flex flex-col">
-        {/* Hero */}
+
+        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            CHANGE 1 — Hero headline
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section
           className="px-6 pt-12 pb-14 flex flex-col items-center text-center"
           style={{ background: "linear-gradient(180deg, #ffffff 0%, #f0faf3 100%)" }}
@@ -117,15 +223,20 @@ export default function Home() {
           </div>
 
           <h1 className="text-4xl font-black text-[#1F1F1F] leading-tight tracking-tight mb-3">
-            Paga todo.
+            {es ? "¿Se cerró tu OXXO?" : "No OXXO nearby?"}
             <br />
-            <span style={{ color: "#046C2C" }}>Sin filas.</span>
+            <span style={{ color: "#046C2C" }}>
+              {es ? "Paga aquí." : "Pay here."}
+            </span>
           </h1>
 
           <p className="text-base text-gray-500 max-w-xs leading-relaxed mb-10">
-            Paga luz, internet, celular y más desde tu teléfono en segundos.
+            {es
+              ? "Paga tu luz, internet, celular y más — desde tu cel, sin filas, sin efectivo."
+              : "Pay your electricity, internet, phone and more — from your phone, no lines, no cash."}
           </p>
 
+          {/* CTA buttons — unchanged */}
           <div className="w-full max-w-sm flex flex-col gap-3">
             <button
               onClick={() => navigate("/servicios")}
@@ -135,17 +246,89 @@ export default function Home() {
                 boxShadow: "0 6px 20px rgba(4,108,44,0.40)",
               }}
             >
-              Ver todos los servicios
+              {es ? "Ver todos los servicios" : "Browse all services"}
               <ArrowRight className="w-5 h-5" />
             </button>
 
-            <p className="text-xs text-gray-400 font-medium text-center -mt-1">Seguro. Rápido. Sin filas.</p>
+            {/* Trust line — unchanged */}
+            <p className="text-xs text-gray-400 font-medium text-center -mt-1">
+              {es ? "Seguro. Rápido. Sin filas." : "Secure. Fast. No lines."}
+            </p>
 
             <button
               onClick={() => navigate("/pagar")}
               className="w-full py-5 px-8 rounded-full text-[#046C2C] text-base font-bold border-2 border-[#046C2C] bg-white transition-all duration-150 active:scale-[0.97] hover:bg-[#F0FAF3]"
             >
-              Pagar un servicio
+              {es ? "Pagar un servicio" : "Pay a service"}
+            </button>
+          </div>
+        </section>
+
+        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            CHANGE 2 — Service logos marquee
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <section style={{ background: "#F5F5F0", padding: "20px 0 18px" }}>
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "#9CA3AF",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: "14px",
+              paddingInline: "16px",
+            }}
+          >
+            {es ? "Paga estos servicios y más" : "Pay these services and more"}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflow: "hidden" }}>
+            <MarqueeRow direction="left" />
+            <MarqueeRow direction="right" />
+          </div>
+        </section>
+
+        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            CHANGE 3 — Broker CTA banner
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <section
+          style={{
+            background: "#1D9E75",
+            padding: "28px 24px",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 220px" }}>
+            <p style={{ color: "white", fontSize: "20px", fontWeight: 900, lineHeight: 1.25, marginBottom: "6px" }}>
+              ¿Eres agente inmobiliario?
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "14px", lineHeight: 1.5 }}>
+              Gana $500 MXN por cada propietario que registres. Sin límite.
+            </p>
+          </div>
+          <div style={{ flex: "1 1 160px", display: "flex", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => navigate("/brokers")}
+              style={{
+                background: "#0A2540",
+                color: "white",
+                border: "none",
+                borderRadius: "999px",
+                padding: "14px 24px",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                width: "100%",
+                maxWidth: "220px",
+              }}
+            >
+              Ver comisiones →
             </button>
           </div>
         </section>
@@ -167,7 +350,6 @@ export default function Home() {
               border: "1px solid #D4EDDA",
             }}
           >
-            {/* Header */}
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
@@ -181,7 +363,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Input */}
             <input
               type="text"
               value={aiInput}
@@ -197,7 +378,6 @@ export default function Home() {
               onFocus={() => setHintIndex((hintIndex + 1) % HINTS.length)}
             />
 
-            {/* Button */}
             <button
               onClick={handleAutofill}
               disabled={!aiInput.trim()}
@@ -210,15 +390,9 @@ export default function Home() {
               }}
             >
               {aiDone ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Listo. Te ayudamos a completar tu pago.
-                </>
+                <><CheckCircle className="w-4 h-4" /> Listo. Te ayudamos a completar tu pago.</>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Autocompletar con IA
-                </>
+                <><Sparkles className="w-4 h-4" /> Autocompletar con IA</>
               )}
             </button>
           </div>
@@ -236,7 +410,7 @@ export default function Home() {
                   className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-[0.96]"
                   style={{
                     background: aiInput === chip.phrase ? "#046C2C" : "#F0FAF3",
-                    color: aiInput === chip.phrase ? "white" : "#046C2C",
+                    color:      aiInput === chip.phrase ? "white"    : "#046C2C",
                     border: `1.5px solid ${aiInput === chip.phrase ? "#046C2C" : "#D4EDDA"}`,
                   }}
                 >
@@ -270,10 +444,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
                     <span className="text-sm font-black text-[#046C2C]">${p.monto}</span>
-                    <span
-                      className="px-2.5 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: "#F0FAF3", color: "#046C2C" }}
-                    >
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#F0FAF3", color: "#046C2C" }}>
                       Pagado
                     </span>
                   </div>
@@ -294,26 +465,10 @@ export default function Home() {
         <section id="como-funciona" className="px-6 py-10">
           <h2 className="text-2xl font-black text-[#1F1F1F] mb-1 text-center">¿Cómo funciona?</h2>
           <p className="text-sm text-gray-500 text-center mb-8">Tres pasos. Así de simple.</p>
-
           <div className="flex flex-col gap-4 max-w-sm mx-auto">
-            <StepCard
-              number={1}
-              icon={<FileText className="w-6 h-6" style={{ color: "#046C2C" }} />}
-              title="Ingresa tu servicio"
-              description="Selecciona el servicio, captura el monto y tu número de referencia."
-            />
-            <StepCard
-              number={2}
-              icon={<CheckCircle className="w-6 h-6" style={{ color: "#39A935" }} />}
-              title="Confirma el monto"
-              description="Revisa todos los detalles antes de proceder. Seguro y transparente."
-            />
-            <StepCard
-              number={3}
-              icon={<Zap className="w-6 h-6" style={{ color: "#046C2C" }} />}
-              title="Paga y recibe tu comprobante"
-              description="Realiza el pago y recibe tu comprobante al instante para compartirlo."
-            />
+            <StepCard number={1} icon={<FileText  className="w-6 h-6" style={{ color: "#046C2C" }} />} title="Ingresa tu servicio"      description="Selecciona el servicio, captura el monto y tu número de referencia." />
+            <StepCard number={2} icon={<CheckCircle className="w-6 h-6" style={{ color: "#39A935" }} />} title="Confirma el monto"       description="Revisa todos los detalles antes de proceder. Seguro y transparente." />
+            <StepCard number={3} icon={<Zap         className="w-6 h-6" style={{ color: "#046C2C" }} />} title="Paga y recibe tu comprobante" description="Realiza el pago y recibe tu comprobante al instante para compartirlo." />
           </div>
         </section>
 
@@ -326,11 +481,7 @@ export default function Home() {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Servicios disponibles</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {["Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono", "Streaming", "Préstamos", "Seguro", "Escuela", "Renta"].map((cat) => (
-                <span
-                  key={cat}
-                  className="px-4 py-1.5 rounded-full text-sm font-semibold"
-                  style={{ background: "#F0FAF3", color: "#046C2C" }}
-                >
+                <span key={cat} className="px-4 py-1.5 rounded-full text-sm font-semibold" style={{ background: "#F0FAF3", color: "#046C2C" }}>
                   {cat}
                 </span>
               ))}
@@ -348,7 +499,7 @@ export default function Home() {
               boxShadow: "0 6px 20px rgba(4,108,44,0.32)",
             }}
           >
-            Pagar un servicio ahora
+            {es ? "Pagar un servicio ahora" : "Pay a service now"}
           </button>
         </div>
       </main>
@@ -361,10 +512,12 @@ export default function Home() {
   );
 }
 
+// ─── STEP CARD ────────────────────────────────────────────────────────────────
+
 function StepCard({ number, icon, title, description }: {
-  number: number;
-  icon: React.ReactNode;
-  title: string;
+  number:      number;
+  icon:        React.ReactNode;
+  title:       string;
   description: string;
 }) {
   return (
@@ -372,18 +525,12 @@ function StepCard({ number, icon, title, description }: {
       className="bg-white rounded-3xl p-5 flex gap-4 items-start"
       style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}
     >
-      <div
-        className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center"
-        style={{ background: "#F0FAF3" }}
-      >
+      <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "#F0FAF3" }}>
         {icon}
       </div>
       <div className="flex-1 pt-0.5">
         <div className="flex items-center gap-2 mb-1.5">
-          <span
-            className="text-xs font-black w-5 h-5 rounded-full flex items-center justify-center"
-            style={{ background: "#046C2C", color: "white" }}
-          >
+          <span className="text-xs font-black w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#046C2C", color: "white" }}>
             {number}
           </span>
           <h3 className="text-sm font-bold text-[#1F1F1F]">{title}</h3>
