@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, Zap, CheckCircle, FileText, Sparkles } from "lucide-react";
-import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 
@@ -177,12 +176,29 @@ export default function Home() {
           <span style={{ color: "#1D9E75" }}>Ya</span>
         </span>
 
-        {/* image logo center */}
+        {/* image logo center — mix-blend-mode removes white background on navy */}
         <img
-          src={logoUrl}
+          src="/pagoya-logo.png"
+          height={40}
           alt="PagoYa"
-          style={{ height: "32px", objectFit: "contain", filter: "brightness(0) invert(1)", position: "absolute", left: "50%", transform: "translateX(-50%)" }}
+          style={{
+            height: "40px", objectFit: "contain", mixBlendMode: "multiply",
+            position: "absolute", left: "50%", transform: "translateX(-50%)",
+          }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const sib = e.currentTarget.nextSibling as HTMLElement | null;
+            if (sib) sib.style.display = "block";
+          }}
         />
+        {/* fallback text logo shown only if image fails to load */}
+        <span style={{
+          display: "none", color: "white", fontWeight: 800, fontSize: "22px",
+          position: "absolute", left: "50%", transform: "translateX(-50%)",
+          whiteSpace: "nowrap",
+        }}>
+          Pago<span style={{ color: "#1D9E75" }}>Ya</span>
+        </span>
 
         {/* lang toggle right */}
         <button
