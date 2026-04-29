@@ -1,20 +1,63 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, Zap, CheckCircle, FileText, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowRight, Zap, CheckCircle, FileText, Sparkles } from "lucide-react";
 import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 
-// ─── MARQUEE DATA ─────────────────────────────────────────────────────────────
+// ─── MARQUEE ──────────────────────────────────────────────────────────────────
 
-const SERVICES = [
+const MARQUEE_SERVICES = [
   "CFE", "Telmex", "Telcel", "AT&T", "Izzi",
   "Megacable", "Sky", "Dish", "Gas Natural", "Totalplay", "Maxcom",
 ];
 
-const BADGE_COLORS = ["#1D9E75", "#D85A30", "#7F77DD", "#0A2540"];
+const BRAND_COLORS = ["#1D9E75", "#D85A30", "#7F77DD", "#0A2540"];
 
-// ─── QUICK CHIPS / HINTS ──────────────────────────────────────────────────────
+function MarqueeRow({ direction }: { direction: "left" | "right" }) {
+  const list = [...MARQUEE_SERVICES, ...MARQUEE_SERVICES];
+  const anim = direction === "left" ? "pgScrollLeft" : "pgScrollRight";
+  return (
+    <div style={{ overflow: "hidden", width: "100%" }}>
+      <div style={{ display: "flex", gap: "10px", width: "max-content", animation: `${anim} 28s linear infinite` }}>
+        {list.map((name, i) => (
+          <span
+            key={`${name}-${i}`}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "7px",
+              background: "white", border: "1px solid #E2E8F0", borderRadius: "999px",
+              padding: "6px 14px 6px 8px", boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+              whiteSpace: "nowrap", fontSize: "13px", fontWeight: 600, color: "#1F1F1F",
+            }}
+          >
+            <span style={{
+              width: "22px", height: "22px", borderRadius: "50%",
+              background: BRAND_COLORS[i % BRAND_COLORS.length],
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              color: "white", fontSize: "11px", fontWeight: 800, flexShrink: 0,
+            }}>
+              {name[0]}
+            </span>
+            {name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── QUICK-ACCESS GRID ────────────────────────────────────────────────────────
+
+const QUICK_ACCESS = [
+  { name: "CFE",      color: "#1D9E75" },
+  { name: "Telcel",   color: "#D85A30" },
+  { name: "Telmex",   color: "#7F77DD" },
+  { name: "Izzi",     color: "#0A2540" },
+  { name: "Sky",      color: "#1D9E75" },
+  { name: "Megacable",color: "#D85A30" },
+];
+
+// ─── AI HINTS ─────────────────────────────────────────────────────────────────
 
 const HINTS = [
   "Quiero pagar luz CFE",
@@ -23,121 +66,40 @@ const HINTS = [
   "Quiero pagar mi renta",
 ];
 
-const QUICK_CHIPS = [
-  { label: "Luz",       phrase: "Quiero pagar luz CFE" },
-  { label: "Internet",  phrase: "Voy a pagar internet izzi" },
-  { label: "Celular",   phrase: "Necesito pagar Telcel 300 pesos" },
-  { label: "Renta",     phrase: "Quiero pagar mi renta" },
-  { label: "Streaming", phrase: "Quiero pagar Netflix" },
-];
-
-const RECENT_PAYMENTS = [
-  { empresa: "CFE",    categoria: "Luz",             monto: "850" },
-  { empresa: "Telcel", categoria: "Teléfono móvil",  monto: "300" },
-  { empresa: "Izzi",   categoria: "Internet",        monto: "649" },
-];
-
-// ─── AI PARSE ─────────────────────────────────────────────────────────────────
-
 function parseAIInput(text: string): { empresa: string; categoria: string; monto: string } {
   const t = text.toLowerCase();
   let empresa = "";
   let categoria = "";
 
-  if (t.includes("cfe") || t.includes("luz"))                             { empresa = "CFE";      categoria = "Luz"; }
-  else if (t.includes("agua"))                                             {                        categoria = "Agua"; }
-  else if (t.includes("gas"))                                              {                        categoria = "Gas"; }
-  else if (t.includes("izzi"))                                             { empresa = "Izzi";     categoria = "Internet"; }
-  else if (t.includes("totalplay"))                                        { empresa = "Totalplay"; categoria = "Internet"; }
-  else if (t.includes("internet"))                                         {                        categoria = "Internet"; }
-  else if (t.includes("telcel"))                                           { empresa = "Telcel";   categoria = "Teléfono móvil"; }
-  else if (t.includes("movistar"))                                         { empresa = "Movistar"; categoria = "Teléfono móvil"; }
-  else if (t.includes("netflix"))                                          { empresa = "Netflix";  categoria = "Streaming"; }
-  else if (t.includes("spotify"))                                          { empresa = "Spotify";  categoria = "Streaming"; }
-  else if (t.includes("streaming"))                                        {                        categoria = "Streaming"; }
-  else if (t.includes("seguro"))                                           {                        categoria = "Seguro"; }
-  else if (t.includes("escuela") || t.includes("colegiatura"))            {                        categoria = "Escuela"; }
-  else if (t.includes("renta"))                                            {                        categoria = "Renta"; }
-  else if (t.includes("préstamo") || t.includes("prestamo"))              {                        categoria = "Préstamos"; }
+  if      (t.includes("cfe") || t.includes("luz"))              { empresa = "CFE";       categoria = "Luz"; }
+  else if (t.includes("agua"))                                   {                         categoria = "Agua"; }
+  else if (t.includes("gas"))                                    {                         categoria = "Gas"; }
+  else if (t.includes("izzi"))                                   { empresa = "Izzi";      categoria = "Internet"; }
+  else if (t.includes("totalplay"))                              { empresa = "Totalplay"; categoria = "Internet"; }
+  else if (t.includes("internet"))                               {                         categoria = "Internet"; }
+  else if (t.includes("telcel"))                                 { empresa = "Telcel";    categoria = "Teléfono móvil"; }
+  else if (t.includes("movistar"))                               { empresa = "Movistar";  categoria = "Teléfono móvil"; }
+  else if (t.includes("netflix"))                                { empresa = "Netflix";   categoria = "Streaming"; }
+  else if (t.includes("spotify"))                                { empresa = "Spotify";   categoria = "Streaming"; }
+  else if (t.includes("streaming"))                              {                         categoria = "Streaming"; }
+  else if (t.includes("seguro"))                                 {                         categoria = "Seguro"; }
+  else if (t.includes("escuela") || t.includes("colegiatura"))  {                         categoria = "Escuela"; }
+  else if (t.includes("renta"))                                  {                         categoria = "Renta"; }
+  else if (t.includes("préstamo") || t.includes("prestamo"))    {                         categoria = "Préstamos"; }
 
   const montoMatch = text.match(/\b(\d{2,6})\b/);
-  const monto = montoMatch ? montoMatch[1] : "";
-
-  return { empresa, categoria, monto };
+  return { empresa, categoria, monto: montoMatch ? montoMatch[1] : "" };
 }
 
-// ─── MARQUEE ROW ──────────────────────────────────────────────────────────────
-
-function MarqueeRow({ direction }: { direction: "left" | "right" }) {
-  const list = [...SERVICES, ...SERVICES];
-  const animName = direction === "left" ? "pgScrollLeft" : "pgScrollRight";
-
-  return (
-    <div style={{ overflow: "hidden", width: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          width: "max-content",
-          animation: `${animName} 28s linear infinite`,
-        }}
-      >
-        {list.map((name, i) => {
-          const color = BADGE_COLORS[i % BADGE_COLORS.length];
-          return (
-            <span
-              key={`${name}-${i}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                background: "white",
-                border: "1px solid #E2E8F0",
-                borderRadius: "999px",
-                padding: "6px 14px 6px 8px",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                whiteSpace: "nowrap",
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#1F1F1F",
-              }}
-            >
-              <span
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: color,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  flexShrink: 0,
-                }}
-              >
-                {name[0]}
-              </span>
-              {name}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+// ─── HOME ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [, navigate] = useLocation();
   const { setPaymentData, paymentData } = usePayment();
-  const [aiInput, setAiInput]   = useState("");
-  const [aiDone, setAiDone]     = useState(false);
+  const [aiInput, setAiInput]     = useState("");
+  const [aiDone, setAiDone]       = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
-  const [lang, setLang]         = useState<"es" | "en">("es");
-
+  const [lang, setLang]           = useState<"es" | "en">("es");
   const es = lang === "es";
 
   const handleAutofill = () => {
@@ -156,47 +118,27 @@ export default function Home() {
     setTimeout(() => { navigate("/pagar"); }, 900);
   };
 
-  const handleChip   = (phrase: string) => { setAiInput(phrase); setAiDone(false); };
-  const handleRepeat = (payment: typeof RECENT_PAYMENTS[0]) => {
-    setPaymentData({ ...paymentData, empresa: payment.empresa, categoria: payment.categoria, monto: payment.monto });
-    navigate("/pagar");
-  };
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#F5F5F0" }}>
 
-      {/* ── Keyframes (CSS-only marquee, no JS libs) ── */}
+      {/* CSS-only marquee keyframes */}
       <style>{`
-        @keyframes pgScrollLeft {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes pgScrollRight {
-          0%   { transform: translateX(-50%); }
-          100% { transform: translateX(0); }
-        }
+        @keyframes pgScrollLeft  { 0% { transform:translateX(0);    } 100% { transform:translateX(-50%); } }
+        @keyframes pgScrollRight { 0% { transform:translateX(-50%); } 100% { transform:translateX(0);    } }
       `}</style>
 
-      {/* Header */}
+      {/* ── 1. HEADER — navy ── */}
       <header
-        className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between"
-        style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}
+        style={{ background: "#0A2540", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}
       >
-        <div className="w-14" />
-        <img src={logoUrl} alt="PagoYa" className="w-56 h-auto object-contain" />
-        {/* Language toggle */}
+        <div style={{ width: "48px" }} />
+        <img src={logoUrl} alt="PagoYa" style={{ height: "36px", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
         <button
           onClick={() => setLang(es ? "en" : "es")}
           style={{
-            fontSize: "12px",
-            fontWeight: 700,
-            color: "#046C2C",
-            border: "1.5px solid #D4EDDA",
-            borderRadius: "999px",
-            padding: "4px 10px",
-            background: "#F0FAF3",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
+            fontSize: "12px", fontWeight: 700, color: "white",
+            border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
+            padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
           }}
         >
           {es ? "EN" : "ES"}
@@ -205,81 +147,69 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col">
 
-        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            CHANGE 1 — Hero headline
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        {/* ── 2. HERO — navy ── */}
         <section
-          className="px-6 pt-12 pb-14 flex flex-col items-center text-center"
-          style={{ background: "linear-gradient(180deg, #ffffff 0%, #f0faf3 100%)" }}
+          style={{ background: "#0A2540", padding: "48px 24px 56px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}
         >
-          <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center mb-8"
-            style={{
-              background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-              boxShadow: "0 8px 24px rgba(4,108,44,0.28)",
-            }}
-          >
-            <Zap className="w-10 h-10 text-white" strokeWidth={2.5} />
+          <div style={{
+            width: "80px", height: "80px", borderRadius: "20px", marginBottom: "32px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
+            boxShadow: "0 8px 24px rgba(4,108,44,0.40)",
+          }}>
+            <Zap style={{ width: "40px", height: "40px", color: "white" }} strokeWidth={2.5} />
           </div>
 
-          <h1 className="text-4xl font-black text-[#1F1F1F] leading-tight tracking-tight mb-3">
+          <h1 style={{ fontSize: "38px", fontWeight: 900, color: "white", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "12px" }}>
             {es ? "¿Se cerró tu OXXO?" : "No OXXO nearby?"}
             <br />
-            <span style={{ color: "#046C2C" }}>
-              {es ? "Paga aquí." : "Pay here."}
-            </span>
+            <span style={{ color: "#39A935" }}>{es ? "Paga aquí." : "Pay here."}</span>
           </h1>
 
-          <p className="text-base text-gray-500 max-w-xs leading-relaxed mb-10">
+          <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.70)", maxWidth: "280px", lineHeight: 1.6, marginBottom: "40px" }}>
             {es
               ? "Paga tu luz, internet, celular y más — desde tu cel, sin filas, sin efectivo."
               : "Pay your electricity, internet, phone and more — from your phone, no lines, no cash."}
           </p>
 
-          {/* CTA buttons — unchanged */}
-          <div className="w-full max-w-sm flex flex-col gap-3">
+          <div style={{ width: "100%", maxWidth: "360px", display: "flex", flexDirection: "column", gap: "12px" }}>
             <button
               onClick={() => navigate("/servicios")}
-              className="w-full py-5 px-8 rounded-full text-white text-base font-bold flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
               style={{
+                width: "100%", padding: "18px 32px", borderRadius: "999px", border: "none",
+                color: "white", fontSize: "16px", fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                boxShadow: "0 6px 20px rgba(4,108,44,0.40)",
+                boxShadow: "0 6px 20px rgba(4,108,44,0.50)",
               }}
             >
               {es ? "Ver todos los servicios" : "Browse all services"}
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight style={{ width: "20px", height: "20px" }} />
             </button>
 
-            {/* Trust line — unchanged */}
-            <p className="text-xs text-gray-400 font-medium text-center -mt-1">
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.45)", fontWeight: 500, textAlign: "center", margin: "-4px 0" }}>
               {es ? "Seguro. Rápido. Sin filas." : "Secure. Fast. No lines."}
             </p>
 
             <button
               onClick={() => navigate("/pagar")}
-              className="w-full py-5 px-8 rounded-full text-[#046C2C] text-base font-bold border-2 border-[#046C2C] bg-white transition-all duration-150 active:scale-[0.97] hover:bg-[#F0FAF3]"
+              style={{
+                width: "100%", padding: "18px 32px", borderRadius: "999px", cursor: "pointer",
+                color: "white", fontSize: "16px", fontWeight: 700,
+                background: "transparent", border: "2px solid rgba(255,255,255,0.40)",
+              }}
             >
               {es ? "Pagar un servicio" : "Pay a service"}
             </button>
           </div>
         </section>
 
-        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            CHANGE 2 — Service logos marquee
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        {/* ── 3. MARQUEE — off-white ── */}
         <section style={{ background: "#F5F5F0", padding: "20px 0 18px" }}>
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: "11px",
-              fontWeight: 600,
-              color: "#9CA3AF",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              marginBottom: "14px",
-              paddingInline: "16px",
-            }}
-          >
+          <p style={{
+            textAlign: "center", fontSize: "11px", fontWeight: 600, color: "#9CA3AF",
+            letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "14px", paddingInline: "16px",
+          }}>
             {es ? "Paga estos servicios y más" : "Pay these services and more"}
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflow: "hidden" }}>
@@ -288,22 +218,119 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            CHANGE 3 — Broker CTA banner
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        <section
-          style={{
-            background: "#1D9E75",
-            padding: "28px 24px",
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "20px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: "1 1 220px" }}>
+        {/* ── 4. WALLET — white ── */}
+        <section style={{ background: "#FFFFFF", padding: "20px 20px 8px" }}>
+          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
+            <WalletBalanceWidget />
+          </div>
+        </section>
+
+        {/* ── 5. AI ASSISTANT — white (continues) ── */}
+        <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
+          <div
+            style={{
+              borderRadius: "24px", padding: "24px", maxWidth: "360px", margin: "0 auto",
+              background: "linear-gradient(145deg, #f0faf3 0%, #ffffff 100%)",
+              boxShadow: "0 4px 20px rgba(4,108,44,0.10)", border: "1px solid #D4EDDA",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+              <div style={{
+                width: "40px", height: "40px", borderRadius: "12px", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
+              }}>
+                <Sparkles style={{ width: "20px", height: "20px", color: "white" }} strokeWidth={2} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: "15px", fontWeight: 900, color: "#1F1F1F", lineHeight: 1.25, marginBottom: "2px" }}>
+                  ¿Qué necesitas pagar hoy?
+                </h2>
+                <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.4 }}>
+                  Describe tu pago y llenamos el formulario.
+                </p>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              value={aiInput}
+              onChange={(e) => { setAiInput(e.target.value); setAiDone(false); }}
+              onKeyDown={(e) => e.key === "Enter" && handleAutofill()}
+              placeholder={HINTS[hintIndex]}
+              onFocus={() => setHintIndex((hintIndex + 1) % HINTS.length)}
+              style={{
+                width: "100%", borderRadius: "16px", padding: "14px 16px", fontSize: "14px",
+                color: "#1F1F1F", outline: "none", marginBottom: "12px", boxSizing: "border-box",
+                background: "white", border: "1.5px solid #D4EDDA", boxShadow: "0 2px 8px rgba(4,108,44,0.06)",
+              }}
+            />
+
+            <button
+              onClick={handleAutofill}
+              disabled={!aiInput.trim()}
+              style={{
+                width: "100%", padding: "14px", borderRadius: "999px", border: "none",
+                color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                background: aiDone ? "#39A935" : "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
+                boxShadow: "0 4px 16px rgba(4,108,44,0.32)", opacity: !aiInput.trim() ? 0.5 : 1,
+              }}
+            >
+              {aiDone
+                ? <><CheckCircle style={{ width: "16px", height: "16px" }} /> Listo. Te ayudamos a completar tu pago.</>
+                : <><Sparkles    style={{ width: "16px", height: "16px" }} /> Autocompletar con IA</>}
+            </button>
+          </div>
+        </section>
+
+        {/* ── 6. QUICK ACCESS GRID — off-white ── */}
+        <section style={{ background: "#F5F5F0", padding: "24px 20px" }}>
+          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
+            <p style={{
+              fontSize: "11px", fontWeight: 700, color: "#9CA3AF",
+              textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "14px",
+            }}>
+              {es ? "Acceso rápido" : "Quick access"}
+            </p>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "10px",
+            }}>
+              {QUICK_ACCESS.map((svc) => (
+                <button
+                  key={svc.name}
+                  onClick={() => navigate("/servicios")}
+                  style={{
+                    background: "white", border: "1px solid #E2E8F0", borderRadius: "16px",
+                    padding: "16px 8px", cursor: "pointer", display: "flex",
+                    flexDirection: "column", alignItems: "center", gap: "8px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <span style={{
+                    width: "36px", height: "36px", borderRadius: "50%", background: svc.color,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "white", fontSize: "15px", fontWeight: 800,
+                  }}>
+                    {svc.name[0]}
+                  </span>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#1F1F1F", textAlign: "center", lineHeight: 1.2 }}>
+                    {svc.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 7. BROKER BANNER — teal ── */}
+        <section style={{
+          background: "#1D9E75", padding: "28px 24px",
+          display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "20px",
+        }}>
+          <div style={{ flex: "1 1 200px" }}>
             <p style={{ color: "white", fontSize: "20px", fontWeight: 900, lineHeight: 1.25, marginBottom: "6px" }}>
               ¿Eres agente inmobiliario?
             </p>
@@ -315,17 +342,9 @@ export default function Home() {
             <button
               onClick={() => navigate("/brokers")}
               style={{
-                background: "#0A2540",
-                color: "white",
-                border: "none",
-                borderRadius: "999px",
-                padding: "14px 24px",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                width: "100%",
-                maxWidth: "220px",
+                background: "#0A2540", color: "white", border: "none", borderRadius: "999px",
+                padding: "14px 24px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap", width: "100%", maxWidth: "220px",
               }}
             >
               Ver comisiones →
@@ -333,180 +352,42 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Wallet Balance Widget */}
-        <section className="px-5 pt-5 pb-1">
-          <div className="max-w-sm mx-auto">
-            <WalletBalanceWidget />
+        {/* ── 8. HOW IT WORKS — white ── */}
+        <section id="como-funciona" style={{ background: "#FFFFFF", padding: "40px 24px" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#1F1F1F", textAlign: "center", marginBottom: "4px" }}>
+            ¿Cómo funciona?
+          </h2>
+          <p style={{ fontSize: "14px", color: "#6B7280", textAlign: "center", marginBottom: "32px" }}>
+            Tres pasos. Así de simple.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "360px", margin: "0 auto" }}>
+            <StepCard number={1} icon={<FileText   style={{ width: "24px", height: "24px", color: "#046C2C" }} />} title="Ingresa tu servicio"           description="Selecciona el servicio, captura el monto y tu número de referencia." />
+            <StepCard number={2} icon={<CheckCircle style={{ width: "24px", height: "24px", color: "#39A935" }} />} title="Confirma el monto"             description="Revisa todos los detalles antes de proceder. Seguro y transparente." />
+            <StepCard number={3} icon={<Zap         style={{ width: "24px", height: "24px", color: "#046C2C" }} />} title="Paga y recibe tu comprobante"  description="Realiza el pago y recibe tu comprobante al instante para compartirlo." />
           </div>
         </section>
 
-        {/* AI Assistant Card */}
-        <section className="px-5 pt-6 pb-2">
-          <div
-            className="rounded-3xl p-6 max-w-sm mx-auto"
-            style={{
-              background: "linear-gradient(145deg, #f0faf3 0%, #ffffff 100%)",
-              boxShadow: "0 4px 20px rgba(4,108,44,0.10)",
-              border: "1px solid #D4EDDA",
-            }}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)" }}
-              >
-                <Sparkles className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-[#1F1F1F] leading-tight">¿Qué necesitas pagar hoy?</h2>
-                <p className="text-xs text-gray-500 leading-snug">Describe tu pago y llenamos el formulario.</p>
-              </div>
-            </div>
-
-            <input
-              type="text"
-              value={aiInput}
-              onChange={(e) => { setAiInput(e.target.value); setAiDone(false); }}
-              onKeyDown={(e) => e.key === "Enter" && handleAutofill()}
-              placeholder={HINTS[hintIndex]}
-              className="w-full rounded-2xl px-4 py-3.5 text-sm text-[#1F1F1F] outline-none transition-all mb-3"
-              style={{
-                background: "white",
-                border: "1.5px solid #D4EDDA",
-                boxShadow: "0 2px 8px rgba(4,108,44,0.06)",
-              }}
-              onFocus={() => setHintIndex((hintIndex + 1) % HINTS.length)}
-            />
-
+        {/* ── 9. BOTTOM CTA — off-white ── */}
+        <div style={{ background: "#F5F5F0", padding: "32px 24px 48px" }}>
+          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
             <button
-              onClick={handleAutofill}
-              disabled={!aiInput.trim()}
-              className="w-full py-3.5 rounded-full text-white text-sm font-bold flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.97] disabled:opacity-50"
+              onClick={() => navigate("/pagar")}
               style={{
-                background: aiDone
-                  ? "#39A935"
-                  : "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                boxShadow: "0 4px 16px rgba(4,108,44,0.32)",
+                width: "100%", padding: "18px 32px", borderRadius: "999px", border: "none",
+                color: "white", fontSize: "16px", fontWeight: 700, cursor: "pointer",
+                background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
+                boxShadow: "0 6px 20px rgba(4,108,44,0.32)",
               }}
             >
-              {aiDone ? (
-                <><CheckCircle className="w-4 h-4" /> Listo. Te ayudamos a completar tu pago.</>
-              ) : (
-                <><Sparkles className="w-4 h-4" /> Autocompletar con IA</>
-              )}
+              {es ? "Pagar un servicio ahora" : "Pay a service now"}
             </button>
           </div>
-        </section>
-
-        {/* Quick Chips */}
-        <section className="px-5 pt-4 pb-2">
-          <div className="max-w-sm mx-auto">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Sugerencias rápidas</p>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_CHIPS.map((chip) => (
-                <button
-                  key={chip.label}
-                  onClick={() => handleChip(chip.phrase)}
-                  className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-[0.96]"
-                  style={{
-                    background: aiInput === chip.phrase ? "#046C2C" : "#F0FAF3",
-                    color:      aiInput === chip.phrase ? "white"    : "#046C2C",
-                    border: `1.5px solid ${aiInput === chip.phrase ? "#046C2C" : "#D4EDDA"}`,
-                  }}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Recent Payments */}
-        <section className="px-5 pt-8 pb-4">
-          <div className="max-w-sm mx-auto">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">Pagos recientes</p>
-            <div className="flex flex-col gap-3">
-              {RECENT_PAYMENTS.map((p) => (
-                <div
-                  key={p.empresa}
-                  className="bg-white rounded-2xl px-5 py-4 flex items-center gap-4"
-                  style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-black text-white"
-                    style={{ background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)" }}
-                  >
-                    {p.empresa[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#1F1F1F]">{p.empresa}</p>
-                    <p className="text-xs text-gray-400">{p.categoria}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <span className="text-sm font-black text-[#046C2C]">${p.monto}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "#F0FAF3", color: "#046C2C" }}>
-                      Pagado
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleRepeat(p)}
-                    className="ml-1 p-2 rounded-xl transition-all active:scale-[0.92] hover:bg-[#F0FAF3]"
-                    title="Repetir pago"
-                  >
-                    <RotateCcw className="w-4 h-4" style={{ color: "#39A935" }} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section id="como-funciona" className="px-6 py-10">
-          <h2 className="text-2xl font-black text-[#1F1F1F] mb-1 text-center">¿Cómo funciona?</h2>
-          <p className="text-sm text-gray-500 text-center mb-8">Tres pasos. Así de simple.</p>
-          <div className="flex flex-col gap-4 max-w-sm mx-auto">
-            <StepCard number={1} icon={<FileText  className="w-6 h-6" style={{ color: "#046C2C" }} />} title="Ingresa tu servicio"      description="Selecciona el servicio, captura el monto y tu número de referencia." />
-            <StepCard number={2} icon={<CheckCircle className="w-6 h-6" style={{ color: "#39A935" }} />} title="Confirma el monto"       description="Revisa todos los detalles antes de proceder. Seguro y transparente." />
-            <StepCard number={3} icon={<Zap         className="w-6 h-6" style={{ color: "#046C2C" }} />} title="Paga y recibe tu comprobante" description="Realiza el pago y recibe tu comprobante al instante para compartirlo." />
-          </div>
-        </section>
-
-        {/* Services */}
-        <section className="px-6 pb-10">
-          <div
-            className="bg-white rounded-3xl p-6 max-w-sm mx-auto text-center"
-            style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
-          >
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Servicios disponibles</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {["Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono", "Streaming", "Préstamos", "Seguro", "Escuela", "Renta"].map((cat) => (
-                <span key={cat} className="px-4 py-1.5 rounded-full text-sm font-semibold" style={{ background: "#F0FAF3", color: "#046C2C" }}>
-                  {cat}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <div className="px-6 pb-12 max-w-sm mx-auto w-full">
-          <button
-            onClick={() => navigate("/pagar")}
-            className="w-full py-5 px-8 rounded-full text-white text-base font-bold transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
-            style={{
-              background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-              boxShadow: "0 6px 20px rgba(4,108,44,0.32)",
-            }}
-          >
-            {es ? "Pagar un servicio ahora" : "Pay a service now"}
-          </button>
         </div>
       </main>
 
-      <footer className="bg-white border-t border-gray-100 px-6 py-5 text-center flex flex-col gap-1">
-        <p className="text-xs text-gray-400">© 2026 PagoYa · Paga todo. Sin filas.</p>
-        <p className="text-xs text-gray-300 font-medium">Powered by Pago Seguro (próximamente)</p>
+      <footer style={{ background: "white", borderTop: "1px solid #F0F0F0", padding: "20px 24px", textAlign: "center" }}>
+        <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "4px" }}>© 2026 PagoYa · Paga todo. Sin filas.</p>
+        <p style={{ fontSize: "12px", color: "#D1D5DB", fontWeight: 500 }}>Powered by Pago Seguro (próximamente)</p>
       </footer>
     </div>
   );
@@ -521,21 +402,29 @@ function StepCard({ number, icon, title, description }: {
   description: string;
 }) {
   return (
-    <div
-      className="bg-white rounded-3xl p-5 flex gap-4 items-start"
-      style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0" }}
-    >
-      <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "#F0FAF3" }}>
+    <div style={{
+      background: "white", borderRadius: "24px", padding: "20px",
+      display: "flex", gap: "16px", alignItems: "flex-start",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0",
+    }}>
+      <div style={{
+        flexShrink: 0, width: "48px", height: "48px", borderRadius: "16px",
+        display: "flex", alignItems: "center", justifyContent: "center", background: "#F0FAF3",
+      }}>
         {icon}
       </div>
-      <div className="flex-1 pt-0.5">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-xs font-black w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#046C2C", color: "white" }}>
+      <div style={{ flex: 1, paddingTop: "2px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+          <span style={{
+            fontSize: "11px", fontWeight: 900, width: "20px", height: "20px", borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "#046C2C", color: "white",
+          }}>
             {number}
           </span>
-          <h3 className="text-sm font-bold text-[#1F1F1F]">{title}</h3>
+          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#1F1F1F" }}>{title}</h3>
         </div>
-        <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
+        <p style={{ fontSize: "14px", color: "#6B7280", lineHeight: 1.5 }}>{description}</p>
       </div>
     </div>
   );

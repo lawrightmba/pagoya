@@ -1,0 +1,77 @@
+In the PagoYa/PagoSeguro codebase, make the following 
+targeted changes to the PagoYa home page only. Read 
+the existing home page file completely before making 
+any changes. Do NOT touch routes, auth, backend, 
+wallet logic, or any other page.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 1 — MOVE MARQUEE UP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Move the service logo marquee section so it sits 
+BETWEEN the hero section and the wallet balance 
+widget. It should be the first thing visible after 
+the hero — before the wallet, before any other content.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 2 — REMOVE REDUNDANT SECTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Remove these three sections entirely from the home page:
+1. Sugerencias rápidas (quick chips / quick suggestions box)
+2. Servicios disponibles section
+3. Pagos recientes TEXT LIST — remove the text-based 
+   list but keep the section container for Change 3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 3 — REPLACE PAGOS RECIENTES 
+WITH SERVICE LOGO QUICK-TAP GRID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Where "Pagos recientes" used to be, replace the 
+content with a compact grid of the 6 most common 
+service logo buttons:
+
+CFE · Telcel · Telmex · Izzi · Sky · Megacable
+
+Each button is a small square card:
+- White background, rounded corners, subtle shadow
+- Colored circle with service initial (use brand 
+  colors rotating: teal, coral, purple, navy)
+- Service name in small bold text below the circle
+- Tapping any button navigates to /servicios with 
+  that service pre-selected if possible, otherwise 
+  just navigates to /servicios
+
+Layout: 3 columns x 2 rows on mobile, 
+6 in a single row on desktop.
+
+Section label above the grid (small, muted):
+  "Acceso rápido" / "Quick access"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHANGE 4 — FIX WHITESPACE WITH 
+BACKGROUND COLOR VARIATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The page currently has too much plain white space.
+Apply alternating background colors to sections 
+in this order top to bottom:
+
+1. Nav + Hero: navy #0A2540 (already correct)
+2. Marquee strip: off-white #F5F5F0
+3. Wallet balance widget: white #FFFFFF
+4. Quick access logo grid: off-white #F5F5F0
+5. Broker CTA banner: teal #1D9E75 (already correct)
+6. Any remaining sections: alternate white/#F5F5F0
+
+This creates visual rhythm and eliminates the 
+feeling of blank space without adding new content.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Mobile-first: verify at 375px width
+- Zero new dependencies
+- Zero backend or route changes
+- Floating WhatsApp button unchanged
+- UTM broker headline swap unchanged
+- Wallet balance widget functionality unchanged
+- After changes confirm home page loads 
+  without errors
