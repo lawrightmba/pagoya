@@ -626,9 +626,25 @@
           </div>
         </div>
 
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">⏳ Waiting for Selcom — mobile money integration</div>
+            <div class="task-why">→ Selcom live credentials required before first real TZS tenant payment. Awaiting onboarding response from Selcom Tanzania team.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb"></div>
+          <div class="task-content">
+            <div class="task-text">⏳ Waiting for TanQR — QR payment integration</div>
+            <div class="task-why">→ TanQR integration required for QR-based payments at property. Awaiting API access and integration documentation from TanQR.</div>
+          </div>
+        </div>
+
         <div class="unlock-row">
           <div>🔓</div>
-          <div class="unlock-text"><strong>Next unlock:</strong> Selcom live credentials → first real TZS tenant payment</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> Selcom live credentials → first real TZS tenant payment → TanQR QR payments</div>
         </div>
       </div>
     </div>
@@ -655,59 +671,83 @@
           <div class="metric"><div class="metric-val">7</div><div class="metric-label">API<br>ROUTES</div></div>
           <div class="metric"><div class="metric-val" id="pagoya-stripe-val">—</div><div class="metric-label">STRIPE<br>STATUS</div></div>
         </div>
-        <div class="today-label">TODAY'S TASKS — tap for context</div>
+        <div class="today-label">STATUS — 2026-04-29</div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text done">Wire frontend "Pagar ahora" → POST /api/pagoya/payments</div>
-            <div class="task-why">✅ DONE — PaymentContext wired, real Stripe PaymentIntent ID on success screen. Procesando... state + error handling live.</div>
-          </div>
-        </div>
-
-        <div class="task-item" onclick="toggleTask(this)">
-          <div class="task-cb checked"></div>
-          <div class="task-content">
-            <div class="task-text done">Confirm Stripe webhook pipeline end-to-end</div>
-            <div class="task-why">✅ DONE — payment_intent.succeeded → 200 → DB updated to succeeded. Dev/prod secret handling solved.</div>
+            <div class="task-text done">✅ 15/15 sandbox tests passing (Taecel/SIPREL)</div>
+            <div class="task-why">→ All 35 services confirmed reachable via SIPREL API. Full sandbox run 2026-04-29. Results saved to tabla-resultados-final-pagoya.xlsx.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb checked"></div>
           <div class="task-content">
-            <div class="task-text done">Add Stripe Elements card entry screen (/tarjeta)</div>
-            <div class="task-why">✅ DONE — Full flow: /pagar → /revisar → /tarjeta → /exito. CardElement live, confirmCardPayment() working, cancel returns to /revisar.</div>
+            <div class="task-text done">✅ $8 MXN platform fee live at checkout</div>
+            <div class="task-why">→ Flat $8.00 MXN fee on all 35 services. Stripe charges bill_amount + $8. Taecel receives bill_amount only. Fee stored in bill_payments.platform_fee_mxn.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Revenue reporting live at /pagoya-admin.html</div>
+            <div class="task-why">→ GET /api/bills/admin/revenue returns today / este mes / total acumulado / proyección mensual. Admin dashboard at /pagoya-admin.html auto-refreshes every 30s.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Domain pagoyamx.com verified (SSL pending)</div>
+            <div class="task-why">→ Domain connected to Replit deployment. SSL certificate auto-issuing via Replit. Expected live within 24–48h.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Landing page updated — logo, marquee, coral CTA</div>
+            <div class="task-why">→ Navy hero, frosted-glass marquee with 35 service badges, single coral #D85A30 "Pagar un servicio →" CTA, transparent PNG logo, stats bar with "2 min" payment time.</div>
+          </div>
+        </div>
+
+        <div class="task-item" onclick="toggleTask(this)">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Custom admin dashboard at /pagoya-admin.html</div>
+            <div class="task-why">→ Standalone HTML (no React, no auth). Shows Taecel saldo, platform revenue, tx stats, SIPREL health, last 10 transactions, quick actions. Auto-refresh 30s.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb"></div>
           <div class="task-content">
-            <div class="task-text">Design OXXO cash voucher UX — Stripe OXXO source flow</div>
-            <div class="task-why">→ Stripe supports OXXO vouchers natively in MXN. Dorsey POS moment: customer pays cash at OXXO, voucher confirms digitally. This is the core Mexico wedge.</div>
+            <div class="task-text">⏳ Oyuki production access — email sent 2026-04-29</div>
+            <div class="task-why">→ Awaiting Oyuki's SIPREL production credentials to go live with real bill payments. Email sent 2026-04-29.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb"></div>
           <div class="task-content">
-            <div class="task-text">Add email/password auth for repeat users + payment history</div>
-            <div class="task-why">→ GET /api/pagoya/recent returns last 5 payments from DB. Auth gates history to correct user. Enables loyalty, repeat payments, personalization.</div>
+            <div class="task-text">⏳ Evoluciona Móvil — integration email sent</div>
+            <div class="task-why">→ Evoluciona Móvil contacted for failover provider integration. Awaiting API credentials and onboarding response.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb"></div>
           <div class="task-content">
-            <div class="task-text">Run first real card payment end-to-end with Stripe test card</div>
-            <div class="task-why">→ Use Stripe test card 4242 4242 4242 4242, any future date, any CVC. Confirm payment flips to succeeded in dashboard.html DB view.</div>
+            <div class="task-text">⏳ SSL certificate — auto-issuing via Replit</div>
+            <div class="task-why">→ pagoyamx.com domain verified. SSL auto-issuing through Replit. Expected live within 24–48h of domain propagation.</div>
           </div>
         </div>
 
         <div class="unlock-row">
           <div>🔓</div>
-          <div class="unlock-text"><strong>Next unlock:</strong> OXXO voucher flow → Dorsey POS moment → fold payment API into PagoSeguro</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> Oyuki production credentials → first live SIPREL payment → pagoyamx.com public launch</div>
         </div>
       </div>
     </div>
