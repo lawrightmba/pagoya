@@ -1,0 +1,124 @@
+In the PagoYa/PagoSeguro codebase, create a new 
+standalone admin dashboard page for PagoYa at:
+artifacts/pagoya/public/pagoya-admin.html
+
+This is a self-contained HTML file (no React, 
+no build step needed) that pulls data from the 
+existing API endpoints. It should auto-refresh 
+every 30 seconds like the command center.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Brand colors:
+  Navy:  #0A2540
+  Teal:  #1D9E75
+  Coral: #D85A30
+  Off-white: #F5F5F0
+
+Layout: dark navy background, card-based grid,
+same visual style as the master command center 
+but PagoYa-specific only.
+
+Header:
+  PagoYa Admin Dashboard
+  Last updated: [timestamp] | Auto-refresh: 30s
+  Status indicator: green dot if API healthy
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — TAECEL SALDO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Calls: GET /api/bills/admin/balance
+
+Two cards side by side:
+  Card 1: Bolsa Tiempo Aire
+    Shows balance in MXN
+    Green if > 1000, amber if 200-1000, red if < 200
+
+  Card 2: Bolsa Pago de Servicios  
+    Shows balance in MXN
+    Green if > 500, amber if 100-500, red if < 500
+    
+  Below both cards:
+    "Recargar saldo: siprel.mx/portal → 
+     Cuentas Disponibles"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — PLATFORM REVENUE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Calls: GET /api/bills/admin/revenue
+
+Four cards:
+  Hoy: $X.XX MXN
+  Este mes: $X.XX MXN  
+  Total acumulado: $X.XX MXN
+  Proyección mensual: $X.XX MXN
+
+Below cards, two stat pills:
+  "Tarifa por transacción: $8.00 MXN"
+  "Margen neto por transacción: $3.00 MXN"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — TRANSACTION STATS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Calls: GET /api/bills/admin/revenue
+(uses transactionCount from the response)
+
+Three cards:
+  Transacciones hoy: N
+  Transacciones este mes: N
+  Total histórico: N
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — SIPREL HEALTH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Calls: GET /api/bills/admin/health
+
+Single card showing:
+  SIPREL Status: ✅ Configured / ❌ Not configured
+  Base URL: https://api-v1-fixedip.taecel.com/api/
+  Credentials: ✅ Set / ❌ Missing
+  Last check: [timestamp]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — RECENT TRANSACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Calls: GET /api/bills/history?limit=10
+
+Table showing last 10 transactions:
+  Fecha | Servicio | Referencia | 
+  Monto | Tarifa | Status | Folio
+
+Status color coded:
+  confirmed → green
+  pending → amber  
+  failed → red
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — QUICK ACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Four buttons:
+  "Ver catálogo de servicios" → /api/bills/catalog
+  "Consultar productos Taecel" → 
+    /api/bills/admin/products
+  "Recargar saldo SIPREL" → 
+    opens siprel.mx/portal in new tab
+  "Ver todos los pagos" → /api/bills/history
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECHNICAL REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Single self-contained HTML file
+- Vanilla JS only — no frameworks
+- All API calls use fetch() with 
+  error handling
+- Auto-refresh every 30 seconds
+- Shows loading skeletons while 
+  fetching data
+- Mobile responsive
+- Access URL: /pagoya-admin.html
+- No authentication required 
+  (security by obscurity like 
+  command-center.html)
+- After creating the file confirm 
+  it is accessible at that URL

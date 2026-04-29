@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PagoYa Admin Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0A2540;
+      color: #e8f0f7;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 20px 16px 60px;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .brand {
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      color: #1D9E75;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-family: 'Courier New', monospace;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #888; display: inline-block;
+      transition: background 0.3s;
+    }
+    .status-dot.ok { background: #1D9E75; box-shadow: 0 0 6px #1D9E75; }
+    .status-dot.err { background: #D85A30; }
+    .meta-text {
+      font-family: 'Courier New', monospace;
+      font-size: 0.58rem;
+      color: #5a7080;
+    }
+    .refresh-btn {
+      font-family: 'Courier New', monospace;
+      font-size: 0.52rem;
+      color: #1D9E75;
+      background: rgba(29,158,117,0.12);
+      border: 1px solid rgba(29,158,117,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .refresh-btn:hover { opacity: 0.75; }
+
+    /* ── Section ── */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-family: 'Courier New', monospace;
+      font-size: 0.52rem;
+      letter-spacing: 0.1em;
+      color: #5a7080;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── Card panel ── */
+    .panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .panel-teal {
+      background: rgba(29,158,117,0.06);
+      border-color: rgba(29,158,117,0.18);
+    }
+    .panel-header {
+      padding: 11px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-family: 'Courier New', monospace;
+      font-size: 0.5rem;
+      letter-spacing: 0.08em;
+      color: #5a7080;
+      text-transform: uppercase;
+    }
+    .panel-teal .panel-header {
+      border-bottom-color: rgba(29,158,117,0.12);
+      color: #1D9E75;
+    }
+
+    /* ── Grid of stat cards ── */
+    .card-grid {
+      display: grid;
+      gap: 0;
+    }
+    .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .card-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .stat-card {
+      padding: 16px 14px;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
+    }
+    .stat-card:last-child { border-right: none; }
+    .stat-value {
+      font-family: 'Courier New', monospace;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #e8f0f7;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+    .stat-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.42rem;
+      color: #5a7080;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      line-height: 1.5;
+    }
+    .stat-sub {
+      font-family: 'Courier New', monospace;
+      font-size: 0.38rem;
+      color: #3d5060;
+      margin-top: 2px;
+    }
+
+    .color-teal  { color: #1D9E75 !important; }
+    .color-green { color: #39A935 !important; }
+    .color-amber { color: #F59E0B !important; }
+    .color-red   { color: #D85A30 !important; }
+
+    /* ── Saldo recharge note ── */
+    .recharge-note {
+      padding: 10px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-family: 'Courier New', monospace;
+      font-size: 0.48rem;
+      color: #5a7080;
+    }
+    .recharge-note a { color: #1D9E75; text-decoration: none; }
+    .recharge-note a:hover { text-decoration: underline; }
+
+    /* ── Stat pills ── */
+    .pill-row {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      flex-wrap: wrap;
+    }
+    .pill {
+      font-family: 'Courier New', monospace;
+      font-size: 0.5rem;
+      color: #1D9E75;
+      background: rgba(29,158,117,0.12);
+      border: 1px solid rgba(29,158,117,0.25);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+
+    /* ── Health card ── */
+    .health-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.72rem;
+    }
+    .health-row:last-child { border-bottom: none; }
+    .health-label { color: #5a7080; font-family: 'Courier New', monospace; font-size: 0.5rem; text-transform: uppercase; }
+    .health-value { font-family: 'Courier New', monospace; font-size: 0.6rem; font-weight: 700; }
+
+    /* ── Table ── */
+    .tx-table { width: 100%; border-collapse: collapse; }
+    .tx-table th {
+      font-family: 'Courier New', monospace;
+      font-size: 0.42rem;
+      color: #5a7080;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 10px 14px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      white-space: nowrap;
+    }
+    .tx-table td {
+      font-family: 'Courier New', monospace;
+      font-size: 0.56rem;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      vertical-align: middle;
+      color: #c8d8e4;
+    }
+    .tx-table tr:last-child td { border-bottom: none; }
+    .tx-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 0.44rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-confirmed { background: rgba(29,158,117,0.18); color: #1D9E75; }
+    .badge-pending   { background: rgba(245,158,11,0.18); color: #F59E0B; }
+    .badge-failed    { background: rgba(216,90,48,0.18); color: #D85A30; }
+
+    /* ── Quick actions ── */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .action-btn {
+      display: block;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: #e8f0f7;
+      font-family: 'Courier New', monospace;
+      font-size: 0.56rem;
+      text-decoration: none;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .action-btn:hover {
+      background: rgba(29,158,117,0.1);
+      border-color: rgba(29,158,117,0.3);
+      color: #1D9E75;
+    }
+
+    /* ── Skeleton ── */
+    .skel {
+      display: inline-block;
+      background: rgba(255,255,255,0.07);
+      border-radius: 4px;
+      animation: skelPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes skelPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .card-grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .card-grid-3 { grid-template-columns: repeat(2, 1fr); }
+      .action-grid { grid-template-columns: 1fr; }
+      .stat-card { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    }
+    @media (max-width: 400px) {
+      .card-grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">PagoYa · Admin</div>
+      <div class="header-top">
+        <div class="title">Dashboard</div>
+        <div class="header-meta">
+          <span class="status-dot" id="statusDot"></span>
+          <span class="meta-text" id="lastUpdated">Cargando…</span>
+          <button class="refresh-btn" onclick="loadAll()">↻ actualizar</button>
+        </div>
+      </div>
+      <div class="meta-text">Auto-refresh: 30s · Endpoints en vivo</div>
+    </div>
+
+    <!-- Section 1: Taecel Saldo -->
+    <div class="section">
+      <div class="section-title">01 · Taecel Saldo SIPREL</div>
+      <div class="panel">
+        <div class="panel-header">Bolsas disponibles · GET /api/bills/admin/balance</div>
+        <div class="card-grid card-grid-2" id="saldoGrid">
+          <div class="stat-card"><div class="stat-value skel" style="width:80px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:80px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+        </div>
+        <div class="recharge-note">
+          Recargar saldo: <a href="https://siprel.mx/portal" target="_blank" rel="noopener">siprel.mx/portal</a> → Cuentas Disponibles
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Platform Revenue -->
+    <div class="section">
+      <div class="section-title">02 · Ingresos por Plataforma</div>
+      <div class="panel panel-teal">
+        <div class="panel-header">Tarifa $8.00 MXN / transacción · GET /api/bills/admin/revenue</div>
+        <div class="card-grid card-grid-4" id="revenueGrid">
+          <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:40px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:50px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+        </div>
+        <div class="pill-row">
+          <span class="pill">Tarifa por transacción: $8.00 MXN</span>
+          <span class="pill">Margen neto por transacción: $3.00 MXN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Transaction Stats -->
+    <div class="section">
+      <div class="section-title">03 · Transacciones</div>
+      <div class="panel">
+        <div class="panel-header">Conteo de transacciones confirmadas</div>
+        <div class="card-grid card-grid-3" id="txStatsGrid">
+          <div class="stat-card"><div class="stat-value skel" style="width:50px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:50px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:70px;height:10px;margin:0 auto;">&nbsp;</div></div>
+          <div class="stat-card"><div class="stat-value skel" style="width:50px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: SIPREL Health -->
+    <div class="section">
+      <div class="section-title">04 · SIPREL Health</div>
+      <div class="panel" id="healthPanel">
+        <div class="panel-header">GET /api/bills/admin/health</div>
+        <div class="health-row">
+          <span class="health-label">Estado SIPREL</span>
+          <span class="health-value skel" style="width:120px;height:14px;" id="healthStatus">&nbsp;</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Base URL</span>
+          <span class="health-value" style="color:#5a7080;font-size:0.5rem;">https://api-v1-fixedip.taecel.com/api/</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Credenciales</span>
+          <span class="health-value" id="healthCreds">&nbsp;</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Última verificación</span>
+          <span class="health-value" id="healthTime" style="color:#5a7080;">&nbsp;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: Recent Transactions -->
+    <div class="section">
+      <div class="section-title">05 · Últimas Transacciones</div>
+      <div class="panel" style="overflow-x:auto;">
+        <div class="panel-header">GET /api/bills/history?limit=10</div>
+        <div id="txTableWrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Servicio</th>
+                <th>Referencia</th>
+                <th>Monto</th>
+                <th>Tarifa</th>
+                <th>Status</th>
+                <th>Folio</th>
+              </tr>
+            </thead>
+            <tbody id="txBody">
+              <tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6: Quick Actions -->
+    <div class="section">
+      <div class="section-title">06 · Acciones Rápidas</div>
+      <div class="action-grid">
+        <a class="action-btn" href="/api/bills/catalog" target="_blank">📋 Ver catálogo de servicios</a>
+        <a class="action-btn" href="/api/bills/admin/products" target="_blank">📦 Consultar productos Taecel</a>
+        <a class="action-btn" href="https://siprel.mx/portal" target="_blank" rel="noopener">💳 Recargar saldo SIPREL</a>
+        <a class="action-btn" href="/api/bills/history?limit=50" target="_blank">🧾 Ver todos los pagos</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const fmt = (n) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtDate = (iso) => {
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' }) +
+             ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    };
+    const saldoColor = (v, greenT, amberT) => v > greenT ? 'color-green' : v > amberT ? 'color-amber' : 'color-red';
+
+    // ── Load Saldo ──
+    async function loadSaldo() {
+      try {
+        const r = await fetch('/api/bills/admin/balance');
+        const d = await r.json();
+
+        const ta = d.tiempoAire ?? null;
+        const ps = d.pagoServicios ?? null;
+
+        document.getElementById('saldoGrid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-value ${ta !== null ? saldoColor(ta, 1000, 200) : ''}">
+              ${ta !== null ? fmt(ta) : d.configured ? '❌ Error' : '—'}
+            </div>
+            <div class="stat-label">Bolsa Tiempo Aire</div>
+            ${ta !== null && ta < 200 ? '<div class="stat-sub color-red">⚠ Saldo bajo</div>' : ''}
+          </div>
+          <div class="stat-card">
+            <div class="stat-value ${ps !== null ? saldoColor(ps, 500, 100) : ''}">
+              ${ps !== null ? fmt(ps) : d.configured ? '❌ Error' : 'No configurado'}
+            </div>
+            <div class="stat-label">Bolsa Pago de Servicios</div>
+            ${ps !== null && ps < 500 ? '<div class="stat-sub color-amber">⚠ Saldo bajo</div>' : ''}
+          </div>`;
+      } catch {
+        document.getElementById('saldoGrid').innerHTML =
+          '<div class="stat-card" style="grid-column:span 2;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">No se pudo contactar la API</div></div>';
+      }
+    }
+
+    // ── Load Revenue ──
+    async function loadRevenue() {
+      try {
+        const r = await fetch('/api/bills/admin/revenue');
+        const d = await r.json();
+
+        document.getElementById('revenueGrid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-value color-teal">${fmt(d.today)}</div>
+            <div class="stat-label">Hoy</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value color-teal">${fmt(d.thisMonth)}</div>
+            <div class="stat-label">Este mes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value color-teal">${fmt(d.allTime)}</div>
+            <div class="stat-label">Total acumulado</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value color-green">${fmt(d.projectedMonthlyRevenue)}</div>
+            <div class="stat-label">Proyección mensual</div>
+          </div>`;
+
+        document.getElementById('txStatsGrid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-value">${d.transactionCount.today}</div>
+            <div class="stat-label">Transacciones hoy</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${d.transactionCount.thisMonth}</div>
+            <div class="stat-label">Este mes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${d.transactionCount.allTime}</div>
+            <div class="stat-label">Total histórico</div>
+          </div>`;
+      } catch {
+        document.getElementById('revenueGrid').innerHTML =
+          '<div class="stat-card" style="grid-column:span 4;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">No se pudo cargar revenue</div></div>';
+      }
+    }
+
+    // ── Load Health ──
+    async function loadHealth() {
+      try {
+        const r = await fetch('/api/bills/admin/health');
+        const d = await r.json();
+        const siprel = d.providers?.siprel;
+        const ok = siprel?.configured;
+
+        document.getElementById('healthStatus').outerHTML =
+          `<span class="health-value ${ok ? 'color-teal' : 'color-red'}" id="healthStatus">
+            ${ok ? '✅ Configurado · ' + siprel.status : '❌ No configurado'}
+          </span>`;
+        document.getElementById('healthCreds').outerHTML =
+          `<span class="health-value ${ok ? 'color-teal' : 'color-red'}" id="healthCreds">
+            ${ok ? '✅ Credenciales configuradas' : '❌ Faltan credenciales'}
+          </span>`;
+        document.getElementById('healthTime').outerHTML =
+          `<span class="health-value" style="color:#5a7080;" id="healthTime">
+            ${new Date(d.timestamp).toLocaleTimeString('es-MX')}
+          </span>`;
+      } catch {
+        document.getElementById('healthStatus').outerHTML =
+          '<span class="health-value color-red" id="healthStatus">❌ Error al conectar</span>';
+      }
+    }
+
+    // ── Load Transactions ──
+    async function loadTransactions() {
+      try {
+        const r = await fetch('/api/bills/history?limit=10');
+        const d = await r.json();
+        const payments = d.payments ?? [];
+
+        if (!payments.length) {
+          document.getElementById('txBody').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">Sin transacciones aún</td></tr>';
+          return;
+        }
+
+        document.getElementById('txBody').innerHTML = payments.map(p => {
+          const statusClass = p.status === 'confirmed' ? 'badge-confirmed'
+                            : p.status === 'pending'   ? 'badge-pending'
+                            : 'badge-failed';
+          const folio = p.taecelFolio || p.confirmationCode || '—';
+          const fee = p.platformFeeMxn ? fmt(p.platformFeeMxn) : '$8.00';
+          return `<tr>
+            <td>${fmtDate(p.createdAt)}</td>
+            <td>${p.serviceName || p.serviceId}</td>
+            <td style="font-family:'Courier New',monospace;font-size:0.5rem;">${p.referencia}</td>
+            <td style="color:#e8f0f7;font-weight:700;">${fmt(p.monto)}</td>
+            <td style="color:#1D9E75;">${fee}</td>
+            <td><span class="badge ${statusClass}">${p.status}</span></td>
+            <td style="font-family:'Courier New',monospace;font-size:0.46rem;color:#5a7080;">${folio.length > 16 ? folio.slice(0,16)+'…' : folio}</td>
+          </tr>`;
+        }).join('');
+      } catch {
+        document.getElementById('txBody').innerHTML =
+          '<tr><td colspan="7" style="text-align:center;padding:20px;color:#D85A30;">Error al cargar transacciones</td></tr>';
+      }
+    }
+
+    // ── Load All ──
+    async function loadAll() {
+      document.getElementById('lastUpdated').textContent = 'Actualizando…';
+      document.getElementById('statusDot').className = 'status-dot';
+
+      try {
+        await Promise.all([loadSaldo(), loadRevenue(), loadHealth(), loadTransactions()]);
+        document.getElementById('statusDot').className = 'status-dot ok';
+        document.getElementById('lastUpdated').textContent =
+          'Última actualización: ' + new Date().toLocaleTimeString('es-MX');
+      } catch {
+        document.getElementById('statusDot').className = 'status-dot err';
+        document.getElementById('lastUpdated').textContent = 'Error al actualizar';
+      }
+    }
+
+    // Initial load + auto-refresh every 30s
+    loadAll();
+    setInterval(loadAll, 30000);
+  </script>
+</body>
+</html>
