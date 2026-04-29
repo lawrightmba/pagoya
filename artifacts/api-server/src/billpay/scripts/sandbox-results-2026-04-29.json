@@ -1,0 +1,120 @@
+{
+  "date": "2026-04-29",
+  "total": 15,
+  "exitosa": 6,
+  "expectedErrors": 2,
+  "unexpectedFailures": 0,
+  "timedOut": 7,
+  "tests": [
+    {
+      "id": "BP-01",
+      "service": "SKY",
+      "producto": "SKY000",
+      "referencia": "871235412635",
+      "monto": "95",
+      "transID": "260401747451",
+      "folio": "356917",
+      "carrier": "SKY",
+      "fecha": "2026-04-28 19:11:10",
+      "bolsa": "Pago de Servicios",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "BP-02",
+      "service": "TMX",
+      "producto": "TMX001",
+      "referencia": "6589745213",
+      "monto": "100",
+      "transID": "260401747465",
+      "folio": "249212",
+      "carrier": "Telmex",
+      "fecha": "2026-04-28 19:11:19",
+      "bolsa": "Pago de Servicios",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "BP-03",
+      "service": "CFE",
+      "producto": "CFE000",
+      "referencia": "125478965412365478965230126654",
+      "monto": "260",
+      "transID": "260401747473",
+      "folio": "487451",
+      "carrier": "CFE - Codigo de Barras",
+      "fecha": "2026-04-28 19:11:29",
+      "bolsa": "Pago de Servicios",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "BP-04",
+      "service": "MEG",
+      "producto": "MEG000",
+      "referencia": "9854123547",
+      "monto": "131",
+      "transID": "260401747483",
+      "folio": "195098",
+      "carrier": "Megacable",
+      "fecha": "2026-04-28 19:11:37",
+      "bolsa": "Pago de Servicios",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "BP-05",
+      "service": "DSH",
+      "producto": "DSH000",
+      "referencia": "27458965324125",
+      "monto": "103",
+      "transID": "260401747494",
+      "folio": "421126",
+      "carrier": "Dish",
+      "fecha": "2026-04-28 19:11:45",
+      "bolsa": "Pago de Servicios",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "TU-01",
+      "service": "TEL010",
+      "producto": "TEL010",
+      "referencia": "5555555505",
+      "transID": "260401747506",
+      "folio": "770797",
+      "carrier": "Telcel",
+      "fecha": "2026-04-28 19:11:56",
+      "bolsa": "Tiempo Aire",
+      "status": "Exitosa",
+      "passed": true
+    },
+    {
+      "id": "TU-02",
+      "service": "TEL050",
+      "producto": "TEL050",
+      "referencia": "5555555510",
+      "transID": "260401747519",
+      "status": "Error 1 (EXPECTED)",
+      "errorCode": "1",
+      "errorMsg": "Teléfono no valido",
+      "passed": true,
+      "expected": "Error code 1"
+    },
+    {
+      "id": "TU-10",
+      "service": "MOV150",
+      "producto": "MOV150",
+      "referencia": "5555555200",
+      "status": "Error 3129 (EXPECTED)",
+      "errorCode": 3129,
+      "errorMsg": "Tabla de transacciones llena",
+      "passed": true,
+      "expected": "Error code 3129"
+    }
+  ],
+  "balances": {
+    "tiempoAire": 4575.4,
+    "pagoServicios": 414.65
+  }
+}

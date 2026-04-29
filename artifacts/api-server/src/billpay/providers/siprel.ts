@@ -128,7 +128,7 @@ async function taecelPost<T>(
   endpoint: string,
   config: TaecelConfig,
   extraParams: Record<string, string> = {},
-  timeoutMs = 20_000,  // requestTXN: 20 s max per Taecel support; statusTXN: 5 s
+  timeoutMs = 20_000,  // requestTXN: 20 s; statusTXN: 20 s (sandbox can take up to 15 s)
 ): Promise<T> {
   const body = new URLSearchParams({
     key: config.apiKey,
@@ -175,8 +175,8 @@ async function requestTXN(
 // ─── METHOD 2: statusTXN with polling loop ────────────────────────────────────
 // Per Taecel support guidance:
 //   • Total cycle timeout : 60 s counted from when requestTXN was first called
-//   • Per-call timeout    : 5 s per statusTXN HTTP request
-//   • Sleep between polls : 3 s
+//   • Per-call timeout    : 20 s per statusTXN HTTP request (sandbox can take up to 15 s)
+//   • Sleep between polls : 5 s
 //   • Stop immediately    : on Exitosa, Fracasada, or any non-zero error code
 async function pollStatusTXN(
   config: TaecelConfig,
@@ -184,8 +184,8 @@ async function pollStatusTXN(
   startedAt: number,
 ): Promise<{ timedOut: boolean; data?: TaecelStatusData; raw?: TaecelStatusTXNResponse }> {
   const CYCLE_TIMEOUT_MS    = 60_000;  // total from requestTXN call
-  const STATUS_CALL_TIMEOUT = 5_000;   // per individual statusTXN HTTP call
-  const POLL_INTERVAL_MS    = 3_000;   // sleep between attempts
+  const STATUS_CALL_TIMEOUT = 20_000;  // per individual statusTXN HTTP call (sandbox up to 15 s)
+  const POLL_INTERVAL_MS    = 5_000;   // sleep between attempts
 
   while (true) {
     const elapsed = Date.now() - startedAt;
@@ -194,7 +194,7 @@ async function pollStatusTXN(
       return { timedOut: true };
     }
 
-    // Each statusTXN call is limited to 5 s per Taecel support guidance
+    // Each statusTXN call is limited to 20 s (sandbox can take up to 15 s)
     const res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID }, STATUS_CALL_TIMEOUT);
     logger.info({ transID, success: res.success, error: res.error, message: res.message }, "taecel: statusTXN poll");
 
