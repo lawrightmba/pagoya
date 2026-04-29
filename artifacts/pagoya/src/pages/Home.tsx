@@ -169,32 +169,29 @@ export default function Home() {
 
       {/* ── 1. HEADER — navy ── */}
       <header style={{
-        background: "#0A2540", padding: "12px 20px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "#0A2540", padding: "10px 20px",
+        display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: "8px",
       }}>
-        {/* text logo left */}
+        {/* left — text logo */}
         <span style={{ fontSize: "22px", fontWeight: 800, lineHeight: 1, userSelect: "none" }}>
           <span style={{ color: "white" }}>Pago</span>
           <span style={{ color: "#1D9E75" }}>Ya</span>
         </span>
 
-        {/* image logo center — wrapper handles centering; img handles crop */}
-        <div style={{
-          position: "absolute", left: "50%", transform: "translateX(-50%)",
-          overflow: "hidden", display: "flex", alignItems: "center",
-          maxWidth: "200px",
-        }}>
+        {/* center — image logo; no transform on parent so mix-blend-mode sees the navy bg */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
           <img
             src="/pagoya-logo.png"
             alt="PagoYa"
             className="pg-nav-logo"
             style={{
+              height: "48px",
               width: "auto",
-              objectFit: "contain",
-              objectPosition: "0% center",
-              transform: "scale(1.2)",
-              transformOrigin: "left center",
-              maxWidth: "180px",
+              maxWidth: "200px",
+              objectFit: "cover",
+              objectPosition: "left center",
+              mixBlendMode: "multiply",
+              clipPath: "inset(0 32% 0 0)",
             }}
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -208,17 +205,19 @@ export default function Home() {
           </span>
         </div>
 
-        {/* lang toggle right */}
-        <button
-          onClick={() => setLang(es ? "en" : "es")}
-          style={{
-            fontSize: "12px", fontWeight: 700, color: "white",
-            border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
-            padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
-          }}
-        >
-          {es ? "EN" : "ES"}
-        </button>
+        {/* right — lang toggle */}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={() => setLang(es ? "en" : "es")}
+            style={{
+              fontSize: "12px", fontWeight: 700, color: "white",
+              border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
+              padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
+            }}
+          >
+            {es ? "EN" : "ES"}
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col">
