@@ -34,6 +34,9 @@ const POLL_TIMEOUT_MS     = 90_000;   // 90 s total cycle per transaction (sandb
 const INTER_TEST_DELAY    = 5_000;    // 5 s between transactions
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
+// TEMPORARY: set to false once Oyuki recharges the Pago de Servicios saldo
+const SKIP_BILL_PAYMENTS  = true;
+
 // ─── TAECEL API TYPES ────────────────────────────────────────────────────────
 
 interface TxnResponse {
@@ -355,7 +358,9 @@ async function main() {
   // — Bill Payments —
   console.log("─── BILL PAYMENTS ─────────────────────────────────────────\n");
 
-  for (const tc of BILL_PAYMENTS) {
+  if (SKIP_BILL_PAYMENTS) {
+    console.log("⏭  Bill payments skipped (Pago de Servicios saldo insufficient — waiting for sandbox recharge)\n");
+  } else for (const tc of BILL_PAYMENTS) {
     let result: RunResult;
     try {
       result = await runTransaction(tc);
