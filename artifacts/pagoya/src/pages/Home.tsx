@@ -186,10 +186,7 @@ export default function Home() {
             className="pg-nav-logo"
             style={{
               width: "auto",
-              objectFit: "cover",
-              objectPosition: "left center",
-              mixBlendMode: "multiply",
-              clipPath: "inset(0 20% 10% 0)",
+              objectFit: "contain",
             }}
             onError={(e) => {
               e.currentTarget.style.display = "none";
