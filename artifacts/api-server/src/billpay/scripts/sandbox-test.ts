@@ -30,7 +30,7 @@ const NIP       = process.env.SIPREL_NIP      ?? "";
 //          Taecel enforces a 10-minute cooldown per reference number (error 3128).
 
 const POLL_INTERVAL_MS    = 5_000;
-const POLL_TIMEOUT_MS     = 180_000;  // 3 min — sandbox is slower than production
+const POLL_TIMEOUT_MS     = 90_000;   // 90 s total cycle per transaction (sandbox latency buffer)
 const INTER_TEST_DELAY    = 5_000;    // 5 s between transactions
 const POST_TIMEOUT_DELAY  = 15_000;   // 15 s recovery pause after a timeout
 
@@ -145,7 +145,7 @@ async function taecelPost<T>(endpoint: string, extra: Record<string, string> = {
     method:  "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body:    body.toString(),
-    signal:  AbortSignal.timeout(15_000),
+    signal:  AbortSignal.timeout(25_000),  // 25 s — sandbox can take up to 15 s per call
   });
 
   if (!response.ok) {

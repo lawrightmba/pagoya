@@ -1,9 +1,9 @@
 {
   "date": "2026-04-29",
   "total": 15,
-  "exitosa": 6,
+  "exitosa": 4,
   "expectedErrors": 2,
-  "unexpectedFailures": 0,
+  "unexpectedFailures": 2,
   "timedOut": 7,
   "tests": [
     {
@@ -12,10 +12,10 @@
       "producto": "SKY000",
       "referencia": "871235412635",
       "monto": "95",
-      "transID": "260401747451",
-      "folio": "356917",
+      "transID": "260401749894",
+      "folio": "747536",
       "carrier": "SKY",
-      "fecha": "2026-04-28 19:11:10",
+      "fecha": "2026-04-28 19:46:45",
       "bolsa": "Pago de Servicios",
       "status": "Exitosa",
       "passed": true
@@ -26,10 +26,10 @@
       "producto": "TMX001",
       "referencia": "6589745213",
       "monto": "100",
-      "transID": "260401747465",
-      "folio": "249212",
+      "transID": "260401749901",
+      "folio": "800782",
       "carrier": "Telmex",
-      "fecha": "2026-04-28 19:11:19",
+      "fecha": "2026-04-28 19:46:53",
       "bolsa": "Pago de Servicios",
       "status": "Exitosa",
       "passed": true
@@ -40,13 +40,11 @@
       "producto": "CFE000",
       "referencia": "125478965412365478965230126654",
       "monto": "260",
-      "transID": "260401747473",
-      "folio": "487451",
-      "carrier": "CFE - Codigo de Barras",
-      "fecha": "2026-04-28 19:11:29",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "transID": "260401749912",
+      "status": "error",
+      "errorCode": "2130",
+      "errorMsg": "No cuenta con saldo suficiente para realizar la transacción",
+      "passed": false
     },
     {
       "id": "BP-04",
@@ -54,10 +52,10 @@
       "producto": "MEG000",
       "referencia": "9854123547",
       "monto": "131",
-      "transID": "260401747483",
-      "folio": "195098",
+      "transID": "260401749917",
+      "folio": "131298",
       "carrier": "Megacable",
-      "fecha": "2026-04-28 19:11:37",
+      "fecha": "2026-04-28 19:47:06",
       "bolsa": "Pago de Servicios",
       "status": "Exitosa",
       "passed": true
@@ -68,23 +66,21 @@
       "producto": "DSH000",
       "referencia": "27458965324125",
       "monto": "103",
-      "transID": "260401747494",
-      "folio": "421126",
-      "carrier": "Dish",
-      "fecha": "2026-04-28 19:11:45",
-      "bolsa": "Pago de Servicios",
-      "status": "Exitosa",
-      "passed": true
+      "transID": "260401749928",
+      "status": "error",
+      "errorCode": "2130",
+      "errorMsg": "No cuenta con saldo suficiente para realizar la transacción",
+      "passed": false
     },
     {
       "id": "TU-01",
       "service": "TEL010",
       "producto": "TEL010",
       "referencia": "5555555505",
-      "transID": "260401747506",
-      "folio": "770797",
+      "transID": "260401749934",
+      "folio": "336141",
       "carrier": "Telcel",
-      "fecha": "2026-04-28 19:11:56",
+      "fecha": "2026-04-28 19:47:21",
       "bolsa": "Tiempo Aire",
       "status": "Exitosa",
       "passed": true
@@ -94,7 +90,7 @@
       "service": "TEL050",
       "producto": "TEL050",
       "referencia": "5555555510",
-      "transID": "260401747519",
+      "transID": "260401749945",
       "status": "Error 1 (EXPECTED)",
       "errorCode": "1",
       "errorMsg": "Teléfono no valido",
@@ -114,7 +110,7 @@
     }
   ],
   "balances": {
-    "tiempoAire": 4575.4,
-    "pagoServicios": 414.65
+    "tiempoAire": 4105.4,
+    "pagoServicios": 73.65
   }
 }
