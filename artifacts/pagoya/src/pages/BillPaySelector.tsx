@@ -129,7 +129,7 @@ function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         const reader = new BrowserMultiFormatReader();
         readerRef.current = reader;
 
-        await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result, err) => {
+        await reader.decodeFromVideoDevice(null, videoRef.current!, (result, err) => {
           if (cancelled || hasDetectedRef.current) return;
 
           if (result) {

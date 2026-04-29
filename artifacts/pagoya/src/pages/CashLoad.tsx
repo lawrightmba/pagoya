@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle } from "lucide-react";
-import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
+const logoUrl = "/pagoya-logo.png";
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 

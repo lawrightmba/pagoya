@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { CheckCircle, Share2, Plus, AlertCircle } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
-import logoUrl from "@assets/pagoya_logo_web_1774491466855.png";
+const logoUrl = "/pagoya-logo.png";
 
 export default function PaymentSuccess() {
   const [, navigate] = useLocation();
