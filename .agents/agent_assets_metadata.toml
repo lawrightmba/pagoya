@@ -18,3 +18,9 @@ id = "hLmCfhZ2cJh8gIa3223fN"
 uri = "file://artifacts/api-server/src/billpay/scripts/tabla-resultados-final-pagoya.xlsx"
 type = "table"
 title = "Tabla de Resultados Final — PagoYa / Taecel / ID373554"
+
+[[outputs]]
+id = "zM1hPonN2EqEh3O4q4nwE"
+uri = "file://PagoYa_Investor_Overview_April2026.docx"
+type = "word_document"
+title = "PagoYa — Investor Overview (April 2026)"
