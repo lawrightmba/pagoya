@@ -287,4 +287,57 @@ router.get("/admin/stats", async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/wallet/test-conekta
+// Verifies Conekta credentials and API reachability without touching the DB.
+// Use this before registering the real webhook in the Conekta Dashboard.
+router.get("/test-conekta", async (_req: Request, res: Response) => {
+  const resolvedKey = process.env.CONEKTA_SECRET_KEY ?? process.env.CONEKTA_API_KEY;
+  const apiKeyPresent = !!resolvedKey;
+  const webhookSecretPresent = !!process.env.CONEKTA_WEBHOOK_SECRET;
+
+  if (!apiKeyPresent) {
+    res.json({
+      configured: false,
+      apiKeyPresent: false,
+      webhookSecretPresent,
+      conektaApiReachable: false,
+      error: "CONEKTA_SECRET_KEY no está configurado.",
+    });
+    return;
+  }
+
+  let conektaApiReachable = false;
+  let error: string | null = null;
+
+  try {
+    const encoded = Buffer.from(`${resolvedKey}:`).toString("base64");
+    const response = await fetch("https://api.conekta.io/customers?limit=1", {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${encoded}`,
+        Accept: "application/vnd.conekta-v2.1.0+json",
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(8_000),
+    });
+
+    if (response.ok || response.status === 200) {
+      conektaApiReachable = true;
+    } else {
+      const body = await response.text();
+      error = `Conekta respondió con ${response.status}: ${body.slice(0, 200)}`;
+    }
+  } catch (err: unknown) {
+    error = err instanceof Error ? err.message : "Error de red al contactar Conekta.";
+  }
+
+  res.json({
+    configured: apiKeyPresent && conektaApiReachable,
+    apiKeyPresent,
+    webhookSecretPresent,
+    conektaApiReachable,
+    error,
+  });
+});
+
 export default router;

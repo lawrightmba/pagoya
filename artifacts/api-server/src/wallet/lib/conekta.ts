@@ -11,8 +11,8 @@ export interface ConektaOxxoOrder {
 }
 
 function getConektaApiKey(): string {
-  const key = process.env.CONEKTA_API_KEY;
-  if (!key) throw new Error("CONEKTA_API_KEY no está configurado.");
+  const key = process.env.CONEKTA_SECRET_KEY ?? process.env.CONEKTA_API_KEY;
+  if (!key) throw new Error("CONEKTA_SECRET_KEY no está configurado.");
   return key;
 }
 

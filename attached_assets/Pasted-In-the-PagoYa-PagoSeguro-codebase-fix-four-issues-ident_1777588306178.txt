@@ -1,0 +1,85 @@
+In the PagoYa/PagoSeguro codebase, fix four issues 
+identified in the OXXO wallet audit. Execute all 
+four fixes in one go.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 1 — CREATE MISSING DB TABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The wallet_transactions table does not exist in 
+the database. Run the Drizzle migration to create it.
+
+Find the wallet_transactions schema definition in 
+the codebase (likely in artifacts/api-server/src/db/ 
+or a shared db package). Run:
+
+  npx drizzle-kit push
+
+from the api-server workspace. Confirm the table 
+was created successfully by running:
+
+  SELECT table_name FROM information_schema.tables 
+  WHERE table_name = 'wallet_transactions';
+
+If drizzle-kit push fails, manually create the table 
+using the schema definition — run the CREATE TABLE 
+SQL directly against the DATABASE_URL.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 2 — VERIFY SECRET NAME IN CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Confirm that artifacts/api-server/src/wallet/lib/conekta.ts
+reads process.env.CONEKTA_API_KEY (not CONEKTA_SECRET_KEY).
+If it reads anything other than CONEKTA_API_KEY update it.
+This must match exactly what is in Replit Secrets.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 3 — VERIFY WEBHOOK ROUTE MOUNTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Confirm in artifacts/api-server/src/app.ts that:
+- The Conekta webhook route is mounted BEFORE 
+  express.json() middleware
+- It uses express.raw({ type: 'application/json' })
+- The route path is exactly: 
+  /api/wallet/webhook/conekta
+
+If anything is wrong fix it.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 4 — ADD SANDBOX TEST ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add a test endpoint to verify the Conekta 
+integration is working before registering 
+the real webhook:
+
+GET /api/wallet/test-conekta
+
+This endpoint should:
+1. Check CONEKTA_API_KEY is set
+2. Make a real API call to Conekta to verify 
+   credentials (call GET /customers with limit=1 
+   or similar lightweight endpoint)
+3. Return:
+{
+  "configured": true/false,
+  "apiKeyPresent": true/false,
+  "webhookSecretPresent": true/false,
+  "conektaApiReachable": true/false,
+  "error": null or error message
+}
+
+This lets us verify everything is wired correctly 
+before processing real payments.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AFTER ALL FIXES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Run the full test suite:
+pnpm --filter @workspace/api-server run test
+
+Confirm:
+1. wallet_transactions table exists in DB
+2. CONEKTA_API_KEY env var is being read correctly
+3. Webhook route is mounted before json middleware
+4. GET /api/wallet/test-conekta returns 
+   { configured: true, conektaApiReachable: true }
+5. All existing tests still pass
