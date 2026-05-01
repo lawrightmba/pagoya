@@ -291,7 +291,7 @@ router.get("/admin/stats", async (_req: Request, res: Response) => {
 // Verifies Conekta credentials and API reachability without touching the DB.
 // Use this before registering the real webhook in the Conekta Dashboard.
 router.get("/test-conekta", async (_req: Request, res: Response) => {
-  const resolvedKey = process.env.CONEKTA_SECRET_KEY ?? process.env.CONEKTA_API_KEY;
+  const resolvedKey = process.env.CONEKTA_API_KEY;
   const apiKeyPresent = !!resolvedKey;
   const webhookSecretPresent = !!process.env.CONEKTA_WEBHOOK_SECRET;
 
@@ -301,7 +301,7 @@ router.get("/test-conekta", async (_req: Request, res: Response) => {
       apiKeyPresent: false,
       webhookSecretPresent,
       conektaApiReachable: false,
-      error: "CONEKTA_SECRET_KEY no está configurado.",
+      error: "CONEKTA_API_KEY no está configurado.",
     });
     return;
   }
