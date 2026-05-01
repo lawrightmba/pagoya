@@ -95,8 +95,20 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
   }, "conekta webhook: debug dump");
   // --- END TEMPORARY DEBUG LOGGING ---
 
-  // TEMPORARILY bypass signature verification so Digital Femsa stops seeing errors
-  res.status(200).json({ received: true, debug: true });
+  const signatureHeader = (
+    req.headers["conekta-signature"] ||
+    req.headers["x-conekta-signature"] ||
+    req.headers["digest"]
+  ) as string | undefined;
+
+  const isValid = verifyConektaWebhookSignature(rawBody, signatureHeader);
+  if (!isValid) {
+    res.status(401).json({ error: "Invalid signature" });
+    return;
+  }
+
+  // Always respond 200 immediately — Digital Femsa retries on non-200
+  res.status(200).json({ received: true });
 
   setImmediate(async () => {
     try {
