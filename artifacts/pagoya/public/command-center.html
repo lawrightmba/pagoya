@@ -654,7 +654,7 @@
       <div class="pc-header">
         <div>
           <div class="pc-title">PagoYa</div>
-          <div class="pc-sub">PAYMENT INFRA · OXXO + STRIPE · MX</div>
+          <div class="pc-sub">PAYMENT INFRA · OXXO + STRIPE + STP · MX</div>
         </div>
         <div class="stage-badge stage-mvp">MVP</div>
       </div>
@@ -678,6 +678,41 @@
           <div class="task-content">
             <div class="task-text done">✅ 15/15 sandbox tests passing (Taecel/SIPREL)</div>
             <div class="task-why">→ All 35 services confirmed reachable via SIPREL API. Full sandbox run 2026-04-29. Results saved to tabla-resultados-final-pagoya.xlsx.</div>
+          </div>
+        </div>
+        <div class="task-row">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ OXXO cash-in live — Digital Femsa webhook verified (2026-05-01)</div>
+            <div class="task-why">→ api.digitalfemsa.io connected. RSA public-key webhook verification live. charge.paid credits wallet automatically. PEM normalization handles Replit Secrets format.</div>
+          </div>
+        </div>
+        <div class="task-row">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ AI/NLP autofill live — Claude-powered (2026-05-01)</div>
+            <div class="task-why">→ POST /api/autofill. User types natural language ("pagar CFE 350 pesos"), Claude extracts biller/amount/reference. NLP query corpus logging conversion rates. No competitor has this.</div>
+          </div>
+        </div>
+        <div class="task-row">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Payment reminders + user profile capture live (2026-05-01)</div>
+            <div class="task-why">→ Daily cron 9AM MX time. WhatsApp reminders 3 days before inferred due date. Silent user_profiles + user_billers built after every payment — opted-in first-party data asset.</div>
+          </div>
+        </div>
+        <div class="task-row">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Loyalty points system live — 3 tiers (2026-05-01)</div>
+            <div class="task-why">→ Bronce/Plata/Oro. 1pt per $10 MXN × tier multiplier. Streak bonuses. Fee-discount redemption. Leaderboard. /puntos dashboard. WhatsApp notify on earn.</div>
+          </div>
+        </div>
+        <div class="task-row">
+          <div class="task-cb checked"></div>
+          <div class="task-content">
+            <div class="task-text done">✅ Hero redesign — AI input as primary CTA (2026-05-01)</div>
+            <div class="task-why">→ Dual-row biller ticker, 3-step instructions, AutofillInput hero, navy/teal/coral brand colors restored. Language toggle persistent via localStorage.</div>
           </div>
         </div>
 
@@ -724,16 +759,16 @@
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb"></div>
           <div class="task-content">
-            <div class="task-text">⏳ Oyuki production access — email sent 2026-04-29</div>
-            <div class="task-why">→ Awaiting Oyuki's SIPREL production credentials to go live with real bill payments. Email sent 2026-04-29.</div>
+            <div class="task-text">⏳ SIPREL production credentials — call Monday 2026-05-04</div>
+            <div class="task-why">→ Call scheduled Monday 2026-05-04. STP credentials in hand as primary rail. SIPREL confirmed as bill pay provider.</div>
           </div>
         </div>
 
         <div class="task-item" onclick="toggleTask(this)">
           <div class="task-cb"></div>
           <div class="task-content">
-            <div class="task-text">⏳ Evoluciona Móvil — integration email sent</div>
-            <div class="task-why">→ Evoluciona Móvil contacted for failover provider integration. Awaiting API credentials and onboarding response.</div>
+            <div class="task-text">✅ Evoluciona Móvil — dropped, STP selected as primary/failover rail</div>
+            <div class="task-why">→ Decision 2026-05-01: STP is more reliable and we have credentials. Evoluciona removed from roadmap.</div>
           </div>
         </div>
 
@@ -747,7 +782,7 @@
 
         <div class="unlock-row">
           <div>🔓</div>
-          <div class="unlock-text"><strong>Next unlock:</strong> Oyuki production credentials → first live SIPREL payment → pagoyamx.com public launch</div>
+          <div class="unlock-text"><strong>Next unlock:</strong> SIPREL Monday call → first live bill payment → pagoyamx.com public launch</div>
         </div>
       </div>
     </div>
@@ -806,7 +841,7 @@
 
     <div class="unlock-row">
       <div>🔓</div>
-      <div class="unlock-text"><strong>Next unlock:</strong> SIPREL_API_KEY + EVOLUCIONA_API_KEY → first live CFE payment → WhatsApp receipt fires to customer</div>
+      <div class="unlock-text"><strong>Next unlock:</strong> SIPREL production credentials (Monday call) → first live CFE payment → WhatsApp receipt fires to customer</div>
     </div>
   </div>
 
@@ -1096,7 +1131,7 @@
       badge.className = 'stage-badge ' + (availProviders > 0 ? 'stage-live' : 'stage-mvp');
 
       if (total === 0) {
-        rowsEl.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:0.58rem;color:var(--muted);padding:10px 0;">No hay pagos aún — esperando credenciales SIPREL / Evoluciona</div>';
+        rowsEl.innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:0.58rem;color:var(--muted);padding:10px 0;">No hay pagos aún — esperando credenciales SIPREL (llamada lunes)</div>';
       } else {
         rowsEl.innerHTML = payments.slice(0, 5).map(p => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
