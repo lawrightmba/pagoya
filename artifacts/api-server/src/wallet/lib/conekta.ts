@@ -101,6 +101,17 @@ export async function createOxxoOrder(params: {
   };
 }
 
+function normalizePemKey(raw: string): string {
+  const key = raw.trim();
+  if (key.includes("\n")) return key;
+  const body = key
+    .replace("-----BEGIN PUBLIC KEY-----", "")
+    .replace("-----END PUBLIC KEY-----", "")
+    .replace(/\s/g, "");
+  const lines = body.match(/.{1,64}/g) ?? [];
+  return "-----BEGIN PUBLIC KEY-----\n" + lines.join("\n") + "\n-----END PUBLIC KEY-----";
+}
+
 export function verifyConektaWebhookSignature(
   rawBody: Buffer,
   signatureHeader: string | undefined,
@@ -114,7 +125,7 @@ export function verifyConektaWebhookSignature(
   try {
     const verify = createVerify("SHA256");
     verify.update(rawBody);
-    return verify.verify(publicKey, signatureHeader, "base64");
+    return verify.verify(normalizePemKey(publicKey), signatureHeader, "base64");
   } catch {
     return false;
   }
