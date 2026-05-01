@@ -97,3 +97,27 @@ export const insertReminderLogSchema = createInsertSchema(reminderLogTable).omit
 });
 export type InsertReminderLog = z.infer<typeof insertReminderLogSchema>;
 export type ReminderLog = typeof reminderLogTable.$inferSelect;
+
+// ─── nlp_queries ──────────────────────────────────────────────────────────────
+export const nlpQueriesTable = pgTable(
+  "nlp_queries",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    rawText: text("raw_text").notNull(),
+    phone: text("phone"),
+    billerId: text("biller_id"),
+    amount: numeric("amount", { precision: 10, scale: 2 }),
+    confidence: text("confidence"),
+    language: text("language"),
+    converted: boolean("converted").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("nlp_queries_phone_idx").on(t.phone)],
+);
+
+export const insertNlpQuerySchema = createInsertSchema(nlpQueriesTable).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNlpQuery = z.infer<typeof insertNlpQuerySchema>;
+export type NlpQuery = typeof nlpQueriesTable.$inferSelect;

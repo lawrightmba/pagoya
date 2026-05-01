@@ -1,0 +1,116 @@
+Do all of the following automatically in one go. Do not 
+stop and ask me anything.
+
+Build an AI/NLP payment autofill system for PagoYa using 
+the Anthropic Claude API. Users type a natural language 
+payment description and the system extracts structured 
+payment data to pre-fill the form.
+
+═══════════════════════════════════════════════════════
+1. BACKEND — new route
+═══════════════════════════════════════════════════════
+
+Create artifacts/api-server/src/routes/autofill.ts
+
+POST /api/autofill
+Body: { text: string, phone?: string }
+Auth: none required (public endpoint)
+
+Handler:
+  1. Validate: text must be 3-500 chars
+  2. Call Anthropic Claude API (use ANTHROPIC_API_KEY 
+     from env) with this exact system prompt:
+
+     "You are a payment assistant for PagoYa, a Mexican 
+     bill payment platform. Extract payment intent from 
+     the user's message. Always respond with valid JSON 
+     only, no other text.
+
+     Extract these fields:
+     - biller_id: one of [cfe, telmex, telcel, izzi, 
+       totalplay, sky, netflix, spotify, agua, gas, 
+       tenencia, predial, other]
+     - biller_name: human readable name in Spanish
+     - amount: number or null (MXN)
+     - reference: account/contract/phone number found 
+       in text or null
+     - language: 'es' or 'en' based on input language
+     - confidence: 'high', 'medium', or 'low'
+     - clarification_needed: null or a short question 
+       in the same language as input if critical info 
+       is missing
+
+     Examples:
+     Input: 'pagar cfe 350'
+     Output: {'biller_id':'cfe','biller_name':'CFE',
+     'amount':350,'reference':null,'language':'es',
+     'confidence':'high','clarification_needed':
+     'Ingresa tu número de servicio CFE'}
+
+     Input: 'telcel recarga 200 a 3221002030'
+     Output: {'biller_id':'telcel','biller_name':'Telcel',
+     'amount':200,'reference':'3221002030','language':'es',
+     'confidence':'high','clarification_needed':null}
+
+     Input: 'pay my netflix'
+     Output: {'biller_id':'netflix','biller_name':'Netflix',
+     'amount':null,'reference':null,'language':'en',
+     'confidence':'medium','clarification_needed':
+     'What amount would you like to pay?'}"
+
+  3. Parse the JSON response from Claude
+  4. Log the query to a new table nlp_queries (see below)
+  5. If phone provided and profile exists, merge with 
+     known user_billers data (pre-fill reference from 
+     last payment if confidence is low/medium)
+  6. Return:
+     {
+       biller_id, biller_name, amount, reference,
+       language, confidence, clarification_needed,
+       prefilled_from_history: boolean
+     }
+
+═══════════════════════════════════════════════════════
+2. DATABASE — log NLP queries for data asset
+═══════════════════════════════════════════════════════
+
+Add to lib/db/src/schema/profiles.ts:
+
+TABLE: nlp_queries
+  id           uuid PRIMARY KEY default gen_random_uuid()
+  raw_text     text NOT NULL          -- what user typed
+  phone        text                   -- if provided
+  biller_id    text                   -- extracted
+  amount       numeric(10,2)          -- extracted
+  confidence   text                   -- high/medium/low
+  language     text                   -- es/en
+  converted    boolean default false  -- did they complete payment?
+  created_at   timestamp default now()
+
+Run Drizzle migration for nlp_queries table.
+
+After a successful payment via bill pay, if the session 
+had an autofill query, update nlp_queries.converted = true
+where phone matches and created_at > now() - interval 1 hour
+
+═══════════════════════════════════════════════════════
+3. FRONTEND — autofill input component
+═══════════════════════════════════════════════════════
+
+Create artifacts/pagoya/src/components/AutofillInput.tsx
+
+A mobile-first React component:
+  - Single text input with placeholder:
+    ES: "¿Qué quieres pagar? Ej: 'CFE 350 pesos'"
+    EN: "What do you want to pay? E.g. 'CFE 350 pesos'"
+  - Microphone icon button (UI only, no actual speech)
+  - On submit (Enter or button click):
+    * Shows a loading spinner
+    * Calls POST /api/autofill
+    * On success: 
+      - Fires onAutofill(result) callback to parent
+      - If clarification_needed: shows it inline below 
+        input in a subtle hint style
+      - If confidence === 'low': shows yellow warning 
+        "Verifica los datos antes de pagar"
+    * On erro

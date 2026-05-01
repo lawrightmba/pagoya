@@ -9,6 +9,7 @@ import billPayRouter from "../billpay/routes/billpay.js";
 import walletRouter from "../wallet/routes/wallet.js";
 import { belvoPaymentsRouter } from "./belvo-payments";
 import proxyRouter from "./proxy";
+import autofillRouter from "./autofill.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -18,6 +19,7 @@ router.use("/pagoya", pagoyaRouter);
 router.use("/bills", billPayRouter);
 router.use("/wallet", walletRouter);
 router.use("/belvo-payments", belvoPaymentsRouter);
+router.use("/autofill", autofillRouter);
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 
