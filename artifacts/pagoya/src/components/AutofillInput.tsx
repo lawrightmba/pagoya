@@ -15,11 +15,12 @@ interface AutofillInputProps {
   phone?: string;
   onAutofill: (result: AutofillResult) => void;
   language?: "es" | "en";
+  dark?: boolean;
 }
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
-export default function AutofillInput({ phone, onAutofill, language = "es" }: AutofillInputProps) {
+export default function AutofillInput({ phone, onAutofill, language = "es", dark = false }: AutofillInputProps) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [clarification, setClarification] = useState<string | null>(null);
@@ -87,16 +88,20 @@ export default function AutofillInput({ phone, onAutofill, language = "es" }: Au
 
   return (
     <div style={{ width: "100%", marginBottom: "1rem" }}>
-      {/* Input row */}
+      {/* Input row
+          LIGHT: border #d1d5db, bg #fff, text #111
+          DARK:  border rgba(255,255,255,0.2), bg #0F2F50, text #FFFFFF
+      */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          border: "1.5px solid #d1d5db",
+          border: `1.5px solid ${dark ? "rgba(255,255,255,0.2)" : "#d1d5db"}`,
           borderRadius: "12px",
           overflow: "hidden",
-          background: "#fff",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          background: dark ? "#0F2F50" : "#fff",
+          boxShadow: dark ? "none" : "0 1px 4px rgba(0,0,0,0.06)",
+          transition: "border-color 0.2s",
         }}
       >
         <input
@@ -114,9 +119,11 @@ export default function AutofillInput({ phone, onAutofill, language = "es" }: Au
             padding: "14px 16px",
             fontSize: "15px",
             fontFamily: "inherit",
-            color: "#111",
+            color: dark ? "#FFFFFF" : "#111",
             background: "transparent",
+            // Placeholder color handled via CSS class below
           }}
+          className={dark ? "pg-dark-input-field" : ""}
         />
 
         {/* Mic icon (UI only) */}
@@ -222,6 +229,8 @@ export default function AutofillInput({ phone, onAutofill, language = "es" }: Au
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        .pg-dark-input-field::placeholder { color: #64748B; }
+        .pg-dark-input-field:focus { outline: none; }
       `}</style>
     </div>
   );

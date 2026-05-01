@@ -16,7 +16,6 @@ const BILLERS = [
   { icon: "🎮", name: "Recarga" },
 ];
 
-// Duplicate so the loop is seamless with no gap
 const ROW1 = [...BILLERS, ...BILLERS];
 const ROW2 = [...BILLERS, ...BILLERS];
 
@@ -24,23 +23,26 @@ interface PillProps {
   icon: string;
   name: string;
   small?: boolean;
+  dark?: boolean;
 }
 
-function Pill({ icon, name, small }: PillProps) {
+function Pill({ icon, name, small, dark }: PillProps) {
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: small ? "5px" : "7px",
-        background: "#F5F7FA",
-        border: "1px solid #E2E8F0",
+        // LIGHT: background "#F5F7FA", border "#E2E8F0", color "#0A2540"
+        // DARK:  background "rgba(255,255,255,0.08)", border "rgba(255,255,255,0.15)", color "#FFFFFF"
+        background: dark ? "rgba(255,255,255,0.08)" : "#F5F7FA",
+        border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "#E2E8F0"}`,
         borderRadius: "999px",
         padding: small ? "5px 11px 5px 8px" : "6px 14px 6px 10px",
         whiteSpace: "nowrap",
         fontSize: small ? "12px" : "14px",
         fontWeight: 600,
-        color: "#0A2540",
+        color: dark ? "#FFFFFF" : "#0A2540",
         letterSpacing: "0.01em",
         flexShrink: 0,
         cursor: "pointer",
@@ -53,7 +55,11 @@ function Pill({ icon, name, small }: PillProps) {
   );
 }
 
-export default function BillerTicker({ small }: { small?: boolean }) {
+export default function BillerTicker({ small, dark }: { small?: boolean; dark?: boolean }) {
+  // Fade mask color must match the page background behind the ticker
+  // LIGHT bg → fade to #ffffff   DARK bg → fade to #0A2540
+  const fadeColor = dark ? "#0A2540" : "#ffffff";
+
   return (
     <div
       style={{
@@ -62,13 +68,12 @@ export default function BillerTicker({ small }: { small?: boolean }) {
         position: "relative",
       }}
     >
-      {/* Left + right fade masks */}
+      {/* Left + right fade masks — color tracks the background */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(to right, #ffffff 0%, transparent 80px, transparent calc(100% - 80px), #ffffff 100%)",
+          background: `linear-gradient(to right, ${fadeColor} 0%, transparent 80px, transparent calc(100% - 80px), ${fadeColor} 100%)`,
           zIndex: 1,
           pointerEvents: "none",
         }}
@@ -88,7 +93,7 @@ export default function BillerTicker({ small }: { small?: boolean }) {
           style={{ animation: "tickerLeft 25s linear infinite" }}
         >
           {ROW1.map((b, i) => (
-            <Pill key={`r1-${i}`} icon={b.icon} name={b.name} small={small} />
+            <Pill key={`r1-${i}`} icon={b.icon} name={b.name} small={small} dark={dark} />
           ))}
         </div>
       </div>
@@ -100,7 +105,7 @@ export default function BillerTicker({ small }: { small?: boolean }) {
           style={{ animation: "tickerRight 25s linear infinite" }}
         >
           {ROW2.map((b, i) => (
-            <Pill key={`r2-${i}`} icon={b.icon} name={b.name} small={small} />
+            <Pill key={`r2-${i}`} icon={b.icon} name={b.name} small={small} dark={dark} />
           ))}
         </div>
       </div>

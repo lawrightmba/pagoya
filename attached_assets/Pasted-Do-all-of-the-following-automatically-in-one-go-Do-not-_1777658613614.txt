@@ -1,0 +1,69 @@
+Do all of the following automatically in one go. Do not 
+stop and ask me anything.
+
+The hero redesign is correct in layout but broke the 
+brand color scheme. Restore the original navy/teal/coral 
+color scheme while keeping the exact layout structure 
+that was just built.
+
+READ artifacts/pagoya/src/pages/Home.tsx fully before 
+making any changes.
+
+COLOR SCHEME TO RESTORE:
+  Background:       Navy #0A2540 (dark, full page)
+  Hero section:     Navy #0A2540 (NOT white)
+  Headline text:    White #FFFFFF (primary)
+  Teal accent line: #1D9E75 (the "en menos de 2 minutos" 
+                    line stays teal but on dark bg)
+  Subheadline:      Light gray #94A3B8 (on dark bg)
+  
+  Ticker pills:     Semi-transparent white bg: 
+                    rgba(255,255,255,0.08)
+                    White text #FFFFFF
+                    Border: rgba(255,255,255,0.15)
+                    (NOT light gray #F5F7FA — that was 
+                    designed for white bg)
+
+  3-step numbers:   Teal #1D9E75 circles (keep)
+  3-step text:      White #FFFFFF (NOT dark gray)
+
+  Autofill input:   Dark input: background #0F2F50
+                    Border: rgba(255,255,255,0.2)
+                    Text: white #FFFFFF
+                    Placeholder: #64748B
+                    Focus border: #1D9E75
+
+  "Pagar ahora" btn: Teal #1D9E75 (keep — looks correct)
+  
+  Trust microcopy:  #64748B (muted, on dark bg)
+
+  Stats bar:        Slightly lighter navy #0F2F50 or 
+                    transparent divider — teal numbers, 
+                    white labels (keep as was)
+
+  Category grid:    Dark card backgrounds #0F2F50
+                    White text, teal icons
+                    Border: rgba(255,255,255,0.08)
+  
+  Divider label     
+  "O elige una 
+  categoría":       #64748B muted on dark bg
+
+  Section dividers: rgba(255,255,255,0.08) — subtle
+
+DO NOT change:
+  - Layout order (nav, hero, ticker, steps, input, 
+    stats, grid)
+  - Component structure
+  - Any logic or props
+  - BillerTicker.tsx (update its pill colors via props 
+    or CSS variables if needed, but keep structure)
+  - AutofillInput.tsx (pass dark theme via className 
+    or style prop only)
+
+After saving:
+git add -A && git commit -m "fix: restore navy/teal/coral 
+brand colors on hero redesign" && git push origin main
+
+Report every line changed and the before/after color 
+values for each element.

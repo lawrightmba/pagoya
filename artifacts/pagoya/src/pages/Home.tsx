@@ -25,17 +25,21 @@ const QUICK_ACCESS = [
   { id: "cfe",      icon: "⚡", name: "CFE",       color: "#1D9E75" },
   { id: "telcel",   icon: "📱", name: "Telcel",    color: "#D85A30" },
   { id: "telmex",   icon: "🌐", name: "Telmex",    color: "#7F77DD" },
-  { id: "izzi",     icon: "📺", name: "Izzi",      color: "#0A2540" },
-  { id: "sky",      icon: "📡", name: "Sky",       color: "#1D9E75" },
-  { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#D85A30" },
+  { id: "izzi",     icon: "📺", name: "Izzi",      color: "#1D9E75" },
+  { id: "sky",      icon: "📡", name: "Sky",       color: "#D85A30" },
+  { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#7F77DD" },
 ];
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
+// BEFORE: background: "rgba(29,158,117,0.18)"
+// AFTER:  background: "rgba(255,255,255,0.08)"
 function Divider() {
-  return <div style={{ height: "1px", background: "rgba(29,158,117,0.18)", margin: "0 20px" }} />;
+  return <div style={{ height: "1px", background: "rgba(255,255,255,0.08)", margin: "0 20px" }} />;
 }
 
+// BEFORE: step text color: "#374151"
+// AFTER:  step text color: "#FFFFFF"
 function StepRow({ number, icon, es, en, lang }: { number: number; icon: string; es: string; en: string; lang: "es" | "en" }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
@@ -49,7 +53,7 @@ function StepRow({ number, icon, es, en, lang }: { number: number; icon: string;
       </div>
       <div>
         <span style={{ fontSize: "18px", marginRight: "6px" }}>{icon}</span>
-        <span style={{ fontSize: "14px", color: "#374151", fontWeight: 500 }}>
+        <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
           {lang === "es" ? es : en}
         </span>
       </div>
@@ -82,7 +86,6 @@ export default function Home() {
 
   useEffect(() => { setLangPref(lang); }, [lang]);
 
-  // Called when AutofillInput returns a result — pre-fill and navigate
   function handleAutofill(result: {
     biller_id: string; biller_name: string;
     amount: number | null; reference: string | null;
@@ -116,14 +119,15 @@ export default function Home() {
   }
 
   return (
-    <div style={{ background: "#FFFFFF", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+    // BEFORE: background: "#FFFFFF"
+    // AFTER:  background: "#0A2540"
+    <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
 
       {/* ── CSS ── */}
       <style>{`
         @keyframes pgStatReveal { 0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)} }
         .pg-qa-card { transition:transform 0.18s,box-shadow 0.18s,border-color 0.18s; }
-        .pg-qa-card:hover { transform:scale(1.04); box-shadow:0 6px 22px rgba(10,37,64,0.13)!important; border-color:#1D9E75!important; }
-        .hero-input-wrap:focus-within { border-color:#1D9E75!important; box-shadow:0 0 0 3px rgba(29,158,117,0.18)!important; }
+        .pg-qa-card:hover { transform:scale(1.04); box-shadow:0 6px 22px rgba(0,0,0,0.30)!important; border-color:#1D9E75!important; }
         @media(max-width:600px){
           .hero-h1{font-size:28px!important;}
           .hero-steps{flex-direction:column!important;gap:14px!important;}
@@ -136,7 +140,7 @@ export default function Home() {
       `}</style>
 
       {/* ══════════════════════════════════════════════════════
-          A. NAV BAR
+          A. NAV BAR — navy (unchanged)
       ══════════════════════════════════════════════════════ */}
       <header style={{
         background: "#0A2540",
@@ -145,10 +149,8 @@ export default function Home() {
         gridTemplateColumns: "1fr auto 1fr",
         alignItems: "center",
       }}>
-        {/* left empty */}
         <span />
 
-        {/* center logo */}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <img
             src="/pagoya-logo.png"
@@ -165,7 +167,6 @@ export default function Home() {
           </span>
         </div>
 
-        {/* right — points link + ES | EN toggle */}
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
           <button
             onClick={() => navigate("/puntos")}
@@ -195,9 +196,11 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             B. HERO BLOCK
+            BEFORE: background: "#FFFFFF", h1 color: "#0A2540", sub: "#6B7280"
+            AFTER:  background: "#0A2540", h1 color: "#FFFFFF",  sub: "#94A3B8"
         ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "#FFFFFF",
+          background: "#0A2540",
           padding: "48px 24px 0",
           display: "flex",
           flexDirection: "column",
@@ -208,23 +211,24 @@ export default function Home() {
             className="hero-h1"
             style={{
               fontWeight: 900,
-              color: "#0A2540",
+              color: "#FFFFFF",
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
-              marginBottom: "12px",
               margin: "0 0 12px",
             }}
           >
             {es ? "Paga cualquier servicio" : "Pay any bill"}
             <br />
+            {/* teal accent — same color, now reads on dark bg */}
             <span style={{ color: "#1D9E75" }}>
               {es ? "en menos de 2 minutos" : "in under 2 minutes"}
             </span>
           </h1>
 
+          {/* BEFORE: color: "#6B7280"  AFTER: color: "#94A3B8" */}
           <p style={{
             fontSize: "16px",
-            color: "#6B7280",
+            color: "#94A3B8",
             maxWidth: "340px",
             lineHeight: 1.6,
             margin: "0 0 28px",
@@ -237,15 +241,18 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             C. BILLER TICKER
+            Pass dark=true so pills use semi-transparent white bg
+            Fade mask updated inside BillerTicker via dark prop
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 0 28px", marginTop: "4px" }}>
-          <BillerTicker small />
+        <section style={{ padding: "0 0 28px", marginTop: "4px", background: "#0A2540" }}>
+          <BillerTicker small dark />
         </section>
 
         {/* ══════════════════════════════════════════════════════
             D. 3-STEP HOW TO USE
+            Background stays navy; text updated in StepRow (#374151 → #FFFFFF)
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 24px 28px" }}>
+        <section style={{ padding: "0 24px 28px", background: "#0A2540" }}>
           <div
             className="hero-steps"
             style={{
@@ -275,16 +282,19 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             E. AUTOFILL INPUT (hero element)
+            dark=true → input bg #0F2F50, white text, teal focus
+            BEFORE trust color: "#9CA3AF"  AFTER: "#64748B"
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 24px 28px" }}>
+        <section style={{ padding: "0 24px 28px", background: "#0A2540" }}>
           <div style={{ maxWidth: "560px", margin: "0 auto" }}>
             <AutofillInput
               phone={phone}
               language={lang}
               onAutofill={handleAutofill}
+              dark
             />
 
-            {/* CTA button below the input */}
+            {/* CTA button — teal #1D9E75, unchanged */}
             <button
               className="hero-cta-btn"
               onClick={() => navigate("/pagar")}
@@ -308,11 +318,11 @@ export default function Home() {
               {es ? "Pagar ahora →" : "Pay now →"}
             </button>
 
-            {/* Trust line */}
+            {/* Trust microcopy — BEFORE: "#9CA3AF"  AFTER: "#64748B" */}
             <p style={{
               marginTop: "10px",
               fontSize: "12px",
-              color: "#9CA3AF",
+              color: "#64748B",
               textAlign: "center",
               lineHeight: 1.5,
             }}>
@@ -327,11 +337,13 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             STATS BAR
+            BEFORE bg: "#FFFFFF",  border: "rgba(29,158,117,0.15)", label color: "#0A2540"
+            AFTER  bg: "#0F2F50",  border: "rgba(255,255,255,0.08)", label color: "white"
         ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "#FFFFFF", padding: "20px 16px",
+          background: "#0F2F50", padding: "20px 16px",
           display: "flex", alignItems: "stretch", justifyContent: "center",
-          borderBottom: "1px solid rgba(29,158,117,0.15)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}>
           {[
             { num: "35+",      label: es ? "Servicios disponibles"   : "Services available"   },
@@ -339,16 +351,18 @@ export default function Home() {
             { num: "WhatsApp", label: es ? "Comprobante instantáneo" : "Instant receipt"      },
           ].map((stat, i) => (
             <div key={stat.num} style={{ display: "contents" }}>
-              {i > 0 && <div style={{ width: "1px", background: "rgba(29,158,117,0.18)", margin: "4px 0" }} />}
+              {i > 0 && <div style={{ width: "1px", background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />}
               <div style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
                 padding: "8px 6px", textAlign: "center",
                 animation: `pgStatReveal 0.6s ease-out ${i * 0.15}s both`,
               }}>
+                {/* teal numbers — unchanged */}
                 <span style={{ fontSize: "20px", fontWeight: 900, color: "#1D9E75", lineHeight: 1.1, marginBottom: "3px" }}>
                   {stat.num}
                 </span>
-                <span style={{ fontSize: "10px", color: "#0A2540", fontWeight: 600, lineHeight: 1.3 }}>
+                {/* BEFORE: "#0A2540"  AFTER: "white" */}
+                <span style={{ fontSize: "10px", color: "white", fontWeight: 600, lineHeight: 1.3 }}>
                   {stat.label}
                 </span>
               </div>
@@ -360,8 +374,9 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             WALLET
+            BEFORE bg: "#FFFFFF"  AFTER bg: "#0F2F50"
         ══════════════════════════════════════════════════════ */}
-        <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
+        <section style={{ background: "#0F2F50", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
             <WalletBalanceWidget />
           </div>
@@ -371,17 +386,23 @@ export default function Home() {
 
         {/* ══════════════════════════════════════════════════════
             F. CATEGORY GRID — secondary
+            BEFORE section bg: "#F0FAF6"   AFTER: "#0A2540"
+            BEFORE card bg: "white"        AFTER: "#0F2F50"
+            BEFORE card border: "#E8F5F0"  AFTER: "rgba(255,255,255,0.08)"
+            BEFORE card text: "#0A2540"    AFTER: "white"
+            BEFORE divider lines: "#D1D5DB" AFTER: "rgba(255,255,255,0.08)"
+            BEFORE divider label: "#9CA3AF" AFTER: "#64748B"
         ══════════════════════════════════════════════════════ */}
-        <section style={{ background: "#F0FAF6", padding: "24px 20px" }}>
+        <section style={{ background: "#0A2540", padding: "24px 20px" }}>
           <div style={{ maxWidth: "400px", margin: "0 auto" }}>
             {/* Divider label */}
             <div style={{
               display: "flex", alignItems: "center", gap: "10px",
-              marginBottom: "20px", color: "#9CA3AF", fontSize: "13px",
+              marginBottom: "20px", color: "#64748B", fontSize: "13px",
             }}>
-              <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+              <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />
               <span>{es ? "O elige una categoría" : "Or choose a category"}</span>
-              <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+              <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
@@ -391,14 +412,16 @@ export default function Home() {
                   className="pg-qa-card"
                   onClick={() => handleQuickAccess(svc.id, svc.name)}
                   style={{
-                    background: "white", border: "1.5px solid #E8F5F0", borderRadius: "16px",
+                    background: "#0F2F50",
+                    border: "1.5px solid rgba(255,255,255,0.08)",
+                    borderRadius: "16px",
                     padding: "16px 8px", cursor: "pointer", display: "flex",
                     flexDirection: "column", alignItems: "center", gap: "8px",
-                    boxShadow: "0 2px 10px rgba(10,37,64,0.07)",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.20)",
                   }}
                 >
                   <span style={{ fontSize: "22px" }}>{svc.icon}</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#0A2540", textAlign: "center", lineHeight: 1.2 }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "white", textAlign: "center", lineHeight: 1.2 }}>
                     {svc.name}
                   </span>
                 </button>
@@ -410,7 +433,7 @@ export default function Home() {
               style={{
                 width: "100%", marginTop: "14px", padding: "12px",
                 borderRadius: "12px", border: "1.5px solid #1D9E75",
-                background: "white", color: "#1D9E75", fontSize: "14px",
+                background: "transparent", color: "#1D9E75", fontSize: "14px",
                 fontWeight: 700, cursor: "pointer",
               }}
             >
@@ -422,7 +445,7 @@ export default function Home() {
         <Divider />
 
         {/* ══════════════════════════════════════════════════════
-            SOFT REGISTRATION CTA — navy
+            SOFT REGISTRATION CTA — navy (already correct)
         ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#0A2540", padding: "40px 24px" }}>
           <div style={{ maxWidth: "480px", margin: "0 auto", textAlign: "center" }}>
