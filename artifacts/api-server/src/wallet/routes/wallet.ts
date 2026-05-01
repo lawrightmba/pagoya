@@ -88,15 +88,16 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
     verified = verifyConektaWebhookSignature(rawBody, sigHeader);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error de configuración del webhook.";
-    res.status(400).json({ error: message });
+    res.status(401).json({ error: message });
     return;
   }
 
   if (!verified) {
-    res.status(400).json({ error: "Firma del webhook inválida." });
+    res.status(401).json({ error: "Invalid signature" });
     return;
   }
 
+  // Always respond 200 immediately — Digital Femsa retries on non-200
   res.status(200).json({ received: true });
 
   setImmediate(async () => {

@@ -1,0 +1,38 @@
+Do all of the following automatically in one go. Do not stop and ask me anything.
+
+The Digital Femsa (Conekta/OXXO Pay) webhook uses RSA public key signature verification — NOT a simple HMAC secret like Stripe. I need to update the webhook handler to verify signatures correctly.
+
+1. Read artifacts/api-server/src/wallet/routes/wallet.ts and show me the current webhook handler (the route handling POST /api/wallet/webhook/conekta) — the full function body.
+
+2. Replace the webhook signature verification logic in that handler with the following RSA verification approach:
+
+   - Read the raw request body as a Buffer (ensure raw body middleware is applied to this route)
+   - Get the signature from the request header: req.headers['conekta-signature'] (or 'digest' — report which header is present in incoming requests)
+   - Verify using Node's built-in crypto module:
+     
+     import crypto from 'crypto';
+     
+     function verifyConektaSignature(rawBody: Buffer, signature: string): boolean {
+       try {
+         const publicKey = process.env.CONEKTA_WEBHOOK_PUBLIC_KEY!;
+         const verify = crypto.createVerify('SHA256');
+         verify.update(rawBody);
+         return verify.verify(publicKey, signature, 'base64');
+       } catch {
+         return false;
+       }
+     }
+     
+   - If verification fails, return 401 with { error: 'Invalid signature' }
+   - If verification passes, proceed with existing charge.paid / charge.expired handling
+   - IMPORTANT: Always return HTTP 200 to Digital Femsa even for unhandled event types — returning non-200 causes "Errores intermitentes"
+
+3. Make sure the raw body middleware is applied ONLY to the webhook route (not globally — it will break other routes).
+
+4. After saving, run this curl to simulate a ping and confirm the route is reachable:
+   curl -s -X POST "https://pagoyamx.com/api/wallet/webhook/conekta" \
+     -H "Content-Type: application/json" \
+     -d '{"type":"test"}' \
+   and report the HTTP status code returned.
+
+5. Report every file changed and every line modified.

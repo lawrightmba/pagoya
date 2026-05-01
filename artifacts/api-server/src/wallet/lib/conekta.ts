@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createVerify } from "node:crypto";
 import { logger } from "../../lib/logger.js";
 
 const CONEKTA_BASE_URL = "https://api.digitalfemsa.io";
@@ -105,12 +105,17 @@ export function verifyConektaWebhookSignature(
   rawBody: Buffer,
   signatureHeader: string | undefined,
 ): boolean {
-  const secret = process.env.CONEKTA_WEBHOOK_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV !== "production") return true;
-    throw new Error("CONEKTA_WEBHOOK_SECRET no está configurado.");
-  }
   if (!signatureHeader) return false;
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  return signatureHeader === expected;
+  const publicKey = process.env.CONEKTA_WEBHOOK_PUBLIC_KEY;
+  if (!publicKey) {
+    if (process.env.NODE_ENV !== "production") return true;
+    throw new Error("CONEKTA_WEBHOOK_PUBLIC_KEY no está configurado.");
+  }
+  try {
+    const verify = createVerify("SHA256");
+    verify.update(rawBody);
+    return verify.verify(publicKey, signatureHeader, "base64");
+  } catch {
+    return false;
+  }
 }
