@@ -16,6 +16,7 @@ import RepDashboard from "@/pages/RepDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import CashLoad from "@/pages/CashLoad";
 import WalletHistorial from "@/pages/WalletHistorial";
+import LoyaltyDashboard from "@/pages/LoyaltyDashboard";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -32,6 +33,8 @@ function Router() {
       <Route path="/exito" component={PaymentSuccess} />
       <Route path="/cargar" component={CashLoad} />
       <Route path="/wallet/historial" component={WalletHistorial} />
+      <Route path="/puntos" component={LoyaltyDashboard} />
+      <Route path="/points" component={LoyaltyDashboard} />
       <Route path="/rep-dashboard" component={RepDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />

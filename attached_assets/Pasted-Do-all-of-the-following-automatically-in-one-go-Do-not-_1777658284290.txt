@@ -1,0 +1,224 @@
+Do all of the following automatically in one go. Do not 
+stop and ask me anything.
+
+Build a loyalty points system for PagoYa. Users earn 
+points on every payment, can redeem for transaction fee 
+discounts, and see their balance on their profile. This 
+is also a retention and data asset — points balances 
+create switching cost and repeat behavior.
+
+═══════════════════════════════════════════════════════
+1. DATABASE
+═══════════════════════════════════════════════════════
+
+Add to lib/db/src/schema/profiles.ts:
+
+TABLE: loyalty_accounts
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  profile_id       uuid NOT NULL references user_profiles(id)
+  phone            text UNIQUE NOT NULL
+  points_balance   integer NOT NULL default 0
+  points_lifetime  integer NOT NULL default 0
+  tier             text NOT NULL default 'bronce'
+    -- 'bronce', 'plata', 'oro'
+  tier_updated_at  timestamp default now()
+  created_at       timestamp default now()
+  updated_at       timestamp default now()
+
+TABLE: loyalty_transactions
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  account_id       uuid NOT NULL references loyalty_accounts(id)
+  phone            text NOT NULL
+  type             text NOT NULL
+    -- 'earn', 'redeem', 'bonus', 'expire'
+  points           integer NOT NULL  -- positive=earn, negative=redeem
+  balance_after    integer NOT NULL
+  description      text              -- human readable reason
+  payment_ref      text              -- bill_payment id or wallet tx id
+  created_at       timestamp default now()
+
+TABLE: loyalty_rewards
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  code             text UNIQUE NOT NULL
+  name_es          text NOT NULL
+  name_en          text NOT NULL
+  points_cost      integer NOT NULL
+  reward_type      text NOT NULL
+    -- 'fee_discount', 'free_transaction', 'bonus_points'
+  reward_value     numeric(10,2)     -- MXN discount or bonus multiplier
+  active           boolean default true
+  created_at       timestamp default now()
+
+Seed loyalty_rewards with:
+  ('FEE_HALF',    'Mitad de comisión',  'Half fee discount',   
+   50,  'fee_discount',    4.00)
+  ('FEE_FREE',    'Transacción gratis', 'Free transaction',    
+   100, 'free_transaction', 8.00)
+  ('BONUS_2X',    'Doble puntos',       'Double points',       
+   75,  'bonus_points',    2.00)
+
+Run Drizzle migration.
+
+═══════════════════════════════════════════════════════
+2. POINTS EARN RULES
+═══════════════════════════════════════════════════════
+
+Create artifacts/api-server/src/services/loyalty.ts
+
+Points earn logic — call earnPoints(phone, amount, type) 
+after every successful payment:
+
+  Base earn rate: 1 point per $10 MXN paid (floor)
+  
+  Multipliers by tier:
+    bronce: 1x
+    plata:  1.5x (>= 500 lifetime points)
+    oro:    2x   (>= 2000 lifetime points)
+  
+  Bonus events:
+    First payment ever:     +25 bonus points
+    5th payment:            +50 bonus points  
+    Streak (7 days in a row): +100 bonus points
+    Referral payment:       +30 bonus points
+
+  After earning:
+    1. Upsert loyalty_accounts on phone
+    2. Insert loyalty_transactions row (type='earn')
+    3. Check if tier should upgrade based on 
+       points_lifetime and update tier if so
+    4. Send WhatsApp message via Twilio:
+       ES: "🌟 +{points} PagoYa Puntos por tu pago de 
+       {biller}. Saldo: {balance} pts 
+       ({tier_emoji} {tier}). 
+       Canjea en pagoyamx.com/puntos"
+       EN: "🌟 +{points} PagoYa Points for your {biller} 
+       payment. Balance: {balance} pts 
+       ({tier_emoji} {tier}). 
+       Redeem at pagoyamx.com/puntos"
+    
+    Tier emojis: bronce=🥉 plata=🥈 oro=🥇
+    
+    Never throws — wrap in try/catch, log errors only
+
+═══════════════════════════════════════════════════════
+3. HOOK INTO PAYMENT FLOWS
+═══════════════════════════════════════════════════════
+
+In artifacts/api-server/src/billpay/routes/billpay.ts:
+  After successful payment AND after captureUserProfile,
+  call earnPoints(phone, amount, 'bill_pay') non-blocking
+
+In artifacts/api-server/src/wallet/routes/wallet.ts:
+  After charge.paid AND after captureUserProfile,
+  call earnPoints(phone, amount, 'oxxo_load') non-blocking
+
+═══════════════════════════════════════════════════════
+4. REDEMPTION ENDPOINTS
+═══════════════════════════════════════════════════════
+
+Add to artifacts/api-server/src/routes/index.ts:
+
+GET /api/loyalty/balance/:phone
+  Response: {
+    points_balance, points_lifetime, tier,
+    next_tier, points_to_next_tier,
+    available_rewards: [{ code, name, points_cost, 
+                          reward_type, reward_value }]
+  }
+
+POST /api/loyalty/redeem
+  Body: { phone: string, reward_code: string }
+  1. Check balance >= reward points_cost
+  2. Deduct points, insert loyalty_transactions 
+     (type='redeem', points=negative)
+  3. Return { success: true, discount_applied: number,
+              new_balance: number, reward_type: string }
+  4. If reward_type === 'free_transaction': return a 
+     one-time use token stored in a new column 
+     redemption_tokens text[] on loyalty_accounts
+
+GET /api/loyalty/history/:phone
+  Response: last 20 loyalty_transactions for this phone
+  Include: type, points, balance_after, description, 
+           created_at
+
+GET /api/loyalty/leaderboard
+  Top 10 accounts by points_lifetime this month
+  Response: [{ tier, points_lifetime, 
+               masked_phone: last 4 digits only }]
+  -- masked for privacy, still creates social proof
+
+═══════════════════════════════════════════════════════
+5. FRONTEND — Points Dashboard Page
+═══════════════════════════════════════════════════════
+
+Create artifacts/pagoya/src/pages/LoyaltyDashboard.tsx
+
+Mobile-first page at route /puntos (and /points for EN):
+
+  A. HEADER
+     Large points balance: "1,250 pts"
+     Tier badge with emoji: "🥈 Plata"
+     Progress bar to next tier with label:
+     "750 pts más para Oro 🥇"
+
+  B. REWARDS GRID (3 cards)
+     Each reward card shows:
+     - Reward name (bilingual)
+     - Points cost with coin icon 🪙
+     - Value description ("Ahorra $8 MXN")
+     - "Canjear / Redeem" button
+     - Disabled + grayed out if insufficient balance
+     On click: confirm modal → POST /api/loyalty/redeem
+               → success toast with confetti animation
+
+  C. POINTS HISTORY
+     Last 10 transactions in a timeline list:
+     Green +points for earn, Red -points for redeem
+     Shows description + date
+     "Ver todo / See all" link loads full history
+
+  D. LEADERBOARD TEASER
+     Top 3 from /api/loyalty/leaderboard
+     "🏆 Esta semana / This week"
+     Masked phones with tier badges
+     Creates social proof and competition
+
+  Colors: Navy #0A2540, Teal #1D9E75, Coral #D85A30
+  Fully bilingual via language prop
+  Mobile-first, no horizontal scroll
+
+═══════════════════════════════════════════════════════
+6. NAV LINK
+═══════════════════════════════════════════════════════
+
+In the main nav / home page:
+  Add a "🪙 Puntos / Points" link pointing to /puntos
+  Show current points balance if phone is in localStorage
+  key 'pagoya_phone': "🪙 1,250 pts" next to the link
+
+═══════════════════════════════════════════════════════
+7. ADMIN STATS UPDATE
+═══════════════════════════════════════════════════════
+
+Add to GET /admin/stats:
+  loyalty_accounts_total: count of loyalty_accounts
+  points_issued_today: sum of points from 
+    loyalty_transactions type='earn' today
+  points_redeemed_today: abs sum type='redeem' today
+  tier_breakdown: { bronce: N, plata: N, oro: N }
+  top_reward: most redeemed reward_code this month
+
+═══════════════════════════════════════════════════════
+8. AFTER ALL CHANGES
+═══════════════════════════════════════════════════════
+
+Test:
+curl -s https://pagoyamx.com/api/loyalty/balance/5213221234567
+
+Then:
+git add -A && git commit -m "feat: loyalty points system 
+with tiers, redemption, and leaderboard" && git push origin main
+
+Report all files created/modified, migration output, 
+seeded rewards, and curl test result.

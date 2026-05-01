@@ -9,6 +9,7 @@ import {
 } from "../services/wallet.js";
 import { createOxxoOrder, verifyConektaWebhookSignature } from "../lib/conekta.js";
 import { captureUserProfile } from "../../services/profiles.js";
+import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
 
 const router: IRouter = Router();
@@ -160,6 +161,9 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
           billerName: "Carga OXXO",
           amount: parseFloat(tx.amountMxn),
         }).catch(() => {});
+
+        // Loyalty points for OXXO wallet load (non-blocking)
+        earnPoints(telefono, parseFloat(tx.amountMxn), "oxxo_load", "Carga OXXO", tx.id).catch(() => {});
 
         logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: credited via Conekta webhook");
 

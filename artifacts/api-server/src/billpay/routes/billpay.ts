@@ -8,6 +8,7 @@ import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServ
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
 import { getOrCreateWallet, getBalance, debitWallet } from "../../wallet/services/wallet.js";
 import { captureUserProfile } from "../../services/profiles.js";
+import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -252,6 +253,9 @@ router.post("/pay", async (req: Request, res: Response) => {
       amount: montoNum,
       repId: repId ?? undefined,
     }).catch(() => {});
+
+    // 6c. Loyalty points (non-blocking, never throws)
+    earnPoints(telefono, montoNum, "bill_pay", service.name, String(paymentId)).catch(() => {});
 
     // 6. Check SIPREL saldo after successful payment (non-blocking)
     if (siprelProvider.getSaldoBalance) {

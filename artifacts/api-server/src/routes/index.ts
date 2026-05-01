@@ -10,6 +10,8 @@ import walletRouter from "../wallet/routes/wallet.js";
 import { belvoPaymentsRouter } from "./belvo-payments";
 import proxyRouter from "./proxy";
 import autofillRouter from "./autofill.js";
+import loyaltyRouter from "./loyalty.js";
+import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -20,6 +22,7 @@ router.use("/bills", billPayRouter);
 router.use("/wallet", walletRouter);
 router.use("/belvo-payments", belvoPaymentsRouter);
 router.use("/autofill", autofillRouter);
+router.use("/loyalty", loyaltyRouter);
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 
@@ -128,6 +131,17 @@ router.post("/sync", (_req: Request, res: Response) => {
     version: process.env.npm_package_version ?? "2.2",
     timestamp: new Date().toISOString(),
   });
+});
+
+// GET /api/admin/stats — command center overview including loyalty
+router.get("/admin/stats", async (_req: Request, res: Response) => {
+  try {
+    const loyalty = await getLoyaltyAdminStats();
+    res.json({ loyalty });
+  } catch (err) {
+    logger.error({ err }, "admin/stats: failed");
+    res.status(500).json({ error: "Error al obtener estadísticas." });
+  }
 });
 
 export default router;

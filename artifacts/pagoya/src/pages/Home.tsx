@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
@@ -66,6 +66,17 @@ export default function Home() {
   const [phone]                  = useState(paymentData.telefono ?? "");
   const [notifPhone, setNotifPhone] = useState("");
   const [notifSent, setNotifSent]   = useState(false);
+  const [pointsBalance, setPointsBalance] = useState<number | null>(null);
+
+  // Load points balance from localStorage phone
+  useEffect(() => {
+    const storedPhone = (() => { try { return localStorage.getItem("pagoya_phone") ?? ""; } catch { return ""; } })();
+    if (!storedPhone) return;
+    fetch(`${import.meta.env.BASE_URL?.replace(/\/$/, "") ?? ""}/api/loyalty/balance/${encodeURIComponent(storedPhone)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d && typeof d.points_balance === "number") setPointsBalance(d.points_balance); })
+      .catch(() => {});
+  }, []);
 
   const es = lang === "es";
 
@@ -154,14 +165,25 @@ export default function Home() {
           </span>
         </div>
 
-        {/* right — ES | EN toggle */}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        {/* right — points link + ES | EN toggle */}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
+          <button
+            onClick={() => navigate("/puntos")}
+            style={{
+              fontSize: "12px", fontWeight: 700, color: "#1D9E75",
+              border: "1.5px solid rgba(29,158,117,0.50)", borderRadius: "999px",
+              padding: "4px 10px", background: "rgba(29,158,117,0.12)", cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🪙 {pointsBalance !== null ? `${pointsBalance.toLocaleString("es-MX")} pts` : (es ? "Puntos" : "Points")}
+          </button>
           <button
             onClick={() => setLang(es ? "en" : "es")}
             style={{
               fontSize: "12px", fontWeight: 700, color: "white",
               border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
-              padding: "4px 12px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
+              padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
             }}
           >
             {es ? "EN" : "ES"}
