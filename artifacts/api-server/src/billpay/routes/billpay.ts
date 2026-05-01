@@ -7,6 +7,7 @@ import { taecelProductCacheTable } from "@workspace/db";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
 import { getOrCreateWallet, getBalance, debitWallet } from "../../wallet/services/wallet.js";
+import { captureUserProfile } from "../../services/profiles.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -241,6 +242,15 @@ router.post("/pay", async (req: Request, res: Response) => {
       referencia,
       confirmationCode: result.confirmationCode,
       provider: result.provider,
+    }).catch(() => {});
+
+    // 6b. Capture user profile for retention/reminders (non-blocking, never throws)
+    captureUserProfile({
+      phone: telefono,
+      billerId: serviceId,
+      billerName: service.name,
+      amount: montoNum,
+      repId: repId ?? undefined,
     }).catch(() => {});
 
     // 6. Check SIPREL saldo after successful payment (non-blocking)

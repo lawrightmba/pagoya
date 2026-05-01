@@ -8,6 +8,7 @@ import { handlePagoyaWebhook } from "./routes/pagoya";
 import { handleConektaWebhook } from "./wallet/routes/wallet.js";
 import { logger } from "./lib/logger";
 import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
+import { startReminderCron } from "./services/reminders.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,5 +72,7 @@ app.use("/api", router);
 
 // Start background Taecel cron jobs (pending reconciliation, product cache, sales recon)
 startTaecelCrons();
+// Start daily payment reminder cron (9 AM Mexico City = 15:00 UTC)
+startReminderCron();
 
 export default app;

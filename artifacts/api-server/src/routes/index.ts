@@ -1,12 +1,15 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
+import { eq } from "drizzle-orm";
+import { db, userProfilesTable, userBillersTable } from "@workspace/db";
 import healthRouter from "./health";
 import pagoyaRouter from "./pagoya";
 import billPayRouter from "../billpay/routes/billpay.js";
 import walletRouter from "../wallet/routes/wallet.js";
 import { belvoPaymentsRouter } from "./belvo-payments";
 import proxyRouter from "./proxy";
+import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
@@ -15,6 +18,78 @@ router.use("/pagoya", pagoyaRouter);
 router.use("/bills", billPayRouter);
 router.use("/wallet", walletRouter);
 router.use("/belvo-payments", belvoPaymentsRouter);
+
+// ─── Reminder opt-out ─────────────────────────────────────────────────────────
+
+// POST /api/reminders/optout
+// Body: { phone: string }
+router.post("/reminders/optout", async (req: Request, res: Response) => {
+  const { phone } = req.body as { phone?: string };
+  if (!phone) {
+    res.status(400).json({ error: "Se requiere el campo 'phone'." });
+    return;
+  }
+  try {
+    const [profile] = await db
+      .select({ id: userProfilesTable.id })
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.phone, phone))
+      .limit(1);
+
+    if (!profile) {
+      res.json({ success: true, message: "Recordatorios cancelados" });
+      return;
+    }
+
+    await db
+      .update(userProfilesTable)
+      .set({ reminderOptedIn: false, updatedAt: new Date() })
+      .where(eq(userProfilesTable.id, profile.id));
+
+    await db
+      .update(userBillersTable)
+      .set({ reminderEnabled: false, updatedAt: new Date() })
+      .where(eq(userBillersTable.profileId, profile.id));
+
+    logger.info({ phone }, "reminders: user opted out");
+    res.json({ success: true, message: "Recordatorios cancelados" });
+  } catch (err) {
+    logger.error({ err, phone }, "reminders: optout failed");
+    res.status(500).json({ error: "Error al cancelar recordatorios." });
+  }
+});
+
+// GET /api/reminders/status/:phone
+router.get("/reminders/status/:phone", async (req: Request, res: Response) => {
+  const { phone } = req.params;
+  try {
+    const [profile] = await db
+      .select()
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.phone, phone))
+      .limit(1);
+
+    if (!profile) {
+      res.json({ opted_in: true, billers: [] });
+      return;
+    }
+
+    const billers = await db
+      .select({
+        billerName: userBillersTable.billerName,
+        reminderEnabled: userBillersTable.reminderEnabled,
+        paymentDay: userBillersTable.paymentDay,
+      })
+      .from(userBillersTable)
+      .where(eq(userBillersTable.profileId, profile.id));
+
+    res.json({ opted_in: profile.reminderOptedIn, billers });
+  } catch (err) {
+    logger.error({ err, phone }, "reminders: status lookup failed");
+    res.status(500).json({ error: "Error al consultar estado." });
+  }
+});
+
 router.use("/", proxyRouter);
 
 // POST /api/upload-logo  — DEV TOOL: replaces pagoya-logo.png via base64 upload

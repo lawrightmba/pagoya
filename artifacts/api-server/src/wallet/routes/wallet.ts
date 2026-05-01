@@ -8,6 +8,7 @@ import {
   getRecentTransactions,
 } from "../services/wallet.js";
 import { createOxxoOrder, verifyConektaWebhookSignature } from "../lib/conekta.js";
+import { captureUserProfile } from "../../services/profiles.js";
 import { logger } from "../../lib/logger.js";
 
 const router: IRouter = Router();
@@ -150,6 +151,14 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
         const encoded = encodeURIComponent(msg);
         fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
           signal: AbortSignal.timeout(4_000),
+        }).catch(() => {});
+
+        // Capture profile for retention/reminders (non-blocking)
+        captureUserProfile({
+          phone: telefono,
+          billerId: "oxxo_wallet_load",
+          billerName: "Carga OXXO",
+          amount: parseFloat(tx.amountMxn),
         }).catch(() => {});
 
         logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: credited via Conekta webhook");

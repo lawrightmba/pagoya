@@ -1,0 +1,124 @@
+Do all of the following automatically in one go. Do not stop 
+and ask me anything.
+
+Build a payment reminder and user profile capture system 
+for PagoYa. This is a data retention and re-engagement 
+engine, not just a notification system.
+
+═══════════════════════════════════════════════════════
+1. DATABASE — add to lib/db/src/schema/
+═══════════════════════════════════════════════════════
+
+Create a new schema file: lib/db/src/schema/profiles.ts
+
+Add these tables:
+
+TABLE: user_profiles
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  phone            text UNIQUE NOT NULL  -- verified via WhatsApp
+  name             text
+  email            text
+  language         text default 'es'     -- 'es' or 'en'
+  location_zip     text
+  acquisition_source text               -- 'organic','rep','referral'
+  rep_id           text                 -- FK to reps if via rep
+  reminder_opted_in boolean default true
+  created_at       timestamp default now()
+  updated_at       timestamp default now()
+
+TABLE: user_billers
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  profile_id       uuid NOT NULL references user_profiles(id)
+  biller_id        text NOT NULL         -- e.g. 'cfe','telcel'
+  biller_name      text NOT NULL
+  service_ref      text                  -- account/contract number
+  typical_amount   numeric(10,2)
+  payment_day      integer               -- day of month (1-31)
+  last_paid_at     timestamp
+  last_amount      numeric(10,2)
+  reminder_enabled boolean default true
+  reminder_days_before integer default 3 -- days before due date
+  created_at       timestamp default now()
+  updated_at       timestamp default now()
+
+TABLE: reminder_log
+  id               uuid PRIMARY KEY default gen_random_uuid()
+  profile_id       uuid NOT NULL references user_profiles(id)
+  biller_id        text NOT NULL
+  channel          text NOT NULL         -- 'whatsapp','sms','email'
+  status           text NOT NULL         -- 'sent','delivered','failed'
+  message          text
+  sent_at          timestamp default now()
+
+Export all three tables from lib/db/src/schema/index.ts
+
+Create and run a Drizzle migration for these three tables.
+
+═══════════════════════════════════════════════════════
+2. PROFILE CAPTURE — hook into existing payment flow
+═══════════════════════════════════════════════════════
+
+In artifacts/api-server/src/wallet/routes/wallet.ts and 
+artifacts/api-server/src/billpay/routes/billpay.ts:
+
+After any successful payment (charge.paid webhook or 
+successful bill pay response), call a new function:
+  captureUserProfile(phone, billerId, billerName, amount, repId?)
+
+This function (put in a new file 
+artifacts/api-server/src/services/profiles.ts):
+  1. Upserts user_profiles on phone (update updated_at if exists)
+  2. Upserts user_billers on (profile_id, biller_id)
+     - Updates typical_amount as rolling average: 
+       (existing_typical * 0.7) + (new_amount * 0.3)
+     - Updates last_paid_at and last_amount
+     - Infers payment_day from current date if not set
+  3. Never throws — wrap in try/catch, log errors only
+  4. Returns the profile_id for use in receipt/WhatsApp message
+
+═══════════════════════════════════════════════════════
+3. REMINDER ENGINE — cron job
+═══════════════════════════════════════════════════════
+
+Create artifacts/api-server/src/services/reminders.ts
+
+Daily cron job (runs at 9AM Mexico City time = 15:00 UTC):
+  1. Query user_billers where:
+     - reminder_enabled = true
+     - payment_day IS NOT NULL
+     - Today = payment_day - reminder_days_before
+     - last_paid_at < start of current month (not already paid)
+  2. For each match, send a WhatsApp message via Twilio:
+
+     ES: "💡 Hola {name}, tu {biller_name} vence en 
+     {reminder_days_before} días. Paga en menos de 2 min: 
+     https://pagoyamx.com/?ref={phone_encoded}"
+     
+     EN: "💡 Hi {name}, your {biller_name} is due in 
+     {reminder_days_before} days. Pay in under 2 min: 
+     https://pagoyamx.com/?ref={phone_encoded}"
+     
+  3. Log every attempt to reminder_log table
+  4. Use language from user_profiles.language for message
+  5. Register this cron in the existing cron setup in 
+     artifacts/api-server/src/index.ts alongside the 
+     existing taecel crons
+
+═══════════════════════════════════════════════════════
+4. OPT-OUT ENDPOINT
+═══════════════════════════════════════════════════════
+
+Add to artifacts/api-server/src/routes/index.ts:
+  POST /api/reminders/optout
+  Body: { phone: string }
+  Action: sets reminder_opted_in = false on user_profiles
+          sets reminder_enabled = false on all their user_billers
+  Response: { success: true, message: "Recordatorios cancelados" }
+
+  GET /api/reminders/status/:phone
+  Response: { opted_in: bool, billers: [{ biller_name, 
+              reminder_enabled, payment_day }] }
+
+═══════════════════════════════════════════════════════
+5. ADMIN VISIBILITY
+══════════════════════════
