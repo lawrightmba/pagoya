@@ -104,11 +104,13 @@ export async function createOxxoOrder(params: {
 function normalizePemKey(raw: string): string {
   const key = raw.trim();
   if (key.includes("\n")) return key;
+  // Strip ALL whitespace including spaces (Replit Secrets replaces \n with spaces)
   const body = key
     .replace("-----BEGIN PUBLIC KEY-----", "")
     .replace("-----END PUBLIC KEY-----", "")
-    .replace(/\s/g, "");
+    .replace(/\s+/g, "");
   const lines = body.match(/.{1,64}/g) ?? [];
+  logger.info({ bodyPreview: body.substring(0, 20) }, "conekta: normalizePemKey called");
   return "-----BEGIN PUBLIC KEY-----\n" + lines.join("\n") + "\n-----END PUBLIC KEY-----";
 }
 
