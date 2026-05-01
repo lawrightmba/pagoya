@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { logger } from "../../lib/logger.js";
 
-const CONEKTA_BASE_URL = "https://api.conekta.io";
+const CONEKTA_BASE_URL = "https://api.digitalfemsa.io";
 
 export interface ConektaOxxoOrder {
   orderId: string;
@@ -21,7 +21,7 @@ function conektaHeaders(apiKey: string): Record<string, string> {
   return {
     Authorization: `Basic ${encoded}`,
     "Content-Type": "application/json",
-    Accept: "application/vnd.conekta-v2.1.0+json",
+    Accept: "application/vnd.app-v2.1.0+json",
   };
 }
 
@@ -88,7 +88,7 @@ export async function createOxxoOrder(params: {
   const charge = data.charges?.data?.[0];
   const pm = charge?.payment_method ?? {};
   const reference = pm.reference ?? pm.store_reference ?? "";
-  const voucherUrl = pm.barcode_url ?? `https://api.conekta.io/orders/${data.id}/barcode`;
+  const voucherUrl = pm.barcode_url ?? `https://api.digitalfemsa.io/orders/${data.id}/barcode`;
   const expireTs = pm.expire_at ? pm.expire_at * 1000 : expiresAt * 1000;
 
   logger.info({ orderId: data.id, reference }, "conekta: OXXO order created");

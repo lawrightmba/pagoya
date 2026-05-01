@@ -311,11 +311,11 @@ router.get("/test-conekta", async (_req: Request, res: Response) => {
 
   try {
     const encoded = Buffer.from(`${resolvedKey}:`).toString("base64");
-    const response = await fetch("https://api.conekta.io/customers?limit=1", {
+    const response = await fetch("https://api.digitalfemsa.io/customers?limit=1", {
       method: "GET",
       headers: {
         Authorization: `Basic ${encoded}`,
-        Accept: "application/vnd.conekta-v2.1.0+json",
+        Accept: "application/vnd.app-v2.1.0+json",
         "Content-Type": "application/json",
       },
       signal: AbortSignal.timeout(8_000),
