@@ -1,113 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, Zap, CheckCircle, FileText, Sparkles } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
+import AutofillInput from "@/components/AutofillInput";
+import BillerTicker from "@/components/BillerTicker";
 
-// ─── DATA ─────────────────────────────────────────────────────────────────────
+// ─── Language helpers ──────────────────────────────────────────────────────────
 
-const MARQUEE_SERVICES = [
-  "CFE", "Telmex", "Telcel", "AT&T", "Izzi",
-  "Megacable", "Sky", "Dish", "Gas Natural", "Totalplay", "Maxcom",
-];
+function getLang(): "es" | "en" {
+  try {
+    const stored = localStorage.getItem("pagoya_lang");
+    if (stored === "en" || stored === "es") return stored;
+  } catch { /* ignore */ }
+  return "es";
+}
 
-const BRAND_COLORS = ["#1D9E75", "#D85A30", "#7F77DD", "#0A2540"];
+function setLangPref(lang: "es" | "en") {
+  try { localStorage.setItem("pagoya_lang", lang); } catch { /* ignore */ }
+}
+
+// ─── Quick access grid data ────────────────────────────────────────────────────
 
 const QUICK_ACCESS = [
-  { name: "CFE",       color: "#1D9E75" },
-  { name: "Telcel",    color: "#D85A30" },
-  { name: "Telmex",    color: "#7F77DD" },
-  { name: "Izzi",      color: "#0A2540" },
-  { name: "Sky",       color: "#1D9E75" },
-  { name: "Megacable", color: "#D85A30" },
+  { id: "cfe",      icon: "⚡", name: "CFE",       color: "#1D9E75" },
+  { id: "telcel",   icon: "📱", name: "Telcel",    color: "#D85A30" },
+  { id: "telmex",   icon: "🌐", name: "Telmex",    color: "#7F77DD" },
+  { id: "izzi",     icon: "📺", name: "Izzi",      color: "#0A2540" },
+  { id: "sky",      icon: "📡", name: "Sky",       color: "#1D9E75" },
+  { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#D85A30" },
 ];
 
-const HINTS = [
-  "Quiero pagar luz CFE",
-  "Necesito pagar Telcel 500 pesos",
-  "Voy a pagar internet izzi",
-  "Quiero pagar mi renta",
-];
-
-function parseAIInput(text: string): { empresa: string; categoria: string; monto: string } {
-  const t = text.toLowerCase();
-  let empresa = "";
-  let categoria = "";
-
-  if      (t.includes("cfe") || t.includes("luz"))              { empresa = "CFE";       categoria = "Luz"; }
-  else if (t.includes("agua"))                                   {                         categoria = "Agua"; }
-  else if (t.includes("gas"))                                    {                         categoria = "Gas"; }
-  else if (t.includes("izzi"))                                   { empresa = "Izzi";      categoria = "Internet"; }
-  else if (t.includes("totalplay"))                              { empresa = "Totalplay"; categoria = "Internet"; }
-  else if (t.includes("internet"))                               {                         categoria = "Internet"; }
-  else if (t.includes("telcel"))                                 { empresa = "Telcel";    categoria = "Teléfono móvil"; }
-  else if (t.includes("movistar"))                               { empresa = "Movistar";  categoria = "Teléfono móvil"; }
-  else if (t.includes("netflix"))                                { empresa = "Netflix";   categoria = "Streaming"; }
-  else if (t.includes("spotify"))                                { empresa = "Spotify";   categoria = "Streaming"; }
-  else if (t.includes("streaming"))                              {                         categoria = "Streaming"; }
-  else if (t.includes("seguro"))                                 {                         categoria = "Seguro"; }
-  else if (t.includes("escuela") || t.includes("colegiatura"))  {                         categoria = "Escuela"; }
-  else if (t.includes("renta"))                                  {                         categoria = "Renta"; }
-  else if (t.includes("préstamo") || t.includes("prestamo"))    {                         categoria = "Préstamos"; }
-
-  const montoMatch = text.match(/\b(\d{2,6})\b/);
-  return { empresa, categoria, monto: montoMatch ? montoMatch[1] : "" };
-}
-
-// ─── MARQUEE (dark, inside hero) ──────────────────────────────────────────────
-
-function HeroMarqueeRow({ direction }: { direction: "left" | "right" }) {
-  const list = [...MARQUEE_SERVICES, ...MARQUEE_SERVICES];
-  const anim = direction === "left" ? "pgScrollLeft" : "pgScrollRight";
-  return (
-    <div style={{ overflow: "hidden", width: "100%" }}>
-      <div style={{ display: "flex", gap: "10px", width: "max-content", animation: `${anim} 30s linear infinite` }}>
-        {list.map((name, i) => (
-          <span
-            key={`${name}-${i}`}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: "7px",
-              background: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.25)",
-              borderRadius: "999px",
-              padding: "6px 14px 6px 8px",
-              whiteSpace: "nowrap", fontSize: "13px", fontWeight: 600,
-              color: "white", letterSpacing: "0.02em",
-            }}
-          >
-            <span style={{
-              width: "22px", height: "22px", borderRadius: "50%",
-              background: BRAND_COLORS[i % BRAND_COLORS.length],
-              opacity: 1,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontSize: "11px", fontWeight: 800, flexShrink: 0,
-            }}>
-              {name[0]}
-            </span>
-            {name}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── SECTION DIVIDER ──────────────────────────────────────────────────────────
+// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function Divider() {
-  return <div style={{ height: "1px", background: "rgba(29,158,117,0.20)", margin: "0 20px" }} />;
+  return <div style={{ height: "1px", background: "rgba(29,158,117,0.18)", margin: "0 20px" }} />;
 }
 
-// ─── SECTION HEADING with left teal accent ─────────────────────────────────
-
-function SectionHeading({ label, sub }: { label: string; sub?: string }) {
+function StepRow({ number, icon, es, en, lang }: { number: number; icon: string; es: string; en: string; lang: "es" | "en" }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <div style={{ width: "4px", height: "22px", borderRadius: "2px", background: "#1D9E75", flexShrink: 0 }} />
-        <h2 style={{ fontSize: "15px", fontWeight: 800, color: "#0A2540", margin: 0 }}>{label}</h2>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+      <div style={{
+        width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
+        background: "#1D9E75", color: "white",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "13px", fontWeight: 800,
+      }}>
+        {number}
       </div>
-      {sub && <p style={{ fontSize: "13px", color: "#6B7280", paddingLeft: "14px", margin: 0 }}>{sub}</p>}
+      <div>
+        <span style={{ fontSize: "18px", marginRight: "6px" }}>{icon}</span>
+        <span style={{ fontSize: "14px", color: "#374151", fontWeight: 500 }}>
+          {lang === "es" ? es : en}
+        </span>
+      </div>
     </div>
   );
 }
@@ -115,101 +60,108 @@ function SectionHeading({ label, sub }: { label: string; sub?: string }) {
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [, navigate]              = useLocation();
+  const [, navigate]            = useLocation();
   const { setPaymentData, paymentData } = usePayment();
-  const [aiInput, setAiInput]    = useState("");
-  const [aiDone,  setAiDone]     = useState(false);
-  const [hintIndex, setHintIndex] = useState(0);
-  const [lang, setLang]           = useState<"es" | "en">("es");
-  const [phone, setPhone]         = useState("");
-  const [notifSent, setNotifSent] = useState(false);
+  const [lang, setLang]         = useState<"es" | "en">(getLang);
+  const [phone]                  = useState(paymentData.telefono ?? "");
+  const [notifPhone, setNotifPhone] = useState("");
+  const [notifSent, setNotifSent]   = useState(false);
+
   const es = lang === "es";
 
-  const handleAutofill = () => {
-    if (!aiInput.trim()) return;
-    const parsed = parseAIInput(aiInput);
+  useEffect(() => { setLangPref(lang); }, [lang]);
+
+  // Called when AutofillInput returns a result — pre-fill and navigate
+  function handleAutofill(result: {
+    biller_id: string; biller_name: string;
+    amount: number | null; reference: string | null;
+  }) {
     setPaymentData({
       ...paymentData,
-      empresa:    parsed.empresa    || paymentData.empresa,
-      categoria:  parsed.categoria  || paymentData.categoria,
-      monto:      parsed.monto      || paymentData.monto,
-      referencia: paymentData.referencia,
-      telefono:   paymentData.telefono,
-      notas:      paymentData.notas,
+      empresa:    result.biller_name || paymentData.empresa,
+      categoria:  result.biller_id   || paymentData.categoria,
+      monto:      result.amount != null ? String(result.amount) : paymentData.monto,
+      referencia: result.reference   || paymentData.referencia,
     });
-    setAiDone(true);
-    setTimeout(() => { navigate("/pagar"); }, 900);
-  };
+    setTimeout(() => navigate("/pagar"), 600);
+  }
 
-  const handleNotifSubmit = async (e: React.FormEvent) => {
+  function handleQuickAccess(id: string, name: string) {
+    setPaymentData({ ...paymentData, empresa: name, categoria: id });
+    navigate("/pagar");
+  }
+
+  async function handleNotifSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim()) return;
+    if (!notifPhone.trim()) return;
     try {
-      // TODO: wire to backend notification system when ready
       await fetch("/api/notifications/register-interest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phone.trim(), language: lang }),
+        body: JSON.stringify({ phone: notifPhone.trim(), language: lang }),
       });
-    } catch {
-      // fall through to success message regardless
-    }
+    } catch { /* fall through */ }
     setNotifSent(true);
-  };
+  }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#FFFFFF" }}>
+    <div style={{ background: "#FFFFFF", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
 
-      {/* ── CSS animations ── */}
+      {/* ── CSS ── */}
       <style>{`
-        @keyframes pgScrollLeft  { 0% { transform:translateX(0);    } 100% { transform:translateX(-50%); } }
-        @keyframes pgScrollRight { 0% { transform:translateX(-50%); } 100% { transform:translateX(0);    } }
-        @keyframes pgStatReveal  { 0% { opacity:0; transform:translateY(14px); } 100% { opacity:1; transform:translateY(0); } }
-        .pg-qa-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
-        .pg-qa-card:hover { transform: scale(1.03); border-top: 3px solid #1D9E75 !important; box-shadow: 0 6px 20px rgba(10,37,64,0.12) !important; }
-
+        @keyframes pgStatReveal { 0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)} }
+        .pg-qa-card { transition:transform 0.18s,box-shadow 0.18s,border-color 0.18s; }
+        .pg-qa-card:hover { transform:scale(1.04); box-shadow:0 6px 22px rgba(10,37,64,0.13)!important; border-color:#1D9E75!important; }
+        .hero-input-wrap:focus-within { border-color:#1D9E75!important; box-shadow:0 0 0 3px rgba(29,158,117,0.18)!important; }
+        @media(max-width:600px){
+          .hero-h1{font-size:28px!important;}
+          .hero-steps{flex-direction:column!important;gap:14px!important;}
+          .hero-cta-btn{height:56px!important;font-size:16px!important;}
+        }
+        @media(min-width:601px){
+          .hero-h1{font-size:40px!important;}
+          .hero-steps{flex-direction:row!important;gap:28px!important;}
+        }
       `}</style>
 
-      {/* ── 1. HEADER — navy ── */}
+      {/* ══════════════════════════════════════════════════════
+          A. NAV BAR
+      ══════════════════════════════════════════════════════ */}
       <header style={{
-        background: "#0A2540", padding: "10px 20px",
-        display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: "8px",
+        background: "#0A2540",
+        padding: "10px 20px",
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",
+        alignItems: "center",
       }}>
-        {/* left — empty */}
+        {/* left empty */}
         <span />
 
-        {/* center — image logo; no transform on parent so mix-blend-mode sees the navy bg */}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+        {/* center logo */}
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <img
             src="/pagoya-logo.png"
             alt="PagoYa"
-            style={{
-              height: "44px",
-              width: "auto",
-              maxWidth: "180px",
-              objectFit: "contain",
-              display: "block",
-            }}
+            style={{ height: "44px", width: "auto", maxWidth: "180px", objectFit: "contain", display: "block" }}
             onError={(e) => {
               e.currentTarget.style.display = "none";
               const sib = e.currentTarget.nextSibling as HTMLElement | null;
               if (sib) sib.style.display = "inline";
             }}
           />
-          {/* fallback shown only if image fails */}
-          <span style={{ display: "none", color: "white", fontWeight: 800, fontSize: "22px", whiteSpace: "nowrap" }}>
+          <span style={{ display: "none", color: "white", fontWeight: 800, fontSize: "22px" }}>
             Pago<span style={{ color: "#1D9E75" }}>Ya</span>
           </span>
         </div>
 
-        {/* right — lang toggle */}
+        {/* right — ES | EN toggle */}
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
             onClick={() => setLang(es ? "en" : "es")}
             style={{
               fontSize: "12px", fontWeight: 700, color: "white",
               border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
-              padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
+              padding: "4px 12px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
             }}
           >
             {es ? "EN" : "ES"}
@@ -217,84 +169,160 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
-        {/* ── 2. HERO — navy (marquee embedded) ── */}
+        {/* ══════════════════════════════════════════════════════
+            B. HERO BLOCK
+        ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "#0A2540", padding: "40px 24px 48px",
-          display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
+          background: "#FFFFFF",
+          padding: "48px 24px 0",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
         }}>
-          <h1 style={{ fontSize: "36px", fontWeight: 900, color: "white", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "12px" }}>
-            {es ? "¿Se cerró tu OXXO?" : "No OXXO nearby?"}
+          <h1
+            className="hero-h1"
+            style={{
+              fontWeight: 900,
+              color: "#0A2540",
+              lineHeight: 1.15,
+              letterSpacing: "-0.02em",
+              marginBottom: "12px",
+              margin: "0 0 12px",
+            }}
+          >
+            {es ? "Paga cualquier servicio" : "Pay any bill"}
             <br />
-            <span style={{ color: "#39A935" }}>{es ? "Paga aquí." : "Pay here."}</span>
+            <span style={{ color: "#1D9E75" }}>
+              {es ? "en menos de 2 minutos" : "in under 2 minutes"}
+            </span>
           </h1>
 
-          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.70)", maxWidth: "280px", lineHeight: 1.6, marginBottom: "24px" }}>
-            {es
-              ? "Paga tu luz, internet, celular y más — desde tu cel, sin filas, sin efectivo."
-              : "Pay your electricity, internet, phone and more — from your phone, no lines, no cash."}
-          </p>
-
-          {/* Marquee inside hero */}
-          <div style={{
-            width: "100vw", maxWidth: "600px",
-            background: "rgba(255,255,255,0.06)",
-            backdropFilter: "blur(4px)",
-            borderTop: "1px solid rgba(255,255,255,0.10)",
-            borderBottom: "1px solid rgba(255,255,255,0.10)",
-            padding: "12px 0", marginBottom: "28px",
-            display: "flex", flexDirection: "column", gap: "10px", overflow: "hidden",
+          <p style={{
+            fontSize: "16px",
+            color: "#6B7280",
+            maxWidth: "340px",
+            lineHeight: 1.6,
+            margin: "0 0 28px",
           }}>
-            <HeroMarqueeRow direction="left" />
-            <HeroMarqueeRow direction="right" />
-          </div>
+            {es
+              ? "Sin filas. Sin apps. Sin cuenta de banco."
+              : "No lines. No apps. No bank account needed."}
+          </p>
+        </section>
 
-          {/* CTA button */}
-          <div style={{ width: "100%", maxWidth: "340px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+        {/* ══════════════════════════════════════════════════════
+            C. BILLER TICKER
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "0 0 28px", marginTop: "4px" }}>
+          <BillerTicker small />
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
+            D. 3-STEP HOW TO USE
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "0 24px 28px" }}>
+          <div
+            className="hero-steps"
+            style={{
+              maxWidth: "600px",
+              margin: "0 auto",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <StepRow number={1} icon="✍️"
+              es="Escribe qué quieres pagar"
+              en="Type what you want to pay"
+              lang={lang}
+            />
+            <StepRow number={2} icon="🤖"
+              es="Nuestra IA llena el formulario"
+              en="Our AI fills the form"
+              lang={lang}
+            />
+            <StepRow number={3} icon="✅"
+              es="Confirma y listo en 2 min"
+              en="Confirm and done in 2 min"
+              lang={lang}
+            />
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
+            E. AUTOFILL INPUT (hero element)
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "0 24px 28px" }}>
+          <div style={{ maxWidth: "560px", margin: "0 auto" }}>
+            <AutofillInput
+              phone={phone}
+              language={lang}
+              onAutofill={handleAutofill}
+            />
+
+            {/* CTA button below the input */}
             <button
+              className="hero-cta-btn"
               onClick={() => navigate("/pagar")}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.1)"; e.currentTarget.style.transform = "scale(1.02)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; e.currentTarget.style.transform = ""; }}
               style={{
-                width: "100%", padding: "16px 40px", borderRadius: "50px", border: "none",
-                color: "white", fontSize: "18px", fontWeight: 700, cursor: "pointer",
-                background: "#D85A30",
-                boxShadow: "0 4px 20px rgba(216,90,48,0.4)",
-                transition: "filter 0.2s, transform 0.2s",
+                width: "100%",
+                height: "52px",
+                borderRadius: "14px",
+                border: "none",
+                background: "#1D9E75",
+                color: "white",
+                fontSize: "17px",
+                fontWeight: 700,
+                cursor: "pointer",
+                letterSpacing: "0.01em",
+                boxShadow: "0 4px 18px rgba(29,158,117,0.32)",
+                transition: "filter 0.15s",
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
             >
-              {es ? "Pagar un servicio →" : "Pay a service →"}
+              {es ? "Pagar ahora →" : "Pay now →"}
             </button>
 
-            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.50)", fontWeight: 500, textAlign: "center", margin: 0 }}>
-              {es ? "Seguro. Rápido. Sin filas." : "Secure. Fast. No lines."}
+            {/* Trust line */}
+            <p style={{
+              marginTop: "10px",
+              fontSize: "12px",
+              color: "#9CA3AF",
+              textAlign: "center",
+              lineHeight: 1.5,
+            }}>
+              {es
+                ? "🔒 Pago seguro · Sin registro para tu primer pago · $8 MXN por transacción"
+                : "🔒 Secure payment · No signup for first payment · $8 MXN per transaction"}
             </p>
           </div>
         </section>
 
-        {/* ── 3. STATS BAR — white ── */}
+        <Divider />
+
+        {/* ══════════════════════════════════════════════════════
+            STATS BAR
+        ══════════════════════════════════════════════════════ */}
         <section style={{
           background: "#FFFFFF", padding: "20px 16px",
           display: "flex", alignItems: "stretch", justifyContent: "center",
-          borderBottom: "1px solid rgba(29,158,117,0.20)",
+          borderBottom: "1px solid rgba(29,158,117,0.15)",
         }}>
           {[
-            { num: "35+",      label: es ? "Servicios disponibles"    : "Services available"      },
-            { num: "2 min",    label: es ? "Tiempo promedio de pago"  : "Average payment time"    },
-            { num: "WhatsApp", label: es ? "Comprobante instantáneo"  : "Instant receipt"         },
+            { num: "35+",      label: es ? "Servicios disponibles"   : "Services available"   },
+            { num: "2 min",    label: es ? "Tiempo promedio de pago" : "Average payment time" },
+            { num: "WhatsApp", label: es ? "Comprobante instantáneo" : "Instant receipt"      },
           ].map((stat, i) => (
             <div key={stat.num} style={{ display: "contents" }}>
-              {i > 0 && (
-                <div style={{ width: "1px", background: "rgba(29,158,117,0.20)", margin: "4px 0" }} />
-              )}
-              <div
-                style={{
-                  flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  padding: "8px 6px", textAlign: "center",
-                  animation: `pgStatReveal 0.6s ease-out ${i * 0.15}s both`,
-                }}
-              >
+              {i > 0 && <div style={{ width: "1px", background: "rgba(29,158,117,0.18)", margin: "4px 0" }} />}
+              <div style={{
+                flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+                padding: "8px 6px", textAlign: "center",
+                animation: `pgStatReveal 0.6s ease-out ${i * 0.15}s both`,
+              }}>
                 <span style={{ fontSize: "20px", fontWeight: 900, color: "#1D9E75", lineHeight: 1.1, marginBottom: "3px" }}>
                   {stat.num}
                 </span>
@@ -308,7 +336,9 @@ export default function Home() {
 
         <Divider />
 
-        {/* ── 4. WALLET — white ── */}
+        {/* ══════════════════════════════════════════════════════
+            WALLET
+        ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
             <WalletBalanceWidget />
@@ -317,239 +347,110 @@ export default function Home() {
 
         <Divider />
 
-        {/* ── 5. AI ASSISTANT — white ── */}
-        <section style={{ background: "#FFFFFF", padding: "24px 20px" }}>
-          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
-            <SectionHeading
-              label={es ? "¿Qué necesitas pagar hoy?" : "What do you need to pay today?"}
-              sub={es ? "Describe tu pago y llenamos el formulario." : "Describe your payment and we'll fill the form."}
-            />
-            <div style={{
-              borderRadius: "20px", padding: "20px",
-              background: "white", boxShadow: "0 2px 12px rgba(10,37,64,0.08)", border: "1px solid #E8F5F0",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-                <div style={{
-                  width: "38px", height: "38px", borderRadius: "12px", flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                }}>
-                  <Sparkles style={{ width: "18px", height: "18px", color: "white" }} strokeWidth={2} />
-                </div>
-                <span style={{ fontSize: "13px", color: "#6B7280" }}>
-                  {es ? "Asistente con IA" : "AI-powered assistant"}
-                </span>
-              </div>
-
-              <input
-                type="text"
-                value={aiInput}
-                onChange={(e) => { setAiInput(e.target.value); setAiDone(false); }}
-                onKeyDown={(e) => e.key === "Enter" && handleAutofill()}
-                placeholder={HINTS[hintIndex]}
-                onFocus={() => setHintIndex((hintIndex + 1) % HINTS.length)}
-                style={{
-                  width: "100%", borderRadius: "14px", padding: "13px 16px", fontSize: "14px",
-                  color: "#1F1F1F", outline: "none", marginBottom: "12px", boxSizing: "border-box",
-                  background: "white", border: "1.5px solid #E8F5F0", boxShadow: "0 1px 4px rgba(10,37,64,0.06)",
-                }}
-              />
-
-              <button
-                onClick={handleAutofill}
-                disabled={!aiInput.trim()}
-                style={{
-                  width: "100%", padding: "13px", borderRadius: "999px", border: "none",
-                  color: "white", fontSize: "14px", fontWeight: 700, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                  background: aiDone ? "#39A935" : "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                  boxShadow: "0 4px 16px rgba(4,108,44,0.28)", opacity: !aiInput.trim() ? 0.5 : 1,
-                }}
-              >
-                {aiDone
-                  ? <><CheckCircle style={{ width: "16px", height: "16px" }} /> {es ? "Listo. Completando tu pago…" : "Done. Completing your payment…"}</>
-                  : <><Sparkles    style={{ width: "16px", height: "16px" }} /> {es ? "Autocompletar con IA" : "AI Autofill"}</>}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <Divider />
-
-        {/* ── 6. QUICK ACCESS GRID — light teal tint ── */}
+        {/* ══════════════════════════════════════════════════════
+            F. CATEGORY GRID — secondary
+        ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#F0FAF6", padding: "24px 20px" }}>
-          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
-            <SectionHeading
-              label={es ? "Acceso rápido" : "Quick access"}
-              sub={es ? "Toca el servicio que quieres pagar." : "Tap the service you want to pay."}
-            />
+          <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+            {/* Divider label */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "20px", color: "#9CA3AF", fontSize: "13px",
+            }}>
+              <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+              <span>{es ? "O elige una categoría" : "Or choose a category"}</span>
+              <div style={{ flex: 1, height: "1px", background: "#D1D5DB" }} />
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
               {QUICK_ACCESS.map((svc) => (
                 <button
-                  key={svc.name}
+                  key={svc.id}
                   className="pg-qa-card"
-                  onClick={() => navigate("/servicios")}
+                  onClick={() => handleQuickAccess(svc.id, svc.name)}
                   style={{
-                    background: "white", border: "1px solid #E8F5F0", borderRadius: "16px",
+                    background: "white", border: "1.5px solid #E8F5F0", borderRadius: "16px",
                     padding: "16px 8px", cursor: "pointer", display: "flex",
                     flexDirection: "column", alignItems: "center", gap: "8px",
-                    boxShadow: "0 2px 12px rgba(10,37,64,0.08)",
+                    boxShadow: "0 2px 10px rgba(10,37,64,0.07)",
                   }}
                 >
-                  <span style={{
-                    width: "36px", height: "36px", borderRadius: "50%", background: svc.color,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "white", fontSize: "15px", fontWeight: 800,
-                  }}>
-                    {svc.name[0]}
-                  </span>
+                  <span style={{ fontSize: "22px" }}>{svc.icon}</span>
                   <span style={{ fontSize: "12px", fontWeight: 700, color: "#0A2540", textAlign: "center", lineHeight: 1.2 }}>
                     {svc.name}
                   </span>
                 </button>
               ))}
             </div>
-          </div>
-        </section>
 
-        <Divider />
-
-        {/* ── 7. HOW IT WORKS — white ── */}
-        <section id="como-funciona" style={{ background: "#FFFFFF", padding: "28px 20px" }}>
-          <div style={{ maxWidth: "360px", margin: "0 auto" }}>
-            <SectionHeading
-              label={es ? "¿Cómo funciona?" : "How does it work?"}
-              sub={es ? "Tres pasos. Así de simple." : "Three steps. That simple."}
-            />
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <StepCard number={1} icon={<FileText   style={{ width: "22px", height: "22px", color: "#046C2C" }} />} title={es ? "Ingresa tu servicio"          : "Enter your service"}          description={es ? "Selecciona el servicio, captura el monto y tu número de referencia." : "Select the service, enter the amount and your reference number."} />
-              <StepCard number={2} icon={<CheckCircle style={{ width: "22px", height: "22px", color: "#39A935" }} />} title={es ? "Confirma el monto"            : "Confirm the amount"}           description={es ? "Revisa todos los detalles antes de proceder. Seguro y transparente." : "Review all details before proceeding. Secure and transparent."} />
-              <StepCard number={3} icon={<Zap         style={{ width: "22px", height: "22px", color: "#046C2C" }} />} title={es ? "Paga y recibe tu comprobante" : "Pay and get your receipt"}     description={es ? "Realiza el pago y recibe tu comprobante al instante." : "Complete payment and receive your receipt instantly."} />
-            </div>
-          </div>
-        </section>
-
-        <Divider />
-
-        {/* ── 8. BOTTOM CTA — white ── */}
-        <section style={{ background: "#FFFFFF", padding: "24px 20px 32px" }}>
-          <div style={{ maxWidth: "340px", margin: "0 auto" }}>
             <button
-              onClick={() => navigate("/pagar")}
+              onClick={() => navigate("/servicios")}
               style={{
-                width: "100%", padding: "17px 32px", borderRadius: "999px", border: "none",
-                color: "white", fontSize: "16px", fontWeight: 700, cursor: "pointer",
-                background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
-                boxShadow: "0 4px 20px rgba(29,158,117,0.40)",
+                width: "100%", marginTop: "14px", padding: "12px",
+                borderRadius: "12px", border: "1.5px solid #1D9E75",
+                background: "white", color: "#1D9E75", fontSize: "14px",
+                fontWeight: 700, cursor: "pointer",
               }}
             >
-              {es ? "Pagar un servicio ahora" : "Pay a service now"}
+              {es ? "Ver todos los servicios →" : "See all services →"}
             </button>
           </div>
         </section>
 
-        {/* ── 9. SOFT REGISTRATION CTA — navy ── */}
+        <Divider />
+
+        {/* ══════════════════════════════════════════════════════
+            SOFT REGISTRATION CTA — navy
+        ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#0A2540", padding: "40px 24px" }}>
           <div style={{ maxWidth: "480px", margin: "0 auto", textAlign: "center" }}>
             <p style={{ fontSize: "12px", fontWeight: 700, color: "#1D9E75", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
               {es ? "¿Todavía no estás listo?" : "Not ready yet?"}
             </p>
-
-            <h2 style={{ fontSize: "24px", fontWeight: 900, color: "white", lineHeight: 1.25, marginBottom: "10px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: 900, color: "white", lineHeight: 1.25, marginBottom: "10px" }}>
               {es ? "Regístrate gratis y te avisamos" : "Register free and we'll notify you"}
             </h2>
-
-            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.70)", lineHeight: 1.6, maxWidth: "340px", margin: "0 auto 28px" }}>
+            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.70)", lineHeight: 1.6, maxWidth: "340px", margin: "0 auto 24px" }}>
               {es
-                ? "Crea tu cuenta en 30 segundos. Te notificamos por WhatsApp cuando quieras pagar tu próximo servicio."
-                : "Create your account in 30 seconds. We'll notify you on WhatsApp when you're ready to pay."}
+                ? "Te notificamos por WhatsApp cuando quieras pagar tu próximo servicio."
+                : "We'll notify you on WhatsApp when you're ready to pay."}
             </p>
-
             {notifSent ? (
               <div style={{
                 background: "rgba(29,158,117,0.15)", border: "1px solid rgba(29,158,117,0.40)",
                 borderRadius: "16px", padding: "18px 20px", color: "white", fontSize: "15px", fontWeight: 600,
               }}>
-                ✅ {es
-                  ? "¡Listo! Te contactaremos por WhatsApp cuando estés listo."
-                  : "Done! We'll contact you on WhatsApp when you're ready."}
+                ✅ {es ? "¡Listo! Te contactaremos por WhatsApp." : "Done! We'll reach out on WhatsApp."}
               </div>
             ) : (
               <form onSubmit={handleNotifSubmit} style={{ display: "flex", gap: "10px", maxWidth: "380px", margin: "0 auto" }}>
                 <input
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+52 XXX XXX XXXX"
-                  required
+                  value={notifPhone}
+                  onChange={(e) => setNotifPhone(e.target.value)}
+                  placeholder={es ? "Tu número WhatsApp" : "Your WhatsApp number"}
                   style={{
-                    flex: 1, borderRadius: "999px", border: "none", padding: "14px 18px",
-                    fontSize: "14px", color: "#1F1F1F", outline: "none",
-                    background: "rgba(255,255,255,0.95)",
+                    flex: 1, padding: "14px 16px", borderRadius: "12px",
+                    border: "none", fontSize: "15px", outline: "none",
+                    background: "rgba(255,255,255,0.10)", color: "white",
                   }}
                 />
                 <button
                   type="submit"
                   style={{
-                    borderRadius: "999px", border: "none", padding: "14px 20px",
-                    background: "#1D9E75", color: "white", fontSize: "14px", fontWeight: 700,
-                    cursor: "pointer", whiteSpace: "nowrap",
-                    boxShadow: "0 4px 16px rgba(29,158,117,0.40)",
+                    padding: "14px 20px", borderRadius: "12px", border: "none",
+                    background: "#1D9E75", color: "white", fontSize: "15px",
+                    fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
                   }}
                 >
-                  {es ? "Avisarme" : "Notify me"}
+                  {es ? "Avisar" : "Notify me"}
                 </button>
               </form>
             )}
-
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.40)", marginTop: "16px" }}>
-              {es ? "Sin spam. Sin contratos. Cancela cuando quieras." : "No spam. No contracts. Cancel anytime."}
-            </p>
           </div>
         </section>
+
       </main>
-
-      <footer style={{ background: "white", borderTop: "1px solid rgba(29,158,117,0.15)", padding: "20px 24px", textAlign: "center" }}>
-        <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "4px" }}>© 2026 PagoYa · Paga todo. Sin filas.</p>
-        <p style={{ fontSize: "12px", color: "#D1D5DB", fontWeight: 500 }}>Powered by Pago Seguro (próximamente)</p>
-      </footer>
-    </div>
-  );
-}
-
-// ─── STEP CARD ────────────────────────────────────────────────────────────────
-
-function StepCard({ number, icon, title, description }: {
-  number:      number;
-  icon:        React.ReactNode;
-  title:       string;
-  description: string;
-}) {
-  return (
-    <div style={{
-      background: "white", borderRadius: "20px", padding: "18px",
-      display: "flex", gap: "14px", alignItems: "flex-start",
-      boxShadow: "0 2px 12px rgba(10,37,64,0.08)", border: "1px solid #E8F5F0",
-    }}>
-      <div style={{
-        flexShrink: 0, width: "44px", height: "44px", borderRadius: "14px",
-        display: "flex", alignItems: "center", justifyContent: "center", background: "#F0FAF3",
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1, paddingTop: "2px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" }}>
-          <span style={{
-            fontSize: "11px", fontWeight: 900, width: "19px", height: "19px", borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "#046C2C", color: "white", flexShrink: 0,
-          }}>
-            {number}
-          </span>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#0A2540", margin: 0 }}>{title}</h3>
-        </div>
-        <p style={{ fontSize: "13px", color: "#6B7280", lineHeight: 1.5, margin: 0 }}>{description}</p>
-      </div>
     </div>
   );
 }

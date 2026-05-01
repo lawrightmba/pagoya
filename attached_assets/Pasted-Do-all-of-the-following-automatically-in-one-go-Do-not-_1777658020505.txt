@@ -1,0 +1,135 @@
+Do all of the following automatically in one go. Do not 
+stop and ask me anything.
+
+Redesign the PagoYa landing page / home screen to make 
+the AI/NLP autofill input the hero element. Keep the 
+existing biller category grid as a secondary fallback. 
+Add a scrolling ticker of biller logos/icons above the 
+hero input.
+
+═══════════════════════════════════════════════════════
+1. READ EXISTING FILES FIRST
+═══════════════════════════════════════════════════════
+
+Read these files completely before making any changes:
+- artifacts/pagoya/src/pages/Home.tsx (or index page)
+- artifacts/pagoya/src/App.tsx
+- artifacts/pagoya/src/components/AutofillInput.tsx
+  (just built — use it as-is, do not modify it)
+
+═══════════════════════════════════════════════════════
+2. BILLER TICKER COMPONENT
+═══════════════════════════════════════════════════════
+
+Create artifacts/pagoya/src/components/BillerTicker.tsx
+
+A horizontally scrolling infinite ticker (CSS animation, 
+no JS library needed) showing biller names/icons.
+
+Ticker items — use emoji icons + biller name in a pill:
+  ⚡ CFE  |  📱 Telcel  |  🌐 Telmex  |  📺 Izzi  
+  📡 Sky  |  🎬 Netflix  |  🎵 Spotify  |  💧 Agua  
+  🔥 Gas  |  🏠 Renta  |  🏛️ Predial  |  🚗 Tenencia
+  📡 Totalplay  |  📱 AT&T  |  🎮 Recarga
+
+Styling:
+  - Two rows scrolling in OPPOSITE directions for visual 
+    depth (row 1 left→right, row 2 right→left)
+  - Each pill: rounded, light gray background #F5F7FA, 
+    dark navy text #0A2540, subtle border
+  - Scroll speed: 25 seconds per loop, smooth infinite
+  - Pause animation on hover (cursor: pointer)
+  - Fade edges with a CSS gradient mask on left and right
+    so items appear to scroll in/out of view cleanly
+  - Mobile: same two rows, slightly smaller pills
+  - Duplicate items array so loop is seamless (no gap)
+
+═══════════════════════════════════════════════════════
+3. HERO SECTION REDESIGN
+═══════════════════════════════════════════════════════
+
+Redesign the top section of the home/landing page:
+
+STRUCTURE (top to bottom):
+  A. NAV BAR — minimal: logo left, language toggle right
+  
+  B. HERO BLOCK — centered, full width, padding 48px top
+    
+    Headline (large, bold, Navy #0A2540):
+      ES: "Paga cualquier servicio\nen menos de 2 minutos"
+      EN: "Pay any bill\nin under 2 minutes"
+    
+    Subheadline (smaller, gray #6B7280):
+      ES: "Sin filas. Sin apps. Sin cuenta de banco."
+      EN: "No lines. No apps. No bank account needed."
+
+  C. BILLER TICKER — full width, margin 24px below 
+     subheadline. Shows scope of what can be paid.
+
+  D. HOW TO USE — 3-step micro-instructions, horizontal 
+     on desktop, vertical on mobile. Keep it ultra brief:
+
+     Step 1: ✍️  "Escribe qué quieres pagar"
+                  "Type what you want to pay"
+     Step 2: 🤖  "Nuestra IA llena el formulario"
+                  "Our AI fills the form"  
+     Step 3: ✅  "Confirma y listo en 2 min"
+                  "Confirm and done in 2 min"
+
+     Style: small numbered steps, icon + one line text,
+     teal #1D9E75 accent color on numbers/icons
+
+  E. AUTOFILL INPUT — the AutofillInput component, 
+     centered, max-width 560px, prominent:
+     - Input box full width with rounded corners
+     - Teal border #1D9E75 on focus
+     - Large "Pagar ahora / Pay now" CTA button below 
+       in Teal #1D9E75, full width on mobile
+     - Below the button, tiny gray text:
+       ES: "🔒 Pago seguro · Sin registro para tu 
+            primer pago · $8 MXN por transacción"
+       EN: "🔒 Secure payment · No signup for first 
+            payment · $8 MXN per transaction"
+
+  F. CATEGORY GRID — existing biller grid below, with 
+     a divider label:
+     ES: "── O elige una categoría ──"
+     EN: "── Or choose a category ──"
+     Style: muted, clearly secondary to the hero above
+
+═══════════════════════════════════════════════════════
+4. LANGUAGE TOGGLE
+═══════════════════════════════════════════════════════
+
+In the nav bar, add a simple ES | EN toggle button.
+  - Clicking switches ALL text on the page
+  - Store preference in localStorage key 'pagoya_lang'
+  - Default to 'es'
+  - The AutofillInput placeholder also switches language
+  - Pass language prop down to AutofillInput so it sends 
+    the right hint to the API
+
+═══════════════════════════════════════════════════════
+5. MOBILE OPTIMIZATION
+═══════════════════════════════════════════════════════
+
+  - Hero headline: 28px on mobile, 40px on desktop
+  - Ticker pills: 12px font on mobile, 14px desktop
+  - 3-step instructions: stack vertically on mobile 
+    with left-aligned text
+  - Autofill input: full viewport width minus 32px 
+    padding on mobile
+  - CTA button: 56px height on mobile (thumb-friendly)
+  - Remove all horizontal scrolling on mobile
+
+═══════════════════════════════════════════════════════
+6. AFTER ALL CHANGES
+═══════════════════════════════════════════════════════
+
+git add -A && git commit -m "feat: hero redesign with 
+AI autofill + biller ticker" && git push origin main
+
+Report:
+- All files created or modified
+- Screenshot or description of the new layout order
+- Any props interface changes to AutofillInput
