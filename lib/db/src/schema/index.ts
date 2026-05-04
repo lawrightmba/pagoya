@@ -32,3 +32,4 @@ export * from "./belvo_dd_payment_requests";
 export * from "./taecel_product_cache";
 export * from "./daily_reconciliation";
 export * from "./profiles";
+export * from "./street_team";
