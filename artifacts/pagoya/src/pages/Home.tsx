@@ -249,6 +249,99 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
+            C2. RENT PAYMENTS VERTICAL CARD
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "0 20px 32px", background: "#0A2540" }}>
+          <div style={{ maxWidth: "560px", margin: "0 auto" }}>
+            <div style={{
+              background: "#0F2F50",
+              border: "1.5px solid rgba(216,90,48,0.35)",
+              borderLeft: "4px solid #D85A30",
+              borderRadius: "18px",
+              padding: "24px 22px",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.28), 0 0 0 1px rgba(216,90,48,0.08)",
+              position: "relative",
+              overflow: "hidden",
+            }}>
+              {/* Subtle coral glow in corner */}
+              <div style={{
+                position: "absolute", top: -40, right: -40,
+                width: 140, height: 140, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(216,90,48,0.18) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }} />
+
+              {/* Tag */}
+              <div style={{ marginBottom: "12px" }}>
+                <span style={{
+                  fontSize: "10px", fontWeight: 800,
+                  color: "#D85A30", letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  background: "rgba(216,90,48,0.15)",
+                  border: "1px solid rgba(216,90,48,0.30)",
+                  borderRadius: "999px",
+                  padding: "3px 10px",
+                }}>
+                  {es ? "También pagamos" : "Vertical"}
+                </span>
+              </div>
+
+              {/* Headline */}
+              <h2 style={{
+                fontSize: "22px", fontWeight: 900, color: "#FFFFFF",
+                lineHeight: 1.2, margin: "0 0 10px",
+                letterSpacing: "-0.01em",
+              }}>
+                {es ? "¿Pagas renta?" : "Pay Rent"}
+                <span style={{ color: "#D85A30" }}> 🏠</span>
+              </h2>
+
+              {/* Supporting copy */}
+              <div style={{ marginBottom: "20px", display: "flex", flexDirection: "column", gap: "7px" }}>
+                {(es ? [
+                  "💸 Cobros a inquilinos y depósitos a propietarios, automáticos.",
+                  "📅 Recordatorios por WhatsApp antes de cada vencimiento.",
+                  "🏦 Sin cuenta de banco — paga en efectivo en OXXO.",
+                ] : [
+                  "💸 Tenant collection and landlord disbursements, automated.",
+                  "📅 WhatsApp reminders before every due date.",
+                  "🏦 No bank account needed — pay cash at OXXO.",
+                ]).map((line) => (
+                  <p key={line} style={{
+                    fontSize: "13px", color: "rgba(255,255,255,0.72)",
+                    lineHeight: 1.55, margin: 0,
+                  }}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <a
+                href="https://pagoseguromx.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  background: "#D85A30", color: "white",
+                  fontSize: "14px", fontWeight: 700,
+                  padding: "12px 22px", borderRadius: "12px",
+                  textDecoration: "none",
+                  boxShadow: "0 4px 14px rgba(216,90,48,0.35)",
+                  transition: "filter 0.15s",
+                  width: "100%", justifyContent: "center",
+                  boxSizing: "border-box",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = "brightness(1.1)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = ""; }}
+              >
+                {es ? "Ir a PagoSeguro →" : "Go to PagoSeguro →"}
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
             D. 3-STEP HOW TO USE
             Background stays navy; text updated in StepRow (#374151 → #FFFFFF)
         ══════════════════════════════════════════════════════ */}
