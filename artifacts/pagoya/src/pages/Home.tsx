@@ -318,13 +318,14 @@ export default function Home() {
               {es ? "Pagar ahora →" : "Pay now →"}
             </button>
 
-            {/* Trust microcopy — BEFORE: "#9CA3AF"  AFTER: "#64748B" */}
+            {/* Trust microcopy — tightly coupled sub-label under the button */}
             <p style={{
-              marginTop: "10px",
-              fontSize: "12px",
+              marginTop: "5px",
+              marginBottom: 0,
+              fontSize: "11px",
               color: "#64748B",
               textAlign: "center",
-              lineHeight: 1.5,
+              lineHeight: 1.4,
             }}>
               {es
                 ? "🔒 Pago seguro · Sin registro para tu primer pago · $8 MXN por transacción"
@@ -333,7 +334,9 @@ export default function Home() {
 
             {/* ── RENT VERTICAL COMPACT CARD ── */}
             <div style={{
-              marginTop: "16px",
+              marginTop: "24px",
+              paddingTop: "20px",
+              borderTop: "1px solid rgba(255,255,255,0.07)",
               background: "#0F2F50",
               border: "1.5px solid rgba(216,90,48,0.35)",
               borderLeft: "4px solid #D85A30",
