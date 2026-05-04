@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVideoPlayer } from '@/lib/video';
+import { Scene0 } from './video_scenes/Scene0';
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
 import { Scene3 } from './video_scenes/Scene3';
@@ -8,6 +9,7 @@ import { Scene4 } from './video_scenes/Scene4';
 import { Scene5 } from './video_scenes/Scene5';
 
 export const SCENE_DURATIONS: Record<string, number> = {
+  intro: 7000,
   query: 7000,
   autofill: 8000,
   payment: 8000,
@@ -16,6 +18,7 @@ export const SCENE_DURATIONS: Record<string, number> = {
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
+  intro: Scene0,
   query: Scene1,
   autofill: Scene2,
   payment: Scene3,
@@ -97,11 +100,12 @@ export default function VideoTemplate({
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6 }}
           >
-            {sceneIndex === 0 && "¿Qué necesitas pagar hoy?"}
-            {sceneIndex === 1 && "Autocompletado con IA"}
-            {sceneIndex === 2 && "Múltiples métodos de pago"}
-            {sceneIndex === 3 && "Confirmación instantánea"}
-            {sceneIndex === 4 && "PagoYa. Paga en 2 minutos."}
+            {sceneIndex === 0 && "Paga cualquier recibo en México"}
+            {sceneIndex === 1 && "¿Qué necesitas pagar hoy?"}
+            {sceneIndex === 2 && "Autocompletado con IA"}
+            {sceneIndex === 3 && "Múltiples métodos de pago"}
+            {sceneIndex === 4 && "Confirmación instantánea"}
+            {sceneIndex === 5 && "PagoYa. Paga en 2 minutos."}
           </motion.h2>
         </AnimatePresence>
       </div>
