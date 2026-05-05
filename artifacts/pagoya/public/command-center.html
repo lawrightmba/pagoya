@@ -105,7 +105,9 @@
     max-width: 900px;
     margin: 0 auto;
     display: flex;
+    flex-wrap: wrap;
     gap: 2px;
+    overflow-x: hidden;
   }
 
   .tab {
@@ -554,6 +556,56 @@
   @media (max-width: 600px) {
     .two-col { grid-template-columns: 1fr; }
     .rhythm-grid { grid-template-columns: repeat(4, 1fr); }
+
+    /* ── Header ── */
+    .header { padding: 0 12px; }
+    .header-inner { height: auto; padding: 10px 0; flex-wrap: wrap; gap: 6px; }
+    .clock { font-size: 11px; }
+    .sync-btn { display: none; }          /* shown in mobile-sync-bar below */
+
+    /* ── Tabs ── */
+    .tabs-wrapper { padding: 0 8px; }
+    .tab { padding: 6px 10px; font-size: 11px; letter-spacing: 0.04em; }
+    .tab .tab-dot { width: 5px; height: 5px; margin-right: 4px; }
+
+    /* ── Mobile sync bar (shown only on mobile) ── */
+    .mobile-sync-bar { display: flex !important; }
+
+    /* ── Main container ── */
+    .main { max-width: 100%; padding: 16px 12px 60px; }
+
+    /* ── Stat grids ── */
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+
+    /* ── Founder hero ── */
+    .founder-hero { padding: 20px 16px; }
+    .founder-hero-title { font-size: 18px; }
+    .founder-hero-sub { max-width: 100%; font-size: 12px; }
+
+    /* ── Pipeline items ── */
+    .pipeline-item { flex-wrap: wrap; gap: 6px; }
+    .pipeline-stage { width: auto; }
+    .pipeline-date { margin-left: auto; }
+
+    /* ── Action items ── */
+    .action-item { flex-wrap: wrap; }
+    .action-tag { margin-top: 6px; }
+
+    /* ── Cards ── */
+    .card { padding: 14px 12px; }
+
+    /* ── Checklist panel overrides ── */
+    .ck-stats { grid-template-columns: repeat(2, 1fr) !important; }
+    .ck-body-grid { grid-template-columns: 1fr !important; }
+    .ck-phase-header { padding: 10px 12px; }
+    .ck-item-body { padding: 0 12px 12px 12px; }
+    .ck-item-header { padding: 10px 12px; }
+
+    /* ── Unlock banner ── */
+    .unlock-banner { padding: 12px; }
+
+    /* ── OPS rhythm schedule grid ── */
+    div[style*="grid-template-columns:50px 1fr"] { grid-template-columns: 44px 1fr !important; }
   }
 
   .unlock-banner {
@@ -692,7 +744,10 @@
 
 <div class="tabs-wrapper">
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('founder', this)">
+    <button class="tab active" onclick="switchTab('checklist', this)">
+      <span class="tab-dot" style="background:#1D9E75"></span>90-Day Checklist
+    </button>
+    <button class="tab" onclick="switchTab('founder', this)">
       <span class="tab-dot" style="background:var(--gold)"></span>Founder Mode
     </button>
     <button class="tab" onclick="switchTab('pagoya', this)">
@@ -707,16 +762,16 @@
     <button class="tab" onclick="switchTab('ops', this)">
       <span class="tab-dot" style="background:var(--text3)"></span>Ops
     </button>
-    <button class="tab" onclick="switchTab('checklist', this)">
-      <span class="tab-dot" style="background:#1D9E75"></span>90-Day Checklist
-    </button>
   </div>
+</div>
+<div class="mobile-sync-bar" style="display:none; background:var(--navy); padding:6px 12px 10px; justify-content:flex-end;">
+  <button class="sync-btn" style="display:inline-flex;" onclick="syncLatest()">⟳ Sync Latest</button>
 </div>
 
 <div class="main">
 
   <!-- FOUNDER MODE -->
-  <div class="tab-content active" id="tab-founder">
+  <div class="tab-content" id="tab-founder">
 
     <div class="founder-hero">
       <div class="founder-hero-label">⚡ Founder Mode — MVP Stage</div>
@@ -1327,7 +1382,7 @@
   </div>
 
   <!-- 90-DAY CHECKLIST -->
-  <div class="tab-content" id="tab-checklist">
+  <div class="tab-content active" id="tab-checklist">
 
     <style>
     .ck-wrap{padding:1rem 0 2rem;font-family:inherit}

@@ -1,0 +1,72 @@
+The command center at artifacts/pagoya/public/command-center.html 
+needs to be fully optimized for iPhone. Currently tabs overflow 
+horizontally requiring the user to scroll right to reach them. 
+Fix the entire layout for mobile-first use. Do all of the 
+following automatically in one go. Make every change, save every 
+file, restart the server, and confirm everything is working. Do 
+not stop and ask anything.
+
+1. TAB NAVIGATION — replace the horizontal scrolling tab row 
+with a mobile-friendly layout:
+   - Wrap all tab buttons in a flex container with 
+     flex-wrap: wrap so tabs flow to a second row instead of 
+     overflowing off screen
+   - Each tab button should be compact — font-size 12px, 
+     padding 6px 10px, so multiple fit per row on iPhone
+   - Move the 90-DAY CHECKLIST tab button to be the FIRST tab 
+     in the navigation row and make it the default active tab 
+     on page load (currently the first tab loads by default — 
+     change this so tab-checklist is the default active panel)
+   - All other tabs follow in their existing order after the 
+     checklist tab
+
+2. OVERALL LAYOUT — make the command center container 
+mobile-first:
+   - Set max-width: 100% on the main container
+   - Add padding: 0 12px so content doesn't touch screen edges
+   - Remove any fixed widths or min-widths on cards, panels, 
+     or stat grids that cause horizontal overflow
+   - All stat grids (the summary number cards at the top of 
+     panels) should use grid-template-columns: repeat(2, 1fr) 
+     on mobile instead of repeat(4, 1fr) — two cards per row 
+     instead of four
+
+3. CHECKLIST PANEL specifically:
+   - The ck-stats grid should be 2 columns on mobile: 
+     grid-template-columns: repeat(2, 1fr)
+   - The ck-body-grid inside each expanded item should stack 
+     vertically on mobile: grid-template-columns: 1fr
+   - Phase headers, item titles, and expanded content should 
+     all be 100% width with no horizontal overflow
+
+4. ALL OTHER PANELS — apply the same mobile fixes:
+   - Any grid inside any tab panel that currently uses 
+     repeat(4, 1fr) or repeat(3, 1fr) should switch to 
+     repeat(2, 1fr) on screens under 600px
+   - Any table that overflows horizontally should get 
+     overflow-x: auto on a wrapper div
+   - Any hardcoded pixel widths wider than 320px on inner 
+     elements should be changed to max-width: 100% or width: 
+     100%
+
+5. ADD RESPONSIVE CSS — add a single media query block near 
+the top of the style section:
+   @media (max-width: 600px) {
+     — all mobile overrides go here —
+   }
+   This keeps all mobile fixes in one place and does not 
+   affect desktop layout.
+
+6. SYNC BUTTON — confirm the Sync Latest button is visible 
+and functional on mobile. If it is currently in a position 
+that gets cut off on iPhone, move it to just below the tab 
+navigation row so it is always visible regardless of which 
+tab is active.
+
+7. After all changes are made:
+   - Commit with message "fix: mobile-first layout for 
+     command center, checklist as default tab"
+   - Push to GitHub
+   - Confirm push succeeded with commit hash
+   - Confirm command-center.html has no horizontal overflow 
+     triggers remaining
