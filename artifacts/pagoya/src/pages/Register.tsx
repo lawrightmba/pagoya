@@ -5,25 +5,38 @@ const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 const CITIES = ["Puerto Vallarta", "Guadalajara"];
 
+const COLONIAS = [
+  "Emiliano Zapata",
+  "Versalles",
+  "5 de Diciembre",
+  "Pitillal",
+  "Fluvial Vallarta",
+  "Las Juntas / La Mojonera",
+  "Zona Romántica",
+  "Marina Vallarta",
+  "Otra / Other",
+];
+
 type FormState = "idle" | "submitting" | "success" | "error";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [colonia, setColonia] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim() || !city) return;
+    if (!name.trim() || !phone.trim() || !city || !colonia) return;
     setFormState("submitting");
     setErrorMsg("");
     try {
       const res = await fetch(`${BASE_URL}/api/street-team/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), city }),
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), city, colonia }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -207,6 +220,51 @@ export default function Register() {
                     Selecciona tu ciudad
                   </option>
                   {CITIES.map((c) => (
+                    <option key={c} value={c} style={{ background: "#0A2540", color: "#FFFFFF" }}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <span style={{
+                  position: "absolute", right: "14px", top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(255,255,255,0.4)", pointerEvents: "none",
+                  fontSize: "12px",
+                }}>▾</span>
+              </div>
+            </div>
+
+            {/* Colonia */}
+            <div>
+              <label style={{
+                display: "block", fontSize: "12px", fontWeight: 600,
+                color: "rgba(255,255,255,0.5)", letterSpacing: "0.05em",
+                textTransform: "uppercase", marginBottom: "6px",
+              }}>
+                ¿En qué colonia vives? / Your neighborhood
+              </label>
+              <div style={{ position: "relative" }}>
+                <select
+                  value={colonia}
+                  onChange={(e) => setColonia(e.target.value)}
+                  required
+                  style={{
+                    ...inputStyle,
+                    color: colonia ? "#FFFFFF" : "rgba(255,255,255,0.35)",
+                    cursor: "pointer",
+                    paddingRight: "40px",
+                  }}
+                  onFocus={(e) => {
+                    (e.target as HTMLSelectElement).style.borderColor = "#1D9E75";
+                  }}
+                  onBlur={(e) => {
+                    (e.target as HTMLSelectElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  }}
+                >
+                  <option value="" disabled style={{ background: "#0A2540", color: "rgba(255,255,255,0.4)" }}>
+                    Selecciona tu colonia
+                  </option>
+                  {COLONIAS.map((c) => (
                     <option key={c} value={c} style={{ background: "#0A2540", color: "#FFFFFF" }}>
                       {c}
                     </option>
