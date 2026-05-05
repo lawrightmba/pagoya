@@ -1,1610 +1,489 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lloyd's Command Center</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PagoYa — 90 Day Plan</title>
 <style>
-  :root {
-    --navy: #0A2540;
-    --teal: #1D9E75;
-    --coral: #D85A30;
-    --purple: #7F77DD;
-    --gold: #F4C842;
-    --bg: #F7F8FA;
-    --surface: #FFFFFF;
-    --surface2: #F0F2F5;
-    --border: #E2E6ED;
-    --text: #0A2540;
-    --text2: #5A6A7E;
-    --text3: #8A9AB0;
-    --green: #1D9E75;
-    --red: #E05252;
-    --shadow: 0 2px 12px rgba(10,37,64,0.08);
-    --shadow-lg: 0 8px 32px rgba(10,37,64,0.12);
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
   }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
+  * { box-sizing: border-box; }
 
   .header {
-    background: var(--navy);
-    padding: 0 20px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 16px;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.2);
-  }
-
-  .header-inner {
-    max-width: 900px;
-    margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 56px;
+    max-width: 100%;
   }
-
-  .logo-text {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: #fff;
-    text-transform: uppercase;
-  }
-
-  .logo-sub {
-    font-size: 10px;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 0.08em;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .clock {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: rgba(255,255,255,0.6);
-    letter-spacing: 0.05em;
-  }
-
+  .header-title { font-size: 16px; font-weight: 700; color: #1a1a1a; }
   .sync-btn {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.8);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .sync-btn:hover { background: rgba(255,255,255,0.18); }
-
-  .tabs-wrapper {
-    background: var(--navy);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 0 20px;
-  }
-
-  .tabs {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    overflow-x: hidden;
-  }
-
-  .tab {
-    padding: 10px 16px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.4);
+    background: #1D9E75;
+    color: #fff;
     border: none;
-    background: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 14px;
+    height: 36px;
+    min-width: 44px;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
     white-space: nowrap;
   }
+  .sync-btn:active { opacity: 0.8; }
 
-  .tab:hover { color: rgba(255,255,255,0.75); }
-
-  .tab.active {
-    color: var(--gold);
-    border-bottom-color: var(--gold);
-  }
-
-  .tab .tab-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-    margin-top: -2px;
-  }
-
-  .main {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 24px 20px 60px;
-  }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 12px;
-    margin-top: 28px;
-  }
-  .section-label:first-child { margin-top: 0; }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 12px;
-    box-shadow: var(--shadow);
-  }
-
-  .card-title {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-
-  .card-sub {
-    font-size: 11px;
-    color: var(--text3);
-    letter-spacing: 0.03em;
-    margin-bottom: 16px;
-  }
-
-  .stat-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .stat-box {
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 12px;
-    text-align: center;
-  }
-
-  .stat-val {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--navy);
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-
-  .stat-val.teal { color: var(--teal); }
-  .stat-val.coral { color: var(--coral); }
-  .stat-val.purple { color: var(--purple); }
-  .stat-val.gold { color: var(--gold); }
-
-  .stat-lbl {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text3);
-  }
-
-  .progress-wrap { margin-bottom: 16px; }
-
-  .progress-header {
+  .progress-wrap {
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 16px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    gap: 12px;
+    max-width: 100%;
   }
-
-  .progress-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text2);
-  }
-
-  .progress-pct {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--teal);
-  }
-
   .progress-bar {
-    height: 6px;
-    background: var(--surface2);
+    flex: 1;
+    height: 8px;
+    background: #e0e0e0;
     border-radius: 99px;
     overflow: hidden;
   }
-
   .progress-fill {
     height: 100%;
+    background: #1D9E75;
     border-radius: 99px;
-    background: linear-gradient(90deg, var(--teal), #2DC78F);
-    transition: width 1s ease;
+    transition: width 0.4s ease;
+    width: 0%;
   }
-
-  .progress-fill.coral { background: linear-gradient(90deg, var(--coral), #F07A50); }
-  .progress-fill.purple { background: linear-gradient(90deg, var(--purple), #A59DFF); }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 99px;
-  }
-
-  .badge.live { background: #E6F7F1; color: var(--teal); }
-  .badge.mvp { background: #EEF0FF; color: var(--purple); }
-  .badge.building { background: #FFF4ED; color: var(--coral); }
-  .badge.needed { background: #FFF8E6; color: #C49A00; }
-
-  .badge::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .badge.live::before { animation: pulse 2s infinite; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-
-  .action-list { list-style: none; }
-
-  .action-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .action-item:last-child { border-bottom: none; }
-
-  .action-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .action-icon.urgent { background: #FFF0ED; }
-  .action-icon.growth { background: #E6F7F1; }
-  .action-icon.capital { background: #EEF0FF; }
-  .action-icon.build { background: #FFF8E6; }
-
-  .action-text { flex: 1; }
-
-  .action-title {
+  .progress-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--text);
-    margin-bottom: 2px;
-    line-height: 1.4;
-  }
-
-  .action-desc {
-    font-size: 11px;
-    color: var(--text2);
-    line-height: 1.5;
-  }
-
-  .action-tag {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    padding: 2px 7px;
-    border-radius: 4px;
+    color: #1D9E75;
     white-space: nowrap;
-    align-self: flex-start;
-    margin-top: 3px;
   }
 
-  .tag-now { background: #FFF0ED; color: var(--coral); }
-  .tag-week { background: #E6F7F1; color: var(--teal); }
-  .tag-month { background: #EEF0FF; color: var(--purple); }
-  .tag-plan { background: var(--surface2); color: var(--text2); }
-
-  .checklist { list-style: none; }
-
-  .check-item {
+  .phase-section { margin: 16px 0 0; }
+  .phase-header {
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    justify-content: space-between;
   }
+  .phase-title { font-size: 14px; font-weight: 700; }
+  .phase-count { font-size: 12px; font-weight: 500; opacity: 0.7; }
+  .ph1 { background: #EEEDFE; }
+  .ph1 .phase-title, .ph1 .phase-count { color: #3C3489; }
+  .ph2 { background: #E1F5EE; }
+  .ph2 .phase-title, .ph2 .phase-count { color: #085041; }
+  .ph3 { background: #FEF3DC; }
+  .ph3 .phase-title, .ph3 .phase-count { color: #6B3D00; }
 
-  .check-item:last-child { border-bottom: none; }
-
-  .check-box {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    border: 2px solid var(--border);
-    flex-shrink: 0;
+  .items-list {
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .item {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e8e8e8;
+    max-width: 100%;
+  }
+  .item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    min-height: 44px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    max-width: 100%;
+  }
+  .item-row:active { background: #f9f9f9; }
+  .item-check {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 44px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     transition: all 0.15s;
-  }
-
-  .check-box.done {
-    background: var(--teal);
-    border-color: var(--teal);
-    color: white;
-    font-size: 10px;
-  }
-
-  .check-box.partial {
-    background: var(--gold);
-    border-color: var(--gold);
-  }
-
-  .check-label { flex: 1; color: var(--text); }
-  .check-label.done { color: var(--text3); text-decoration: line-through; }
-
-  .pipeline-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .pipeline-item:last-child { border-bottom: none; }
-
-  .pipeline-stage {
-    width: 70px;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-align: center;
-    padding: 3px 6px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-
-  .stage-target { background: var(--surface2); color: var(--text3); }
-  .stage-research { background: #FFF8E6; color: #C49A00; }
-  .stage-applied { background: #EEF0FF; color: var(--purple); }
-  .stage-active { background: #E6F7F1; color: var(--teal); }
-  .stage-won { background: #0A2540; color: #fff; }
-
-  .pipeline-name {
-    flex: 1;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .pipeline-sub {
-    font-size: 11px;
-    color: var(--text3);
-  }
-
-  .pipeline-date {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--text3);
-  }
-
-  .win-item {
-    display: flex;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    align-items: flex-start;
-  }
-
-  .win-item:last-child { border-bottom: none; }
-
-  .win-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--teal);
-    flex-shrink: 0;
-    margin-top: 5px;
-  }
-
-  .win-dot.pending { background: var(--gold); }
-  .win-dot.blocked { background: var(--coral); }
-
-  .win-text {
-    font-size: 12px;
-    color: var(--text2);
-    line-height: 1.5;
-  }
-
-  .win-text strong { color: var(--text); font-weight: 600; }
-
-  .rhythm-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-  }
-
-  .rhythm-day {
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 10px 6px;
-    text-align: center;
-  }
-
-  .rhythm-day.today {
-    background: var(--navy);
-    color: white;
-  }
-
-  .rhythm-dow {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 4px;
-  }
-
-  .rhythm-day.today .rhythm-dow { color: rgba(255,255,255,0.5); }
-
-  .rhythm-icon {
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-
-  .rhythm-focus {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--text2);
-    line-height: 1.3;
-  }
-
-  .rhythm-day.today .rhythm-focus { color: rgba(255,255,255,0.8); }
-
-  .auto-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .auto-item:last-child { border-bottom: none; }
-
-  .auto-status {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .auto-status.live { background: var(--teal); animation: pulse 2s infinite; }
-  .auto-status.built { background: var(--purple); }
-  .auto-status.needed { background: var(--gold); }
-  .auto-status.future { background: var(--border); }
-
-  .auto-name {
-    flex: 1;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .auto-desc {
-    font-size: 11px;
-    color: var(--text3);
-  }
-
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  @media (max-width: 600px) {
-    .two-col { grid-template-columns: 1fr; }
-    .rhythm-grid { grid-template-columns: repeat(4, 1fr); }
-
-    /* ── Header ── */
-    .header { padding: 0 12px; }
-    .header-inner { height: auto; padding: 10px 0; flex-wrap: wrap; gap: 6px; }
-    .clock { font-size: 11px; }
-    .sync-btn { display: none; }          /* shown in mobile-sync-bar below */
-
-    /* ── Tabs ── */
-    .tabs-wrapper { padding: 0 8px; }
-    .tab { padding: 6px 10px; font-size: 11px; letter-spacing: 0.04em; }
-    .tab .tab-dot { width: 5px; height: 5px; margin-right: 4px; }
-
-    /* ── Mobile sync bar (shown only on mobile) ── */
-    .mobile-sync-bar { display: flex !important; }
-
-    /* ── Main container ── */
-    .main { max-width: 100%; padding: 16px 12px 60px; }
-
-    /* ── Stat grids ── */
-    .stat-row { grid-template-columns: repeat(2, 1fr); }
-
-    /* ── Founder hero ── */
-    .founder-hero { padding: 20px 16px; }
-    .founder-hero-title { font-size: 18px; }
-    .founder-hero-sub { max-width: 100%; font-size: 12px; }
-
-    /* ── Pipeline items ── */
-    .pipeline-item { flex-wrap: wrap; gap: 6px; }
-    .pipeline-stage { width: auto; }
-    .pipeline-date { margin-left: auto; }
-
-    /* ── Action items ── */
-    .action-item { flex-wrap: wrap; }
-    .action-tag { margin-top: 6px; }
-
-    /* ── Cards ── */
-    .card { padding: 14px 12px; }
-
-    /* ── Checklist panel overrides ── */
-    .ck-stats { grid-template-columns: repeat(2, 1fr) !important; }
-    .ck-body-grid { grid-template-columns: 1fr !important; }
-    .ck-phase-header { padding: 10px 12px; }
-    .ck-item-body { padding: 0 12px 12px 12px; }
-    .ck-item-header { padding: 10px 12px; }
-
-    /* ── Unlock banner ── */
-    .unlock-banner { padding: 12px; }
-
-    /* ── OPS rhythm schedule grid ── */
-    div[style*="grid-template-columns:50px 1fr"] { grid-template-columns: 44px 1fr !important; }
-  }
-
-  .unlock-banner {
-    background: linear-gradient(135deg, var(--navy), #1A3A5C);
-    border-radius: 10px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 4px;
-  }
-
-  .unlock-icon { font-size: 16px; }
-
-  .unlock-text {
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-    line-height: 1.4;
-  }
-
-  .unlock-text strong { color: white; }
-
-  .founder-hero {
-    background: linear-gradient(135deg, var(--navy) 0%, #1A3558 60%, #0D3050 100%);
-    border-radius: 16px;
-    padding: 28px 24px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .founder-hero::before {
-    content: '';
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(244,200,66,0.12), transparent 70%);
-    pointer-events: none;
-  }
-
-  .founder-hero-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 8px;
-  }
-
-  .founder-hero-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: white;
-    line-height: 1.3;
-    margin-bottom: 8px;
-  }
-
-  .founder-hero-sub {
-    font-size: 13px;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.5;
-    max-width: 500px;
-  }
-
-  .phase-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  .phase-chip {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 99px;
-    padding: 5px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.75);
-  }
-
-  .phase-chip.active {
-    background: var(--gold);
-    border-color: var(--gold);
-    color: var(--navy);
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 16px 0;
-  }
-
-  .copy-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text2);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.04em;
+    background: #fff;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    align-self: flex-start;
   }
-  .copy-btn:hover { background: var(--border); }
+  .item-check.checked { background: #1D9E75; border-color: #1D9E75; }
+  .item-check.checked::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 10px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg) translate(-1px,-1px);
+  }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { font-size: 14px; font-weight: 500; line-height: 1.4; color: #1a1a1a; word-wrap: break-word; }
+  .item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; }
+  .item-day { font-size: 11px; color: #999; font-weight: 500; }
+  .badge-critical {
+    font-size: 10px; font-weight: 700; color: #B91C1C;
+    background: #FEE2E2; padding: 2px 6px; border-radius: 4px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .item.done .item-title { text-decoration: line-through; color: #aaa; }
+  .item.done .item-row { opacity: 0.55; }
+  .item-chevron { font-size: 11px; color: #ccc; margin-top: 4px; transition: transform 0.2s; flex-shrink: 0; }
+  .item.open .item-chevron { transform: rotate(180deg); color: #999; }
 
-  .footer {
-    text-align: center;
-    padding: 20px;
-    font-size: 10px;
-    color: var(--text3);
-    letter-spacing: 0.08em;
+  .item-detail {
+    display: none;
+    padding: 0 14px 16px 48px;
+    border-top: 1px solid #f0f0f0;
+    max-width: 100%;
   }
+  .item.open .item-detail { display: block; }
+  .detail-section { margin-top: 12px; }
+  .detail-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #aaa; margin-bottom: 4px;
+  }
+  .detail-text { font-size: 13px; color: #444; line-height: 1.6; }
+  .bottom-pad { height: 48px; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-inner">
-    <div class="logo">
-      <div>
-        <div class="logo-text">Lloyd's CMD</div>
-        <div class="logo-sub">PAGOYA · PAGOSEGURO · MAHALI</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="clock" id="clock">--:--:--</div>
-      <button class="sync-btn" onclick="syncLatest()">⟳ Sync</button>
-    </div>
-  </div>
+  <div class="header-title">PagoYa &mdash; 90 Day Plan</div>
+  <button class="sync-btn" onclick="syncNow()">&#8635; Sync</button>
 </div>
 
-<div class="tabs-wrapper">
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('checklist', this)">
-      <span class="tab-dot" style="background:#1D9E75"></span>90-Day Checklist
-    </button>
-    <button class="tab" onclick="switchTab('founder', this)">
-      <span class="tab-dot" style="background:var(--gold)"></span>Founder Mode
-    </button>
-    <button class="tab" onclick="switchTab('pagoya', this)">
-      <span class="tab-dot" style="background:var(--teal)"></span>PagoYa
-    </button>
-    <button class="tab" onclick="switchTab('pagoseguro', this)">
-      <span class="tab-dot" style="background:var(--coral)"></span>PagoSeguro
-    </button>
-    <button class="tab" onclick="switchTab('mahali', this)">
-      <span class="tab-dot" style="background:var(--purple)"></span>Mahali
-    </button>
-    <button class="tab" onclick="switchTab('ops', this)">
-      <span class="tab-dot" style="background:var(--text3)"></span>Ops
-    </button>
-  </div>
-</div>
-<div class="mobile-sync-bar" style="display:none; background:var(--navy); padding:6px 12px 10px; justify-content:flex-end;">
-  <button class="sync-btn" style="display:inline-flex;" onclick="syncLatest()">⟳ Sync Latest</button>
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+  <div class="progress-label" id="prog-label">0 / 24</div>
 </div>
 
-<div class="main">
-
-  <!-- FOUNDER MODE -->
-  <div class="tab-content" id="tab-founder">
-
-    <div class="founder-hero">
-      <div class="founder-hero-label">⚡ Founder Mode — MVP Stage</div>
-      <div class="founder-hero-title">You've built the product.<br>Now build the company.</div>
-      <div class="founder-hero-sub">Three MVPs live. The job has changed. Distribution, capital, and storytelling are now the product. Every hour should move the needle on traction or funding.</div>
-      <div class="phase-chips">
-        <div class="phase-chip">✓ Ideation</div>
-        <div class="phase-chip">✓ Build</div>
-        <div class="phase-chip active">→ Traction</div>
-        <div class="phase-chip">Growth</div>
-        <div class="phase-chip">Scale</div>
-      </div>
-    </div>
-
-    <div class="section-label">🔥 This Week's Founder Priorities</div>
-    <div class="card">
-      <ul class="action-list">
-        <li class="action-item">
-          <div class="action-icon urgent">🎯</div>
-          <div class="action-text">
-            <div class="action-title">Define your ONE metric per platform</div>
-            <div class="action-desc">PagoYa: first paying user. PagoSeguro: first enrolled broker. Mahali: first live TZS payment. Everything else is noise until these fire.</div>
-          </div>
-          <span class="action-tag tag-now">NOW</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon capital">💰</div>
-          <div class="action-text">
-            <div class="action-title">Build your investor one-pager</div>
-            <div class="action-desc">One page. Problem, solution, traction, ask. PagoYa + PagoSeguro as one fintech narrative. Share with 3 angels this week for feedback before building the full deck.</div>
-          </div>
-          <span class="action-tag tag-now">NOW</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon growth">📞</div>
-          <div class="action-text">
-            <div class="action-title">SIPREL Monday call — treat it like a funding call</div>
-            <div class="action-desc">Prepare a clear ask: production credentials by end of week. Have backup (STP) ready. First live bill payment unlocks the entire PagoYa revenue story.</div>
-          </div>
-          <span class="action-tag tag-now">MON</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon build">📧</div>
-          <div class="action-text">
-            <div class="action-title">Replace Touch 3 & 4 Loom placeholders</div>
-            <div class="action-desc">Record 90-second demo videos for broker sequence. Touch 3 sends Apr 27, Touch 4 May 11. Loom + personal face = 3× response rate vs text-only.</div>
-          </div>
-          <span class="action-tag tag-week">APR 25</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon capital">🏆</div>
-          <div class="action-text">
-            <div class="action-title">Apply to 2 pitch competitions</div>
-            <div class="action-desc">RICE Business Plan Competition, 500 Global Batch 30, or MassChallenge Texas. Non-dilutive capital + investor visibility. Deadline research: this week.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="section-label">🏗 Investor Readiness Checklist</div>
-    <div class="card">
-      <ul class="checklist">
-        <li class="check-item">
-          <div class="check-box done" onclick="toggleCheck(this)">✓</div>
-          <span class="check-label done">Working MVP — all 3 platforms</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box done" onclick="toggleCheck(this)">✓</div>
-          <span class="check-label done">PagoYa investor teaser v3 produced</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box partial" onclick="toggleCheck(this)"></div>
-          <span class="check-label">First paying user / live transaction (PagoYa)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">Investor one-pager (1 page, shareable PDF)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">Full pitch deck (10–12 slides, Sequoia format)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">3-minute demo video (screen + face cam)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">Financial model (3-year, unit economics)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">Data room (Google Drive, organized)</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">10 warm angel intros identified</span>
-        </li>
-        <li class="check-item">
-          <div class="check-box" onclick="toggleCheck(this)"></div>
-          <span class="check-label">Applied to 1 accelerator (500 Global / YC / MassChallenge)</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="section-label">🚀 Capital Formation Pipeline</div>
-    <div class="card">
-      <div class="card-sub">Pitch competitions · Accelerators · Angels</div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-research">Research</div>
-        <div>
-          <div class="pipeline-name">500 Global Batch 30</div>
-          <div class="pipeline-sub">$150K for 5% · Strong LatAm track record · PagoYa fits perfectly</div>
-        </div>
-        <div class="pipeline-date">May '26</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-research">Research</div>
-        <div>
-          <div class="pipeline-name">RICE Business Plan Competition</div>
-          <div class="pipeline-sub">Non-dilutive · MBA network · Houston connection</div>
-        </div>
-        <div class="pipeline-date">Apr '26</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-target">Target</div>
-        <div>
-          <div class="pipeline-name">MassChallenge Texas</div>
-          <div class="pipeline-sub">Zero equity · $500K+ in prizes · Austin cohort</div>
-        </div>
-        <div class="pipeline-date">Jun '26</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-target">Target</div>
-        <div>
-          <div class="pipeline-name">Ventures Africa / GSMA Africa Fund</div>
-          <div class="pipeline-sub">Mahali / Sub-Saharan PropTech · TZ-specific track</div>
-        </div>
-        <div class="pipeline-date">Q3 '26</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-target">Target</div>
-        <div>
-          <div class="pipeline-name">Angel Round — PagoYa Series Pre-Seed</div>
-          <div class="pipeline-sub">$250K–$500K · Houston / LatAm fintech angels · SAFE note</div>
-        </div>
-        <div class="pipeline-date">Q3 '26</div>
-      </div>
-    </div>
-
-    <div class="section-label">📊 Per-Platform Traction Targets</div>
-    <div class="two-col">
-      <div class="card">
-        <div class="card-title" style="color:var(--teal)">PagoYa</div>
-        <div class="card-sub">Bill Pay · Mexico</div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>30-day:</strong> First 10 paying users, pagoyamx.com public, SIPREL live</div></div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>60-day:</strong> 100 users, $5K MXN revenue, WhatsApp referral loop live</div></div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>90-day:</strong> 500 users, partnership with 1 colonia, DiMo P2P beta</div></div>
-      </div>
-      <div class="card">
-        <div class="card-title" style="color:var(--coral)">PagoSeguro</div>
-        <div class="card-sub">Rent Collection · PV</div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>30-day:</strong> 3 brokers enrolled, first digital rent collected</div></div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>60-day:</strong> 10 brokers, 25 active leases, first commission paid</div></div>
-        <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>90-day:</strong> 50 leases, VECORE partnership signed, rep network 10+</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="color:var(--purple)">Mahali</div>
-      <div class="card-sub">PropTech · Tanzania</div>
-      <div class="two-col">
-        <div>
-          <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>30-day:</strong> Selcom live, first TZS payment processed</div></div>
-          <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>60-day:</strong> 50 listings, 5 active tenants, diaspora landing page live</div></div>
-        </div>
-        <div>
-          <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>90-day:</strong> 200 listings, TanQR live, William team fully activated</div></div>
-          <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>6-month:</strong> Expand to 2 more Tanzania cities, Nairobi scoping</div></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- PAGOYA -->
-  <div class="tab-content" id="tab-pagoya">
-
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <div>
-        <div style="font-size:20px; font-weight:700; color:var(--navy)">PagoYa</div>
-        <div style="font-size:12px; color:var(--text3); letter-spacing:0.04em">BILL PAY · OXXO + STRIPE + STP · MEXICO</div>
-      </div>
-      <span class="badge mvp">MVP</span>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-box">
-        <div class="stat-val teal">35</div>
-        <div class="stat-lbl">Services Live</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="pagoya-payments">—</div>
-        <div class="stat-lbl">Payments</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" id="pagoya-revenue">—</div>
-        <div class="stat-lbl">MXN Revenue</div>
-      </div>
-    </div>
-
-    <div class="progress-wrap">
-      <div class="progress-header">
-        <span class="progress-label">Build Progress</span>
-        <span class="progress-pct">90%</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
-    </div>
-
-    <div class="section-label">🔥 Founder Actions — PagoYa</div>
-    <div class="card">
-      <ul class="action-list">
-        <li class="action-item">
-          <div class="action-icon urgent">📞</div>
-          <div class="action-text">
-            <div class="action-title">SIPREL production call — Monday May 4</div>
-            <div class="action-desc">Get live credentials. First real bill payment fires the entire revenue story. Come with STP as backup. This is the unlock.</div>
-          </div>
-          <span class="action-tag tag-now">MON</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon growth">🚀</div>
-          <div class="action-text">
-            <div class="action-title">Identify your first 10 users</div>
-            <div class="action-desc">Not sign-ups — paying users. Target: people in PV/Nayarit who pay CFE or Telmex monthly. Friends, family, street team. Get 10 before any paid marketing.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon capital">📱</div>
-          <div class="action-text">
-            <div class="action-title">Record PagoYa 90-second demo video</div>
-            <div class="action-desc">NLP input → OXXO payment in 2 minutes. Show the magic. Upload to Loom. This becomes your pitch deck slide 3, broker outreach embed, and investor teaser proof.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon build">🌐</div>
-          <div class="action-text">
-            <div class="action-title">pagoyamx.com public launch</div>
-            <div class="action-desc">SSL auto-issuing via Replit. Once confirmed live, post on LinkedIn + share with 3 journalists covering Mexican fintech. ProductHunt launch next month.</div>
-          </div>
-          <span class="action-tag tag-week">APR 27</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="section-label">✅ Sprint Wins — May 1, 2026</div>
-    <div class="card">
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>OXXO cash-in live</strong> — Digital Femsa webhook verified, RSA key signature confirmed</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>AI/NLP autofill live</strong> — Claude-powered POST /api/autofill, natural language bill pay</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Loyalty system live</strong> — Bronce/Plata/Oro tiers, streak bonuses, WhatsApp notify</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>$15 MXN platform fee live</strong> — all 35 services, stored in bill_payments table</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Revenue dashboard live</strong> — /pagoya-admin.html, auto-refresh 30s</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>pagoyamx.com domain verified</strong> — SSL auto-issuing, expected live 24–48h</div></div>
-      <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>SIPREL production credentials</strong> — call scheduled Mon May 4</div></div>
-      <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>SSL certificate</strong> — auto-issuing via Replit, expected 24–48h from domain propagation</div></div>
-    </div>
-
-    <div class="unlock-banner">
-      <div class="unlock-icon">🔓</div>
-      <div class="unlock-text"><strong>Next unlock:</strong> SIPREL Monday call → first live CFE payment → pagoyamx.com public launch → first 10 paying users</div>
-    </div>
-
-  </div>
-
-  <!-- PAGOSEGURO -->
-  <div class="tab-content" id="tab-pagoseguro">
-
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <div>
-        <div style="font-size:20px; font-weight:700; color:var(--navy)">PagoSeguro</div>
-        <div style="font-size:12px; color:var(--text3); letter-spacing:0.04em">RENT COLLECTION · PUERTO VALLARTA · RIVIERA NAYARIT</div>
-      </div>
-      <span class="badge live">Live</span>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-box">
-        <div class="stat-val coral">56</div>
-        <div class="stat-lbl">HubSpot Contacts</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val coral">14.7%</div>
-        <div class="stat-lbl">Open Rate T1</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val coral">82%</div>
-        <div class="stat-lbl">Build Progress</div>
-      </div>
-    </div>
-
-    <div class="progress-wrap">
-      <div class="progress-header">
-        <span class="progress-label">Build Progress</span>
-        <span class="progress-pct">82%</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill coral" style="width:82%"></div></div>
-    </div>
-
-    <div class="section-label">🔥 Founder Actions — PagoSeguro</div>
-    <div class="card">
-      <ul class="action-list">
-        <li class="action-item">
-          <div class="action-icon urgent">🎥</div>
-          <div class="action-text">
-            <div class="action-title">Record Loom for Touch 3 & 4</div>
-            <div class="action-desc">Touch 3 sends Apr 27, Touch 4 May 11. 90 seconds. Show the broker dashboard, auto-CLABE, WhatsApp receipt. Personal face + screen = higher trust with PV brokers.</div>
-          </div>
-          <span class="action-tag tag-now">APR 25</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon growth">🤝</div>
-          <div class="action-text">
-            <div class="action-title">Personal outreach to warm opens (Touch 1)</div>
-            <div class="action-desc">14.7% open rate = ~8 warm brokers. Check Brevo for 2+ opens. Send personal WhatsApp voice note using script in tracker_v4.xlsx Tab 3. Convert 1 to a call.</div>
-          </div>
-          <span class="action-tag tag-now">NOW</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon capital">🏢</div>
-          <div class="action-text">
-            <div class="action-title">Priority call: VECORE, Luna Vista, Enlace</div>
-            <div class="action-desc">These are your anchor broker targets. One signed agency partnership legitimizes the entire PV market. Prepare a 10-min demo, not a pitch. Show them it works.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon build">🏘</div>
-          <div class="action-text">
-            <div class="action-title">Scope commercial landlord segment</div>
-            <div class="action-desc">Flagged as future build. If a commercial landlord expresses interest in Touch 2–4 responses, capture it. This is a $5K+ MXN/month average lease vs $800 residential.</div>
-          </div>
-          <span class="action-tag tag-month">MAY</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="section-label">📬 Broker Email Sequence Status</div>
-    <div class="card">
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-active">Sent</div>
-        <div>
-          <div class="pipeline-name">Touch 1 — Introduction</div>
-          <div class="pipeline-sub">14.71% open rate · Check Brevo for 2+ opens = warm lead</div>
-        </div>
-        <div class="pipeline-date">Apr 13</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-active">Sent</div>
-        <div>
-          <div class="pipeline-name">Touch 2 — Social Proof</div>
-          <div class="pipeline-sub">Scheduled → monitor for replies</div>
-        </div>
-        <div class="pipeline-date">Apr 20</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-research">Pending</div>
-        <div>
-          <div class="pipeline-name">Touch 3 — Demo Video</div>
-          <div class="pipeline-sub">⚠️ Swap Loom placeholder before send</div>
-        </div>
-        <div class="pipeline-date">Apr 27</div>
-      </div>
-      <div class="pipeline-item">
-        <div class="pipeline-stage stage-target">Scheduled</div>
-        <div>
-          <div class="pipeline-name">Touch 4 — Final CTA</div>
-          <div class="pipeline-sub">⚠️ Swap Loom placeholder before send · 244/300 Brevo emails remaining</div>
-        </div>
-        <div class="pipeline-date">May 11</div>
-      </div>
-    </div>
-
-    <div class="section-label">⚙️ Street Team Status</div>
-    <div class="card">
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Full system live</strong> — /rep-signup, /rep-login, /rep-dashboard, /admin</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Auto-commissions</strong> — 150 MXN signup / 500 MXN first payment / 300 MXN referral</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Identity verification</strong> — CURP, INE/passport, phone OTP, admin approval</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Immutable audit log</strong> — Postgres-level trigger, 21/21 tests passing</div></div>
-      <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>Check pending payouts</strong> — any reps past 7-day hold? Admin → bulk payout tab</div></div>
-    </div>
-
-    <div class="unlock-banner">
-      <div class="unlock-icon">🔓</div>
-      <div class="unlock-text"><strong>Next unlock:</strong> Record Loom videos → swap Touch 3/4 placeholders → 1 broker demo call → first enrolled landlord → first digital rent collected</div>
-    </div>
-
-  </div>
-
-  <!-- MAHALI -->
-  <div class="tab-content" id="tab-mahali">
-
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <div>
-        <div style="font-size:20px; font-weight:700; color:var(--navy)">Mahali</div>
-        <div style="font-size:12px; color:var(--text3); letter-spacing:0.04em">AI MLS · PROPTECH · DAR ES SALAAM, TANZANIA</div>
-      </div>
-      <span class="badge mvp">MVP Ready</span>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat-box">
-        <div class="stat-val purple">7</div>
-        <div class="stat-lbl">User Roles</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val purple">5</div>
-        <div class="stat-lbl">Demo Accounts</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val purple">85%</div>
-        <div class="stat-lbl">Build Progress</div>
-      </div>
-    </div>
-
-    <div class="progress-wrap">
-      <div class="progress-header">
-        <span class="progress-label">Build Progress</span>
-        <span class="progress-pct">85%</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill purple" style="width:85%"></div></div>
-    </div>
-
-    <div class="section-label">🔥 Founder Actions — Mahali</div>
-    <div class="card">
-      <ul class="action-list">
-        <li class="action-item">
-          <div class="action-icon urgent">💳</div>
-          <div class="action-text">
-            <div class="action-title">Close Selcom onboarding this week</div>
-            <div class="action-desc">Selcom live credentials = first real TZS payment. This is the single unlock for Mahali going from MVP to live. Escalate if no response — try direct LinkedIn to Selcom Tanzania team.</div>
-          </div>
-          <span class="action-tag tag-now">URGENT</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon growth">🌍</div>
-          <div class="action-text">
-            <div class="action-title">Build Tanzania diaspora landing page</div>
-            <div class="action-desc">UK/UAE/USA diaspora are high-LTV. A single page targeting "invest in TZ property from abroad" + WhatsApp CTA is a Thiel wedge move. One channel, completely dominated first.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon capital">📣</div>
-          <div class="action-text">
-            <div class="action-title">Activate William for 5 real listings</div>
-            <div class="action-desc">Empty marketplace = no traction story. Work with local team to get 5 real Dar es Salaam listings live before any investor pitch. Photos, TZS pricing, verified landlord.</div>
-          </div>
-          <span class="action-tag tag-week">THIS WEEK</span>
-        </li>
-        <li class="action-item">
-          <div class="action-icon build">🏦</div>
-          <div class="action-text">
-            <div class="action-title">Research Africa-focused PropTech investors</div>
-            <div class="action-desc">Ventures Africa, GSMA Innovation Fund, Founders Factory Africa, Partech Africa. Mahali's story (7-role marketplace, bilingual, Selcom-native) is strong for Sub-Saharan vertical funds.</div>
-          </div>
-          <span class="action-tag tag-month">MAY</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="section-label">✅ Review 2 Sprint Wins</div>
-    <div class="card">
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>All 27 Tanzania regions</strong> — full region coverage in location dropdown</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Zanzibar added</strong> — Unguja + Pemba in Popular Neighborhoods</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Agent Add Listing fixed</strong> — Quick Actions + My Listings both confirmed working</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Manager Tenants + Invoicing tabs live</strong> — TZS + Selcom integration ready</div></div>
-      <div class="win-item"><div class="win-dot"></div><div class="win-text"><strong>Swahili/English toggle live</strong> — Phase 1 complete, Phase 2 = full content translation</div></div>
-      <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>Selcom live credentials</strong> — awaiting onboarding response</div></div>
-      <div class="win-item"><div class="win-dot pending"></div><div class="win-text"><strong>TanQR QR payments</strong> — awaiting API access and integration docs</div></div>
-    </div>
-
-    <div class="unlock-banner">
-      <div class="unlock-icon">🔓</div>
-      <div class="unlock-text"><strong>Next unlock:</strong> Selcom live credentials → first real TZS payment → 5 real listings live → diaspora landing page → TanQR QR payments</div>
-    </div>
-
-  </div>
-
-  <!-- OPS -->
-  <div class="tab-content" id="tab-ops">
-
-    <div class="section-label">⏱ Daily Operating Rhythm</div>
-    <div class="card">
-      <div class="rhythm-grid">
-        <div class="rhythm-day">
-          <div class="rhythm-dow">MON</div>
-          <div class="rhythm-icon">🔥</div>
-          <div class="rhythm-focus">All 3 Review</div>
-        </div>
-        <div class="rhythm-day">
-          <div class="rhythm-dow">TUE</div>
-          <div class="rhythm-icon">₱</div>
-          <div class="rhythm-focus">Pago Growth</div>
-        </div>
-        <div class="rhythm-day">
-          <div class="rhythm-dow">WED</div>
-          <div class="rhythm-icon">M</div>
-          <div class="rhythm-focus">Mahali Build</div>
-        </div>
-        <div class="rhythm-day today">
-          <div class="rhythm-dow">THU</div>
-          <div class="rhythm-icon">Y</div>
-          <div class="rhythm-focus">PagoYa Sprint</div>
-        </div>
-        <div class="rhythm-day">
-          <div class="rhythm-dow">FRI</div>
-          <div class="rhythm-icon">🔥</div>
-          <div class="rhythm-focus">Outreach Day</div>
-        </div>
-        <div class="rhythm-day">
-          <div class="rhythm-dow">SAT</div>
-          <div class="rhythm-icon">₱</div>
-          <div class="rhythm-focus">Content Batch</div>
-        </div>
-        <div class="rhythm-day">
-          <div class="rhythm-dow">SUN</div>
-          <div class="rhythm-icon">—</div>
-          <div class="rhythm-focus">Rest + Vision</div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div style="display:grid; grid-template-columns:50px 1fr; gap:8px; align-items:start;">
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">7:00</div>
-        <div style="font-size:12px; color:var(--text2);">Morning Command Check — open this dashboard · HubSpot · WhatsApp scan</div>
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">8:00</div>
-        <div style="font-size:12px; color:var(--text2);">PagoSeguro Growth Block — broker outreach · rep follow-ups · content queue</div>
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">9:00</div>
-        <div style="font-size:12px; color:var(--text2);">Mahali Build Block — dev task · agent outreach · Tanzania market intel</div>
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">10:00</div>
-        <div style="font-size:12px; color:var(--text2);">PagoYa Sprint Block — dev sprint · SIPREL · OXXO product design</div>
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">4:00</div>
-        <div style="font-size:12px; color:var(--text2);">Automation Audit — Buffer · HubSpot · Zapier · anything need manual touch?</div>
-        <div style="font-family:'DM Mono',monospace; font-size:11px; color:var(--teal); font-weight:600;">6:00</div>
-        <div style="font-size:12px; color:var(--text2);">End-of-Day Log — tasks done · 3 priorities tomorrow · 1-line journal</div>
-      </div>
-    </div>
-
-    <div class="section-label">⚙️ Automation Stack</div>
-    <div class="card">
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">HubSpot 28-Day Sequence</div>
-        <div class="auto-desc">PagoSeguro · Broker Outreach</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">Buffer Tue/Thu/Sat Queue</div>
-        <div class="auto-desc">PagoSeguro · Instagram</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">Tally → Zapier → HubSpot</div>
-        <div class="auto-desc">PagoSeguro · Street Team Leads</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">Twilio WhatsApp Alerts</div>
-        <div class="auto-desc">PagoSeguro · Rep Commissions</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">Stripe Webhook → DB</div>
-        <div class="auto-desc">PagoYa · Payment Status</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status live"></div>
-        <div class="auto-name">Digital Femsa OXXO Webhook</div>
-        <div class="auto-desc">PagoYa · Cash-in wallet credits</div>
-        <span class="badge live" style="font-size:9px; padding:2px 6px;">Live</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status needed"></div>
-        <div class="auto-name">Selcom Live Credentials</div>
-        <div class="auto-desc">Mahali · Rent Payments</div>
-        <span class="badge needed" style="font-size:9px; padding:2px 6px;">Needed</span>
-      </div>
-      <div class="auto-item">
-        <div class="auto-status future"></div>
-        <div class="auto-name">PagoYa → PagoSeguro API</div>
-        <div class="auto-desc">Payment integration merge</div>
-        <span class="badge building" style="font-size:9px; padding:2px 6px;">Future</span>
-      </div>
-    </div>
-
-    <div class="section-label">📋 Quick Actions</div>
-    <div class="two-col">
-      <button class="copy-btn" style="width:100%; padding:12px;" onclick="copyProgress()">📋 Copy Progress Summary</button>
-      <button class="copy-btn" style="width:100%; padding:12px;" onclick="syncLatest()">⟳ Sync Latest</button>
-    </div>
-
-  </div>
-
-  <!-- 90-DAY CHECKLIST -->
-  <div class="tab-content active" id="tab-checklist">
-
-    <style>
-    .ck-wrap{padding:1rem 0 2rem;font-family:inherit}
-    .ck-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
-    .ck-stat{background:rgba(0,0,0,0.04);border-radius:8px;padding:10px 12px}
-    .ck-stat-n{font-size:20px;font-weight:600}
-    .ck-stat-l{font-size:11px;opacity:0.6;margin-top:2px}
-    .ck-prog-wrap{margin-bottom:1.5rem}
-    .ck-prog-label{font-size:12px;opacity:0.6;margin-bottom:6px;display:flex;justify-content:space-between}
-    .ck-prog-bar{height:6px;background:rgba(0,0,0,0.1);border-radius:3px;overflow:hidden}
-    .ck-prog-fill{height:100%;background:#1D9E75;border-radius:3px;transition:width 0.3s}
-    .ck-phase-header{border-radius:8px;padding:12px 16px;margin:1.25rem 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
-    .ck-phase-title{font-size:15px;font-weight:600}
-    .ck-phase-sub{font-size:12px;margin-top:2px;opacity:0.75}
-    .ck-phase-badge{font-size:11px;padding:3px 10px;border-radius:8px;white-space:nowrap;font-weight:500}
-    .ck-ph1{background:#EEEDFE}.ck-ph1 .ck-phase-title{color:#26215C}.ck-ph1 .ck-phase-sub{color:#534AB7}.ck-ph1-badge{background:#AFA9EC;color:#26215C}
-    .ck-ph2{background:#E1F5EE}.ck-ph2 .ck-phase-title{color:#04342C}.ck-ph2 .ck-phase-sub{color:#0F6E56}.ck-ph2-badge{background:#5DCAA5;color:#04342C}
-    .ck-ph3{background:#FAEEDA}.ck-ph3 .ck-phase-title{color:#412402}.ck-ph3 .ck-phase-sub{color:#854F0B}.ck-ph3-badge{background:#EF9F27;color:#412402}
-    .ck-items{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
-    .ck-item{background:#fff;border:0.5px solid #ddd;border-radius:10px;overflow:hidden}
-    .ck-item-header{padding:12px 14px;cursor:pointer;display:flex;align-items:flex-start;gap:10px}
-    .ck-item-header:hover{background:#f9f9f9}
-    .ck-check{width:18px;height:18px;border:1.5px solid #bbb;border-radius:4px;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
-    .ck-check.ck-done{background:#1D9E75;border-color:#1D9E75}
-    .ck-check.ck-done::after{content:"";display:block;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
-    .ck-item-main{flex:1}
-    .ck-item-title{font-size:14px;font-weight:500;color:#1a1a1a;line-height:1.4}
-    .ck-item-meta{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;align-items:center}
-    .ck-tag{font-size:11px;padding:2px 7px;border-radius:6px}
-    .ck-tag-risk{background:#EEEDFE;color:#3C3489}
-    .ck-tag-comp{background:#E1F5EE;color:#085041}
-    .ck-tag-ops{background:#FAEEDA;color:#633806}
-    .ck-tag-fin{background:#E6F1FB;color:#0C447C}
-    .ck-tag-reg{background:#FAECE7;color:#712B13}
-    .ck-tag-crit{background:#FCEBEB;color:#A32D2D}
-    .ck-week{font-size:11px;color:#999}
-    .ck-item-body{display:none;padding:0 14px 14px 42px;border-top:0.5px solid #eee}
-    .ck-item.ck-open .ck-item-body{display:block}
-    .ck-body-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-    .ck-body-section label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px}
-    .ck-body-section p{font-size:13px;color:#333;line-height:1.6}
-    .ck-comp{background:#f5f5f3;border-radius:8px;padding:10px 12px;margin-top:10px}
-    .ck-comp label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px}
-    .ck-comp p{font-size:13px;color:#333;line-height:1.6}
-    </style>
-
-    <div class="ck-wrap">
-      <div class="ck-stats">
-        <div class="ck-stat"><div class="ck-stat-n" id="ck-total">24</div><div class="ck-stat-l">Total actions</div></div>
-        <div class="ck-stat"><div class="ck-stat-n" style="color:#1D9E75" id="ck-done">0</div><div class="ck-stat-l">Completed</div></div>
-        <div class="ck-stat"><div class="ck-stat-n" style="color:#534AB7" id="ck-ph1r">9</div><div class="ck-stat-l">Days 1–30 remaining</div></div>
-        <div class="ck-stat"><div class="ck-stat-n" style="color:#E24B4A" id="ck-critr">5</div><div class="ck-stat-l">Critical items remaining</div></div>
-      </div>
-      <div class="ck-prog-wrap">
-        <div class="ck-prog-label"><span>Overall progress</span><span id="ck-pct">0%</span></div>
-        <div class="ck-prog-bar"><div class="ck-prog-fill" id="ck-fill" style="width:0%"></div></div>
-      </div>
-      <div id="ck-list"></div>
-    </div>
-
-    <script>
-    (function(){
-    const CK_DATA = [
-      {phase:1,label:"Days 1\u201330 \u2014 stabilize and activate",phClass:"ck-ph1",badgeClass:"ck-ph1-badge",items:[
-        {id:"p1-1",week:"Day 1\u20133",title:"Verify Evoluciona M\u00f3vil failover with live credentials",tags:["risk","ops"],critical:true,reasoning:"The auto-failover from SIPREL to Evoluciona M\u00f3vil was built but never tested with live credentials. If SIPREL goes down and failover fires against bad credentials, every user sees a failure \u2014 the highest-probability technical failure in week one.",action:"Run a live $10 MXN Telcel recarga through Evoluciona M\u00f3vil directly in PagoYa. Confirm TransID returns, folio is generated, and WhatsApp receipt fires. Log result in command center. Set monthly retest reminder.",competitive:"Spin by OXXO and Cashi have redundant infrastructure from years of operation. A verified failover closes PagoYa\u2019s biggest early technical gap vs competitors on day one."},
-        {id:"p1-2",week:"Day 1\u20133",title:"Confirm Stripe webhook idempotency under load",tags:["risk","fin"],critical:true,reasoning:"Stripe can fire the same webhook multiple times if your server doesn\u2019t respond within timeout. If idempotency isn\u2019t airtight, a user could be double-charged or wallet credited twice \u2014 a trust-destroying incident in week one.",action:"Send 3 duplicate webhook payloads for the same payment_intent_id and confirm only one payment record is written and only one WhatsApp receipt fires. Document idempotency key handling.",competitive:"Not a differentiator \u2014 table stakes. But a double-charge in week 1 generates negative word-of-mouth in PV\u2019s tight expat community that takes months to reverse."},
-        {id:"p1-3",week:"Day 1\u20137",title:"Launch rep activation sprint \u2014 10 reps, 100 users, 30 days",tags:["comp","ops"],critical:true,reasoning:"The rep network is PagoYa\u2019s primary distribution moat vs Spin by OXXO and Cashi, neither of which has a street team commission structure. A dormant rep network provides zero moat.",action:"WhatsApp blast all reps with: (1) target \u2014 10 referrals in 30 days to earn 300 MXN bonus, (2) pitch script in Spanish, (3) specific use case: \u2018Dile a tus clientes que con PagoYa pagan CFE en 2 minutos sin ir al OXXO.\u2019 Add rep leaderboard to dashboard this week.",competitive:"Spin by OXXO acquires users via 24,000 physical stores. PagoYa acquires via trusted personal referrals \u2014 which converts at 3\u20135x higher than store signage. This is how you beat a better-funded competitor in a local market."},
-        {id:"p1-4",week:"Day 1\u20137",title:"Target PV expat community as first 50 users",tags:["comp","ops"],critical:false,reasoning:"Puerto Vallarta has ~30,000 expats motivated to avoid OXXO lines, comfortable with digital-first solutions, and with higher average bill amounts. Easiest early adopters for organic word-of-mouth.",action:"Post in major PV expat Facebook groups (Expats in Puerto Vallarta, PV Newcomers) with a genuine message. Have 2\u20133 reps connected to the expat community post their personal referral link.",competitive:"No competitor specifically targets PV expats. Spin requires INE. Mercado Pago requires full KYC. PagoYa\u2019s no-account first payment + bilingual UI is a genuine exclusive for this segment."},
-        {id:"p1-5",week:"Day 7\u201314",title:"Get Mexican fintech legal opinion on IFPE requirements",tags:["reg","risk"],critical:true,reasoning:"Wallet balance + bill pay aggregation at scale may trigger CNBV IFPE licensing requirements. Companies that skip this get cease-and-desist letters retroactively. A one-time legal opinion now costs $2\u20133k USD and provides a defensible compliance position.",action:"Engage Mexican fintech attorney (Legal Paradox or similar) for written opinion: does PagoYa\u2019s wallet + bill pay model constitute IFPE activity? Get opinion before wallet balance feature goes live.",competitive:"Every serious fintech in Mexico \u2014 Klar, Stori, Spin \u2014 has done this. Without it, CNBV enforcement risk grows proportionally with transaction volume."},
-        {id:"p1-6",week:"Day 7\u201314",title:"Set transaction limits for unregistered (guest) users",tags:["reg","risk"],critical:false,reasoning:"Mexico\u2019s AML law has thresholds above which payment processors must collect KYC. Unregistered users paying large amounts without identity information creates regulatory exposure as volume grows.",action:"Replit Agent: add check on bill payment endpoint \u2014 if user_id is null, enforce max $500 MXN per transaction, $2,000 MXN per 30-day rolling window. Above limits, surface progressive account creation as required step.",competitive:"Spin enforces limits via KYC-required account. PagoYa\u2019s guest flow is a UX advantage \u2014 but only if it stays within regulatory safe harbor."},
-        {id:"p1-7",week:"Day 14\u201321",title:"Get WhatsApp Business API verified (green checkmark)",tags:["ops","risk"],critical:false,reasoning:"WhatsApp suspension kills receipts, rep notifications, and reminders simultaneously \u2014 the most disruptive single operational risk in the first 30 days. Verified accounts are substantially less likely to be suspended.",action:"Submit WhatsApp Business verification through Meta Business Manager. Add \u2018STOP para cancelar\u2019 to every outbound template. Monitor delivery rate weekly \u2014 drop below 85% is a suspension warning.",competitive:"WhatsApp receipts are a genuine differentiator vs competitors who use in-app-only notifications. Verified status protects that moat."},
-        {id:"p1-8",week:"Day 21\u201330",title:"Build live unit economics dashboard in command center",tags:["fin","ops"],critical:false,reasoning:"At $15 MXN fee and $5 MXN Taecel commission, you need a real-time margin view per transaction by payment method. This is the number you watch every morning and show investors.",action:"Add unit economics tab showing: transactions this month, avg bill amount, Taecel fees paid, Stripe fees estimated, gross revenue, gross margin, break-even transaction count. Auto-update from DB.",competitive:"Investors comparing PagoYa to Spin by OXXO ($0 fee model) will ask how you\u2019re profitable. A live dashboard you can screenshot beats a spreadsheet estimate every time."},
-        {id:"p1-9",week:"Day 21\u201330",title:"Achieve 100 transactions and document first user stories",tags:["comp","ops"],critical:false,reasoning:"100 transactions is the minimum signal the product works end-to-end with real users and the minimum proof point for investor conversations.",action:"Hit 100 transactions before day 30. Pull top 5 services, avg transaction amount, repeat user rate, % who created account after nudge. Write 2\u20133 one-paragraph user stories for investor materials.",competitive:"At 100 transactions you have real data. You can\u2019t compete with Spin on volume \u2014 you compete on habit: \u2018Our first 100 users averaged X repeat payments.\u2019 That\u2019s a fundable narrative."}
-      ]},
-      {phase:2,label:"Days 31\u201360 \u2014 expand and harden",phClass:"ck-ph2",badgeClass:"ck-ph2-badge",items:[
-        {id:"p2-1",week:"Day 31\u201335",title:"Launch OXXO cash voucher (Prompt 2A \u2192 2B \u2192 2C)",tags:["comp","fin"],critical:true,reasoning:"OXXO cash-in eliminates Stripe card fees, unlocks the 54% unbanked population, and directly competes with Spin by OXXO\u2019s core value proposition. Single highest-impact feature after core bill pay.",action:"Execute the 3-prompt Replit Agent sequence: 2A (wallet backend + Conekta webhook), 2B (OXXO voucher UI at /cargar), 2C (wallet balance as checkout option). Test with real OXXO payment before announcing. Maintain $2,000 MXN minimum float reserve.",competitive:"When PagoYa users can load wallet at any OXXO and pay bills digitally, Spin\u2019s physical store advantage becomes irrelevant for bill payment specifically."},
-        {id:"p2-2",week:"Day 31\u201340",title:"Open Guadalajara as a parallel market via rep network",tags:["comp","ops"],critical:false,reasoning:"PV\u2019s TAM is real but limited. GDL has 5M+ people, a large underbanked population, and higher smartphone penetration. Rep network works in GDL with zero tech changes \u2014 pure distribution expansion.",action:"Recruit 3\u20135 GDL reps via /rep-signup. Offer 500 MXN launch bonus for first 10 GDL referrals. Update rep dashboard to show city/region. Target 50 GDL users by day 60.",competitive:"No competitor targets underbanked GDL users through a personal rep referral model. Mercado Pago dominates GDL via app store downloads, not personal trust networks."},
-        {id:"p2-3",week:"Day 35\u201345",title:"Migrate from Replit to Railway or Render",tags:["risk","ops"],critical:false,reasoning:"Replit Reserved VM is correct for MVP but not production-grade for a fintech handling real MXN transactions. Railway and Render offer PostgreSQL, auto-scaling, zero-downtime deploys, and better uptime SLAs.",action:"Spin up Railway/Render environment, migrate PostgreSQL with pg_dump, test all endpoints, cut over DNS. Keep Replit running 72 hours as fallback. Do this before 500 users \u2014 not after.",competitive:"One major outage during a bill payment creates a 1-star review in a tight community. Closing this infrastructure gap before real volume is the right sequence."},
-        {id:"p2-4",week:"Day 40\u201350",title:"Conduct 5 in-person UX tests with Mexican residents",tags:["comp","ops"],critical:false,reasoning:"PagoYa\u2019s UX was built with expats as the mental model. Mexican residents in colonias populares interact differently with mobile payment UIs. 5 sessions will reveal more than any analytics dashboard.",action:"Recruit 5 Spanish-dominant Mexican residents (not tech workers), watch them pay a CFE bill with no guidance. Note every hesitation. Budget $500 MXN in incentives. Implement top 3 UX fixes within 1 week.",competitive:"Spin by OXXO spent years refining UX for this user. PagoYa can compress that learning into 5 sessions. The gap is closeable \u2014 but only if you go find it."},
-        {id:"p2-5",week:"Day 45\u201355",title:"Submit Taecel wholesale contract",tags:["ops","fin"],critical:false,reasoning:"Wholesale contract gives invoice documentation, formal SLA, and ability to negotiate volume pricing. Required for clean books when investors do due diligence.",action:"Compile SA de CV documents (articles of incorporation, legal rep ID, proof of address, CLABE). Print 2 copies, sign, courier to Quer\u00e9taro. Follow up after 5 business days. File executed copy.",competitive:"A signed wholesale contract is materially more credible to investors than an informal provider relationship."},
-        {id:"p2-6",week:"Day 50\u201360",title:"Reach 500 transactions \u2014 analyze retention and repeat rate",tags:["comp","fin"],critical:false,reasoning:"500 transactions is the minimum dataset for meaningful retention analysis. Repeat rate is PagoYa\u2019s most important product-market fit signal.",action:"Pull cohort analysis: users who paid in week 1 vs 2 vs 3, repeat payment rate by service category, avg payments per user per month. Target: 40%+ 30-day repeat rate. If below 30%, payment reminders become the urgent build.",competitive:"A 40%+ repeat rate at 500 transactions proves habitual behavior \u2014 the same habit formation Spin by OXXO demonstrates with monthly bills. This is the investor signal that matters most."}
-      ]},
-      {phase:3,label:"Days 61\u201390 \u2014 investor-ready and P2P-ready",phClass:"ck-ph3",badgeClass:"ck-ph3-badge",items:[
-        {id:"p3-1",week:"Day 61\u201365",title:"Hold STP meeting with live transaction data in hand",tags:["ops","risk"],critical:true,reasoning:"By day 60 you\u2019ll have 500+ transactions, wholesale Taecel contract, live product in 2 markets. That\u2019s a fundamentally different STP conversation than going in as pre-revenue.",action:"Prepare 1-page brief: entity structure, transaction volume, active markets, tech stack, P2P roadmap. Ask specifically: onboarding path for SA de CV with existing operations, minimum volume or capitalization requirement.",competitive:"STP is the on-ramp to P2P via DiMo. Getting onboarding started by day 65 puts PagoYa 6\u20139 months ahead on P2P vs building from scratch."},
-        {id:"p3-2",week:"Day 65\u201375",title:"Add payment reminders for recurring bills",tags:["comp","ops"],critical:false,reasoning:"Payment reminders are the #1 feature gap vs Spin by OXXO, Mercado Pago, Cashi, and bank apps. Users who forget to pay aren\u2019t churning \u2014 they\u2019re just not returning.",action:"Replit Agent: after user pays a service, ask \u2018Quieres que te recordemos 3 d\u00edas antes de tu pr\u00f3ximo vencimiento?\u2019 Store service + reminder date. Cron job fires WhatsApp reminder at 9am with deep link back to that service\u2019s payment screen.",competitive:"Closes the most visible feature gap vs all competitors simultaneously. After this is live, PagoYa matches or exceeds Spin and Cashi on every core bill-pay feature."},
-        {id:"p3-3",week:"Day 70\u201380",title:"Update investor overview with live metrics",tags:["comp","fin"],critical:false,reasoning:"The April investor overview shows projections. By day 80 you have real numbers. A deck with real data converts investor conversations at dramatically higher rates than projection decks.",action:"Update PagoYa Investor Overview DOCX: live transaction count, revenue to date, unit economics at actual rates, user retention, PV+GDL data, STP status, fee updated to $15 MXN. Prepare 5-minute verbal pitch built around real numbers.",competitive:"\u2018X transactions, Y% repeat rate, Z MXN revenue, 2 markets, STP in progress, P2P roadmap clear\u2019 \u2014 that\u2019s a Series A-ready narrative."},
-        {id:"p3-4",week:"Day 75\u201385",title:"Launch loyalty punch card for end users",tags:["comp","ops"],critical:false,reasoning:"Spin by OXXO has Spin Premia. Cashi has loyalty points. Mercado Pago has cashback. PagoYa has nothing for end users yet. A simple reward closes the loyalty gap and increases repeat rate.",action:"Build punch card: pay 10 times, get $20 MXN wallet credit. Display as progress bar on home screen: \u20187/10 pagos \u2014 te faltan 3 para tu recompensa.\u2019 No points, no tiers \u2014 one simple number.",competitive:"After this is live, PagoYa matches or exceeds all competitors on core bill-pay features. Remaining gaps (physical stores, P2P) are Phase 2, not Day 90 gaps."},
-        {id:"p3-5",week:"Day 80\u201390",title:"Reach 1,000 transactions \u2014 prepare Series A materials",tags:["comp","fin"],critical:false,reasoning:"1,000 transactions is the canonical proof-of-traction milestone for a seed/Series A fintech raise in Mexico. Enough to show cohort retention, service distribution, market penetration, and GDL growth.",action:"Target 1,000 cumulative transactions by day 90. Pull full analytics: cohort retention, top 10 services by volume, avg transaction value, PV vs GDL split, monthly revenue run rate, user acquisition cost. Write 1-page \u2018State of PagoYa at 90 Days\u2019 document.",competitive:"At 1,000 transactions PagoYa competes on traction not features. \u20181,000 transactions in 90 days in one city, expanding to Mexico\u2019s second-largest metro\u2019 is the right investor frame."}
-      ]}
-    ];
-
-    let ckChecks = JSON.parse(localStorage.getItem('ck_checks')||'{}');
-
-    function ckSave(){localStorage.setItem('ck_checks',JSON.stringify(ckChecks));}
-
-    function ckUpdateStats(){
-      const total = CK_DATA.reduce((s,p)=>s+p.items.length,0);
-      const done = Object.values(ckChecks).filter(Boolean).length;
-      const pct = Math.round(done/total*100);
-      document.getElementById('ck-total').textContent=total;
-      document.getElementById('ck-done').textContent=done;
-      document.getElementById('ck-pct').textContent=pct+'%';
-      document.getElementById('ck-fill').style.width=pct+'%';
-      const ph1done=CK_DATA[0].items.filter(i=>ckChecks[i.id]).length;
-      document.getElementById('ck-ph1r').textContent=CK_DATA[0].items.length-ph1done;
-      const critItems=CK_DATA.flatMap(p=>p.items).filter(i=>i.critical);
-      document.getElementById('ck-critr').textContent=critItems.filter(i=>!ckChecks[i.id]).length;
-    }
-
-    function ckRender(){
-      const list=document.getElementById('ck-list');
-      if(!list)return;
-      list.innerHTML='';
-      CK_DATA.forEach(phase=>{
-        const ph=document.createElement('div');
-        const done=phase.items.filter(i=>ckChecks[i.id]).length;
-        ph.innerHTML=`<div class="ck-phase-header ${phase.phClass}"><div><div class="ck-phase-title">${phase.label}</div><div class="ck-phase-sub">${done}/${phase.items.length} completed</div></div><span class="ck-phase-badge ${phase.badgeClass}">${phase.items.length} actions</span></div>`;
-        const itemsDiv=document.createElement('div');
-        itemsDiv.className='ck-items';
-        phase.items.forEach(item=>{
-          const el=document.createElement('div');
-          el.className='ck-item';
-          const tagHtml=item.tags.map(t=>`<span class="ck-tag ck-tag-${t}">${t}</span>`).join('');
-          const critTag=item.critical?'<span class="ck-tag ck-tag-crit">critical</span>':'';
-          el.innerHTML=`<div class="ck-item-header"><div class="ck-check${ckChecks[item.id]?' ck-done':''}" data-id="${item.id}"></div><div class="ck-item-main"><div class="ck-item-title">${item.title}</div><div class="ck-item-meta">${tagHtml}${critTag}<span class="ck-week">${item.week}</span></div></div></div><div class="ck-item-body"><div class="ck-body-grid"><div class="ck-body-section"><label>Why this matters</label><p>${item.reasoning}</p></div><div class="ck-body-section"><label>Specific action</label><p>${item.action}</p></div></div><div class="ck-comp"><label>Competitive expected result</label><p>${item.competitive}</p></div></div>`;
-          el.querySelector('.ck-check').addEventListener('click',e=>{
-            e.stopPropagation();
-            ckChecks[item.id]=!ckChecks[item.id];
-            ckSave();ckRender();ckUpdateStats();
-          });
-          el.querySelector('.ck-item-header').addEventListener('click',e=>{
-            if(e.target.classList.contains('ck-check'))return;
-            el.classList.toggle('ck-open');
-          });
-          itemsDiv.appendChild(el);
-        });
-        ph.appendChild(itemsDiv);
-        list.appendChild(ph);
-      });
-    }
-
-    ckRender();ckUpdateStats();
-    })();
-    </script>
-
-  </div>
-
-</div>
-
-<div class="footer">LLOYD'S COMMAND CENTER · v3.0 · PAGOSEGURO · MAHALI · PAGOYA</div>
+<div id="checklist"></div>
+<div class="bottom-pad"></div>
 
 <script>
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent =
-      now.toLocaleTimeString('en-US', { hour12: false });
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+const ITEMS = [
+  // ── PHASE 1 ──────────────────────────────────────────────────────────────
+  {
+    phase: 1, id: `p1-1`,
+    title: `Verify Evoluciona M\u00f3vil failover with live credentials`,
+    day: `Day 1\u20133`, critical: true,
+    why: `Evoluciona M\u00f3vil is your primary bill-pay rail for CFE and Telmex. If it goes down without a tested failover, every user payment fails silently \u2014 destroying early trust before you have any brand equity.`,
+    action: `Obtain live SIPREL or STP API credentials. Script a failover test that routes a live CFE payment through the backup provider and confirm the response within 24 hours. Document the failover threshold in the backend config.`,
+    result: `Users experience zero downtime on your single most common payment type, giving PagoYa a reliability edge over cash alternatives from day one.`
+  },
+  {
+    phase: 1, id: `p1-2`,
+    title: `Confirm Stripe webhook idempotency under load`,
+    day: `Day 1\u20133`, critical: true,
+    why: `Stripe can replay webhooks \u2014 if your handler is not idempotent, a single payment can be credited twice, creating fraud exposure and accounting chaos before you have onboarded your tenth user.`,
+    action: `Replay the payment_intent.succeeded event against production using the Stripe CLI. Verify that duplicate event IDs are detected and skipped via the idempotency_key column in your bill_payments table. Run at 10\u00d7 normal rate.`,
+    result: `Zero double-credits in the first 1,000 transactions, and a clean audit trail ready for any investor or regulator who asks about financial controls.`
+  },
+  {
+    phase: 1, id: `p1-3`,
+    title: `Launch rep activation sprint \u2014 10 reps, 100 users, 30 days`,
+    day: `Day 1\u20137`, critical: true,
+    why: `Your fastest path to first-paying users is not paid ads \u2014 it is trusted people already in colonias who can demonstrate the app in person and handle the \u201cis this a scam?\u201d objection on the spot.`,
+    action: `Recruit 10 reps via the /register page. Give each a simple script: find 10 neighbors who pay CFE or Telmex monthly. Hold a 30-minute WhatsApp group training. Track activations in the admin dashboard.`,
+    result: `100 warm users acquired at near-zero cost, each with a personal voucher \u2014 the kind of social proof that converts skeptical Mexican families far faster than any Facebook ad.`
+  },
+  {
+    phase: 1, id: `p1-4`,
+    title: `Target PV expat community as first 50 users`,
+    day: `Day 1\u20137`, critical: false,
+    why: `Puerto Vallarta expats pay Mexican utility bills but are underserved by traditional payment channels \u2014 they already trust app-based solutions and have disposable income to absorb the \$15 MXN fee without friction.`,
+    action: `Post in Facebook groups \u201cPV Expats\u201d, \u201cVallarta Living\u201d, and \u201cNayarit Expats\u201d. Offer first-payment fee waiver for 48 hours. Personally DM anyone who comments. Get 5 people to pay a real bill on camera.`,
+    result: `50 early adopters who understand value, leave English-language reviews, and bring in word-of-mouth from friends who are also expats \u2014 a demographic with above-average LTV.`
+  },
+  {
+    phase: 1, id: `p1-5`,
+    title: `Get Mexican fintech legal opinion on IFPE requirements`,
+    day: `Day 7\u201314`, critical: true,
+    why: `Operating as an electronic payment institution without IFPE registration is a regulatory violation under LADF \u2014 one complaint to CNBV can halt operations and create personal liability for the founder.`,
+    action: `Engage a Mexican fintech lawyer (Basham, Ringe y Correa or equivalent) for a 2-hour opinion on whether PagoYa requires IFPE or can operate under a third-party aggregator exemption. Budget \$500\u2013\$1,500 USD.`,
+    result: `Clear legal standing to operate, a compliance roadmap for scale, and investor confidence that you have addressed Mexico\u2019s top fintech regulatory risk before taking outside money.`
+  },
+  {
+    phase: 1, id: `p1-6`,
+    title: `Set transaction limits for unregistered users`,
+    day: `Day 7\u201314`, critical: false,
+    why: `CNBV rules require tiered transaction limits for unverified users. Ignoring this creates AML exposure even at small volumes \u2014 and STP or Stripe may terminate your account if patterns look irregular.`,
+    action: `Cap unregistered users at \$500 MXN per transaction and \$2,000 MXN per month. Add a soft KYC prompt (name + CURP) that unlocks a \$5,000 MXN monthly limit. Gate this in the backend before the Stripe PaymentIntent is created.`,
+    result: `Full compliance with CNBV Level 1 transaction limits, reducing regulatory risk while creating a natural upsell moment to verified accounts with higher limits.`
+  },
+  {
+    phase: 1, id: `p1-7`,
+    title: `Get WhatsApp Business API verified`,
+    day: `Day 14\u201321`, critical: false,
+    why: `WhatsApp is the primary communication channel for 90% of Mexican smartphone users. Without API verification your messages come from an unbranded number \u2014 recipients do not trust them and open rates collapse.`,
+    action: `Submit WhatsApp Business API verification via Meta Business Suite. Use a dedicated Mexican number. Set up template messages for payment confirmation, OXXO voucher delivery, and loyalty point alerts. Test end-to-end with 5 real users.`,
+    result: `Branded payment confirmations via the channel users already trust, reducing support tickets and increasing repeat payment rates among the first 100 users.`
+  },
+  {
+    phase: 1, id: `p1-8`,
+    title: `Build live unit economics dashboard in command center`,
+    day: `Day 21\u201330`, critical: false,
+    why: `Without a single dashboard showing CAC, LTV, revenue per transaction, and churn, you are flying blind \u2014 and you cannot walk an investor through your unit economics on a 5-minute call.`,
+    action: `Add a Metrics tab to command center pulling from /api/bills/admin/revenue. Display: total transactions, total MXN revenue, \$15 MXN fee collected, average repeat rate, top 3 bill types. Auto-refresh every 60 seconds.`,
+    result: `Real-time proof of a working revenue model you can show any investor from your phone \u2014 the single most powerful data point in a pre-Series A conversation.`
+  },
+  {
+    phase: 1, id: `p1-9`,
+    title: `Achieve 100 transactions and document first user stories`,
+    day: `Day 21\u201330`, critical: false,
+    why: `100 transactions is the threshold that separates "someone built an app" from "people are actually using it" \u2014 the first proof-of-traction number that changes how investors and press respond.`,
+    action: `Set a team goal of 100 paid transactions in 30 days. For the first 20 users who pay, collect a 1-minute voice note or 3-sentence written testimonial. Record one 60-second screen + face video of a real user paying a bill.`,
+    result: `Social proof assets \u2014 testimonials, a demo video, a transaction milestone \u2014 that replace generic pitch claims with verifiable evidence of demand in your seed round materials.`
+  },
 
-  function switchTab(name, el) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    el.classList.add('active');
-  }
+  // ── PHASE 2 ──────────────────────────────────────────────────────────────
+  {
+    phase: 2, id: `p2-1`,
+    title: `Launch OXXO cash voucher (Prompt 2A \u2192 2B \u2192 2C)`,
+    day: `Day 31\u201335`, critical: true,
+    why: `Over 65% of Mexicans remain unbanked or underbanked \u2014 they cannot use Stripe cards but they can pay cash at any OXXO. Blocking them cuts your total addressable market by more than half.`,
+    action: `Activate the Digital Femsa OXXO webhook already in the codebase. Run end-to-end test: generate a voucher, pay it at a real OXXO, confirm the wallet credit via webhook. Build the 2A \u2192 2B \u2192 2C NLP prompt flow for cash-first users.`,
+    result: `Access to the unbanked majority \u2014 65M+ Mexicans \u2014 who represent the highest-volume, lowest-competition segment in Mexican bill pay and the foundation of your 1,000-transaction milestone.`
+  },
+  {
+    phase: 2, id: `p2-2`,
+    title: `Open Guadalajara as parallel market via rep network`,
+    day: `Day 31\u201340`, critical: false,
+    why: `Guadalajara is Mexico\u2019s second-largest metro with 5M people, high smartphone penetration, and identical CFE/Telmex utility structures \u2014 a natural expansion with zero product changes required.`,
+    action: `Recruit 5 reps specifically in ZMG via the /register page. Run the same activation playbook as PV. Target Zapopan and Tlaquepaque first \u2014 above-median income neighborhoods with CFE payment compliance issues.`,
+    result: `Geographic proof that PagoYa is replicable beyond PV \u2014 two active markets before Series A dramatically expands your addressable market narrative for investors.`
+  },
+  {
+    phase: 2, id: `p2-3`,
+    title: `Migrate from Replit to Railway or Render`,
+    day: `Day 35\u201345`, critical: false,
+    why: `Replit deployment is excellent for prototyping but introduces latency and cold starts that are not acceptable for a production payment application with real user funds.`,
+    action: `Export Postgres from Replit. Deploy the Express API server to Railway with environment variable parity. Point pagoyamx.com DNS to Railway. Validate all Stripe webhooks, OXXO webhooks, and Claude autofill endpoints in staging first.`,
+    result: `Sub-100ms API response times, 99.9% uptime SLA, and infrastructure credibility that removes a common investor objection about production readiness at scale.`
+  },
+  {
+    phase: 2, id: `p2-4`,
+    title: `Conduct 5 in-person UX tests with Mexican residents`,
+    day: `Day 40\u201350`, critical: false,
+    why: `Product-market fit in Mexico looks different than in the US \u2014 the NLP prompts and confirmation flows need to match how native Spanish speakers think about bill payments, not how a bilingual founder does.`,
+    action: `Sit with 5 people in PV or GDL who have never seen PagoYa. Give them one task: pay your CFE bill. Watch without helping. Record with their permission. Log every point of confusion in a Notion UX audit doc.`,
+    result: `A prioritized list of friction points that, when fixed, will increase conversion from first-open to first-payment \u2014 the highest-leverage product improvement at this stage.`
+  },
+  {
+    phase: 2, id: `p2-5`,
+    title: `Submit Taecel wholesale contract`,
+    day: `Day 45\u201355`, critical: false,
+    why: `Taecel retail API margin is 3\u20135% \u2014 at volume, a wholesale contract drops your cost to under 1%, directly widening the unit economics that determine when PagoYa becomes cash-flow positive.`,
+    action: `Reach 250 cumulative transactions to qualify for Taecel volume tier discussion. Email their commercial team with your transaction export, current API usage, and a 90-day growth projection. Propose a 60-day wholesale pilot.`,
+    result: `Lower COGS on every transaction processed \u2014 the contractual foundation for a unit economics story where each payment becomes more profitable as you scale.`
+  },
+  {
+    phase: 2, id: `p2-6`,
+    title: `Reach 500 transactions \u2014 analyze retention and repeat rate`,
+    day: `Day 50\u201360`, critical: false,
+    why: `500 transactions with a measured repeat rate is the clearest signal of product-market fit available at pre-seed \u2014 investors care more about whether users come back than whether they ever came at all.`,
+    action: `Pull cohort data from Postgres: of all users who made their first transaction in week 1, what % made a second transaction within 30 days? Present this in a single slide: retention curve + LTV estimate. Share it with 3 angels.`,
+    result: `A retention-based LTV model that replaces speculation with data \u2014 the core of your Series A narrative and proof that PagoYa creates habit, not novelty.`
+  },
+  {
+    phase: 2, id: `p2-7`,
+    title: `Launch DiMo P2P payment beta for user-to-user transfers`,
+    day: `Day 50\u201360`, critical: false,
+    why: `DiMo (Dinero M\u00f3vil) is Banxico\u2019s interoperable P2P transfer standard \u2014 adding it makes PagoYa a full wallet, not just a bill-pay app, dramatically increasing daily active use and in-app balance retention.`,
+    action: `Integrate DiMo via your STP connection. Build a simple \u201csend money\u201d flow: amount, phone number, confirm. Test between 5 internal accounts. Gate behind verified KYC. Launch to top 50 most active users first.`,
+    result: `A stickier product that keeps MXN balances inside PagoYa rather than being withdrawn after each bill \u2014 increasing LTV and creating a network effect as each sender recruits a receiver.`
+  },
+  {
+    phase: 2, id: `p2-8`,
+    title: `Build affiliate partner program for PagoYa referrals`,
+    day: `Day 55\u201360`, critical: false,
+    why: `Your rep network is proven \u2014 a formal affiliate program with trackable referral links turns every power user into a growth channel with near-zero marginal CAC compared to paid acquisition.`,
+    action: `Build referral link generation in the user profile page. Track referral_id in the bill_payments table. Pay \$30 MXN per successful referred first payment, credited to wallet balance. Launch to the top 20 reps first.`,
+    result: `A self-funding acquisition loop where every \$30 MXN referral bonus is recovered within 2 transactions from the new user \u2014 turning your most engaged users into your most effective sales team.`
+  },
+  {
+    phase: 2, id: `p2-9`,
+    title: `Launch Spanish-language social content series`,
+    day: `Day 55\u201360`, critical: false,
+    why: `Organic content in Mexican Spanish outperforms paid ads 3:1 for fintech trust-building \u2014 short videos of real users paying real bills remove the scam objection before a rep ever has to answer it.`,
+    action: `Film 4 short videos (60 seconds each): one user paying CFE, one paying Telmex, one collecting OXXO cash, one explaining why they switched from OXXO to PagoYa. Post on TikTok, Instagram Reels, and WhatsApp Status weekly.`,
+    result: `Organic reach that compounds over time \u2014 each video that lands in a colonia WhatsApp group is worth 10 paid impressions because it comes with implicit social endorsement from a neighbor.`
+  },
 
-  function toggleCheck(el) {
-    const label = el.nextElementSibling;
-    if (el.classList.contains('done')) {
-      el.classList.remove('done');
-      el.textContent = '';
-      label.classList.remove('done');
-    } else {
-      el.classList.add('done');
-      el.classList.remove('partial');
-      el.textContent = '✓';
-      label.classList.add('done');
+  // ── PHASE 3 ──────────────────────────────────────────────────────────────
+  {
+    phase: 3, id: `p3-1`,
+    title: `Hold STP meeting with live transaction data`,
+    day: `Day 61\u201365`, critical: true,
+    why: `STP (Sistema de Transferencias y Pagos) is Mexico\u2019s real-time interbank network \u2014 becoming an STP member unlocks same-day settlement for SPEI payments, removing your dependence on third-party aggregators.`,
+    action: `Book a formal meeting with STP partnerships team using your live transaction data (500+ transactions, revenue proof, user growth). Bring your IFPE legal opinion and compliance roadmap. Come with a specific volume commitment.`,
+    result: `A direct STP relationship that eliminates the 2\u20133 day settlement lag, reduces per-transaction fees by 40\u201360%, and positions PagoYa as infrastructure rather than just an app.`
+  },
+  {
+    phase: 3, id: `p3-2`,
+    title: `Add payment reminders for recurring bills`,
+    day: `Day 65\u201375`, critical: false,
+    why: `CFE and Telmex bills arrive on the same date every month \u2014 a timely WhatsApp reminder 3 days before due is the single highest-ROI feature for increasing repeat transaction rate without acquiring new users.`,
+    action: `Build a cron job that checks bill_payments for each user\u2019s most recent payment per service type. Schedule a WhatsApp template message 3 days before the estimated next due date. Test with 10 users before full rollout.`,
+    result: `A measurable increase in month-2 repeat rate \u2014 the core metric that separates a \$20 LTV app from a \$200 LTV financial habit and determines whether Series A math works.`
+  },
+  {
+    phase: 3, id: `p3-3`,
+    title: `Update investor overview with live metrics`,
+    day: `Day 70\u201380`, critical: false,
+    why: `Investor conversations require a living document \u2014 a static deck built at launch will have been wrong for 60 days by the time you are in serious discussions, undermining credibility exactly when it matters most.`,
+    action: `Update the PagoYa investor one-pager with actual numbers: transaction count, total MXN revenue, CAC, repeat rate, geographic spread. Replace every projection with an actual. Add a current run rate line. Send to 5 warm angels.`,
+    result: `An investor document anchored in reality rather than assumption \u2014 the kind that generates second meetings instead of polite rejections, because the numbers speak before the founder does.`
+  },
+  {
+    phase: 3, id: `p3-4`,
+    title: `Launch loyalty punch card for end users`,
+    day: `Day 75\u201385`, critical: false,
+    why: `Loyalty programs in Mexican fintech see 2\u20133\u00d7 higher retention among participants \u2014 a simple pay 5 bills, get the 6th fee-free mechanic converts one-time users into monthly habits without expensive rewards infrastructure.`,
+    action: `Activate the existing loyalty tier system (Bronce/Plata/Oro). Add a visible punch card UI to the home screen showing progress toward the next tier. Notify via WhatsApp when a tier is reached. Promote via rep network first.`,
+    result: `A retention loop that makes PagoYa feel earned rather than transactional \u2014 turning the \$15 MXN fee from a cost into a game users choose to play, reducing churn among your highest-value cohort.`
+  },
+  {
+    phase: 3, id: `p3-5`,
+    title: `Complete IFPE registration or formal aggregator agreement`,
+    day: `Day 75\u201390`, critical: true,
+    why: `By Day 75 you will have live transaction data, legal opinion, and investor interest \u2014 the exact moment CNBV will scrutinize you. Formalizing your regulatory status now prevents a compliance disruption at Series A.`,
+    action: `Based on the Day 14 legal opinion: either file IFPE application with CNBV or execute a formal aggregator agreement with your payment processor. Have counsel review all contracts before signing. File before 1,000 transactions.`,
+    result: `Regulatory standing that converts from a risk flag to a competitive moat \u2014 few competitors your size have formalized their CNBV position, and you will be the one that did.`
+  },
+  {
+    phase: 3, id: `p3-6`,
+    title: `Reach 1,000 transactions \u2014 prepare Series A materials`,
+    day: `Day 80\u201390`, critical: false,
+    why: `1,000 transactions across two markets with a measurable repeat rate, clear unit economics, and a live regulatory opinion is a fundable company \u2014 not a demo. This milestone determines PagoYa\u2019s trajectory.`,
+    action: `Close the 90-day sprint with a full data export: transactions, users, MXN revenue, CAC, LTV, retention cohort, geographic spread. Build a 10-slide Sequoia-format deck. Schedule 10 first meetings with LatAm fintech angels.`,
+    result: `A fundable pre-seed close at \$250K\u2013\$500K SAFE note that buys 12 months of runway \u2014 enough to prove the STP integration, reach 10,000 transactions, and set up a Series A at 10\u00d7 the valuation.`
+  }
+];
+
+const TOTAL = ITEMS.length;
+const STORAGE_KEY = 'ck_checks';
+
+function loadChecks() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveChecks(c) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch(e) {}
+}
+function updateProgress() {
+  const checks = loadChecks();
+  const done = ITEMS.filter(it => checks[it.id]).length;
+  const pct = Math.round((done / TOTAL) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = done + ' / ' + TOTAL + ' complete';
+}
+
+function toggleCheck(e, id) {
+  e.stopPropagation();
+  const checks = loadChecks();
+  checks[id] = !checks[id];
+  saveChecks(checks);
+  const item = document.getElementById('item-' + id);
+  const box  = document.getElementById('box-'  + id);
+  if (checks[id]) { item.classList.add('done'); box.classList.add('checked'); }
+  else            { item.classList.remove('done'); box.classList.remove('checked'); }
+  updateProgress();
+  // update phase count
+  const phase = ITEMS.find(it => it.id === id).phase;
+  refreshPhaseCount(phase, checks);
+}
+
+function refreshPhaseCount(phaseNum, checks) {
+  const phItems = ITEMS.filter(it => it.phase === phaseNum);
+  const done = phItems.filter(it => checks[it.id]).length;
+  const el = document.getElementById('ph-count-' + phaseNum);
+  if (el) el.textContent = done + ' / ' + phItems.length;
+}
+
+function toggleOpen(id) {
+  document.getElementById('item-' + id).classList.toggle('open');
+}
+
+function syncNow() {
+  const btn = document.querySelector('.sync-btn');
+  btn.textContent = '... Syncing';
+  btn.disabled = true;
+  fetch('/api/sync').then(r => r.json()).catch(() => {}).finally(() => { location.reload(); });
+}
+
+function render() {
+  const checks = loadChecks();
+  const phases = [
+    { num: 1, label: 'Phase 1 \u2014 Days 1\u201330', cls: 'ph1' },
+    { num: 2, label: 'Phase 2 \u2014 Days 31\u201360', cls: 'ph2' },
+    { num: 3, label: 'Phase 3 \u2014 Days 61\u201390', cls: 'ph3' }
+  ];
+  const container = document.getElementById('checklist');
+  let html = '';
+  for (const ph of phases) {
+    const phItems = ITEMS.filter(it => it.phase === ph.num);
+    const doneCnt = phItems.filter(it => checks[it.id]).length;
+    html += '<div class="phase-section">';
+    html += '<div class="phase-header ' + ph.cls + '">';
+    html += '<span class="phase-title">' + ph.label + '</span>';
+    html += '<span class="phase-count" id="ph-count-' + ph.num + '">' + doneCnt + ' / ' + phItems.length + '</span>';
+    html += '</div><div class="items-list">';
+    for (const it of phItems) {
+      const isDone = !!checks[it.id];
+      const doneClass = isDone ? ' done' : '';
+      const checkedClass = isDone ? ' checked' : '';
+      const critBadge = it.critical ? '<span class="badge-critical">Critical</span>' : '';
+      html += '<div class="item' + doneClass + '" id="item-' + it.id + '">';
+      html += '<div class="item-row" onclick="toggleOpen(\'' + it.id + '\')">';
+      html += '<div class="item-check' + checkedClass + '" id="box-' + it.id + '" onclick="toggleCheck(event,\'' + it.id + '\')"></div>';
+      html += '<div class="item-main">';
+      html += '<div class="item-title">' + it.title + '</div>';
+      html += '<div class="item-meta"><span class="item-day">' + it.day + '</span>' + critBadge + '</div>';
+      html += '</div>';
+      html += '<div class="item-chevron">\u25be</div>';
+      html += '</div>';
+      html += '<div class="item-detail">';
+      html += '<div class="detail-section"><div class="detail-label">Why this matters</div><div class="detail-text">' + it.why + '</div></div>';
+      html += '<div class="detail-section"><div class="detail-label">Specific action</div><div class="detail-text">' + it.action + '</div></div>';
+      html += '<div class="detail-section"><div class="detail-label">Competitive result</div><div class="detail-text">' + it.result + '</div></div>';
+      html += '</div>';
+      html += '</div>';
     }
+    html += '</div></div>';
   }
+  container.innerHTML = html;
+  updateProgress();
+}
 
-  function syncLatest() {
-    fetch('/api/sync').then(r => r.json()).then(d => {
-      console.log('Synced:', d);
-      loadPagoYaStats();
-    }).catch(() => console.log('Sync endpoint not available'));
-  }
-
-  async function loadPagoYaStats() {
-    try {
-      const res = await fetch('/api/bills/admin/revenue');
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.totalCount !== undefined) {
-        document.getElementById('pagoya-payments').textContent = data.totalCount || '0';
-        document.getElementById('pagoya-revenue').textContent = data.totalRevenue
-          ? '$' + Number(data.totalRevenue).toLocaleString('es-MX', {minimumFractionDigits:0})
-          : '$0';
-      }
-    } catch (e) {}
-  }
-
-  loadPagoYaStats();
-
-  function copyProgress() {
-    const text = `LLOYD'S COMMAND CENTER — ${new Date().toLocaleDateString()}
-━━━━━━━━━━━━━━━━━━━━━━━━
-PagoYa: MVP • 90% build • 35 services • pagoyamx.com launching
-PagoSeguro: LIVE • 82% build • 56 HubSpot contacts • 14.7% T1 open rate
-Mahali: MVP Ready • 85% build • 7 roles • Selcom pending
-
-NEXT ACTIONS:
-→ SIPREL production call Mon May 4
-→ Loom videos for Touch 3 (Apr 27) & Touch 4 (May 11)
-→ Selcom live credentials — escalate this week
-→ Investor one-pager draft
-→ Identify first 10 PagoYa paying users`;
-    navigator.clipboard.writeText(text).then(() => {
-      event.target.textContent = '✓ Copied!';
-      setTimeout(() => event.target.textContent = '📋 Copy Progress Summary', 2000);
-    });
-  }
+render();
 </script>
 </body>
 </html>

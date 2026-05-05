@@ -1,0 +1,87 @@
+completely replace artifacts/pagoya/public/command-center.html 
+with a clean, simple, mobile-first iPhone page that contains 
+ONLY the 90-day checklist. Remove everything else — all other 
+tabs, all other panels, founder mode, pagoseguro, mahali, ops, 
+the dark header bar, all of it. Start fresh.
+
+The new command center is a single clean page with:
+
+1. HEADER — simple white bar, full width:
+   - Title: "PagoYa — 90 Day Plan"
+   - Sync button on the right: taps call fetch('/api/sync') 
+     then location.reload()
+   - Font size 16px title, clean, no dark backgrounds
+
+2. PROGRESS BAR — below header:
+   - Single teal progress bar showing X of 24 complete
+   - "X / 24 complete" label next to it
+
+3. THREE PHASE SECTIONS — stacked vertically, full width:
+
+PHASE 1 — Days 1-30 (purple header):
+- Verify Evoluciona Móvil failover with live credentials | Day 1-3 | CRITICAL
+- Confirm Stripe webhook idempotency under load | Day 1-3 | CRITICAL
+- Launch rep activation sprint — 10 reps, 100 users, 30 days | Day 1-7 | CRITICAL
+- Target PV expat community as first 50 users | Day 1-7
+- Get Mexican fintech legal opinion on IFPE requirements | Day 7-14 | CRITICAL
+- Set transaction limits for unregistered users | Day 7-14
+- Get WhatsApp Business API verified | Day 14-21
+- Build live unit economics dashboard in command center | Day 21-30
+- Achieve 100 transactions and document first user stories | Day 21-30
+
+PHASE 2 — Days 31-60 (green header):
+- Launch OXXO cash voucher (Prompt 2A → 2B → 2C) | Day 31-35 | CRITICAL
+- Open Guadalajara as parallel market via rep network | Day 31-40
+- Migrate from Replit to Railway or Render | Day 35-45
+- Conduct 5 in-person UX tests with Mexican residents | Day 40-50
+- Submit Taecel wholesale contract | Day 45-55
+- Reach 500 transactions — analyze retention and repeat rate | Day 50-60
+
+PHASE 3 — Days 61-90 (amber header):
+- Hold STP meeting with live transaction data | Day 61-65 | CRITICAL
+- Add payment reminders for recurring bills | Day 65-75
+- Update investor overview with live metrics | Day 70-80
+- Launch loyalty punch card for end users | Day 75-85
+- Reach 1,000 transactions — prepare Series A materials | Day 80-90
+
+4. EACH CHECKLIST ITEM:
+   - Checkbox on the left — tap to check/uncheck
+   - Item title
+   - Week label in muted text (Day 1-3 etc)
+   - CRITICAL badge in red if critical
+   - Tap the row (not the checkbox) to expand detail:
+     * Why this matters (2-3 sentences)
+     * Specific action (2-3 sentences)
+     * Competitive result (1-2 sentences)
+   - Checked items show strikethrough and reduced opacity
+   - State saves to localStorage key ck_checks
+
+5. CSS RULES — non negotiable:
+   html, body {
+     overflow-x: hidden;
+     max-width: 100vw;
+     margin: 0;
+     padding: 0;
+     font-family: -apple-system, sans-serif;
+     background: #f5f5f5;
+   }
+   * { box-sizing: border-box; }
+   - No fixed widths anywhere
+   - No horizontal scrolling anywhere
+   - Everything max-width: 100%
+   - Comfortable padding: 0 16px on content
+   - Min touch target size 44px on all tappable elements
+
+6. NO OTHER CONTENT — no metrics cards from other projects, 
+   no founder mode, no broker outreach, no MAHALI data, 
+   no other tabs, no other panels. Just the 90-day checklist 
+   and the sync button.
+
+After building:
+- Commit with message "refactor: command center replaced with 
+  clean 90-day mobile checklist"
+- Push to GitHub and confirm commit hash
+- Confirm html has overflow-x: hidden
+- Confirm no horizontal scroll triggers exist
+- Confirm all 24 checklist items are present
+- Confirm localStorage ck_checks is wired
