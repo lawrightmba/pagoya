@@ -214,7 +214,7 @@ export default function AdminDashboard() {
             borderBottom: "1px solid rgba(29,158,117,0.12)",
           }}>
             <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#1D9E75", textTransform: "uppercase" }}>
-              Ingresos por Plataforma · $8.00 MXN / transacción
+              Ingresos por Plataforma · $15.00 MXN / transacción
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>

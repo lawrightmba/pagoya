@@ -13,7 +13,7 @@ import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
 const COMMISSION_HOLD_DAYS = 7;
-const PLATFORM_FEE_MXN = "8.00";
+const PLATFORM_FEE_MXN = "15.00";
 const TAECEL_COST_PER_TXN_MXN = 5.00;
 const NET_MARGIN_PER_TXN_MXN = 3.00;
 

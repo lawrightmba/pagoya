@@ -15,7 +15,7 @@ export default function PaymentReview() {
     }
   }, []);
 
-  const PLATFORM_FEE = 8.00;
+  const PLATFORM_FEE = 15.00;
 
   const formatMonto = (monto: string) => {
     const num = parseFloat(monto);
@@ -103,7 +103,7 @@ export default function PaymentReview() {
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ fontSize: "13px", color: "#888888" }}>Tarifa de plataforma</span>
-                <span style={{ fontSize: "13px", color: "#888888" }}>$8.00 MXN</span>
+                <span style={{ fontSize: "13px", color: "#888888" }}>$15.00 MXN</span>
               </div>
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
               <div className="flex items-center justify-between py-2">

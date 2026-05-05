@@ -24,7 +24,7 @@ export const billPaymentsTable = pgTable("bill_payments", {
   taecelCarrier: text("taecel_carrier"),
   taecelCargoMxn: numeric("taecel_cargo_mxn", { precision: 10, scale: 2 }),
   bolsaType: text("bolsa_type"),
-  platformFeeMxn: numeric("platform_fee_mxn", { precision: 10, scale: 2 }).default("8.00"),
+  platformFeeMxn: numeric("platform_fee_mxn", { precision: 10, scale: 2 }).default("15.00"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
