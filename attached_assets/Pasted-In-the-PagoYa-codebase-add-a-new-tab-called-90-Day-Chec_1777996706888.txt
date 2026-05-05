@@ -1,0 +1,31 @@
+In the PagoYa codebase, add a new tab called "90-Day Checklist" to the command center at artifacts/pagoya/public/command-center.html. Study the existing tab structure, styling, and JavaScript patterns thoroughly before making any changes — match the existing design system exactly.
+
+ADD THE FOLLOWING:
+
+1. NEW TAB BUTTON — add a tab button labeled "90-Day Checklist" to the existing tab navigation row, following the same pattern as the other tabs.
+
+2. NEW TAB PANEL — create the corresponding tab panel with the full checklist content below. The panel should only show when that tab is active, following the same show/hide pattern used by other tabs.
+
+3. CHECKLIST CONTENT — paste the following self-contained HTML/CSS/JS block inside the new tab panel. It is fully self-contained and will not conflict with existing styles because all class names are prefixed with "ck-":
+
+--- BEGIN CHECKLIST BLOCK ---
+
+<style>
+.ck-wrap{padding:1rem 0 2rem;font-family:inherit}
+.ck-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.ck-stat{background:rgba(0,0,0,0.04);border-radius:8px;padding:10px 12px}
+.ck-stat-n{font-size:20px;font-weight:600}
+.ck-stat-l{font-size:11px;opacity:0.6;margin-top:2px}
+.ck-prog-wrap{margin-bottom:1.5rem}
+.ck-prog-label{font-size:12px;opacity:0.6;margin-bottom:6px;display:flex;justify-content:space-between}
+.ck-prog-bar{height:6px;background:rgba(0,0,0,0.1);border-radius:3px;overflow:hidden}
+.ck-prog-fill{height:100%;background:#1D9E75;border-radius:3px;transition:width 0.3s}
+.ck-phase-header{border-radius:8px;padding:12px 16px;margin:1.25rem 0 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.ck-phase-title{font-size:15px;font-weight:600}
+.ck-phase-sub{font-size:12px;margin-top:2px;opacity:0.75}
+.ck-phase-badge{font-size:11px;padding:3px 10px;border-radius:8px;white-space:nowrap;font-weight:500}
+.ck-ph1{background:#EEEDFE}.ck-ph1 .ck-phase-title{color:#26215C}.ck-ph1 .ck-phase-sub{color:#534AB7}.ck-ph1-badge{background:#AFA9EC;color:#26215C}
+.ck-ph2{background:#E1F5EE}.ck-ph2 .ck-phase-title{color:#04342C}.ck-ph2 .ck-phase-sub{color:#0F6E56}.ck-ph2-badge{background:#5DCAA5;color:#04342C}
+.ck-ph3{background:#FAEEDA}.ck-ph3 .ck-phase-title{color:#412402}.ck-ph3 .ck-phase-sub{color:#854F0B}.ck-ph3-badge{background:#EF9F27;color:#412402}
+.ck-items{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.ck-item{background:#fff;border:0.5px solid #d
