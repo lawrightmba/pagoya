@@ -24,3 +24,9 @@ id = "zM1hPonN2EqEh3O4q4nwE"
 uri = "file://PagoYa_Investor_Overview_April2026.docx"
 type = "word_document"
 title = "PagoYa — Investor Overview (April 2026)"
+
+[[outputs]]
+id = "GnGb0urVq9YqDzVelH9dH"
+uri = "file://artifacts/api-server/src/billpay/scripts/Matriz_Pruebas_PagoYa_Taecel_v3_FINAL.xlsx"
+type = "table"
+title = "Matriz_Pruebas_PagoYa_Taecel_v3_FINAL.xlsx"
