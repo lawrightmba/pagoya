@@ -30,3 +30,9 @@ id = "GnGb0urVq9YqDzVelH9dH"
 uri = "file://artifacts/api-server/src/billpay/scripts/Matriz_Pruebas_PagoYa_Taecel_v3_FINAL.xlsx"
 type = "table"
 title = "Matriz_Pruebas_PagoYa_Taecel_v3_FINAL.xlsx"
+
+[[outputs]]
+id = "hy4oglmTfNq-MQe87yHn4"
+uri = "file://artifacts/api-server/src/billpay/scripts/Matriz_Pruebas_PagoYa_Taecel_FINAL_CERTIFICADA.xlsx"
+type = "table"
+title = "Matriz_Pruebas_PagoYa_Taecel_FINAL_CERTIFICADA.xlsx"
