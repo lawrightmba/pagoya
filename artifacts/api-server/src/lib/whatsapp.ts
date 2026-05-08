@@ -6,7 +6,8 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN,
 );
 
-const FROM = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
+const rawFrom = process.env.TWILIO_WHATSAPP_FROM ?? "whatsapp:+14155238886";
+const FROM = rawFrom.startsWith("whatsapp:") ? rawFrom : `whatsapp:${rawFrom}`;
 
 export async function sendWhatsApp(to: string, body: string): Promise<void> {
   if (!process.env.TWILIO_ACCOUNT_SID) {
