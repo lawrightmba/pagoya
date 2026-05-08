@@ -5,6 +5,7 @@
 import { db } from "@workspace/db";
 import { sql, eq, and, gte, desc } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
 
 // ─── Raw SQL helpers (tables not in drizzle schema yet) ──────────────────────
 
@@ -165,15 +166,11 @@ function sendLoyaltyWhatsApp(
   tier: string,
 ): void {
   const tierEmoji = TIER_EMOJIS[tier] ?? "🥉";
-  const cleaned = phone.replace(/\D/g, "");
-  const msg = encodeURIComponent(
+  const msg =
     `🌟 +${pointsEarned} PagoYa Puntos por tu pago de ${billerName}. ` +
     `Saldo: ${balance} pts (${tierEmoji} ${tier.charAt(0).toUpperCase() + tier.slice(1)}). ` +
-    `Canjea en pagoyamx.com/puntos`,
-  );
-  fetch(`https://wa.me/${cleaned}?text=${msg}`, {
-    signal: AbortSignal.timeout(4_000),
-  }).catch(() => {});
+    `Canjea en pagoyamx.com/puntos`;
+  sendWhatsApp(phone, msg).catch(() => {});
 }
 
 // ─── Main: earnPoints ─────────────────────────────────────────────────────────

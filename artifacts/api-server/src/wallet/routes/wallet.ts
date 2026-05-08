@@ -11,6 +11,7 @@ import { createOxxoOrder, verifyConektaWebhookSignature } from "../lib/conekta.j
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
+import { sendWhatsApp } from "../../lib/whatsapp.js";
 
 const router: IRouter = Router();
 
@@ -149,10 +150,7 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
           `Nuevo saldo: $${newBalance.toFixed(2)} MXN\n\n` +
           `Ya puedes pagar tus servicios.\n_PagoYa — pagoseguromx.com_`;
 
-        const encoded = encodeURIComponent(msg);
-        fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
-          signal: AbortSignal.timeout(4_000),
-        }).catch(() => {});
+        sendWhatsApp(telefono, msg).catch(() => {});
 
         // Capture profile for retention/reminders (non-blocking)
         captureUserProfile({
@@ -188,10 +186,7 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
           `Monto: $${parseFloat(tx.amountMxn).toFixed(2)} MXN\n\n` +
           `Si pagaste en OXXO y no se acreditó, contáctanos. De lo contrario puedes generar una nueva carga.\n_PagoYa — pagoseguromx.com_`;
 
-        const encoded = encodeURIComponent(msg);
-        fetch(`https://wa.me/${telefono.replace(/\D/g, "")}?text=${encoded}`, {
-          signal: AbortSignal.timeout(4_000),
-        }).catch(() => {});
+        sendWhatsApp(telefono, msg).catch(() => {});
 
         logger.info({ conektaOrderId, walletId: tx.walletId }, "wallet: transaction expired via Conekta webhook");
 

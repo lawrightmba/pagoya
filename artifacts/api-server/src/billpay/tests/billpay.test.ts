@@ -29,6 +29,10 @@ vi.mock("../lib/notifications.js", () => ({
   SALDO_LOW_THRESHOLD: 500,
 }));
 
+vi.mock("../../lib/whatsapp.js", () => ({
+  sendWhatsApp: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("../../wallet/lib/conekta.js", () => ({
   createOxxoOrder: vi.fn().mockResolvedValue({
     orderId: "ord_test_oxxo_001",
@@ -43,6 +47,7 @@ vi.mock("../../wallet/lib/conekta.js", () => ({
 import { siprelProvider } from "../providers/siprel.js";
 import { evolucionaProvider } from "../providers/evoluciona.js";
 import { sendLowSaldoAlert, sendWhatsAppReceipt } from "../lib/notifications.js";
+import { sendWhatsApp } from "../../lib/whatsapp.js";
 import { createOxxoOrder } from "../../wallet/lib/conekta.js";
 import app from "../../app.js";
 
@@ -664,9 +669,7 @@ describe("9. Wallet", () => {
   });
 
   it("Conekta webhook charge.expired sets status to 'failed' and sends WhatsApp failure notification", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.mocked(sendWhatsApp).mockResolvedValue(undefined);
 
     await db.insert(usersTable).values({ telefono: "3221234567" }).onConflictDoNothing();
     const [wallet] = await db
@@ -708,15 +711,11 @@ describe("9. Wallet", () => {
       .where(eq(walletsTable.id, wallet.id));
     expect(parseFloat(updatedWallet.balanceMxn)).toBe(200);
 
-    // WhatsApp failure message must have been dispatched to the wa.me URL
-    const waCall = fetchSpy.mock.calls.find(
-      ([url]) => typeof url === "string" && (url as string).startsWith("https://wa.me/"),
+    // WhatsApp failure message must have been dispatched via Twilio sendWhatsApp
+    expect(vi.mocked(sendWhatsApp)).toHaveBeenCalledWith(
+      expect.stringContaining("3221234567"),
+      expect.stringMatching(/venci/i),
     );
-    expect(waCall).toBeDefined();
-    const waUrl = decodeURIComponent(waCall![0] as string);
-    expect(waUrl).toContain("venci");
-
-    fetchSpy.mockRestore();
   });
 
   it("GET /api/wallet/transactions returns results in descending order and respects limit param", async () => {
@@ -1306,18 +1305,16 @@ describe("14. Error Code 403 — Credential Alert", () => {
   });
 
   it("21. Error 403 from requestTXN fires an admin WhatsApp alert about invalid credentials", async () => {
-    const calls: string[] = [];
+    vi.mocked(sendWhatsApp).mockResolvedValue(undefined);
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       const u = url.toString();
-      calls.push(u);
       if (u.includes("requestTXN")) {
         return new Response(
           JSON.stringify({ success: false, error: 403, message: "Credenciales invalidas", data: [], extra: null }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      // wa.me alert URL — return 200 so it doesn't throw
       return new Response(null, { status: 200 });
     });
 
@@ -1325,13 +1322,13 @@ describe("14. Error Code 403 — Credential Alert", () => {
       realPay({ id: "cfe" } as never, { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" }),
     ).rejects.toThrow(/INVALID_CREDENTIALS/i);
 
-    // Allow the non-blocking fireAdminAlert fetch to resolve
+    // Allow the non-blocking fireAdminAlert to resolve
     await tick(100);
 
-    const waCall = calls.find((u) => u.startsWith("https://wa.me/"));
-    expect(waCall).toBeDefined();
-    const decoded = decodeURIComponent(waCall!);
-    expect(decoded.toLowerCase()).toMatch(/siprel|credencial/i);
+    expect(vi.mocked(sendWhatsApp)).toHaveBeenCalledWith(
+      "523221234567",
+      expect.stringMatching(/siprel|credencial/i),
+    );
   });
 });
 

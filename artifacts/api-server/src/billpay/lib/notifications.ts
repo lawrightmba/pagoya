@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger.js";
+import { sendWhatsApp } from "../../lib/whatsapp.js";
 
 const SALDO_LOW_THRESHOLD = 500;
 
@@ -21,7 +22,6 @@ export async function sendWhatsAppReceipt(params: {
     `Proveedor: ${params.provider.toUpperCase()}\n` +
     `Tel cliente: ${params.telefono}`;
 
-  const encoded = encodeURIComponent(msg);
   const targets: string[] = [];
 
   const cleanTel = params.telefono.replace(/\D/g, "");
@@ -33,14 +33,9 @@ export async function sendWhatsAppReceipt(params: {
   }
 
   for (const number of targets) {
-    try {
-      await fetch(`https://wa.me/${number}?text=${encoded}`, {
-        method: "GET",
-        signal: AbortSignal.timeout(4000),
-      });
-    } catch (err) {
+    await sendWhatsApp(number, msg).catch((err) => {
       logger.warn({ number, err }, "billpay: WhatsApp receipt send failed (non-fatal)");
-    }
+    });
   }
 }
 
@@ -55,15 +50,10 @@ export async function sendLowSaldoAlert(balance: number): Promise<void> {
     `Acción requerida: recargar saldo SIPREL para continuar procesando pagos.`;
 
   const cleanAdmin = adminNumber.replace(/\D/g, "");
-  try {
-    await fetch(`https://wa.me/${cleanAdmin}?text=${encodeURIComponent(msg)}`, {
-      method: "GET",
-      signal: AbortSignal.timeout(4000),
-    });
-    logger.warn({ balance }, "billpay: low saldo alert sent to admin");
-  } catch (err) {
+  await sendWhatsApp(cleanAdmin, msg).catch((err) => {
     logger.warn({ err }, "billpay: low saldo alert send failed (non-fatal)");
-  }
+  });
+  logger.warn({ balance }, "billpay: low saldo alert sent to admin");
 }
 
 export { SALDO_LOW_THRESHOLD };

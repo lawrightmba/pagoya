@@ -1,5 +1,6 @@
 import type { ProviderAdapter, BillService, BillPayRequest, BillPayResult } from "../types/billpay.js";
 import { logger } from "../../lib/logger.js";
+import { sendWhatsApp } from "../../lib/whatsapp.js";
 import { db } from "@workspace/db";
 import { taecelProductCacheTable } from "@workspace/db";
 import { desc } from "drizzle-orm";
@@ -306,15 +307,7 @@ async function getSales(config: TaecelConfig, fecha: string): Promise<unknown> {
 async function fireAdminAlert(message: string): Promise<void> {
   const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
   if (!adminNumber) return;
-  const encoded = encodeURIComponent(`⚠️ *PagoYa Admin Alert*\n${message}`);
-  try {
-    await fetch(`https://wa.me/${adminNumber.replace(/\D/g, "")}?text=${encoded}`, {
-      method: "GET",
-      signal: AbortSignal.timeout(4_000),
-    });
-  } catch {
-    // non-fatal
-  }
+  await sendWhatsApp(adminNumber, `⚠️ *PagoYa Admin Alert*\n${message}`).catch(() => {});
 }
 
 // ─── PROVIDER ADAPTER ────────────────────────────────────────────────────────

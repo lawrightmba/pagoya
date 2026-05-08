@@ -1,17 +1,13 @@
 import { db, userProfilesTable, userBillersTable, reminderLogTable } from "@workspace/db";
 import { eq, and, isNotNull, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
 
 /**
- * Send a WhatsApp message via wa.me deep link (same approach as notifications.ts).
- * Not a real delivery guarantee — just opens WA with pre-filled text.
+ * Send a WhatsApp message via Twilio.
  */
 async function sendWhatsAppReminder(phone: string, message: string): Promise<void> {
-  const clean = phone.replace(/\D/g, "");
-  const encoded = encodeURIComponent(message);
-  await fetch(`https://wa.me/${clean}?text=${encoded}`, {
-    signal: AbortSignal.timeout(5_000),
-  });
+  await sendWhatsApp(phone, message);
 }
 
 function buildMessage(params: {
