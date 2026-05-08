@@ -1,0 +1,63 @@
+Replace the wa.me stub notification system with real Twilio 
+WhatsApp delivery. The Twilio secrets will be added to Replit 
+Secrets manually after this build — write the code to use them.
+
+STEP 1 — Install Twilio SDK:
+Run in shell: npm install twilio
+Add "twilio": "^5.0.0" to package.json dependencies.
+
+STEP 2 — Create artifacts/api-server/src/lib/whatsapp.ts:
+import twilio from 'twilio';
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+const FROM = process.env.TWILIO_WHATSAPP_FROM ?? 
+  'whatsapp:+14155238886';
+
+export async function sendWhatsApp(
+  to: string, 
+  body: string
+): Promise<void> {
+  if (!process.env.TWILIO_ACCOUNT_SID) {
+    console.warn('[WhatsApp] Twilio not configured — skipping:', 
+      to, body.slice(0, 60));
+    return;
+  }
+  const toFormatted = to.startsWith('whatsapp:') 
+    ? to 
+    : `whatsapp:${to}`;
+  try {
+    await client.messages.create({ from: FROM, to: toFormatted, 
+      body });
+    console.log('[WhatsApp] Sent to', to);
+  } catch (err) {
+    console.error('[WhatsApp] Failed to send to', to, err);
+  }
+}
+
+STEP 3 — Replace all wa.me fetch calls across these files 
+with sendWhatsApp() from the new lib:
+- artifacts/api-server/src/wallet/routes/wallet.ts
+- artifacts/api-server/src/billpay/lib/notifications.ts
+- artifacts/api-server/src/billpay/providers/siprel.ts
+- artifacts/api-server/src/services/reminders.ts
+- artifacts/api-server/src/services/loyalty.ts
+
+In each file:
+- Add: import { sendWhatsApp } from '../lib/whatsapp';
+  (adjust relative path per file location)
+- Replace every: fetch(`https://wa.me/...`)
+  with: await sendWhatsApp(phone, message)
+- Keep the .catch(() => {}) pattern — wrap each call in 
+  try/catch so failures remain non-blocking
+
+STEP 4 — After all replacements, restart server and confirm:
+- No TypeScript errors
+- Server starts clean
+- Run: grep -r "wa.me" artifacts/api-server/src --include="*.ts"
+  Should return zero results.
+
+Report all files changed and confirm zero wa.me references remain.
