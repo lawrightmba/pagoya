@@ -130,8 +130,8 @@ export default function Home() {
         <meta property="og:title" content="PagoYa | Paga tus servicios desde tu celular" />
         <meta property="og:description" content="Sin banco, sin filas. Paga todos tus servicios desde tu celular en Puerto Vallarta." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://pagoya.mx" />
-        <link rel="canonical" href="https://pagoya.mx/" />
+        <meta property="og:url" content="https://pagoyamx.com" />
+        <link rel="canonical" href="https://pagoyamx.com/" />
       </Helmet>
 
       {/* ── CSS ── */}

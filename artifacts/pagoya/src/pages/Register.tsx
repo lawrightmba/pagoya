@@ -82,7 +82,7 @@ export default function Register() {
         <title>Crear cuenta gratis | PagoYa</title>
         <meta name="description" content="Regístrate gratis en PagoYa y empieza a pagar todos tus servicios desde tu celular. Sin banco, sin filas, sin complicaciones." />
         <meta name="keywords" content="registrarse PagoYa, crear cuenta pagos, app pagos sin banco México" />
-        <link rel="canonical" href="https://pagoya.mx/register" />
+        <link rel="canonical" href="https://pagoyamx.com/register" />
       </Helmet>
       {/* Logo */}
       <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>

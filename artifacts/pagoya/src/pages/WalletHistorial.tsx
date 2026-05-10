@@ -138,7 +138,7 @@ export default function WalletHistorial() {
       <Helmet>
         <title>Historial de pagos | PagoYa</title>
         <meta name="description" content="Consulta todos tus pagos y movimientos en un solo lugar. Tu historial de transacciones siempre disponible en PagoYa." />
-        <link rel="canonical" href="https://pagoya.mx/wallet/historial" />
+        <link rel="canonical" href="https://pagoyamx.com/wallet/historial" />
       </Helmet>
       {/* Header */}
       <header

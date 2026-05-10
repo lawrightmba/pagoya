@@ -113,7 +113,7 @@ export default function CashLoad() {
         <title>Cargar saldo con OXXO | PagoYa Wallet</title>
         <meta name="description" content="Recarga tu wallet PagoYa en efectivo en cualquier OXXO. Rápido, seguro y sin tarjeta de crédito." />
         <meta name="keywords" content="recargar saldo OXXO, cargar wallet en efectivo, pago en efectivo servicios México" />
-        <link rel="canonical" href="https://pagoya.mx/cargar" />
+        <link rel="canonical" href="https://pagoyamx.com/cargar" />
       </Helmet>
       {/* Header */}
       <header
