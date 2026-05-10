@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle } from "lucide-react";
 const logoUrl = "/pagoya-logo.png";
@@ -108,6 +109,12 @@ export default function CashLoad() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
+      <Helmet>
+        <title>Cargar saldo con OXXO | PagoYa Wallet</title>
+        <meta name="description" content="Recarga tu wallet PagoYa en efectivo en cualquier OXXO. Rápido, seguro y sin tarjeta de crédito." />
+        <meta name="keywords" content="recargar saldo OXXO, cargar wallet en efectivo, pago en efectivo servicios México" />
+        <link rel="canonical" href="https://pagoya.mx/cargar" />
+      </Helmet>
       {/* Header */}
       <header
         className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3"

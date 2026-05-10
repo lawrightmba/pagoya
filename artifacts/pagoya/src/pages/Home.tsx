@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
@@ -122,6 +123,16 @@ export default function Home() {
     // BEFORE: background: "#FFFFFF"
     // AFTER:  background: "#0A2540"
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <Helmet>
+        <title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
+        <meta name="description" content="Paga luz, agua, teléfono y más desde tu celular sin ir al banco. PagoYa es la app de pagos más fácil de Puerto Vallarta y Guadalajara." />
+        <meta name="keywords" content="pagar servicios en línea, pago de luz Puerto Vallarta, pagar CFE, pago de agua, app de pagos México" />
+        <meta property="og:title" content="PagoYa | Paga tus servicios desde tu celular" />
+        <meta property="og:description" content="Sin banco, sin filas. Paga todos tus servicios desde tu celular en Puerto Vallarta." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://pagoya.mx" />
+        <link rel="canonical" href="https://pagoya.mx/" />
+      </Helmet>
 
       {/* ── CSS ── */}
       <style>{`

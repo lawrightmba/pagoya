@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { ArrowLeft, RefreshCw, Wallet } from "lucide-react";
 
@@ -134,6 +135,11 @@ export default function WalletHistorial() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
+      <Helmet>
+        <title>Historial de pagos | PagoYa</title>
+        <meta name="description" content="Consulta todos tus pagos y movimientos en un solo lugar. Tu historial de transacciones siempre disponible en PagoYa." />
+        <link rel="canonical" href="https://pagoya.mx/wallet/historial" />
+      </Helmet>
       {/* Header */}
       <header
         className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 sticky top-0 z-10"

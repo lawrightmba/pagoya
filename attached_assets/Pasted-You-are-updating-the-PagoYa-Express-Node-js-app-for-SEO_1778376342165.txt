@@ -1,0 +1,89 @@
+You are updating the PagoYa Express/Node.js app for SEO. Complete ALL of the following tasks autonomously with no interruptions.
+
+TASK 1 — FIND HTML TEMPLATE FILES
+Locate all HTML template files used to render pages. These may be:
+- /public/*.html files
+- /views/*.ejs or /views/*.hbs files
+- Any layout/base template file shared across routes
+
+List every file you find before making changes.
+
+TASK 2 — ADD META TAGS TO EACH PAGE
+
+For each page below, find the matching file and insert the meta tags inside the <head> tag, immediately after any existing <meta charset> and <meta viewport> tags. Do not remove anything existing.
+
+--- HOME PAGE (index or root route) ---
+<title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
+<meta name="description" content="Paga luz, agua, teléfono y más desde tu celular sin ir al banco. PagoYa es la app de pagos más fácil de Puerto Vallarta y Guadalajara.">
+<meta name="keywords" content="pagar servicios en línea, pago de luz Puerto Vallarta, pagar CFE, pago de agua, app de pagos México">
+<meta property="og:title" content="PagoYa | Paga tus servicios desde tu celular">
+<meta property="og:description" content="Sin banco, sin filas. Paga todos tus servicios desde tu celular en Puerto Vallarta.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pagoya.mx">
+
+--- REGISTER PAGE (/register) ---
+<title>Crear cuenta gratis | PagoYa</title>
+<meta name="description" content="Regístrate gratis en PagoYa y empieza a pagar todos tus servicios desde tu celular. Sin banco, sin filas, sin complicaciones.">
+<meta name="keywords" content="registrarse PagoYa, crear cuenta pagos, app pagos sin banco México">
+
+--- WALLET LOAD PAGE (/cargar) ---
+<title>Cargar saldo con OXXO | PagoYa Wallet</title>
+<meta name="description" content="Recarga tu wallet PagoYa en efectivo en cualquier OXXO. Rápido, seguro y sin tarjeta de crédito.">
+<meta name="keywords" content="recargar saldo OXXO, cargar wallet en efectivo, pago en efectivo servicios México">
+
+--- TRANSACTION HISTORY PAGE (/wallet/historial) ---
+<title>Historial de pagos | PagoYa</title>
+<meta name="description" content="Consulta todos tus pagos y movimientos en un solo lugar. Tu historial de transacciones siempre disponible en PagoYa.">
+
+--- LOGIN PAGE (/login) ---
+<title>Iniciar sesión | PagoYa</title>
+<meta name="description" content="Entra a tu cuenta PagoYa y paga tus servicios en segundos desde tu celular.">
+
+TASK 3 — GOOGLE SEARCH CONSOLE VERIFICATION TAG
+Add this tag to the <head> of EVERY page (or the shared layout/base template if one exists). Replace PASTE_YOUR_CODE_HERE with the actual verification code from Google Search Console → Settings → Ownership Verification → HTML Tag method:
+
+<meta name="google-site-verification" content="PASTE_YOUR_CODE_HERE">
+
+If a shared layout file exists (like layout.ejs, base.html, or _layout.hbs), add it there only once instead of to every individual file.
+
+TASK 4 — ADD CANONICAL TAGS
+For each page, also add a canonical link tag inside <head> to prevent duplicate content issues:
+
+Home:     <link rel="canonical" href="https://pagoya.mx/">
+Register: <link rel="canonical" href="https://pagoya.mx/register">
+Cargar:   <link rel="canonical" href="https://pagoya.mx/cargar">
+Historial:<link rel="canonical" href="https://pagoya.mx/wallet/historial">
+Login:    <link rel="canonical" href="https://pagoya.mx/login">
+
+TASK 5 — ROBOTS.TXT
+Check if /public/robots.txt exists. If it does not exist, create it at /public/robots.txt with this content:
+
+User-agent: *
+Allow: /
+Disallow: /command-center
+Disallow: /admin
+Disallow: /rep-dashboard
+Disallow: /rep-login
+Disallow: /rep-signup
+Sitemap: https://pagoya.mx/sitemap.xml
+
+TASK 6 — SITEMAP
+Check if /public/sitemap.xml exists. If it does not exist, create it at /public/sitemap.xml with this content:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://pagoya.mx/</loc><priority>1.0</priority></url>
+  <url><loc>https://pagoya.mx/register</loc><priority>0.8</priority></url>
+  <url><loc>https://pagoya.mx/login</loc><priority>0.6</priority></url>
+  <url><loc>https://pagoya.mx/cargar</loc><priority>0.7</priority></url>
+  <url><loc>https://pagoya.mx/wallet/historial</loc><priority>0.5</priority></url>
+</urlset>
+
+TASK 7 — SERVE STATIC FILES
+Make sure Express is serving /public as static files so robots.txt and sitemap.xml are accessible at the root domain. Verify this line exists in the main server file (app.js, index.js, or server.js):
+
+app.use(express.static('public'));
+
+If it is missing, add it after the Express app is initialized.
+
+When all tasks are complete, confirm which files were modified and list the exact changes made to each.
