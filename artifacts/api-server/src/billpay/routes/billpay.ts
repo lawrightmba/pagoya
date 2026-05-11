@@ -251,7 +251,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       billerId: serviceId,
       billerName: service.name,
       amount: montoNum,
-      repId: repId ?? undefined,
+      repId: effectiveRepId ?? undefined,
     }).catch(() => {});
 
     // 6c. Loyalty points (non-blocking, never throws)

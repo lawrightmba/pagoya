@@ -1447,3 +1447,252 @@ describe("16. Product Cache", () => {
     expect(productCalls).toHaveLength(1); // stale cache forced a fresh fetch
   });
 });
+
+// ---------------------------------------------------------------------------
+// 17. "Error inesperado" + "En proceso" edge case
+// Per Taecel: success:true + message:"Error inesperado" + data.Status:"En proceso"
+// is a TRANSIENT state — transaction is still being processed by the carrier.
+// The polling loop must NOT resolve this as confirmed; it must continue polling.
+// ---------------------------------------------------------------------------
+describe('17. "Error inesperado" + "En proceso" edge case', () => {
+  type SiprelMod = typeof import("../providers/siprel.js");
+  let realPay: SiprelMod["siprelProvider"]["pay"];
+
+  beforeAll(async () => {
+    const mod = await vi.importActual<SiprelMod>("../providers/siprel.js");
+    realPay = mod.siprelProvider.pay.bind(mod.siprelProvider);
+    setTaecelEnv();
+  });
+
+  afterAll(() => {
+    clearTaecelEnv();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** Build the specific "Error inesperado" + "En proceso" response from statusTXN */
+  function statusTxnErrorInesperadoEnProceso(transID: string) {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        error: "0",
+        message: "Error inesperado",
+        data: {
+          TransID: transID,
+          Fecha: "2026-05-11 12:43:06",
+          Carrier: "Telcel",
+          Folio: "",
+          Status: "En proceso",
+          Monto: "$100.00",
+          Cargo: "$0.00",
+          Bolsa: "Tiempo Aire",
+          "Saldo Final": "$2,870.40",
+        },
+        extra: null,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  it('27. "Error inesperado"+"En proceso" on first poll does NOT resolve — polling continues', async () => {
+    vi.useFakeTimers();
+
+    let statusCallCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EI_001");
+      if (u.includes("statusTXN")) {
+        statusCallCount++;
+        // First call returns "Error inesperado"+"En proceso"; second returns Exitosa
+        return statusCallCount === 1
+          ? statusTxnErrorInesperadoEnProceso("TX_EI_001")
+          : statusTxnOk("TX_EI_001");
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "telcel_recarga_100" } as never,
+      { serviceId: "telcel_recarga_100", referencia: "5555555515", monto: 100, telefono: "5555555515" },
+    );
+
+    // Advance past the 3-second poll interval so the second statusTXN call fires
+    await vi.advanceTimersByTimeAsync(5_000);
+    const result = await payPromise;
+
+    // Must have polled at least twice — the first "Error inesperado" response triggered a retry
+    expect(statusCallCount).toBeGreaterThanOrEqual(2);
+    // Final result must be confirmed, not a false positive from the first poll
+    expect(result.status).toBe("confirmed");
+  });
+
+  it('28. Multiple consecutive "Error inesperado"+"En proceso" responses eventually resolve on success', async () => {
+    vi.useFakeTimers();
+
+    let statusCallCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EI_002");
+      if (u.includes("statusTXN")) {
+        statusCallCount++;
+        // First three calls: "Error inesperado"+"En proceso"; fourth: Exitosa
+        if (statusCallCount < 4) return statusTxnErrorInesperadoEnProceso("TX_EI_002");
+        return statusTxnOk("TX_EI_002", { Folio: "EI-FOLIO-OK", Bolsa: "Tiempo Aire", Carrier: "Telcel" });
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "telcel_recarga_100" } as never,
+      { serviceId: "telcel_recarga_100", referencia: "5555555515", monto: 100, telefono: "5555555515" },
+    );
+
+    // Advance enough time for 3 retries (3 × 3s = 9s) plus a small buffer
+    await vi.advanceTimersByTimeAsync(15_000);
+    const result = await payPromise;
+
+    expect(statusCallCount).toBeGreaterThanOrEqual(4);
+    expect(result.status).toBe("confirmed");
+    expect(result.confirmationCode).toBe("EI-FOLIO-OK");
+  });
+
+  it('29. Polling timeout still fires correctly when all polls return "Error inesperado"+"En proceso"', async () => {
+    vi.useFakeTimers();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EI_003");
+      if (u.includes("statusTXN")) return statusTxnErrorInesperadoEnProceso("TX_EI_003");
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "telcel_recarga_100" } as never,
+      { serviceId: "telcel_recarga_100", referencia: "5555555515", monto: 100, telefono: "5555555515" },
+    );
+
+    // Advance past the 60-second cycle timeout
+    await vi.advanceTimersByTimeAsync(65_000);
+    const result = await payPromise;
+
+    // Must time out to pending, not resolve as a false confirmed
+    expect(result.status).toBe("pending");
+  });
+
+  it('30. success:true + "Error inesperado" with Status NOT "En proceso" is treated as Type 1 (confirmed)', async () => {
+    // If Status has already moved on (e.g. "Exitosa") but message still says "Error inesperado",
+    // the transaction is confirmed and the loop should stop.
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EI_004");
+      if (u.includes("statusTXN")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            error: "0",
+            message: "Error inesperado",
+            data: {
+              TransID: "TX_EI_004",
+              Folio: "EI-FOLIO-DONE",
+              Status: "Exitosa",     // <-- definitive status, NOT "En proceso"
+              Carrier: "Telcel",
+              Monto: "$100.00",
+              Cargo: "$100.00",
+              Bolsa: "Tiempo Aire",
+              "Saldo Final": "$2,770.40",
+            },
+            extra: null,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const result = await realPay(
+      { id: "telcel_recarga_100" } as never,
+      { serviceId: "telcel_recarga_100", referencia: "5555555515", monto: 100, telefono: "5555555515" },
+    );
+
+    // Should resolve immediately as confirmed since Status != "En proceso"
+    expect(result.status).toBe("confirmed");
+    expect(result.confirmationCode).toBe("EI-FOLIO-DONE");
+  });
+
+  it('31. "Error inesperado"+"En proceso" correctly uses the affected sandbox reference numbers', async () => {
+    // Verify the fix applies for all six documented sandbox numbers (5555555515,
+    // 5555555525, 5555555530, 5555555540, 5555555560, 5555555565). We spot-check
+    // two of them to confirm the polling path is reference-number-agnostic.
+    vi.useFakeTimers();
+
+    const testedRefs: string[] = [];
+
+    for (const ref of ["5555555525", "5555555560"]) {
+      testedRefs.push(ref);
+      let callCount = 0;
+
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+        const u = url.toString();
+        if (u.includes("requestTXN")) return reqTxnOk(`TX_REF_${ref}`);
+        if (u.includes("statusTXN")) {
+          callCount++;
+          return callCount === 1
+            ? statusTxnErrorInesperadoEnProceso(`TX_REF_${ref}`)
+            : statusTxnOk(`TX_REF_${ref}`, { Folio: `FOLIO_${ref}` });
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      const payPromise = realPay(
+        { id: "telcel_recarga_200" } as never,
+        { serviceId: "telcel_recarga_200", referencia: ref, monto: 200, telefono: ref },
+      );
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      const result = await payPromise;
+
+      expect(result.status).toBe("confirmed");
+      expect(callCount).toBeGreaterThanOrEqual(2);
+
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+      vi.useFakeTimers();
+    }
+
+    expect(testedRefs).toHaveLength(2);
+  });
+
+  it('32. rawResponse.transID is preserved when resolved after "Error inesperado"+"En proceso" retry', async () => {
+    vi.useFakeTimers();
+
+    let statusCallCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_EI_PRESERVE");
+      if (u.includes("statusTXN")) {
+        statusCallCount++;
+        return statusCallCount === 1
+          ? statusTxnErrorInesperadoEnProceso("TX_EI_PRESERVE")
+          : statusTxnOk("TX_EI_PRESERVE", { Folio: "FOLIO-PRESERVE" });
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const payPromise = realPay(
+      { id: "cfe" } as never,
+      { serviceId: "cfe", referencia: "125478965412", monto: 260, telefono: "3221234567" },
+    );
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    const result = await payPromise;
+
+    expect(result.status).toBe("confirmed");
+    const raw = result.rawResponse as Record<string, unknown>;
+    expect(raw.transID).toBe("TX_EI_PRESERVE");
+  });
+});

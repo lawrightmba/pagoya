@@ -219,8 +219,21 @@ async function pollStatusTXN(
     logger.info({ transID, success: res.success, error: res.error, message: res.message }, "taecel: statusTXN poll");
 
     // Type 1: valid success
+    // Guard: success:true + message:"Error inesperado" + data.Status:"En proceso" is a
+    // transient state meaning the transaction is still being processed by the carrier.
+    // It must NOT be resolved as confirmed — treat it as Type 3 and keep polling.
     if (res.success === true && !Array.isArray(res.data)) {
-      return { timedOut: false, data: res.data as TaecelStatusData, raw: res };
+      const d = res.data as TaecelStatusData;
+      const statusField = (d.Status ?? "").trim();
+      if (res.message === "Error inesperado" && statusField === "En proceso") {
+        logger.info(
+          { transID, message: res.message, status: statusField },
+          "taecel: statusTXN 'Error inesperado'+'En proceso' — transient state, continuing poll",
+        );
+        await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        continue;
+      }
+      return { timedOut: false, data: d, raw: res };
     }
 
     // Type 2: valid failure — non-zero error code, stop immediately

@@ -1,0 +1,15 @@
+In the SIPREL provider adapter, update the transaction request handler to correctly handle the “Error inesperado” + “En proceso” edge case as specified by the provider.
+Context: After calling requestTXN, some service numbers return a response where success: true, error: "0", message: "Error inesperado", but data.Status: "En proceso". This does NOT mean the transaction failed — it means the transaction is still processing and must be polled.
+Affected service numbers: 5555555515, 5555555525, 5555555530, 5555555540, 5555555560, 5555555565
+Changes required:
+	1.	In the SIPREL adapter’s requestTXN response handler, add a condition to detect when message === "Error inesperado" AND data.Status === "En proceso" simultaneously. Do NOT treat this as a failure or throw an error.
+	2.	When this condition is detected, immediately begin a polling loop calling statustxn with the returned TransID:
+	•	Sleep exactly 3 seconds between each poll attempt
+	•	On each poll response, check if Status is no longer "En proceso"
+	•	If Status has changed to a definitive result (success or failure), resolve or reject the transaction accordingly and exit the loop
+	•	If 60 seconds have elapsed since the original requestTXN call was made, exit the loop and mark the transaction as failed with a timeout error message
+	3.	The 60-second timeout countdown starts from the moment requestTXN was first called, not from when polling begins.
+	4.	Make sure the polling logic applies specifically when the affected service numbers above are involved. If the same edge case appears on other service numbers, the polling logic should still apply since it is safe behavior regardless.
+	5.	Do not change any other existing behavior in the SIPREL adapter — only add this polling/retry path for the “En proceso” edge case.
+	6.	After making the change, run the existing test suite to confirm all 32 tests still pass. If any tests need to be updated or added to cover this new polling behavior, add them.
+	7.	Do not restart the server or deploy — just make the code changes and confirm tests pass.
