@@ -3,8 +3,11 @@
     "id": "TU-03",
     "producto": "TEL100",
     "referencia": "5555555515",
-    "fechaHora": "2026-05-11 18:02:40",
+    "fechaHora": "2026-05-11 18:05:26",
+    "transID": null,
+    "folio": null,
     "status": "error",
-    "errorMsg": "HTTP Error 403: Forbidden"
+    "errorCode": "3128",
+    "errorMsg": "Numero recargado en menos de 10 minutos, por favor revise su reporte de ventas o espere para intentarlo nuevamente"
   }
 ]
