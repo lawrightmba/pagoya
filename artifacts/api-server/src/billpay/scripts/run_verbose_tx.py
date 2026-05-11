@@ -122,41 +122,13 @@ def run_verbose(producto, referencia, label):
         print(json.dumps(s, indent=2, ensure_ascii=False), flush=True)
         polls.append({"poll": poll_n, "ts": poll_ts, "raw": s})
 
-        # Type 1 — success=true, data is object
-        # Apply folio-presence check before marking EXITOSA:
-        #   IF folio present and non-empty                  → EXITOSA
-        #   IF folio absent/empty AND msg contains "Error"  → ERROR_INESPERADO (treat as failed)
+        # Type 1 — confirmed success
         if s.get("success") is True and isinstance(s.get("data"), dict):
-            d            = s["data"]
-            folio        = (d.get("Folio") or "").strip()
-            carrier      = d.get("Carrier")
-            cargo        = d.get("Cargo")
-            msg          = (s.get("message") or "").lower()
-            status_field = (d.get("Status") or "").strip()
-
-            has_real_folio      = len(folio) > 0
-            is_error_inesperado = not has_real_folio and "error" in msg
-
-            if is_error_inesperado:
-                print(
-                    f"\n  → ERROR_INESPERADO: success=true but folio='{folio}'"
-                    f"  msg='{s.get('message')}'  Status='{status_field}'",
-                    flush=True,
-                )
-                return {
-                    "label": label, "producto": producto, "referencia": referencia,
-                    "fechaHora": fecha_hora, "transID": trans_id,
-                    "folio": folio or None, "carrier": carrier,
-                    "fecha": d.get("Fecha"), "bolsa": d.get("Bolsa"),
-                    "monto": d.get("Monto"), "cargo": cargo,
-                    "saldoFinal": d.get("Saldo Final"),
-                    "status": "ERROR_INESPERADO",
-                    "descripcion": s.get("message"),
-                    "statusField": status_field,
-                    "requestTXN_raw": req_raw, "statusTXN_polls": polls,
-                }
-
-            print(f"\n  → EXITOSA: Folio={folio}  Carrier={carrier}  Cargo={cargo}", flush=True)
+            d = s["data"]
+            folio   = d.get("Folio")
+            carrier = d.get("Carrier")
+            cargo   = d.get("Cargo")
+            print(f"\n  → TYPE 1 (SUCCESS): Folio={folio}  Carrier={carrier}  Cargo={cargo}", flush=True)
             return {
                 "label": label, "producto": producto, "referencia": referencia,
                 "fechaHora": fecha_hora, "transID": trans_id,
@@ -168,37 +140,18 @@ def run_verbose(producto, referencia, label):
                 "requestTXN_raw": req_raw, "statusTXN_polls": polls,
             }
 
-        # Type 2 — confirmed failure (success=false, non-zero error code)
-        # Resolve the most descriptive label using data.Status when available:
-        #   data.Status == "Fracasada"    → FRACASADA
-        #   data.Status == "No Procesada" → NO_PROCESADA
-        #   otherwise                     → ERROR_<code>
+        # Type 2 — confirmed failure
         err = s.get("error")
         if err is not None and err != 0:
-            d            = s.get("data", {})
-            status_field = (d.get("Status") or "").strip() if isinstance(d, dict) else ""
-            folio_val    = d.get("Folio")   if isinstance(d, dict) else None
-            carrier_val  = d.get("Carrier") if isinstance(d, dict) else None
-
-            if status_field == "Fracasada":
-                resolved_status = "FRACASADA"
-            elif status_field == "No Procesada":
-                resolved_status = "NO_PROCESADA"
-            else:
-                resolved_status = f"ERROR_{err}"
-
-            print(
-                f"\n  → TYPE 2 ({resolved_status}): error={err}"
-                f"  msg='{s.get('message')}'  Status='{status_field}'",
-                flush=True,
-            )
+            d   = s.get("data", {})
+            print(f"\n  → TYPE 2 (FAILURE): error={err}  msg={s.get('message')}", flush=True)
             return {
                 "label": label, "producto": producto, "referencia": referencia,
                 "fechaHora": fecha_hora, "transID": trans_id,
-                "folio": folio_val, "carrier": carrier_val,
-                "status": resolved_status,
-                "errorCode": err, "descripcion": s.get("message"),
-                "statusField": status_field,
+                "folio": d.get("Folio") if isinstance(d, dict) else None,
+                "carrier": d.get("Carrier") if isinstance(d, dict) else None,
+                "status": "error", "errorCode": err,
+                "errorMsg": s.get("message"), "descripcion": s.get("message"),
                 "requestTXN_raw": req_raw, "statusTXN_polls": polls,
             }
 
