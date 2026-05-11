@@ -386,24 +386,59 @@ export const siprelProvider: ProviderAdapter = {
       };
     }
 
-    // 8. statusTXN returned failure
-    const statusData = pollResult.data!;
+    // 8. statusTXN returned Type 2 failure (success=false, non-zero error code)
     if (pollResult.raw && !pollResult.raw.success) {
       const code = pollResult.raw.error;
-      const codeLabel = SERVICE_WEB_ERROR_CODES[code] ?? PROVIDER_ERROR_CODES[code] ?? `ERROR_${code}`;
+
+      // Resolve the most descriptive label: prefer data.Status if present
+      const rawData = !Array.isArray(pollResult.raw.data)
+        ? (pollResult.raw.data as TaecelStatusData)
+        : ({} as TaecelStatusData);
+      const statusField = (rawData?.Status ?? "").trim();
+
+      let codeLabel: string;
+      if (statusField === "Fracasada") {
+        codeLabel = "FRACASADA";
+      } else if (statusField === "No Procesada") {
+        codeLabel = "NO_PROCESADA";
+      } else {
+        codeLabel = SERVICE_WEB_ERROR_CODES[code] ?? PROVIDER_ERROR_CODES[code] ?? `ERROR_${code}`;
+      }
+
       if (code === 3133) {
         getProducts(config).catch(() => {});
       }
+
+      logger.warn({ transID, code, codeLabel, statusField }, "taecel: statusTXN confirmed failure");
       throw new Error(`Taecel statusTXN failed [${codeLabel}]: ${pollResult.raw.message}`);
     }
 
-    // 6. statusTXN success
-    const folio = statusData.Folio ?? transID;
-    const carrier = statusData.Carrier ?? "";
+    // 6. statusTXN Type 1 — success=true, but validate folio before marking confirmed
+    //
+    //   IF  success=true AND folio present and non-empty  → EXITOSA (confirmed)
+    //   IF  success=true AND folio absent/empty AND message contains "Error"
+    //                                                     → ERROR_INESPERADO (treat as failed)
+    //
+    const statusData = pollResult.data!;
+    const rawFolio   = (statusData.Folio ?? "").trim();
+    const rawMsg     = (pollResult.raw?.message ?? "").toLowerCase();
+    const hasRealFolio     = rawFolio.length > 0;
+    const isErrorInesperado = !hasRealFolio && rawMsg.includes("error");
+
+    if (isErrorInesperado) {
+      logger.warn(
+        { transID, message: pollResult.raw?.message, folio: rawFolio },
+        "taecel: statusTXN ERROR_INESPERADO — success=true but no folio and message contains 'Error'",
+      );
+      throw new Error(`Taecel statusTXN ERROR_INESPERADO [sin folio]: ${pollResult.raw?.message}`);
+    }
+
+    const folio    = rawFolio || transID;
+    const carrier  = statusData.Carrier ?? "";
     const cargoStr = statusData.Cargo ?? "$0.00";
     const cargoMxn = parseFloat(cargoStr.replace(/[$,]/g, "")) || 0;
 
-    logger.info({ transID, folio, carrier, bolsa }, "taecel: payment confirmed");
+    logger.info({ transID, folio, carrier, bolsa }, "taecel: payment confirmed — folio present");
 
     return {
       success: true,
