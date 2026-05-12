@@ -36,4 +36,4 @@ Disallow: /rep-dashboard
 Disallow: /rep-login
 Disallow: /rep-signup
 
-Sitemap: https://pagoya.mx/sitemap.xml
+Sitemap: https://pagoyamx.com/sitemap.xml
