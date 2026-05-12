@@ -20,6 +20,9 @@ import LoyaltyDashboard from "@/pages/LoyaltyDashboard";
 import Register from "@/pages/Register";
 import GuiaBlog from "@/pages/GuiaBlog";
 import PagarCFE from "@/pages/PagarCFE";
+import PagarTelmex from "@/pages/PagarTelmex";
+import Recargas from "@/pages/Recargas";
+import DepositoOXXO from "@/pages/DepositoOXXO";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -43,6 +46,9 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/guia-pagar-servicios-sin-cuenta-bancaria" component={GuiaBlog} />
       <Route path="/pagar-cfe" component={PagarCFE} />
+      <Route path="/pagar-telmex" component={PagarTelmex} />
+      <Route path="/recargas" component={Recargas} />
+      <Route path="/deposito-oxxo" component={DepositoOXXO} />
       <Route component={NotFound} />
     </Switch>
   );

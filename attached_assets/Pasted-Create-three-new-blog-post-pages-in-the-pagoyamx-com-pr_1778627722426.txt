@@ -1,0 +1,441 @@
+Create three new blog post pages in the pagoyamx.com project (artifacts/pagoya) following the exact same pattern used for /pagar-cfe — same component structure, react-helmet-async meta tags, Article JSON-LD schema, bilingual content rendering, and nav.
+
+PAGE 1: /pagar-telmex
+
+Meta tags:
+- title: "Cómo Pagar Telmex, Izzi y Totalplay Sin Ir al Banco | PagoYa"
+- description: "Paga tu Telmex, Izzi, Totalplay, Megacable o Sky desde tu celular en minutos. Sin cuenta bancaria, sin tarjeta. Recarga con efectivo en OXXO y paga al instante."
+- canonical: https://pagoyamx.com/pagar-telmex
+- robots: index, follow
+- OG tags and Article JSON-LD
+
+Page content:
+
+# Cómo pagar Telmex, Izzi y Totalplay sin ir al banco
+
+## Paga tu internet y teléfono desde tu celular — sin cuenta bancaria
+
+Telmex, Izzi, Totalplay, Megacable, Sky — si vives en México, probablemente tienes al menos uno de estos servicios en casa. Y cada mes llega la misma historia: el recibo, la fecha límite, y la pregunta de cómo pagarlo sin perder una mañana entera.
+
+Telmex, Izzi, Totalplay, Megacable, Sky — if you live in Mexico, you probably have at least one of these services at home. And every month the same story arrives: the bill, the due date, and the question of how to pay it without losing an entire morning.
+
+Con PagoYa puedes pagar todos estos servicios desde tu celular en minutos — sin tarjeta, sin cuenta bancaria, y con solo efectivo en OXXO si eso es lo que tienes.
+
+With PagoYa you can pay all these services from your phone in minutes — no card, no bank account, and with just cash at OXXO if that's what you have.
+
+## Servicios de internet y cable que puedes pagar con PagoYa
+
+PagoYa soporta los principales proveedores de internet, cable y telefonía fija en México:
+
+PagoYa supports Mexico's main internet, cable, and landline providers:
+
+- Telmex — internet y teléfono fijo Infinitum / internet and Infinitum landline
+- Izzi — cable e internet / cable and internet
+- Totalplay — internet de fibra óptica / fiber optic internet
+- Megacable — cable e internet / cable and internet
+- Sky — televisión satelital / satellite television
+
+Todos desde una sola app. Un solo proceso de pago. Una sola comisión de $15 MXN.
+
+All from a single app. One payment process. One flat $15 MXN fee.
+
+## Cómo pagar Telmex con PagoYa: paso a paso
+
+El proceso es el mismo para todos los proveedores — aquí el ejemplo con Telmex:
+
+The process is the same for all providers — here's the example with Telmex:
+
+Paso 1: Abre la app PagoYa y asegúrate de tener saldo en tu billetera. Si no tienes, recarga con efectivo en cualquier OXXO. / Open the PagoYa app and make sure you have balance in your wallet. If not, load with cash at any OXXO.
+
+Paso 2: Selecciona Telmex (o Izzi, Totalplay, Megacable, Sky) en el catálogo de servicios. / Select Telmex (or Izzi, Totalplay, Megacable, Sky) from the service catalog.
+
+Paso 3: Ingresa tu número de cuenta o número de teléfono de Telmex — lo encuentras en tu recibo mensual. / Enter your Telmex account number or phone number — you'll find it on your monthly bill.
+
+Paso 4: Confirma el monto a pagar y autoriza la transacción. / Confirm the amount to pay and authorize the transaction.
+
+Paso 5: Recibe tu confirmación en segundos. Tu servicio queda al corriente. / Receive your confirmation in seconds. Your service is up to date.
+
+## ¿Dónde encuentro mi número de cuenta Telmex?
+
+Tu número de cuenta Telmex aparece en la parte superior de tu recibo mensual. También puedes encontrarlo:
+
+Your Telmex account number appears at the top of your monthly bill. You can also find it:
+
+- En el portal telmex.com con tu número de teléfono / On the telmex.com portal with your phone number
+- En la app Mi Telmex / In the Mi Telmex app
+- Llamando al 800-123-2222 / By calling 800-123-2222
+
+Para Izzi: usa tu número de cuenta del recibo (formato: IZZI-XXXXXXXX) / For Izzi: use your account number from the bill (format: IZZI-XXXXXXXX)
+
+Para Totalplay: usa el número de contrato de tu recibo mensual / For Totalplay: use the contract number from your monthly bill
+
+Para Megacable: usa el número de cliente que aparece en tu recibo / For Megacable: use the customer number on your bill
+
+## ¿Cuánto cobra PagoYa?
+
+$15 MXN fijo por transacción — sin importar el monto de tu recibo.
+
+$15 MXN flat per transaction — regardless of your bill amount.
+
+Si pagas Telmex ($399 MXN) y también Izzi ($450 MXN) el mismo mes, son dos transacciones separadas: $15 MXN cada una. Total de comisiones: $30 MXN para quedarte sin filas ni viajes ese mes.
+
+If you pay Telmex ($399 MXN) and also Izzi ($450 MXN) the same month, those are two separate transactions: $15 MXN each. Total fees: $30 MXN to stay line-free and trip-free that month.
+
+## ¿Cuánto tarda en aplicarse el pago?
+
+Los pagos a Telmex, Izzi, Totalplay y demás proveedores procesados con PagoYa se envían en tiempo real. En la mayoría de los casos el proveedor lo registra en menos de 24 horas, frecuentemente en minutos.
+
+Payments to Telmex, Izzi, Totalplay, and other providers processed with PagoYa are sent in real time. In most cases the provider registers it in under 24 hours, frequently within minutes.
+
+Recomendación: Si tu servicio está por cortarse, paga con al menos 24 horas de anticipación. / Recommendation: If your service is about to be cut, pay at least 24 hours in advance.
+
+## ¿Qué necesito para pagar mi internet sin cuenta bancaria?
+
+Solo tres cosas:
+
+Just three things:
+
+1. Tu celular con la app PagoYa instalada / Your phone with PagoYa installed
+2. Saldo en tu billetera PagoYa — recargable con efectivo en OXXO / Balance in your PagoYa wallet — loadable with cash at OXXO
+3. Tu número de cuenta del proveedor (está en tu recibo) / Your provider account number (on your bill)
+
+Sin tarjeta. Sin banco. Sin complicaciones.
+
+No card. No bank. No complications.
+
+## Pagar internet en México: comparación de opciones
+
+| | Ventanilla banco | Portal del proveedor | PagoYa |
+|---|---|---|---|
+| ¿Necesitas cuenta bancaria? | Sí | Sí | No |
+| ¿Disponible 24/7? | No | Sí | Sí |
+| ¿Pago con efectivo? | No | No | Sí (vía OXXO) |
+| ¿Múltiples proveedores? | No | No (uno por uno) | Sí — todos en una app |
+| ¿Historial centralizado? | No | No | Sí |
+| ¿Comisión? | Variable | $0 (con tarjeta) | $15 MXN fijo |
+
+La ventaja real de PagoYa no es solo el pago sin banco — es tener todos tus servicios en una sola app, con historial completo y sin necesidad de recordar contraseñas de cinco portales distintos.
+
+PagoYa's real advantage isn't just bank-free payment — it's having all your services in one app, with complete history and no need to remember passwords for five different portals.
+
+## Otros servicios que puedes pagar con PagoYa
+
+Desde la misma app también puedes pagar:
+
+From the same app you can also pay:
+
+- CFE (recibo de luz) → https://pagoyamx.com/pagar-cfe
+- Recargas Telcel, AT&T y Movistar → https://pagoyamx.com/recargas
+- Renta de vivienda → https://pagoyamx.com/pagar-renta
+- Ver catálogo completo de 26+ servicios → https://pagoyamx.com/servicios
+
+Guía completa: Cómo pagar todos tus servicios en México sin cuenta bancaria → https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria
+
+## Preguntas frecuentes
+
+¿Puedo pagar Telmex de otra persona con PagoYa?
+Sí. Solo necesitas el número de cuenta Telmex de esa persona. Ideal para pagar el servicio de un familiar.
+Can I pay someone else's Telmex with PagoYa? Yes. You just need that person's Telmex account number. Ideal for paying a family member's service.
+
+¿PagoYa funciona para pagar paquetes Telmex (internet + TV + teléfono)?
+Sí. PagoYa paga el recibo mensual de Telmex independientemente del paquete contratado — internet solo, triple play, o cualquier combinación.
+Does PagoYa work to pay Telmex packages? Yes. PagoYa pays the monthly Telmex bill regardless of the contracted package.
+
+¿Qué pasa si pago de más por error?
+PagoYa procesa exactamente el monto que tú confirmas. Siempre verifica el monto antes de confirmar. Si tienes un problema contacta soporte@pagoyamx.com.
+What if I overpay by mistake? PagoYa processes exactly the amount you confirm. Always verify before confirming. For problems contact soporte@pagoyamx.com.
+
+## Paga tu Telmex, Izzi o Totalplay ahora
+
+Sin filas. Sin traslados. Sin cuenta bancaria.
+
+No lines. No trips. No bank account.
+
+Descargar PagoYa gratis → https://pagoyamx.com/register
+
+PagoYa es operado por Longview Meridian Technologies. Comisión fija de $15 MXN por transacción. Pagos procesados vía SIPREL y Evoluciona con failover automático.
+
+---
+
+PAGE 2: /recargas
+
+Meta tags:
+- title: "Recargas Telcel, AT&T y Movistar Sin Tarjeta | PagoYa"
+- description: "Recarga tu celular Telcel, AT&T o Movistar desde la app en segundos. Sin tarjeta, sin cuenta bancaria. Carga tu billetera con efectivo en OXXO y recarga al instante."
+- canonical: https://pagoyamx.com/recargas
+- robots: index, follow
+- OG tags and Article JSON-LD
+
+Page content:
+
+# Cómo hacer recargas de Telcel, AT&T y Movistar sin tarjeta
+
+## Recarga tu celular en segundos — sin tarjeta, sin banco
+
+Las recargas de tiempo aire son el servicio más frecuente en México. Millones de personas recargan Telcel, AT&T o Movistar cada semana — y la mayoría lo hace en efectivo, en tiendas físicas, esperando turno.
+
+Mobile top-ups are Mexico's most frequent service. Millions of people top up Telcel, AT&T, or Movistar every week — and most do it in cash, at physical stores, waiting their turn.
+
+Con PagoYa, puedes recargar tu celular desde la app en segundos — sin moverte, sin tarjeta, y con saldo que puedes cargar con efectivo en cualquier OXXO.
+
+With PagoYa, you can top up your phone from the app in seconds — without moving, without a card, and with balance you can load with cash at any OXXO.
+
+## Operadores disponibles para recarga en PagoYa
+
+PagoYa soporta los tres principales operadores móviles de México:
+
+PagoYa supports Mexico's three main mobile carriers:
+
+- Telcel — el operador con mayor cobertura en México / Mexico's largest coverage carrier
+- AT&T México — cobertura nacional 4G/LTE / nationwide 4G/LTE coverage
+- Movistar — recargas prepago en todo el país / prepaid top-ups nationwide
+
+## Cómo recargar tu celular con PagoYa: paso a paso
+
+Paso 1: Abre la app PagoYa. Si no tienes saldo, recarga tu billetera con efectivo en cualquier OXXO primero. / Open the PagoYa app. If you don't have balance, load your wallet with cash at any OXXO first.
+
+Paso 2: Selecciona Recargas en el menú principal, luego elige tu operador: Telcel, AT&T o Movistar. / Select Recargas from the main menu, then choose your carrier: Telcel, AT&T, or Movistar.
+
+Paso 3: Ingresa el número de celular a recargar — puede ser el tuyo o el de cualquier otra persona. / Enter the phone number to top up — it can be yours or anyone else's.
+
+Paso 4: Elige el monto de recarga disponible para ese operador. / Choose the top-up amount available for that carrier.
+
+Paso 5: Confirma y listo. La recarga se aplica en segundos. / Confirm and done. The top-up applies in seconds.
+
+## ¿Puedo recargar el celular de otra persona?
+
+Sí. PagoYa te permite ingresar cualquier número de teléfono para recargar — el tuyo, el de un familiar, el de un amigo. No importa quién sea el titular de la línea.
+
+Yes. PagoYa lets you enter any phone number to top up — yours, a family member's, a friend's. It doesn't matter who owns the line.
+
+Esto es especialmente útil para:
+
+This is especially useful for:
+
+- Recargar el celular de tus papás o abuelitos / Topping up your parents' or grandparents' phones
+- Enviar recarga como regalo / Sending a top-up as a gift
+- Recargar una línea de trabajo / Topping up a work line
+
+## ¿Cuánto cobra PagoYa por las recargas?
+
+La comisión es la misma para todos los servicios: $15 MXN fijo por transacción.
+
+The fee is the same for all services: $15 MXN flat per transaction.
+
+Si recargas $100 MXN a Telcel, pagas $100 MXN de recarga + $15 MXN de comisión = $115 MXN total descontados de tu billetera.
+
+If you top up $100 MXN to Telcel, you pay $100 MXN top-up + $15 MXN fee = $115 MXN total deducted from your wallet.
+
+## Recargas PagoYa vs. recargar en OXXO directamente
+
+| | Recarga en OXXO | PagoYa |
+|---|---|---|
+| ¿Necesitas ir a la tienda? | Sí, siempre | No |
+| ¿Disponible 24/7? | Solo horario OXXO | Sí, cualquier hora |
+| ¿Puedes recargar a otro número? | Sí | Sí |
+| ¿Historial de recargas? | No | Sí, en la app |
+| ¿Cuántos operadores? | Varios (en caja) | Telcel, AT&T, Movistar |
+| ¿Comisión? | Variable por operador | $15 MXN fijo |
+
+## ¿Cuánto saldo necesito en mi billetera para una recarga?
+
+| Recarga | Comisión | Total billetera |
+|---|---|---|
+| $50 MXN | $15 MXN | $65 MXN |
+| $100 MXN | $15 MXN | $115 MXN |
+| $200 MXN | $15 MXN | $215 MXN |
+| $500 MXN | $15 MXN | $515 MXN |
+
+## Cómo cargar saldo a tu billetera PagoYa con efectivo
+
+Si no tienes saldo en tu billetera, recarga con efectivo en cualquier OXXO:
+
+If you don't have balance in your wallet, load with cash at any OXXO:
+
+1. Abre PagoYa → sección "Recargar saldo" → obtén tu código / Open PagoYa → "Recargar saldo" section → get your code
+2. Ve al OXXO más cercano / Go to the nearest OXXO
+3. Dile al cajero que quieres depositar a tu billetera PagoYa / Tell the cashier you want to deposit to your PagoYa wallet
+4. Paga en efectivo — el saldo aparece en tu app en minutos / Pay cash — balance appears in your app within minutes
+
+Más detalles: Cómo depositar en OXXO paso a paso → https://pagoyamx.com/deposito-oxxo
+
+## Otros servicios que puedes pagar con PagoYa
+
+- CFE (recibo de luz) → https://pagoyamx.com/pagar-cfe
+- Telmex, Izzi, Totalplay → https://pagoyamx.com/pagar-telmex
+- Renta de vivienda → https://pagoyamx.com/pagar-renta
+- Ver todos los servicios → https://pagoyamx.com/servicios
+
+Guía completa: Cómo pagar todos tus servicios en México sin cuenta bancaria → https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria
+
+## Preguntas frecuentes
+
+¿Cuánto tarda en aplicarse la recarga?
+Las recargas se aplican en segundos en la mayoría de los casos.
+How long does the top-up take? Top-ups apply within seconds in most cases.
+
+¿Puedo hacer recargas automáticas o programadas?
+Actualmente PagoYa procesa recargas manuales bajo demanda. La función de recargas automáticas está en el roadmap.
+Can I set up automatic top-ups? Currently PagoYa processes manual on-demand top-ups. Automatic scheduled top-ups are on the roadmap.
+
+¿Qué pasa si la recarga no se aplica?
+PagoYa usa failover automático entre proveedores. Si la recarga no se puede procesar, el saldo regresa inmediatamente a tu billetera.
+What if the top-up doesn't apply? PagoYa uses automatic failover. If the top-up cannot be processed, the balance returns immediately to your wallet.
+
+## Recarga tu celular ahora
+
+Sin moverte. Sin tarjeta. Sin banco.
+
+Without moving. Without a card. Without a bank.
+
+Descargar PagoYa gratis → https://pagoyamx.com/register
+
+PagoYa es operado por Longview Meridian Technologies. Comisión fija de $15 MXN por transacción.
+
+---
+
+PAGE 3: /deposito-oxxo
+
+Meta tags:
+- title: "Cómo Depositar en OXXO para Recargar tu Billetera PagoYa | PagoYa"
+- description: "Aprende a recargar tu billetera PagoYa con efectivo en cualquier tienda OXXO de México. Sin tarjeta ni cuenta bancaria. Saldo disponible en minutos."
+- canonical: https://pagoyamx.com/deposito-oxxo
+- robots: index, follow
+- OG tags and Article JSON-LD
+
+Page content:
+
+# Cómo depositar en OXXO para pagar tus servicios con PagoYa
+
+## ¿Qué es el depósito en OXXO y para qué sirve?
+
+Si no tienes tarjeta de crédito o débito, el depósito en OXXO es tu puerta de entrada al mundo de los pagos digitales. Es el mecanismo que convierte tu efectivo en saldo digital — listo para pagar CFE, Telmex, recargas de celular y más de 26 servicios desde tu celular.
+
+If you don't have a credit or debit card, the OXXO deposit is your gateway to the world of digital payments. It's the mechanism that converts your cash into digital balance — ready to pay CFE, Telmex, mobile top-ups, and 26+ services from your phone.
+
+OXXO tiene más de 20,000 tiendas en México. Hay una en prácticamente cada colonia, cada pueblo, cada ciudad del país. Eso significa que sin importar dónde vivas, tienes acceso a la red de recarga de PagoYa.
+
+OXXO has over 20,000 stores in Mexico. There's one in practically every neighborhood, every town, every city in the country. That means no matter where you live, you have access to PagoYa's top-up network.
+
+## Cómo funciona el depósito OXXO para PagoYa
+
+El proceso usa la infraestructura de Conekta — uno de los agregadores de pagos más grandes y regulados de México — para conectar tu depósito en efectivo con tu billetera digital PagoYa de forma segura y en tiempo real.
+
+The process uses Conekta infrastructure — one of Mexico's largest and most regulated payment aggregators — to connect your cash deposit with your PagoYa digital wallet securely and in real time.
+
+Cuando depositas en OXXO:
+
+When you deposit at OXXO:
+
+1. El cajero escanea tu código o referencia de pago / The cashier scans your code or payment reference
+2. Tu efectivo entra al sistema de Conekta / Your cash enters the Conekta system
+3. Conekta notifica a PagoYa del depósito / Conekta notifies PagoYa of the deposit
+4. PagoYa acredita el saldo a tu billetera / PagoYa credits the balance to your wallet
+
+Todo esto ocurre en minutos. Sin intermediarios manuales, sin demoras bancarias.
+
+All of this happens in minutes. No manual intermediaries, no banking delays.
+
+## Paso a paso: cómo depositar en OXXO
+
+Paso 1: Abre la app PagoYa en tu celular. / Open the PagoYa app on your phone.
+
+Paso 2: Ve a la sección "Recargar saldo" o "Depositar" en el menú principal. / Go to the "Recargar saldo" or "Depositar" section in the main menu.
+
+Paso 3: Ingresa el monto que quieres depositar. / Enter the amount you want to deposit.
+
+Paso 4: La app genera un código de barras o una referencia de pago única. Guarda esta pantalla o toma una captura. / The app generates a barcode or unique payment reference. Save this screen or take a screenshot.
+
+Paso 5: Ve a cualquier tienda OXXO y dile al cajero: "Quiero hacer un depósito, aquí está mi referencia." Muéstrale el código. / Go to any OXXO store and tell the cashier: "I want to make a deposit, here's my reference." Show them the code.
+
+Paso 6: Paga el monto en efectivo al cajero. / Pay the amount in cash to the cashier.
+
+Paso 7: El cajero te dará un ticket de confirmación. Guárdalo. / The cashier will give you a confirmation ticket. Keep it.
+
+Paso 8: En minutos, el saldo aparece en tu billetera PagoYa con notificación en la app. / Within minutes, the balance appears in your PagoYa wallet with a notification in the app.
+
+## ¿Cuánto tiempo tarda en reflejarse el depósito?
+
+En la mayoría de los casos, el saldo aparece en tu billetera PagoYa en menos de 15 minutos después del depósito en OXXO.
+
+In most cases, balance appears in your PagoYa wallet in under 15 minutes after the OXXO deposit.
+
+En casos excepcionales puede tardar hasta 60 minutos. Si después de una hora no ves el saldo, contacta a soporte en soporte@pagoyamx.com con tu número de ticket de OXXO.
+
+In exceptional cases it can take up to 60 minutes. If after an hour you don't see the balance, contact support at soporte@pagoyamx.com with your OXXO ticket number.
+
+## ¿Hay un monto mínimo o máximo?
+
+- Monto mínimo: $20 MXN / Minimum amount: $20 MXN
+- Monto máximo por depósito: $10,000 MXN (límite de OXXO Pay por transacción) / Maximum per deposit: $10,000 MXN
+- Sin límite diario acumulado para depósitos múltiples / No daily cumulative limit for multiple deposits
+
+## ¿Es seguro depositar en OXXO para PagoYa?
+
+Sí. El depósito OXXO para PagoYa usa la infraestructura de Conekta, un agregador de pagos regulado en México con más de una década de operaciones y miles de empresas clientes.
+
+Yes. The OXXO deposit for PagoYa uses Conekta infrastructure, a regulated payment aggregator in Mexico with over a decade of operations and thousands of business clients.
+
+Tu efectivo nunca "desaparece" — en todo momento está registrado en el sistema con tu referencia única. Si hay algún problema, el ticket de OXXO es tu comprobante.
+
+Your cash never "disappears" — at all times it's recorded in the system with your unique reference. If there's any problem, the OXXO ticket is your proof.
+
+## ¿Puedo depositar en otras tiendas además de OXXO?
+
+Actualmente PagoYa acepta depósitos en efectivo únicamente a través de la red OXXO vía Conekta. La expansión a otras redes de conveniencia está en el roadmap de PagoYa.
+
+Currently PagoYa accepts cash deposits only through the OXXO network via Conekta. Expansion to other convenience networks is on PagoYa's roadmap.
+
+## ¿Qué puedo pagar con mi saldo PagoYa?
+
+Una vez que tienes saldo en tu billetera, puedes pagar:
+
+Once you have balance in your wallet, you can pay:
+
+- CFE (recibo de luz) → https://pagoyamx.com/pagar-cfe
+- Telmex, Izzi, Totalplay, Megacable, Sky → https://pagoyamx.com/pagar-telmex
+- Recargas Telcel, AT&T y Movistar → https://pagoyamx.com/recargas
+- Renta de vivienda → https://pagoyamx.com/pagar-renta
+- Ver todos los 26+ servicios → https://pagoyamx.com/servicios
+
+Guía completa: Cómo pagar todos tus servicios en México sin cuenta bancaria → https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria
+
+## Preguntas frecuentes
+
+¿Necesito internet en el momento de depositar en OXXO?
+Necesitas internet para generar el código en la app antes de ir a OXXO. Una vez que tienes el código guardado, no necesitas internet en la tienda.
+Do I need internet when depositing at OXXO? You need internet to generate the code in the app before going to OXXO. Once you have the saved code, you don't need internet in the store.
+
+¿El cajero de OXXO sabe cómo procesar un depósito PagoYa?
+Sí. OXXO procesa depósitos a billeteras digitales regularmente — es parte de su operación estándar.
+Does the OXXO cashier know how to process a PagoYa deposit? Yes. OXXO regularly processes deposits to digital wallets — it's part of their standard operation.
+
+¿Puedo depositar para otra persona?
+Sí. Cualquier persona puede hacer el depósito físico en OXXO usando tu código de referencia. El saldo siempre se acredita a la billetera que generó ese código.
+Can someone else make the deposit for me? Yes. Anyone can make the physical deposit at OXXO using your reference code. The balance always credits to the wallet that generated that code.
+
+## Empieza con $50 pesos
+
+No necesitas una gran cantidad para empezar. Deposita $50-$100 MXN en OXXO, prueba pagar un servicio, y convéncete tú mismo de qué tan fácil es.
+
+You don't need a large amount to start. Deposit $50-$100 MXN at OXXO, try paying a service, and convince yourself how easy it is.
+
+Descargar PagoYa gratis → https://pagoyamx.com/register
+
+PagoYa es operado por Longview Meridian Technologies. Depósitos OXXO procesados vía Conekta. Comisión fija de $15 MXN por transacción de pago.
+
+---
+
+FINAL INSTRUCTIONS FOR ALL THREE PAGES:
+
+After building all three pages confirm:
+1. All three URLs return HTTP 200:
+   - https://pagoyamx.com/pagar-telmex
+   - https://pagoyamx.com/recargas
+   - https://pagoyamx.com/deposito-oxxo
+2. All three routes are registered in App.tsx
+3. Meta titles are correct on each page
+4. All three pages have robots: index, follow, canonical, OG tags, and Article JSON-LD
+5. Internal links between pages resolve correctly — /pagar-telmex links to /recargas and /pagar-cfe, /recargas links to /deposito-oxxo, /deposito-oxxo links to /pagar-cfe and /recargas
+6. The dead link in GuiaBlog.tsx pointing to /deposito-oxxo now resolves correctly
+7. Build completes with no new errors
