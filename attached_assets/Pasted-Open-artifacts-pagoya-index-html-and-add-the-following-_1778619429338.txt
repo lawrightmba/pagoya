@@ -1,0 +1,72 @@
+Open artifacts/pagoya/index.html and add the following three JSON-LD schema blocks inside the <head> tag, just before the closing </head> tag. Do not modify any existing content in the file.
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do I need a bank account to use PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. PagoYa lets you load your digital wallet with cash at any OXXO store in Mexico. No bank account or credit card required."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Necesito una cuenta bancaria para usar PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. PagoYa te permite recargar tu billetera digital con efectivo en cualquier tienda OXXO en México. No necesitas cuenta bancaria ni tarjeta de crédito."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does PagoYa charge per payment?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PagoYa charges a flat fee of $15 MXN per transaction. No percentage-based charges, no hidden fees, no mandatory monthly subscription."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Cuánto cobra PagoYa por cada pago?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PagoYa cobra una comisión fija de $15 MXN por transacción. Sin cargos por porcentaje, sin costos ocultos, sin suscripción mensual obligatoria."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I pay my CFE electricity bill with PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. PagoYa supports CFE bill payments directly from the app in seconds. You only need your CFE service number from your bill."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo pagar mi recibo de CFE con PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. PagoYa permite pagar tu recibo de CFE directamente desde la app en segundos. Solo necesitas el número de servicio de tu recibo."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What services can I pay with PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PagoYa supports 26+ services including CFE, Telmex, Izzi, Totalplay, Sky, Megacable, Telcel top-ups, AT&T, Movistar, water, property tax, internet, streaming, and rent payments — all from one app."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué servicios puedo pagar con PagoYa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PagoYa permite pagar más de 26 servicios: CFE, Telmex, Izzi, Totalplay, Sky, Megacable, recargas Telcel, AT&T, Movistar, agua, predial, internet, streaming y renta. Todo desde una sola app."
+      }
+    },
+    {
