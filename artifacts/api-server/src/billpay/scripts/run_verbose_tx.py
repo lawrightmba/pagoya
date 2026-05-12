@@ -38,21 +38,26 @@ def curl_post(endpoint, params, timeout=30):
     return json.loads(body)
 
 
-def run_verbose(producto, referencia, label):
+def run_verbose(producto, referencia, label, monto=None):
     started_at = datetime.now()
     fecha_hora  = started_at.strftime("%Y-%m-%d %H:%M:%S")
 
     print(f"\n{SEP}", flush=True)
-    print(f"  {label}  |  SKU: {producto}  |  REF: {referencia}", flush=True)
+    monto_tag = f"  |  MONTO: ${monto}" if monto else ""
+    print(f"  {label}  |  SKU: {producto}  |  REF: {referencia}{monto_tag}", flush=True)
     print(f"  FECHA/HORA: {fecha_hora}", flush=True)
     print(SEP, flush=True)
 
     # ── 1. requestTXN ─────────────────────────────────────────────────────────
+    req_params = {"producto": producto, "referencia": referencia}
+    if monto:
+        req_params["monto"] = str(monto)
+
     print(f"\n[requestTXN] → POST {BASE_URL}requestTXN", flush=True)
-    print(f"  params: producto={producto} referencia={referencia}", flush=True)
+    print(f"  params: {' '.join(f'{k}={v}' for k,v in req_params.items())}", flush=True)
 
     try:
-        req_raw = curl_post("requestTXN", {"producto": producto, "referencia": referencia})
+        req_raw = curl_post("requestTXN", req_params)
     except Exception as e:
         print(f"  EXCEPTION: {e}", flush=True)
         return {
@@ -122,9 +127,21 @@ def run_verbose(producto, referencia, label):
         print(json.dumps(s, indent=2, ensure_ascii=False), flush=True)
         polls.append({"poll": poll_n, "ts": poll_ts, "raw": s})
 
-        # Type 1 — confirmed success
+        # Type 1 — success:true with dict payload
+        # Guard: success:true + message:"Error inesperado" + Status:"En proceso" is a
+        # transient state (transaction still processing). Treat as Type 3 — keep polling.
         if s.get("success") is True and isinstance(s.get("data"), dict):
-            d = s["data"]
+            d            = s["data"]
+            status_field = (d.get("Status") or "").strip()
+            msg          = s.get("message") or ""
+            if msg == "Error inesperado" and status_field == "En proceso":
+                print(
+                    f"  → TYPE 3 (Error inesperado+En proceso) — transient, sleeping {POLL_INTERVAL_S}s",
+                    flush=True,
+                )
+                time.sleep(POLL_INTERVAL_S)
+                continue
+
             folio   = d.get("Folio")
             carrier = d.get("Carrier")
             cargo   = d.get("Cargo")
@@ -162,14 +179,15 @@ def run_verbose(producto, referencia, label):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
-        print("Usage: run_verbose_tx.py <producto> <referencia> <label>", file=sys.stderr)
+        print("Usage: run_verbose_tx.py <producto> <referencia> <label> [monto]", file=sys.stderr)
         sys.exit(1)
 
     producto   = sys.argv[1]
     referencia = sys.argv[2]
     label      = sys.argv[3]
+    monto      = sys.argv[4] if len(sys.argv) > 4 else None
 
-    result = run_verbose(producto, referencia, label)
+    result = run_verbose(producto, referencia, label, monto=monto)
 
     print(f"\n{SEP}", flush=True)
     print(f"  FINAL RESULT — {label}", flush=True)
