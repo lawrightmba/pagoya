@@ -1,0 +1,192 @@
+Create a new blog post page in the pagoyamx.com project (artifacts/pagoya) at the route /pagar-cfe. Follow the exact same pattern used to build /guia-pagar-servicios-sin-cuenta-bancaria including the same header/nav, react-helmet-async meta tags, Article JSON-LD schema, and bilingual content rendering.
+
+Meta tags:
+- title: "Cómo Pagar tu Recibo de CFE Sin Ir al Banco | PagoYa"
+- description: "Paga tu recibo de CFE desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Recarga con efectivo en OXXO y paga al instante con PagoYa."
+- canonical: https://pagoyamx.com/pagar-cfe
+- robots: index, follow
+- OG tags and Article JSON-LD matching the pattern from GuiaBlog.tsx
+
+Page content — convert this markdown to clean HTML preserving all headings, tables, bullet points, bold text, numbered steps, and internal links:
+
+---
+
+# Cómo pagar tu recibo de CFE sin ir al banco
+### How to Pay Your CFE Electricity Bill Without Going to the Bank
+
+## ¿Cansado de hacer fila para pagar tu recibo de luz?
+### Tired of Standing in Line to Pay Your Electricity Bill?
+
+Pagar el recibo de CFE es uno de esos trámites que nadie quiere hacer pero nadie puede ignorar. Si no pagas, te cortan la luz. Y sin embargo, millones de mexicanos siguen haciendo filas en bancos, en tiendas de conveniencia, o en las propias oficinas de CFE — perdiendo tiempo valioso cada mes.
+
+If you live in Mexico and don't have a bank account, paying your bills shouldn't be complicated. Yet millions of Mexicans still stand in line at banks, convenience stores, or CFE offices — losing valuable time every month.
+
+Hay una manera más fácil. Con PagoYa, puedes pagar tu recibo de CFE desde tu celular en menos de 2 minutos — sin tarjeta, sin cuenta bancaria, sin filas.
+
+There's an easier way. With PagoYa, you can pay your CFE bill from your phone in under 2 minutes — no card, no bank account, no lines.
+
+---
+
+## Lo que necesitas para pagar tu CFE con PagoYa
+### What You Need to Pay Your CFE With PagoYa
+
+Solo tres cosas:
+
+Just three things:
+
+1. Tu smartphone — Android o iOS / Your smartphone — Android or iOS
+2. La app PagoYa — descarga gratis / The PagoYa app — free download
+3. Tu número de servicio CFE — está en tu recibo, en la parte superior / Your CFE service number — it's on your bill, at the top
+
+No necesitas tarjeta de crédito. No necesitas cuenta bancaria. Si tienes efectivo y un OXXO cerca, puedes pagar tu CFE hoy mismo.
+
+No credit card needed. No bank account needed. If you have cash and an OXXO nearby, you can pay your CFE today.
+
+---
+
+## Cómo pagar tu CFE con PagoYa: paso a paso
+### How to Pay Your CFE With PagoYa: Step by Step
+
+Paso 1: Descarga la app PagoYa desde Google Play o App Store. El registro toma menos de 3 minutos — solo necesitas tu número de teléfono. / Download the PagoYa app from Google Play or App Store. Registration takes under 3 minutes — you just need your phone number.
+
+Paso 2: Recarga tu billetera PagoYa con efectivo en cualquier tienda OXXO. Si ya tienes saldo, salta directo al paso 3. / Load your PagoYa wallet with cash at any OXXO store. If you already have balance, skip straight to step 3.
+
+Paso 3: Abre la app, selecciona CFE en el catálogo de servicios. / Open the app, select CFE from the service catalog.
+
+Paso 4: Ingresa tu número de servicio CFE — lo encuentras en la parte superior de tu recibo, es un número de 12 dígitos. / Enter your CFE service number — you'll find it at the top of your bill, it's a 12-digit number.
+
+Paso 5: Confirma el monto y autoriza el pago. Recibirás una notificación de confirmación en segundos. / Confirm the amount and authorize the payment. You'll receive a confirmation notification in seconds.
+
+¿Listo? Tu pago de CFE está procesado. Sin filas, sin traslados, sin perder la mañana.
+
+Done? Your CFE payment is processed. No lines, no trips, no wasted morning.
+
+---
+
+## ¿Dónde encuentro mi número de servicio CFE?
+### Where Do I Find My CFE Service Number?
+
+Tu número de servicio CFE (también llamado Número de Suministro o RPU) aparece en la parte superior de tu recibo físico o digital. Es un número de 12 dígitos que identifica específicamente tu conexión eléctrica.
+
+Your CFE service number (also called Número de Suministro or RPU) appears at the top of your physical or digital bill. It's a 12-digit number that specifically identifies your electrical connection.
+
+Si no tienes tu recibo a la mano, también puedes encontrarlo:
+
+If you don't have your bill handy, you can also find it:
+
+- En el portal web de CFE (cfe.mx) con tu CURP o RFC / On the CFE web portal (cfe.mx) with your CURP or RFC
+- En la app oficial de CFE / In the official CFE app
+- En cualquier oficina de atención al cliente de CFE / At any CFE customer service office
+
+---
+
+## ¿Cuánto cobra PagoYa por pagar mi CFE?
+### How Much Does PagoYa Charge to Pay My CFE?
+
+PagoYa cobra una comisión fija de $15 MXN por transacción — sin importar el monto de tu recibo de CFE. Si tu recibo es de $200 MXN o de $2,000 MXN, la comisión es siempre $15 MXN.
+
+PagoYa charges a flat fee of $15 MXN per transaction — regardless of your CFE bill amount. Whether your bill is $200 MXN or $2,000 MXN, the fee is always $15 MXN.
+
+Sin cargos por porcentaje. Sin costos ocultos. Sin sorpresas.
+
+No percentage charges. No hidden costs. No surprises.
+
+---
+
+## ¿Cuánto tarda en aplicarse el pago de CFE?
+### How Long Does It Take for the CFE Payment to Apply?
+
+Los pagos de CFE procesados con PagoYa se envían en tiempo real a través de los rieles de pago SIPREL y Evoluciona — los mismos proveedores que procesan millones de pagos de servicios en México cada día.
+
+CFE payments processed with PagoYa are sent in real time through SIPREL and Evoluciona payment rails — the same providers that process millions of service payments in Mexico every day.
+
+En la mayoría de los casos, el pago se refleja en el sistema de CFE en menos de 24 horas. En muchos casos, en minutos.
+
+In most cases, the payment is reflected in CFE's system in under 24 hours. In many cases, within minutes.
+
+Importante: Si tu servicio está a punto de ser cortado por falta de pago, realiza el pago con al menos 24 horas de anticipación para asegurarte de que CFE lo procese a tiempo. / If your service is about to be cut for non-payment, make the payment at least 24 hours in advance to ensure CFE processes it in time.
+
+---
+
+## ¿Qué pasa si el pago falla?
+### What Happens if the Payment Fails?
+
+PagoYa usa failover automático entre dos proveedores de pago (SIPREL y Evoluciona). Si uno de los proveedores tiene una interrupción en el momento de tu pago, el sistema cambia automáticamente al otro para completar la transacción.
+
+PagoYa uses automatic failover between two payment providers (SIPREL and Evoluciona). If one provider has an outage at the time of your payment, the system automatically switches to the other to complete the transaction.
+
+Si por alguna razón el pago no se puede procesar, el saldo regresa inmediatamente a tu billetera PagoYa. Nunca perderás dinero en un pago fallido.
+
+If for any reason the payment cannot be processed, the balance returns immediately to your PagoYa wallet. You'll never lose money on a failed payment.
+
+---
+
+## Pagar CFE con PagoYa vs. otras opciones
+### Paying CFE With PagoYa vs. Other Options
+
+| | Fila en CFE / OXXO | App banco | PagoYa |
+|---|---|---|---|
+| ¿Necesitas cuenta bancaria? | No | Sí | No |
+| ¿Disponible 24/7? | No | Sí | Sí |
+| ¿Tiempo requerido? | 20-45 min | 5 min | 2 min |
+| ¿Historial de pagos? | No | Sí | Sí |
+| ¿Pago con efectivo? | Sí | No | Sí (vía OXXO) |
+| ¿Comisión? | Variable | $0 (con cuenta) | $15 MXN fijo |
+
+Si ya tienes cuenta bancaria y app de banco, úsala — es gratis. PagoYa es la mejor opción si no tienes cuenta bancaria o si quieres la conveniencia de pagar múltiples servicios desde una sola app.
+
+If you already have a bank account and banking app, use it — it's free. PagoYa is the best option if you don't have a bank account or if you want the convenience of paying multiple services from a single app.
+
+---
+
+## Otros servicios que puedes pagar con PagoYa
+### Other Services You Can Pay With PagoYa
+
+PagoYa no es solo para CFE. Desde la misma app puedes pagar más de 26 servicios:
+
+PagoYa isn't just for CFE. From the same app you can pay 26+ services:
+
+- Telmex — internet y teléfono fijo → https://pagoyamx.com/pagar-telmex
+- Recargas Telcel, AT&T y Movistar → https://pagoyamx.com/recargas
+- Renta de vivienda vía PagoSeguro → https://pagoyamx.com/pagar-renta
+- Ver todos los servicios → https://pagoyamx.com/servicios
+
+También puedes leer nuestra guía completa: Cómo pagar todos tus servicios en México sin cuenta bancaria → https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria
+
+---
+
+## Preguntas frecuentes sobre pagar CFE con PagoYa
+
+¿Puedo pagar CFE sin tener internet en casa?
+Sí. Solo necesitas datos móviles en tu celular para usar la app PagoYa. No necesitas WiFi ni internet en casa.
+Can I pay CFE without having internet at home? Yes. You just need mobile data on your phone to use the PagoYa app. No WiFi or home internet needed.
+
+¿Puedo pagar el CFE de otra persona con PagoYa?
+Sí. Solo necesitas el número de servicio CFE de esa persona. Puedes pagar el recibo de un familiar, amigo o cualquier dirección desde tu cuenta PagoYa.
+Can I pay someone else's CFE with PagoYa? Yes. You just need that person's CFE service number. You can pay a family member's, friend's, or any address's bill from your PagoYa account.
+
+¿PagoYa me manda un comprobante de pago?
+Sí. Recibirás una notificación de confirmación en la app inmediatamente después del pago. El historial completo está disponible en la sección "Historial" de tu billetera PagoYa.
+Does PagoYa send me a payment receipt? Yes. You'll receive a confirmation notification in the app immediately after payment. Your complete payment history is available in the "Historial" section of your PagoYa wallet.
+
+---
+
+## Paga tu CFE ahora / Pay Your CFE Now
+
+No esperes a que te corten la luz. Con PagoYa, pagar tu CFE toma menos tiempo que leer este artículo.
+
+Don't wait until they cut your power. With PagoYa, paying your CFE takes less time than reading this article.
+
+Descargar PagoYa y pagar mi CFE → https://pagoyamx.com/register
+Download PagoYa and pay my CFE → https://pagoyamx.com/register
+
+PagoYa es operado por Longview Meridian Technologies. Pagos procesados vía SIPREL y Evoluciona con failover automático. Comisión fija de $15 MXN por transacción. Los tiempos de acreditación dependen de CFE.
+
+---
+
+After building confirm:
+- URL https://pagoyamx.com/pagar-cfe returns HTTP 200
+- Meta title reads: "Cómo Pagar tu Recibo de CFE Sin Ir al Banco | PagoYa"
+- Meta description, canonical, robots index/follow, OG tags, and Article JSON-LD are all present
+- The dead link in GuiaBlog.tsx line 245 pointing to /pagar-cfe now resolves correctly
+- Build completes with no new errors

@@ -19,6 +19,7 @@ import WalletHistorial from "@/pages/WalletHistorial";
 import LoyaltyDashboard from "@/pages/LoyaltyDashboard";
 import Register from "@/pages/Register";
 import GuiaBlog from "@/pages/GuiaBlog";
+import PagarCFE from "@/pages/PagarCFE";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/rep-dashboard" component={RepDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/guia-pagar-servicios-sin-cuenta-bancaria" component={GuiaBlog} />
+      <Route path="/pagar-cfe" component={PagarCFE} />
       <Route component={NotFound} />
     </Switch>
   );
