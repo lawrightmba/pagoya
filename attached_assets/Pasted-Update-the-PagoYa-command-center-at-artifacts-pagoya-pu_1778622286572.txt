@@ -1,0 +1,60 @@
+Update the PagoYa command center at artifacts/pagoya/public/command-center.html with the following changes. Replace ALL existing content with this new focused version:
+
+SECTION 1 — PAGOYA 90-DAY PLAN: DAYS 1-30 CHECKLIST
+
+Display as a clean interactive checklist with checkboxes that save state to localStorage. Organize into 3 phases:
+
+PHASE 1: TECHNICAL FOUNDATION (Days 1-7)
+□ Sitemaps submitted to Google Search Console — pagoyamx.com
+□ Sitemaps submitted to Google Search Console — pagoseguromx.com
+□ robots.txt verified — AI crawlers allowed on both domains
+□ llms.txt live on pagoyamx.com
+□ llms.txt live on pagoseguromx.com
+□ FAQ schema deployed and Google validated — pagoyamx.com
+□ FAQ schema deployed and Google validated — pagoseguromx.com
+□ Organization schema deployed — both domains
+□ App/Service schema deployed — both domains
+□ Google Search Console verified — both domains
+□ Search Console coverage report reviewed (check Day 3-4)
+
+PHASE 2: CONTENT FOUNDATION (Days 8-21)
+□ Set up blog/content section on pagoyamx.com
+□ Set up blog/content section on pagoseguromx.com
+□ Write PagoYa pillar page: "Guía completa para pagar servicios en México sin cuenta bancaria"
+□ Write PagoSeguro pillar page: "Guía completa para cobrar renta digitalmente en México"
+□ Publish CFE payment cluster article
+□ Publish Telmex/Izzi/Totalplay cluster article
+□ Publish recargas Telcel/AT&T cluster article
+□ Publish OXXO Pay explainer article
+□ Publish PagoSeguro: Pagar renta en OXXO guide
+□ Publish PagoSeguro: Propietarios extranjeros guide
+□ Internal linking complete between pillar and all cluster pages
+□ All blog pages have FAQ schema added
+
+PHASE 3: AUTHORITY & DISTRIBUTION (Days 22-30)
+□ Contxto pitch drafted and sent — PagoYa underbanked narrative
+□ Expat real estate media pitch drafted and sent — PagoSeguro
+□ Instagram Reels content plan created (3-5 videos per week)
+□ First 3 Instagram Reels published — PagoYa how-to demos
+□ First 3 Instagram Reels published — PagoSeguro landlord demos
+□ Reddit presence started — r/mexico and r/PersonalFinanceMexico
+□ Search Console first keyword data reviewed and logged
+□ Contxto / iupana follow-up sent if no response
+□ Week 4 content calendar confirmed for Days 31-60
+
+---
+
+SECTION 2 — CONTENT PUBLICATION CALENDAR: DAYS 1-30
+
+Display as a visual week-by-week calendar grid. Each item should be color coded: PagoYa items in blue, PagoSeguro items in green, Shared/PR items in purple.
+
+WEEK 1 (Days 1-7) — Technical Lock
+- Both domains: Technical SEO/GEO stack verification
+- Search Console monitoring begins
+- No content publishing this week
+
+WEEK 2 (Days 8-14) — Pillar Pages
+- Day 8: Publish PagoYa pillar page — "Guía completa para pagar servicios en México sin cuenta bancaria"
+- Day 9: Publish PagoSeguro pillar page — "Guía completa para cobrar renta digitalmente en México"
+- Day 10: Publish CFE payment cluster article
+- Day 11: Publish PagoSeguro: Paga
