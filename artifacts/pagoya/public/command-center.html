@@ -1,489 +1,744 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>PagoYa — 90 Day Plan</title>
+<title>PagoYa — Command Center</title>
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    color: #e8eaf0;
     overflow-x: hidden;
     max-width: 100vw;
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #f5f5f5;
-    color: #1a1a1a;
   }
-  * { box-sizing: border-box; }
 
+  /* ── HEADER ── */
   .header {
-    background: #fff;
-    border-bottom: 1px solid #e0e0e0;
+    background: #161921;
+    border-bottom: 1px solid #252830;
     padding: 0 16px;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 200;
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 56px;
-    max-width: 100%;
   }
-  .header-title { font-size: 16px; font-weight: 700; color: #1a1a1a; }
-  .sync-btn {
-    background: #1D9E75;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 0 14px;
-    height: 36px;
-    min-width: 44px;
-    cursor: pointer;
-    white-space: nowrap;
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-title { font-size: 15px; font-weight: 700; color: #fff; }
+  .today-badge {
+    font-size: 11px; font-weight: 600; color: #1D9E75;
+    background: #1D9E7520; border: 1px solid #1D9E7540;
+    padding: 3px 8px; border-radius: 20px;
   }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .reminder-badge {
+    background: #E84B6B; color: #fff; font-size: 11px; font-weight: 700;
+    border-radius: 20px; padding: 2px 7px; display: none;
+  }
+  .sync-btn, .tab-btn {
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    padding: 0 14px; height: 34px; cursor: pointer; white-space: nowrap;
+  }
+  .sync-btn { background: #1D9E75; color: #fff; }
   .sync-btn:active { opacity: 0.8; }
 
+  /* ── TABS ── */
+  .tabs {
+    background: #161921;
+    border-bottom: 1px solid #252830;
+    display: flex;
+    padding: 0 12px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 12px 14px 11px;
+    font-size: 13px; font-weight: 600;
+    color: #6b7280; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab.active { color: #1D9E75; border-bottom-color: #1D9E75; }
+
+  /* ── PROGRESS ── */
   .progress-wrap {
-    background: #fff;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 12px 16px;
+    background: #161921;
+    border-bottom: 1px solid #252830;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     gap: 12px;
-    max-width: 100%;
   }
-  .progress-bar {
-    flex: 1;
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 99px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: #1D9E75;
-    border-radius: 99px;
-    transition: width 0.4s ease;
-    width: 0%;
-  }
-  .progress-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1D9E75;
-    white-space: nowrap;
-  }
+  .progress-bar { flex: 1; height: 6px; background: #252830; border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1D9E75; border-radius: 99px; transition: width 0.4s ease; width: 0%; }
+  .progress-label { font-size: 12px; font-weight: 600; color: #1D9E75; white-space: nowrap; }
 
-  .phase-section { margin: 16px 0 0; }
+  /* ── SECTION PANEL ── */
+  .panel { display: none; padding-bottom: 64px; }
+  .panel.active { display: block; }
+
+  /* ── PHASE HEADERS ── */
   .phase-header {
     padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 12px;
   }
-  .phase-title { font-size: 14px; font-weight: 700; }
-  .phase-count { font-size: 12px; font-weight: 500; opacity: 0.7; }
-  .ph1 { background: #EEEDFE; }
-  .ph1 .phase-title, .ph1 .phase-count { color: #3C3489; }
-  .ph2 { background: #E1F5EE; }
-  .ph2 .phase-title, .ph2 .phase-count { color: #085041; }
-  .ph3 { background: #FEF3DC; }
-  .ph3 .phase-title, .ph3 .phase-count { color: #6B3D00; }
+  .phase-title { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+  .phase-count { font-size: 11px; font-weight: 600; opacity: 0.7; }
+  .ph1 { background: #1a1535; }
+  .ph1 .phase-title { color: #a78bfa; }
+  .ph1 .phase-count { color: #a78bfa; }
+  .ph2 { background: #0d2318; }
+  .ph2 .phase-title { color: #34d399; }
+  .ph2 .phase-count { color: #34d399; }
+  .ph3 { background: #1e1505; }
+  .ph3 .phase-title { color: #fbbf24; }
+  .ph3 .phase-count { color: #fbbf24; }
 
-  .items-list {
-    padding: 8px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+  /* ── CHECKLIST ITEMS ── */
+  .items-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
   .item {
-    background: #fff;
-    border-radius: 12px;
+    background: #1a1d27;
+    border-radius: 10px;
+    border: 1px solid #252830;
     overflow: hidden;
-    border: 1px solid #e8e8e8;
-    max-width: 100%;
   }
+  .item.done { opacity: 0.5; }
   .item-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px;
-    min-height: 44px;
-    cursor: pointer;
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    max-width: 100%;
   }
-  .item-row:active { background: #f9f9f9; }
   .item-check {
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
-    min-height: 44px;
-    border: 2px solid #ccc;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    cursor: pointer;
-    background: #fff;
-    -webkit-tap-highlight-color: transparent;
-    flex-shrink: 0;
-    align-self: flex-start;
+    width: 20px; height: 20px; min-width: 20px;
+    border: 2px solid #3a3f50; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; background: transparent;
+    flex-shrink: 0; margin-top: 2px;
   }
   .item-check.checked { background: #1D9E75; border-color: #1D9E75; }
   .item-check.checked::after {
-    content: '';
-    display: block;
-    width: 6px;
-    height: 10px;
-    border: 2px solid #fff;
-    border-top: none;
-    border-left: none;
+    content: ''; display: block;
+    width: 5px; height: 9px;
+    border: 2px solid #fff; border-top: none; border-left: none;
     transform: rotate(45deg) translate(-1px,-1px);
   }
   .item-main { flex: 1; min-width: 0; }
-  .item-title { font-size: 14px; font-weight: 500; line-height: 1.4; color: #1a1a1a; word-wrap: break-word; }
-  .item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 5px; }
-  .item-day { font-size: 11px; color: #999; font-weight: 500; }
-  .badge-critical {
-    font-size: 10px; font-weight: 700; color: #B91C1C;
-    background: #FEE2E2; padding: 2px 6px; border-radius: 4px;
-    letter-spacing: 0.04em; text-transform: uppercase;
+  .item-title { font-size: 13px; font-weight: 500; line-height: 1.4; color: #d1d5db; }
+  .item.done .item-title { text-decoration: line-through; color: #4b5563; }
+  .item-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .item-day { font-size: 11px; color: #6b7280; }
+  .reminder-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #f59e0b; display: none; flex-shrink: 0;
   }
-  .item.done .item-title { text-decoration: line-through; color: #aaa; }
-  .item.done .item-row { opacity: 0.55; }
-  .item-chevron { font-size: 11px; color: #ccc; margin-top: 4px; transition: transform 0.2s; flex-shrink: 0; }
-  .item.open .item-chevron { transform: rotate(180deg); color: #999; }
+  .reminder-dot.on { display: inline-block; }
+  .item-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .remind-btn {
+    font-size: 11px; color: #6b7280; background: #252830;
+    border: 1px solid #353a47; border-radius: 6px;
+    padding: 3px 8px; cursor: pointer; white-space: nowrap;
+  }
+  .remind-btn.on { color: #f59e0b; border-color: #f59e0b40; background: #f59e0b15; }
+  .remind-btn:active { opacity: 0.7; }
 
-  .item-detail {
-    display: none;
-    padding: 0 14px 16px 48px;
-    border-top: 1px solid #f0f0f0;
-    max-width: 100%;
+  /* ── CALENDAR SECTION ── */
+  .week-block { margin: 12px 12px 0; }
+  .week-header {
+    padding: 10px 12px;
+    border-radius: 8px 8px 0 0;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
   }
-  .item.open .item-detail { display: block; }
-  .detail-section { margin-top: 12px; }
-  .detail-label {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.08em; color: #aaa; margin-bottom: 4px;
+  .w1 { background: #1e1b35; color: #a78bfa; }
+  .w2 { background: #0e2820; color: #34d399; }
+  .w3 { background: #1f1a08; color: #fbbf24; }
+  .w4 { background: #1e1220; color: #f472b6; }
+  .week-items { background: #1a1d27; border: 1px solid #252830; border-radius: 0 0 8px 8px; overflow: hidden; }
+  .cal-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; border-bottom: 1px solid #252830;
   }
-  .detail-text { font-size: 13px; color: #444; line-height: 1.6; }
-  .bottom-pad { height: 48px; }
+  .cal-item:last-child { border-bottom: none; }
+  .cal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .dot-blue { background: #3b82f6; }
+  .dot-green { background: #10b981; }
+  .dot-purple { background: #8b5cf6; }
+  .dot-gray { background: #6b7280; }
+  .cal-day { font-size: 11px; font-weight: 700; color: #6b7280; white-space: nowrap; flex-shrink: 0; min-width: 44px; }
+  .cal-text { font-size: 13px; color: #d1d5db; line-height: 1.4; flex: 1; }
+  .cal-tag {
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    flex-shrink: 0; white-space: nowrap; align-self: flex-start; margin-top: 2px;
+  }
+  .tag-pagoya { background: #1e3a5f; color: #60a5fa; }
+  .tag-pagoseguro { background: #064e3b; color: #34d399; }
+  .tag-shared { background: #3b0764; color: #c084fc; }
+  .tag-none { display: none; }
+
+  .cal-remind-btn {
+    font-size: 10px; color: #6b7280; background: #252830;
+    border: 1px solid #353a47; border-radius: 5px;
+    padding: 2px 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0; align-self: flex-start; margin-top: 2px;
+  }
+  .cal-remind-btn.on { color: #f59e0b; border-color: #f59e0b40; background: #f59e0b15; }
+
+  /* ── REMINDERS PANEL ── */
+  .reminders-panel {
+    margin: 12px 12px 0;
+    background: #1a1d27; border: 1px solid #252830; border-radius: 10px; overflow: hidden;
+  }
+  .reminders-header {
+    padding: 12px 14px; border-bottom: 1px solid #252830;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .reminders-title { font-size: 13px; font-weight: 700; color: #fff; }
+  .reminders-sub { font-size: 11px; color: #6b7280; }
+  .reminder-item {
+    padding: 12px 14px; border-bottom: 1px solid #1e2130;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .reminder-item:last-child { border-bottom: none; }
+  .ri-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .ri-dot.overdue { background: #ef4444; }
+  .ri-dot.soon { background: #f59e0b; }
+  .ri-dot.ok { background: #6b7280; }
+  .ri-main { flex: 1; min-width: 0; }
+  .ri-name { font-size: 13px; color: #d1d5db; line-height: 1.3; }
+  .ri-date { font-size: 11px; margin-top: 3px; }
+  .ri-date.overdue { color: #ef4444; }
+  .ri-date.soon { color: #f59e0b; }
+  .ri-date.ok { color: #6b7280; }
+  .ri-del { font-size: 11px; color: #4b5563; background: none; border: none; cursor: pointer; padding: 2px 6px; }
+  .empty-msg { padding: 20px 14px; font-size: 13px; color: #4b5563; text-align: center; }
+
+  /* ── REMINDER MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 500;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1a1d27; border: 1px solid #252830;
+    border-radius: 16px 16px 0 0; padding: 20px 16px 32px;
+    width: 100%; max-width: 480px;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .modal-task { font-size: 13px; color: #9ca3af; margin-bottom: 16px; line-height: 1.4; }
+  .modal-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; margin-bottom: 6px; }
+  .modal-date-input {
+    width: 100%; background: #0f1117; border: 1px solid #353a47;
+    border-radius: 8px; color: #fff; font-size: 14px; padding: 10px 12px;
+    margin-bottom: 14px; outline: none;
+  }
+  .modal-actions { display: flex; flex-direction: column; gap: 8px; }
+  .modal-btn {
+    width: 100%; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer;
+  }
+  .modal-btn-email { background: #1D9E75; color: #fff; }
+  .modal-btn-wa { background: #25D366; color: #fff; }
+  .modal-btn-both { background: #3b82f6; color: #fff; }
+  .modal-btn-cancel { background: #252830; color: #9ca3af; }
+  .modal-btn:active { opacity: 0.85; }
+
+  .section-note {
+    font-size: 12px; color: #4b5563; padding: 10px 16px;
+  }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <div class="header-title">PagoYa &mdash; 90 Day Plan</div>
-  <button class="sync-btn" onclick="syncNow()">&#8635; Sync</button>
+  <div class="header-left">
+    <div class="header-title">⚡ PagoYa CC</div>
+    <div class="today-badge" id="today-badge"></div>
+  </div>
+  <div class="header-right">
+    <span class="reminder-badge" id="reminder-badge">0</span>
+    <button class="sync-btn" onclick="syncNow()">↻ Sync</button>
+  </div>
 </div>
 
-<div class="progress-wrap">
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('checklist', this)">Days 1–30 Plan</button>
+  <button class="tab" onclick="switchTab('calendar', this)">Content Calendar</button>
+  <button class="tab" onclick="switchTab('reminders', this)">Reminders</button>
+</div>
+
+<!-- PROGRESS (shown on checklist tab) -->
+<div class="progress-wrap" id="progress-wrap">
   <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
-  <div class="progress-label" id="prog-label">0 / 24</div>
+  <div class="progress-label" id="prog-label">0 / 32</div>
 </div>
 
-<div id="checklist"></div>
-<div class="bottom-pad"></div>
+<!-- ══════════════════════════════════════════════════════
+     PANEL 1 — DAYS 1–30 CHECKLIST
+══════════════════════════════════════════════════════ -->
+<div class="panel active" id="panel-checklist">
+
+  <!-- PHASE 1 -->
+  <div class="phase-header ph1">
+    <span class="phase-title">Phase 1 — Technical Foundation (Days 1–7)</span>
+    <span class="phase-count" id="ph1-count">0 / 11</span>
+  </div>
+  <div class="items-list" id="ph1-list"></div>
+
+  <!-- PHASE 2 -->
+  <div class="phase-header ph2">
+    <span class="phase-title">Phase 2 — Content Foundation (Days 8–21)</span>
+    <span class="phase-count" id="ph2-count">0 / 12</span>
+  </div>
+  <div class="items-list" id="ph2-list"></div>
+
+  <!-- PHASE 3 -->
+  <div class="phase-header ph3">
+    <span class="phase-title">Phase 3 — Authority & Distribution (Days 22–30)</span>
+    <span class="phase-count" id="ph3-count">0 / 9</span>
+  </div>
+  <div class="items-list" id="ph3-list"></div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL 2 — CONTENT CALENDAR
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-calendar">
+  <p class="section-note">Color key: <span style="color:#60a5fa">■ PagoYa</span> &nbsp;<span style="color:#34d399">■ PagoSeguro</span> &nbsp;<span style="color:#c084fc">■ Shared/PR</span></p>
+
+  <!-- WEEK 1 -->
+  <div class="week-block">
+    <div class="week-header w1">Week 1 (Days 1–7) — Technical Lock</div>
+    <div class="week-items" id="week1-items"></div>
+  </div>
+
+  <!-- WEEK 2 -->
+  <div class="week-block">
+    <div class="week-header w2">Week 2 (Days 8–14) — Pillar Pages</div>
+    <div class="week-items" id="week2-items"></div>
+  </div>
+
+  <!-- WEEK 3 -->
+  <div class="week-block">
+    <div class="week-header w3">Week 3 (Days 15–21) — Cluster Content</div>
+    <div class="week-items" id="week3-items"></div>
+  </div>
+
+  <!-- WEEK 4 -->
+  <div class="week-block">
+    <div class="week-header w4">Week 4 (Days 22–30) — Authority Push</div>
+    <div class="week-items" id="week4-items"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL 3 — REMINDERS
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-reminders">
+  <div class="reminders-panel" style="margin-top:12px">
+    <div class="reminders-header">
+      <div>
+        <div class="reminders-title">Active Reminders</div>
+        <div class="reminders-sub">Tasks due in next 7 days highlighted. Overdue in red.</div>
+      </div>
+    </div>
+    <div id="reminders-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     REMINDER MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Set Reminder</div>
+    <div class="modal-task" id="modal-task-name"></div>
+    <div class="modal-label">Due Date</div>
+    <input type="date" class="modal-date-input" id="modal-date" />
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-both" onclick="setReminderBoth()">📧 Email + 💬 WhatsApp</button>
+      <button class="modal-btn modal-btn-email" onclick="setReminderEmail()">📧 Email only</button>
+      <button class="modal-btn modal-btn-wa" onclick="setReminderWA()">💬 WhatsApp only</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
-const ITEMS = [
-  // ── PHASE 1 ──────────────────────────────────────────────────────────────
-  {
-    phase: 1, id: `p1-1`,
-    title: `Verify Evoluciona M\u00f3vil failover with live credentials`,
-    day: `Day 1\u20133`, critical: true,
-    why: `Evoluciona M\u00f3vil is your primary bill-pay rail for CFE and Telmex. If it goes down without a tested failover, every user payment fails silently \u2014 destroying early trust before you have any brand equity.`,
-    action: `Obtain live SIPREL or STP API credentials. Script a failover test that routes a live CFE payment through the backup provider and confirm the response within 24 hours. Document the failover threshold in the backend config.`,
-    result: `Users experience zero downtime on your single most common payment type, giving PagoYa a reliability edge over cash alternatives from day one.`
-  },
-  {
-    phase: 1, id: `p1-2`,
-    title: `Confirm Stripe webhook idempotency under load`,
-    day: `Day 1\u20133`, critical: true,
-    why: `Stripe can replay webhooks \u2014 if your handler is not idempotent, a single payment can be credited twice, creating fraud exposure and accounting chaos before you have onboarded your tenth user.`,
-    action: `Replay the payment_intent.succeeded event against production using the Stripe CLI. Verify that duplicate event IDs are detected and skipped via the idempotency_key column in your bill_payments table. Run at 10\u00d7 normal rate.`,
-    result: `Zero double-credits in the first 1,000 transactions, and a clean audit trail ready for any investor or regulator who asks about financial controls.`
-  },
-  {
-    phase: 1, id: `p1-3`,
-    title: `Launch rep activation sprint \u2014 10 reps, 100 users, 30 days`,
-    day: `Day 1\u20137`, critical: true,
-    why: `Your fastest path to first-paying users is not paid ads \u2014 it is trusted people already in colonias who can demonstrate the app in person and handle the \u201cis this a scam?\u201d objection on the spot.`,
-    action: `Recruit 10 reps via the /register page. Give each a simple script: find 10 neighbors who pay CFE or Telmex monthly. Hold a 30-minute WhatsApp group training. Track activations in the admin dashboard.`,
-    result: `100 warm users acquired at near-zero cost, each with a personal voucher \u2014 the kind of social proof that converts skeptical Mexican families far faster than any Facebook ad.`
-  },
-  {
-    phase: 1, id: `p1-4`,
-    title: `Target PV expat community as first 50 users`,
-    day: `Day 1\u20137`, critical: false,
-    why: `Puerto Vallarta expats pay Mexican utility bills but are underserved by traditional payment channels \u2014 they already trust app-based solutions and have disposable income to absorb the \$15 MXN fee without friction.`,
-    action: `Post in Facebook groups \u201cPV Expats\u201d, \u201cVallarta Living\u201d, and \u201cNayarit Expats\u201d. Offer first-payment fee waiver for 48 hours. Personally DM anyone who comments. Get 5 people to pay a real bill on camera.`,
-    result: `50 early adopters who understand value, leave English-language reviews, and bring in word-of-mouth from friends who are also expats \u2014 a demographic with above-average LTV.`
-  },
-  {
-    phase: 1, id: `p1-5`,
-    title: `Get Mexican fintech legal opinion on IFPE requirements`,
-    day: `Day 7\u201314`, critical: true,
-    why: `Operating as an electronic payment institution without IFPE registration is a regulatory violation under LADF \u2014 one complaint to CNBV can halt operations and create personal liability for the founder.`,
-    action: `Engage a Mexican fintech lawyer (Basham, Ringe y Correa or equivalent) for a 2-hour opinion on whether PagoYa requires IFPE or can operate under a third-party aggregator exemption. Budget \$500\u2013\$1,500 USD.`,
-    result: `Clear legal standing to operate, a compliance roadmap for scale, and investor confidence that you have addressed Mexico\u2019s top fintech regulatory risk before taking outside money.`
-  },
-  {
-    phase: 1, id: `p1-6`,
-    title: `Set transaction limits for unregistered users`,
-    day: `Day 7\u201314`, critical: false,
-    why: `CNBV rules require tiered transaction limits for unverified users. Ignoring this creates AML exposure even at small volumes \u2014 and STP or Stripe may terminate your account if patterns look irregular.`,
-    action: `Cap unregistered users at \$500 MXN per transaction and \$2,000 MXN per month. Add a soft KYC prompt (name + CURP) that unlocks a \$5,000 MXN monthly limit. Gate this in the backend before the Stripe PaymentIntent is created.`,
-    result: `Full compliance with CNBV Level 1 transaction limits, reducing regulatory risk while creating a natural upsell moment to verified accounts with higher limits.`
-  },
-  {
-    phase: 1, id: `p1-7`,
-    title: `Get WhatsApp Business API verified`,
-    day: `Day 14\u201321`, critical: false,
-    why: `WhatsApp is the primary communication channel for 90% of Mexican smartphone users. Without API verification your messages come from an unbranded number \u2014 recipients do not trust them and open rates collapse.`,
-    action: `Submit WhatsApp Business API verification via Meta Business Suite. Use a dedicated Mexican number. Set up template messages for payment confirmation, OXXO voucher delivery, and loyalty point alerts. Test end-to-end with 5 real users.`,
-    result: `Branded payment confirmations via the channel users already trust, reducing support tickets and increasing repeat payment rates among the first 100 users.`
-  },
-  {
-    phase: 1, id: `p1-8`,
-    title: `Build live unit economics dashboard in command center`,
-    day: `Day 21\u201330`, critical: false,
-    why: `Without a single dashboard showing CAC, LTV, revenue per transaction, and churn, you are flying blind \u2014 and you cannot walk an investor through your unit economics on a 5-minute call.`,
-    action: `Add a Metrics tab to command center pulling from /api/bills/admin/revenue. Display: total transactions, total MXN revenue, \$15 MXN fee collected, average repeat rate, top 3 bill types. Auto-refresh every 60 seconds.`,
-    result: `Real-time proof of a working revenue model you can show any investor from your phone \u2014 the single most powerful data point in a pre-Series A conversation.`
-  },
-  {
-    phase: 1, id: `p1-9`,
-    title: `Achieve 100 transactions and document first user stories`,
-    day: `Day 21\u201330`, critical: false,
-    why: `100 transactions is the threshold that separates "someone built an app" from "people are actually using it" \u2014 the first proof-of-traction number that changes how investors and press respond.`,
-    action: `Set a team goal of 100 paid transactions in 30 days. For the first 20 users who pay, collect a 1-minute voice note or 3-sentence written testimonial. Record one 60-second screen + face video of a real user paying a bill.`,
-    result: `Social proof assets \u2014 testimonials, a demo video, a transaction milestone \u2014 that replace generic pitch claims with verifiable evidence of demand in your seed round materials.`
-  },
+// ── DATA ────────────────────────────────────────────────────────────────────
 
-  // ── PHASE 2 ──────────────────────────────────────────────────────────────
-  {
-    phase: 2, id: `p2-1`,
-    title: `Launch OXXO cash voucher (Prompt 2A \u2192 2B \u2192 2C)`,
-    day: `Day 31\u201335`, critical: true,
-    why: `Over 65% of Mexicans remain unbanked or underbanked \u2014 they cannot use Stripe cards but they can pay cash at any OXXO. Blocking them cuts your total addressable market by more than half.`,
-    action: `Activate the Digital Femsa OXXO webhook already in the codebase. Run end-to-end test: generate a voucher, pay it at a real OXXO, confirm the wallet credit via webhook. Build the 2A \u2192 2B \u2192 2C NLP prompt flow for cash-first users.`,
-    result: `Access to the unbanked majority \u2014 65M+ Mexicans \u2014 who represent the highest-volume, lowest-competition segment in Mexican bill pay and the foundation of your 1,000-transaction milestone.`
-  },
-  {
-    phase: 2, id: `p2-2`,
-    title: `Open Guadalajara as parallel market via rep network`,
-    day: `Day 31\u201340`, critical: false,
-    why: `Guadalajara is Mexico\u2019s second-largest metro with 5M people, high smartphone penetration, and identical CFE/Telmex utility structures \u2014 a natural expansion with zero product changes required.`,
-    action: `Recruit 5 reps specifically in ZMG via the /register page. Run the same activation playbook as PV. Target Zapopan and Tlaquepaque first \u2014 above-median income neighborhoods with CFE payment compliance issues.`,
-    result: `Geographic proof that PagoYa is replicable beyond PV \u2014 two active markets before Series A dramatically expands your addressable market narrative for investors.`
-  },
-  {
-    phase: 2, id: `p2-3`,
-    title: `Migrate from Replit to Railway or Render`,
-    day: `Day 35\u201345`, critical: false,
-    why: `Replit deployment is excellent for prototyping but introduces latency and cold starts that are not acceptable for a production payment application with real user funds.`,
-    action: `Export Postgres from Replit. Deploy the Express API server to Railway with environment variable parity. Point pagoyamx.com DNS to Railway. Validate all Stripe webhooks, OXXO webhooks, and Claude autofill endpoints in staging first.`,
-    result: `Sub-100ms API response times, 99.9% uptime SLA, and infrastructure credibility that removes a common investor objection about production readiness at scale.`
-  },
-  {
-    phase: 2, id: `p2-4`,
-    title: `Conduct 5 in-person UX tests with Mexican residents`,
-    day: `Day 40\u201350`, critical: false,
-    why: `Product-market fit in Mexico looks different than in the US \u2014 the NLP prompts and confirmation flows need to match how native Spanish speakers think about bill payments, not how a bilingual founder does.`,
-    action: `Sit with 5 people in PV or GDL who have never seen PagoYa. Give them one task: pay your CFE bill. Watch without helping. Record with their permission. Log every point of confusion in a Notion UX audit doc.`,
-    result: `A prioritized list of friction points that, when fixed, will increase conversion from first-open to first-payment \u2014 the highest-leverage product improvement at this stage.`
-  },
-  {
-    phase: 2, id: `p2-5`,
-    title: `Submit Taecel wholesale contract`,
-    day: `Day 45\u201355`, critical: false,
-    why: `Taecel retail API margin is 3\u20135% \u2014 at volume, a wholesale contract drops your cost to under 1%, directly widening the unit economics that determine when PagoYa becomes cash-flow positive.`,
-    action: `Reach 250 cumulative transactions to qualify for Taecel volume tier discussion. Email their commercial team with your transaction export, current API usage, and a 90-day growth projection. Propose a 60-day wholesale pilot.`,
-    result: `Lower COGS on every transaction processed \u2014 the contractual foundation for a unit economics story where each payment becomes more profitable as you scale.`
-  },
-  {
-    phase: 2, id: `p2-6`,
-    title: `Reach 500 transactions \u2014 analyze retention and repeat rate`,
-    day: `Day 50\u201360`, critical: false,
-    why: `500 transactions with a measured repeat rate is the clearest signal of product-market fit available at pre-seed \u2014 investors care more about whether users come back than whether they ever came at all.`,
-    action: `Pull cohort data from Postgres: of all users who made their first transaction in week 1, what % made a second transaction within 30 days? Present this in a single slide: retention curve + LTV estimate. Share it with 3 angels.`,
-    result: `A retention-based LTV model that replaces speculation with data \u2014 the core of your Series A narrative and proof that PagoYa creates habit, not novelty.`
-  },
-  {
-    phase: 2, id: `p2-7`,
-    title: `Launch DiMo P2P payment beta for user-to-user transfers`,
-    day: `Day 50\u201360`, critical: false,
-    why: `DiMo (Dinero M\u00f3vil) is Banxico\u2019s interoperable P2P transfer standard \u2014 adding it makes PagoYa a full wallet, not just a bill-pay app, dramatically increasing daily active use and in-app balance retention.`,
-    action: `Integrate DiMo via your STP connection. Build a simple \u201csend money\u201d flow: amount, phone number, confirm. Test between 5 internal accounts. Gate behind verified KYC. Launch to top 50 most active users first.`,
-    result: `A stickier product that keeps MXN balances inside PagoYa rather than being withdrawn after each bill \u2014 increasing LTV and creating a network effect as each sender recruits a receiver.`
-  },
-  {
-    phase: 2, id: `p2-8`,
-    title: `Build affiliate partner program for PagoYa referrals`,
-    day: `Day 55\u201360`, critical: false,
-    why: `Your rep network is proven \u2014 a formal affiliate program with trackable referral links turns every power user into a growth channel with near-zero marginal CAC compared to paid acquisition.`,
-    action: `Build referral link generation in the user profile page. Track referral_id in the bill_payments table. Pay \$30 MXN per successful referred first payment, credited to wallet balance. Launch to the top 20 reps first.`,
-    result: `A self-funding acquisition loop where every \$30 MXN referral bonus is recovered within 2 transactions from the new user \u2014 turning your most engaged users into your most effective sales team.`
-  },
-  {
-    phase: 2, id: `p2-9`,
-    title: `Launch Spanish-language social content series`,
-    day: `Day 55\u201360`, critical: false,
-    why: `Organic content in Mexican Spanish outperforms paid ads 3:1 for fintech trust-building \u2014 short videos of real users paying real bills remove the scam objection before a rep ever has to answer it.`,
-    action: `Film 4 short videos (60 seconds each): one user paying CFE, one paying Telmex, one collecting OXXO cash, one explaining why they switched from OXXO to PagoYa. Post on TikTok, Instagram Reels, and WhatsApp Status weekly.`,
-    result: `Organic reach that compounds over time \u2014 each video that lands in a colonia WhatsApp group is worth 10 paid impressions because it comes with implicit social endorsement from a neighbor.`
-  },
+const CHECKLIST = [
+  // Phase 1 — 11 items
+  { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
+  { phase:1, id:'p1-02', title:'Sitemaps submitted to Google Search Console — pagoseguromx.com' },
+  { phase:1, id:'p1-03', title:'robots.txt verified — AI crawlers allowed on both domains' },
+  { phase:1, id:'p1-04', title:'llms.txt live on pagoyamx.com' },
+  { phase:1, id:'p1-05', title:'llms.txt live on pagoseguromx.com' },
+  { phase:1, id:'p1-06', title:'FAQ schema deployed and Google validated — pagoyamx.com' },
+  { phase:1, id:'p1-07', title:'FAQ schema deployed and Google validated — pagoseguromx.com' },
+  { phase:1, id:'p1-08', title:'Organization schema deployed — both domains' },
+  { phase:1, id:'p1-09', title:'App/Service schema deployed — both domains' },
+  { phase:1, id:'p1-10', title:'Google Search Console verified — both domains' },
+  { phase:1, id:'p1-11', title:'Search Console coverage report reviewed (check Day 3–4)' },
 
-  // ── PHASE 3 ──────────────────────────────────────────────────────────────
-  {
-    phase: 3, id: `p3-1`,
-    title: `Hold STP meeting with live transaction data`,
-    day: `Day 61\u201365`, critical: true,
-    why: `STP (Sistema de Transferencias y Pagos) is Mexico\u2019s real-time interbank network \u2014 becoming an STP member unlocks same-day settlement for SPEI payments, removing your dependence on third-party aggregators.`,
-    action: `Book a formal meeting with STP partnerships team using your live transaction data (500+ transactions, revenue proof, user growth). Bring your IFPE legal opinion and compliance roadmap. Come with a specific volume commitment.`,
-    result: `A direct STP relationship that eliminates the 2\u20133 day settlement lag, reduces per-transaction fees by 40\u201360%, and positions PagoYa as infrastructure rather than just an app.`
-  },
-  {
-    phase: 3, id: `p3-2`,
-    title: `Add payment reminders for recurring bills`,
-    day: `Day 65\u201375`, critical: false,
-    why: `CFE and Telmex bills arrive on the same date every month \u2014 a timely WhatsApp reminder 3 days before due is the single highest-ROI feature for increasing repeat transaction rate without acquiring new users.`,
-    action: `Build a cron job that checks bill_payments for each user\u2019s most recent payment per service type. Schedule a WhatsApp template message 3 days before the estimated next due date. Test with 10 users before full rollout.`,
-    result: `A measurable increase in month-2 repeat rate \u2014 the core metric that separates a \$20 LTV app from a \$200 LTV financial habit and determines whether Series A math works.`
-  },
-  {
-    phase: 3, id: `p3-3`,
-    title: `Update investor overview with live metrics`,
-    day: `Day 70\u201380`, critical: false,
-    why: `Investor conversations require a living document \u2014 a static deck built at launch will have been wrong for 60 days by the time you are in serious discussions, undermining credibility exactly when it matters most.`,
-    action: `Update the PagoYa investor one-pager with actual numbers: transaction count, total MXN revenue, CAC, repeat rate, geographic spread. Replace every projection with an actual. Add a current run rate line. Send to 5 warm angels.`,
-    result: `An investor document anchored in reality rather than assumption \u2014 the kind that generates second meetings instead of polite rejections, because the numbers speak before the founder does.`
-  },
-  {
-    phase: 3, id: `p3-4`,
-    title: `Launch loyalty punch card for end users`,
-    day: `Day 75\u201385`, critical: false,
-    why: `Loyalty programs in Mexican fintech see 2\u20133\u00d7 higher retention among participants \u2014 a simple pay 5 bills, get the 6th fee-free mechanic converts one-time users into monthly habits without expensive rewards infrastructure.`,
-    action: `Activate the existing loyalty tier system (Bronce/Plata/Oro). Add a visible punch card UI to the home screen showing progress toward the next tier. Notify via WhatsApp when a tier is reached. Promote via rep network first.`,
-    result: `A retention loop that makes PagoYa feel earned rather than transactional \u2014 turning the \$15 MXN fee from a cost into a game users choose to play, reducing churn among your highest-value cohort.`
-  },
-  {
-    phase: 3, id: `p3-5`,
-    title: `Complete IFPE registration or formal aggregator agreement`,
-    day: `Day 75\u201390`, critical: true,
-    why: `By Day 75 you will have live transaction data, legal opinion, and investor interest \u2014 the exact moment CNBV will scrutinize you. Formalizing your regulatory status now prevents a compliance disruption at Series A.`,
-    action: `Based on the Day 14 legal opinion: either file IFPE application with CNBV or execute a formal aggregator agreement with your payment processor. Have counsel review all contracts before signing. File before 1,000 transactions.`,
-    result: `Regulatory standing that converts from a risk flag to a competitive moat \u2014 few competitors your size have formalized their CNBV position, and you will be the one that did.`
-  },
-  {
-    phase: 3, id: `p3-6`,
-    title: `Reach 1,000 transactions \u2014 prepare Series A materials`,
-    day: `Day 80\u201390`, critical: false,
-    why: `1,000 transactions across two markets with a measurable repeat rate, clear unit economics, and a live regulatory opinion is a fundable company \u2014 not a demo. This milestone determines PagoYa\u2019s trajectory.`,
-    action: `Close the 90-day sprint with a full data export: transactions, users, MXN revenue, CAC, LTV, retention cohort, geographic spread. Build a 10-slide Sequoia-format deck. Schedule 10 first meetings with LatAm fintech angels.`,
-    result: `A fundable pre-seed close at \$250K\u2013\$500K SAFE note that buys 12 months of runway \u2014 enough to prove the STP integration, reach 10,000 transactions, and set up a Series A at 10\u00d7 the valuation.`
-  }
+  // Phase 2 — 12 items
+  { phase:2, id:'p2-01', title:'Set up blog/content section on pagoyamx.com' },
+  { phase:2, id:'p2-02', title:'Set up blog/content section on pagoseguromx.com' },
+  { phase:2, id:'p2-03', title:'Write PagoYa pillar page: "Guía completa para pagar servicios en México sin cuenta bancaria"' },
+  { phase:2, id:'p2-04', title:'Write PagoSeguro pillar page: "Guía completa para cobrar renta digitalmente en México"' },
+  { phase:2, id:'p2-05', title:'Publish CFE payment cluster article' },
+  { phase:2, id:'p2-06', title:'Publish Telmex/Izzi/Totalplay cluster article' },
+  { phase:2, id:'p2-07', title:'Publish recargas Telcel/AT&T cluster article' },
+  { phase:2, id:'p2-08', title:'Publish OXXO Pay explainer article' },
+  { phase:2, id:'p2-09', title:'Publish PagoSeguro: Pagar renta en OXXO guide' },
+  { phase:2, id:'p2-10', title:'Publish PagoSeguro: Propietarios extranjeros guide' },
+  { phase:2, id:'p2-11', title:'Internal linking complete between pillar and all cluster pages' },
+  { phase:2, id:'p2-12', title:'All blog pages have FAQ schema added' },
+
+  // Phase 3 — 9 items
+  { phase:3, id:'p3-01', title:'Contxto pitch drafted and sent — PagoYa underbanked narrative' },
+  { phase:3, id:'p3-02', title:'Expat real estate media pitch drafted and sent — PagoSeguro' },
+  { phase:3, id:'p3-03', title:'Instagram Reels content plan created (3–5 videos per week)' },
+  { phase:3, id:'p3-04', title:'First 3 Instagram Reels published — PagoYa how-to demos' },
+  { phase:3, id:'p3-05', title:'First 3 Instagram Reels published — PagoSeguro landlord demos' },
+  { phase:3, id:'p3-06', title:'Reddit presence started — r/mexico and r/PersonalFinanceMexico' },
+  { phase:3, id:'p3-07', title:'Search Console first keyword data reviewed and logged' },
+  { phase:3, id:'p3-08', title:'Contxto / iupana follow-up sent if no response' },
+  { phase:3, id:'p3-09', title:'Week 4 content calendar confirmed for Days 31–60' },
 ];
 
-const TOTAL = ITEMS.length;
-const STORAGE_KEY = 'ck_checks';
+const CALENDAR = [
+  // Week 1
+  { week:1, day:'Days 1–7', text:'Both domains: Technical SEO/GEO stack verification', tag:'shared', id:'cal-w1-1' },
+  { week:1, day:'Days 1–7', text:'Google Search Console monitoring begins', tag:'shared', id:'cal-w1-2' },
+  { week:1, day:'Days 1–7', text:'No content publishing this week — foundation only', tag:'none', id:'cal-w1-3' },
+
+  // Week 2
+  { week:2, day:'Day 8',  text:'Publish PagoYa pillar page — "Guía completa para pagar servicios en México sin cuenta bancaria"', tag:'pagoya', id:'cal-w2-1' },
+  { week:2, day:'Day 9',  text:'Publish PagoSeguro pillar page — "Guía completa para cobrar renta digitalmente en México"', tag:'pagoseguro', id:'cal-w2-2' },
+  { week:2, day:'Day 10', text:'Publish CFE payment cluster article', tag:'pagoya', id:'cal-w2-3' },
+  { week:2, day:'Day 11', text:'Publish PagoSeguro: Pagar renta en OXXO guide', tag:'pagoseguro', id:'cal-w2-4' },
+  { week:2, day:'Day 12', text:'First Instagram Reels published — PagoYa how-to demos', tag:'pagoya', id:'cal-w2-5' },
+  { week:2, day:'Day 13', text:'First Instagram Reels published — PagoSeguro landlord demos', tag:'pagoseguro', id:'cal-w2-6' },
+  { week:2, day:'Day 14', text:'Review Search Console first data', tag:'shared', id:'cal-w2-7' },
+
+  // Week 3
+  { week:3, day:'Day 15', text:'Publish Telmex/Izzi/Totalplay cluster article', tag:'pagoya', id:'cal-w3-1' },
+  { week:3, day:'Day 16', text:'Publish PagoSeguro: Propietarios extranjeros guide', tag:'pagoseguro', id:'cal-w3-2' },
+  { week:3, day:'Day 17', text:'Publish recargas Telcel/AT&T/Movistar cluster article', tag:'pagoya', id:'cal-w3-3' },
+  { week:3, day:'Day 18', text:'Publish PagoSeguro: Brokers inmobiliarios PV guide', tag:'pagoseguro', id:'cal-w3-4' },
+  { week:3, day:'Day 19', text:'Publish OXXO Pay explainer', tag:'pagoya', id:'cal-w3-5' },
+  { week:3, day:'Day 20', text:'Publish SPEI vs transferencia guide', tag:'pagoseguro', id:'cal-w3-6' },
+  { week:3, day:'Day 21', text:'Internal linking audit — connect all cluster pages to pillar pages', tag:'shared', id:'cal-w3-7' },
+
+  // Week 4
+  { week:4, day:'Day 22', text:'Draft and send Contxto pitch — PagoYa underbanked narrative', tag:'pagoya', id:'cal-w4-1' },
+  { week:4, day:'Day 23', text:'Draft and send expat real estate media pitch — PagoSeguro', tag:'pagoseguro', id:'cal-w4-2' },
+  { week:4, day:'Day 24', text:'Publish DiMo/SPEI explainer', tag:'pagoya', id:'cal-w4-3' },
+  { week:4, day:'Day 25', text:'Publish Riviera Nayarit landlord guide', tag:'pagoseguro', id:'cal-w4-4' },
+  { week:4, day:'Day 26', text:'Reddit seeding begins — r/mexico and r/PersonalFinanceMexico', tag:'shared', id:'cal-w4-5' },
+  { week:4, day:'Day 27', text:'Review Search Console keyword data — adjust Week 5 content plan', tag:'shared', id:'cal-w4-6' },
+  { week:4, day:'Day 28', text:'Forbes México / El Economista pitch drafted', tag:'shared', id:'cal-w4-7' },
+  { week:4, day:'Day 29', text:'Confirm Days 31–60 content calendar', tag:'shared', id:'cal-w4-8' },
+  { week:4, day:'Day 30', text:'Full 30-day SEO audit — impressions, clicks, indexed pages', tag:'shared', id:'cal-w4-9' },
+];
+
+const TOTAL = CHECKLIST.length;
+const STORAGE_KEY = 'ck_checks_v2';
+const REMINDER_KEY = 'ck_reminders_v2';
+const EMAIL = 'lawrightmba@gmail.com';
+const WA_NUM = '17138052626';
+
+let checks = {};
+let reminders = {};
+let modalItemId = null;
+let modalItemName = null;
+
+// ── STORAGE ─────────────────────────────────────────────────────────────────
 
 function loadChecks() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
 }
-function saveChecks(c) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch(e) {}
+function saveChecks() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(checks)); } catch(e) {}
 }
+function loadReminders() {
+  try { return JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveReminders() {
+  try { localStorage.setItem(REMINDER_KEY, JSON.stringify(reminders)); } catch(e) {}
+}
+
+// ── TODAY ────────────────────────────────────────────────────────────────────
+
+function todayStr() {
+  const d = new Date();
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+function todayISO() {
+  return new Date().toISOString().slice(0,10);
+}
+function daysUntil(isoDate) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(isoDate + 'T00:00:00');
+  return Math.round((d - now) / 86400000);
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('progress-wrap').style.display = id === 'checklist' ? 'flex' : 'none';
+  if (id === 'reminders') renderRemindersPanel();
+}
+
+// ── PROGRESS ─────────────────────────────────────────────────────────────────
+
 function updateProgress() {
-  const checks = loadChecks();
-  const done = ITEMS.filter(it => checks[it.id]).length;
+  const done = Object.values(checks).filter(Boolean).length;
   const pct = Math.round((done / TOTAL) * 100);
   document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-label').textContent = done + ' / ' + TOTAL + ' complete';
+  document.getElementById('prog-label').textContent = done + ' / ' + TOTAL;
+
+  // Phase counts
+  [1,2,3].forEach(ph => {
+    const items = CHECKLIST.filter(i => i.phase === ph);
+    const donePh = items.filter(i => checks[i.id]).length;
+    document.getElementById('ph' + ph + '-count').textContent = donePh + ' / ' + items.length;
+  });
 }
 
-function toggleCheck(e, id) {
-  e.stopPropagation();
-  const checks = loadChecks();
+// ── CHECKLIST RENDER ─────────────────────────────────────────────────────────
+
+function renderChecklist() {
+  [1,2,3].forEach(ph => {
+    const container = document.getElementById('ph' + ph + '-list');
+    container.innerHTML = '';
+    CHECKLIST.filter(i => i.phase === ph).forEach(item => {
+      const isDone = !!checks[item.id];
+      const hasReminder = !!reminders[item.id];
+      const div = document.createElement('div');
+      div.className = 'item' + (isDone ? ' done' : '');
+      div.id = 'item-' + item.id;
+      div.innerHTML = `
+        <div class="item-row" onclick="toggleCheck('${item.id}')">
+          <div class="item-check ${isDone ? 'checked' : ''}" id="chk-${item.id}"></div>
+          <div class="item-main">
+            <div class="item-title">${item.title}</div>
+            <div class="item-meta">
+              <span class="reminder-dot ${hasReminder ? 'on' : ''}" id="dot-${item.id}"></span>
+              ${hasReminder ? '<span class="item-day" id="rdate-'+item.id+'">' + fmtDate(reminders[item.id].date) + '</span>' : ''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="remind-btn ${hasReminder ? 'on' : ''}" id="rbtn-${item.id}"
+              onclick="event.stopPropagation(); openModal('${item.id}', '${escJs(item.title)}')"
+            >${hasReminder ? '🔔' : '+ Remind'}</button>
+          </div>
+        </div>`;
+      container.appendChild(div);
+    });
+  });
+  updateProgress();
+}
+
+function toggleCheck(id) {
   checks[id] = !checks[id];
-  saveChecks(checks);
+  saveChecks();
   const item = document.getElementById('item-' + id);
-  const box  = document.getElementById('box-'  + id);
-  if (checks[id]) { item.classList.add('done'); box.classList.add('checked'); }
-  else            { item.classList.remove('done'); box.classList.remove('checked'); }
+  const chk = document.getElementById('chk-' + id);
+  if (checks[id]) { item.classList.add('done'); chk.classList.add('checked'); }
+  else { item.classList.remove('done'); chk.classList.remove('checked'); }
   updateProgress();
-  // update phase count
-  const phase = ITEMS.find(it => it.id === id).phase;
-  refreshPhaseCount(phase, checks);
 }
 
-function refreshPhaseCount(phaseNum, checks) {
-  const phItems = ITEMS.filter(it => it.phase === phaseNum);
-  const done = phItems.filter(it => checks[it.id]).length;
-  const el = document.getElementById('ph-count-' + phaseNum);
-  if (el) el.textContent = done + ' / ' + phItems.length;
+// ── CALENDAR RENDER ──────────────────────────────────────────────────────────
+
+function renderCalendar() {
+  const tagMap = {
+    pagoya: { cls:'tag-pagoya', dot:'dot-blue', label:'PagoYa' },
+    pagoseguro: { cls:'tag-pagoseguro', dot:'dot-green', label:'PagoSeguro' },
+    shared: { cls:'tag-shared', dot:'dot-purple', label:'Shared' },
+    none: { cls:'tag-none', dot:'dot-gray', label:'' },
+  };
+  [1,2,3,4].forEach(w => {
+    const container = document.getElementById('week' + w + '-items');
+    container.innerHTML = '';
+    CALENDAR.filter(c => c.week === w).forEach(cal => {
+      const t = tagMap[cal.tag] || tagMap.none;
+      const hasReminder = !!reminders[cal.id];
+      const div = document.createElement('div');
+      div.className = 'cal-item';
+      div.id = 'cal-' + cal.id;
+      div.innerHTML = `
+        <div class="cal-dot ${t.dot}"></div>
+        <div class="cal-day">${cal.day}</div>
+        <div class="cal-text">${cal.text}</div>
+        ${t.label ? `<span class="cal-tag ${t.cls}">${t.label}</span>` : ''}
+        ${cal.tag !== 'none' ? `<button class="cal-remind-btn ${hasReminder ? 'on' : ''}" id="crbtn-${cal.id}"
+          onclick="openModal('${cal.id}', '${escJs(cal.text)}')">${hasReminder ? '🔔' : '+ Remind'}</button>` : ''}`;
+      container.appendChild(div);
+    });
+  });
 }
 
-function toggleOpen(id) {
-  document.getElementById('item-' + id).classList.toggle('open');
-}
+// ── REMINDERS PANEL ──────────────────────────────────────────────────────────
 
-function syncNow() {
-  const btn = document.querySelector('.sync-btn');
-  btn.textContent = '... Syncing';
-  btn.disabled = true;
-  fetch('/api/sync').then(r => r.json()).catch(() => {}).finally(() => { location.reload(); });
-}
-
-function render() {
-  const checks = loadChecks();
-  const phases = [
-    { num: 1, label: 'Phase 1 \u2014 Days 1\u201330', cls: 'ph1' },
-    { num: 2, label: 'Phase 2 \u2014 Days 31\u201360', cls: 'ph2' },
-    { num: 3, label: 'Phase 3 \u2014 Days 61\u201390', cls: 'ph3' }
-  ];
-  const container = document.getElementById('checklist');
-  let html = '';
-  for (const ph of phases) {
-    const phItems = ITEMS.filter(it => it.phase === ph.num);
-    const doneCnt = phItems.filter(it => checks[it.id]).length;
-    html += '<div class="phase-section">';
-    html += '<div class="phase-header ' + ph.cls + '">';
-    html += '<span class="phase-title">' + ph.label + '</span>';
-    html += '<span class="phase-count" id="ph-count-' + ph.num + '">' + doneCnt + ' / ' + phItems.length + '</span>';
-    html += '</div><div class="items-list">';
-    for (const it of phItems) {
-      const isDone = !!checks[it.id];
-      const doneClass = isDone ? ' done' : '';
-      const checkedClass = isDone ? ' checked' : '';
-      const critBadge = it.critical ? '<span class="badge-critical">Critical</span>' : '';
-      html += '<div class="item' + doneClass + '" id="item-' + it.id + '">';
-      html += '<div class="item-row" onclick="toggleOpen(\'' + it.id + '\')">';
-      html += '<div class="item-check' + checkedClass + '" id="box-' + it.id + '" onclick="toggleCheck(event,\'' + it.id + '\')"></div>';
-      html += '<div class="item-main">';
-      html += '<div class="item-title">' + it.title + '</div>';
-      html += '<div class="item-meta"><span class="item-day">' + it.day + '</span>' + critBadge + '</div>';
-      html += '</div>';
-      html += '<div class="item-chevron">\u25be</div>';
-      html += '</div>';
-      html += '<div class="item-detail">';
-      html += '<div class="detail-section"><div class="detail-label">Why this matters</div><div class="detail-text">' + it.why + '</div></div>';
-      html += '<div class="detail-section"><div class="detail-label">Specific action</div><div class="detail-text">' + it.action + '</div></div>';
-      html += '<div class="detail-section"><div class="detail-label">Competitive result</div><div class="detail-text">' + it.result + '</div></div>';
-      html += '</div>';
-      html += '</div>';
-    }
-    html += '</div></div>';
+function renderRemindersPanel() {
+  const list = document.getElementById('reminders-list');
+  const entries = Object.values(reminders).sort((a,b) => a.date.localeCompare(b.date));
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="empty-msg">No reminders set yet.<br>Tap "+ Remind" on any checklist or calendar item.</div>';
+    return;
   }
-  container.innerHTML = html;
-  updateProgress();
+  list.innerHTML = '';
+  entries.forEach(r => {
+    const diff = daysUntil(r.date);
+    const status = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
+    const dateLabel = diff < 0 ? `Overdue by ${Math.abs(diff)} day${Math.abs(diff)===1?'':'s'}` :
+                      diff === 0 ? 'Due today' :
+                      diff === 1 ? 'Due tomorrow' :
+                      `Due in ${diff} days (${fmtDate(r.date)})`;
+    const div = document.createElement('div');
+    div.className = 'reminder-item';
+    div.innerHTML = `
+      <div class="ri-dot ${status}"></div>
+      <div class="ri-main">
+        <div class="ri-name">${r.name}</div>
+        <div class="ri-date ${status}">${dateLabel}</div>
+      </div>
+      <button class="ri-del" onclick="deleteReminder('${r.id}')">✕</button>`;
+    list.appendChild(div);
+  });
 }
 
-render();
+function updateReminderBadge() {
+  const count = Object.keys(reminders).length;
+  const badge = document.getElementById('reminder-badge');
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline' : 'none';
+}
+
+function deleteReminder(id) {
+  delete reminders[id];
+  saveReminders();
+  updateReminderBadge();
+  refreshReminderUI(id);
+  renderRemindersPanel();
+}
+
+function refreshReminderUI(id) {
+  // checklist button
+  const rbtn = document.getElementById('rbtn-' + id);
+  const dot = document.getElementById('dot-' + id);
+  if (rbtn) {
+    const hasR = !!reminders[id];
+    rbtn.textContent = hasR ? '🔔' : '+ Remind';
+    rbtn.className = 'remind-btn' + (hasR ? ' on' : '');
+    if (dot) dot.className = 'reminder-dot' + (hasR ? ' on' : '');
+  }
+  // calendar button
+  const crbtn = document.getElementById('crbtn-' + id);
+  if (crbtn) {
+    const hasR = !!reminders[id];
+    crbtn.textContent = hasR ? '🔔' : '+ Remind';
+    crbtn.className = 'cal-remind-btn' + (hasR ? ' on' : '');
+  }
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+
+function openModal(id, name) {
+  modalItemId = id;
+  modalItemName = name;
+  document.getElementById('modal-task-name').textContent = name;
+  document.getElementById('modal-date').value = todayISO();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalItemId = null; modalItemName = null;
+}
+
+function storeReminder() {
+  const date = document.getElementById('modal-date').value;
+  if (!date) return null;
+  reminders[modalItemId] = { id: modalItemId, name: modalItemName, date };
+  saveReminders();
+  updateReminderBadge();
+  refreshReminderUI(modalItemId);
+  document.getElementById('modal-overlay').classList.remove('open');
+  return date;
+}
+
+function setReminderEmail() {
+  const date = storeReminder();
+  if (!date) return;
+  const subj = encodeURIComponent('PagoYa Command Center Reminder: ' + modalItemName);
+  const body = encodeURIComponent('Task: ' + modalItemName + '\nDue: ' + date + '\n\nSet from PagoYa Command Center.');
+  window.open('mailto:' + EMAIL + '?subject=' + subj + '&body=' + body);
+}
+
+function setReminderWA() {
+  const date = storeReminder();
+  if (!date) return;
+  const msg = encodeURIComponent('PagoYa Reminder: ' + modalItemName + ' — Due: ' + date);
+  window.open('https://wa.me/' + WA_NUM + '?text=' + msg);
+}
+
+function setReminderBoth() {
+  const date = storeReminder();
+  if (!date) return;
+  const subj = encodeURIComponent('PagoYa Command Center Reminder: ' + modalItemName);
+  const body = encodeURIComponent('Task: ' + modalItemName + '\nDue: ' + date + '\n\nSet from PagoYa Command Center.');
+  const msg = encodeURIComponent('PagoYa Reminder: ' + modalItemName + ' — Due: ' + date);
+  window.open('mailto:' + EMAIL + '?subject=' + subj + '&body=' + body);
+  setTimeout(() => window.open('https://wa.me/' + WA_NUM + '?text=' + msg), 400);
+}
+
+// ── SYNC ─────────────────────────────────────────────────────────────────────
+
+async function syncNow() {
+  const btn = document.querySelector('.sync-btn');
+  btn.textContent = '↻ Syncing…';
+  btn.disabled = true;
+  try {
+    await fetch('/api/sync', { method: 'POST' });
+  } catch(e) {}
+  setTimeout(() => { btn.textContent = '↻ Sync'; btn.disabled = false; }, 1200);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+
+function escJs(s) { return s.replace(/'/g,"&#39;").replace(/"/g,'&quot;'); }
+function fmtDate(iso) {
+  const [y,m,d] = iso.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[parseInt(m)-1] + ' ' + parseInt(d);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+checks = loadChecks();
+reminders = loadReminders();
+document.getElementById('today-badge').textContent = todayStr();
+renderChecklist();
+renderCalendar();
+updateReminderBadge();
 </script>
 </body>
 </html>

@@ -1,0 +1,107 @@
+Update the PagoYa command center at artifacts/pagoya/public/command-center.html with the following changes. Replace ALL existing content with this new focused version:
+
+SECTION 1 — PAGOYA 90-DAY PLAN: DAYS 1-30 CHECKLIST
+
+Display as a clean interactive checklist with checkboxes that save state to localStorage. Organize into 3 phases:
+
+PHASE 1: TECHNICAL FOUNDATION (Days 1-7)
+□ Sitemaps submitted to Google Search Console — pagoyamx.com
+□ Sitemaps submitted to Google Search Console — pagoseguromx.com
+□ robots.txt verified — AI crawlers allowed on both domains
+□ llms.txt live on pagoyamx.com
+□ llms.txt live on pagoseguromx.com
+□ FAQ schema deployed and Google validated — pagoyamx.com
+□ FAQ schema deployed and Google validated — pagoseguromx.com
+□ Organization schema deployed — both domains
+□ App/Service schema deployed — both domains
+□ Google Search Console verified — both domains
+□ Search Console coverage report reviewed (check Day 3-4)
+
+PHASE 2: CONTENT FOUNDATION (Days 8-21)
+□ Set up blog/content section on pagoyamx.com
+□ Set up blog/content section on pagoseguromx.com
+□ Write PagoYa pillar page: "Guía completa para pagar servicios en México sin cuenta bancaria"
+□ Write PagoSeguro pillar page: "Guía completa para cobrar renta digitalmente en México"
+□ Publish CFE payment cluster article
+□ Publish Telmex/Izzi/Totalplay cluster article
+□ Publish recargas Telcel/AT&T cluster article
+□ Publish OXXO Pay explainer article
+□ Publish PagoSeguro: Pagar renta en OXXO guide
+□ Publish PagoSeguro: Propietarios extranjeros guide
+□ Internal linking complete between pillar and all cluster pages
+□ All blog pages have FAQ schema added
+
+PHASE 3: AUTHORITY & DISTRIBUTION (Days 22-30)
+□ Contxto pitch drafted and sent — PagoYa underbanked narrative
+□ Expat real estate media pitch drafted and sent — PagoSeguro
+□ Instagram Reels content plan created (3-5 videos per week)
+□ First 3 Instagram Reels published — PagoYa how-to demos
+□ First 3 Instagram Reels published — PagoSeguro landlord demos
+□ Reddit presence started — r/mexico and r/PersonalFinanceMexico
+□ Search Console first keyword data reviewed and logged
+□ Contxto / iupana follow-up sent if no response
+□ Week 4 content calendar confirmed for Days 31-60
+
+---
+
+SECTION 2 — CONTENT PUBLICATION CALENDAR: DAYS 1-30
+
+Display as a visual week-by-week calendar grid. Each item should be color coded: PagoYa items in blue, PagoSeguro items in green, Shared/PR items in purple.
+
+WEEK 1 (Days 1-7) — Technical Lock
+- Both domains: Technical SEO/GEO stack verification
+- Search Console monitoring begins
+- No content publishing this week
+
+WEEK 2 (Days 8-14) — Pillar Pages
+- Day 8: Publish PagoYa pillar page — "Guía completa para pagar servicios en México sin cuenta bancaria"
+- Day 9: Publish PagoSeguro pillar page — "Guía completa para cobrar renta digitalmente en México"
+- Day 10: Publish CFE payment cluster article
+- Day 11: Publish PagoSeguro: Pagar renta en OXXO guide
+- Day 12: First Instagram Reels published (PagoYa)
+- Day 13: First Instagram Reels published (PagoSeguro)
+- Day 14: Review Search Console first data
+
+WEEK 3 (Days 15-21) — Cluster Content
+- Day 15: Publish Telmex/Izzi/Totalplay cluster article
+- Day 16: Publish PagoSeguro: Propietarios extranjeros guide
+- Day 17: Publish recargas Telcel/AT&T/Movistar cluster article
+- Day 18: Publish PagoSeguro: Brokers inmobiliarios PV guide
+- Day 19: Publish OXXO Pay explainer
+- Day 20: Publish SPEI vs transferencia guide (PagoSeguro)
+- Day 21: Internal linking audit — connect all cluster pages to pillar pages
+
+WEEK 4 (Days 22-30) — Authority Push
+- Day 22: Draft and send Contxto pitch — PagoYa underbanked narrative
+- Day 23: Draft and send expat real estate media pitch — PagoSeguro
+- Day 24: Publish DiMo/SPEI explainer (PagoYa)
+- Day 25: Publish Riviera Nayarit landlord guide (PagoSeguro)
+- Day 26: Reddit seeding begins — r/mexico and r/PersonalFinanceMexico
+- Day 27: Review Search Console keyword data — adjust Week 5 content plan
+- Day 28: Forbes México / El Economista pitch drafted
+- Day 29: Confirm Days 31-60 content calendar
+- Day 30: Full 30-day SEO audit — impressions, clicks, indexed pages
+
+---
+
+SECTION 3 — CALENDAR REMINDERS
+
+Add a reminder system with the following specs:
+
+1. Display a simple reminders panel showing upcoming tasks for the next 7 days based on today's date
+2. Add a "Set Reminder" button on each checklist item and each calendar item
+3. When reminder is set, send:
+   - Email to lawrightmba@gmail.com via EmailJS or mailto link with subject "PagoYa Command Center Reminder: [task name]" and the due date in the body
+   - WhatsApp message to +17138052626 via WhatsApp click-to-chat link (wa.me/17138052626) with the task name and due date
+4. Show a badge count of active reminders set
+5. Reminders panel shows tasks due in next 7 days highlighted in yellow, overdue items in red
+
+DESIGN REQUIREMENTS:
+- Clean, dark professional dashboard aesthetic matching existing command center style
+- Mobile-friendly layout (Lloyd works from mobile)
+- Progress bar showing % of Days 1-30 checklist completed
+- Show today's date prominently at the top
+- "Sync Latest" button preserved from existing command center calling /api/sync
+- All checklist state saves to localStorage so it persists between sessions
+
+After building, confirm the file is live at https://pagoyamx.com/command-center and show me the section headers and item counts for each section.
