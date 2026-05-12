@@ -32,6 +32,25 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    {
+      name: "static-cache-headers",
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && /\/(llms\.txt|robots\.txt|sitemap\.xml)(\?.*)?$/.test(req.url)) {
+            res.setHeader("Cache-Control", "public, max-age=86400");
+          }
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && /\/(llms\.txt|robots\.txt|sitemap\.xml)(\?.*)?$/.test(req.url)) {
+            res.setHeader("Cache-Control", "public, max-age=86400");
+          }
+          next();
+        });
+      },
+    },
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
