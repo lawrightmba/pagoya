@@ -18,6 +18,7 @@ import CashLoad from "@/pages/CashLoad";
 import WalletHistorial from "@/pages/WalletHistorial";
 import LoyaltyDashboard from "@/pages/LoyaltyDashboard";
 import Register from "@/pages/Register";
+import GuiaBlog from "@/pages/GuiaBlog";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/rep-dashboard" component={RepDashboard} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/guia-pagar-servicios-sin-cuenta-bancaria" component={GuiaBlog} />
       <Route component={NotFound} />
     </Switch>
   );

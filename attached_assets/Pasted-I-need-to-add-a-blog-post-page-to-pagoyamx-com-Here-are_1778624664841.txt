@@ -1,0 +1,211 @@
+I need to add a blog post page to pagoyamx.com. Here are the full instructions:
+
+1. Create a new route at /guia-pagar-servicios-sin-cuenta-bancaria that renders a standalone blog post page
+2. The page should use the same header/nav as the rest of the site
+3. Add these meta tags to this page:
+   - title: "Cómo Pagar Servicios en México Sin Cuenta Bancaria | PagoYa"
+   - description: "Guía completa para pagar CFE, Telmex, recargas y más de 26 servicios en México sin cuenta bancaria. Solo necesitas tu celular y efectivo en OXXO."
+   - canonical: https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria
+4. Create the page content using this exact text converted to clean HTML — preserve all headings, tables, bullet points, bold text, and internal links exactly as written:
+
+---
+
+# Guía completa para pagar servicios en México sin cuenta bancaria
+### The Complete Guide to Paying Bills in Mexico Without a Bank Account
+
+## Introducción / Introduction
+
+Si vives en México y no tienes cuenta bancaria, pagar tus servicios no debería ser complicado. Sin embargo, para millones de mexicanos, cada mes significa largas filas en el banco, viajes a puntos de pago, o depender de familiares que sí tienen tarjeta. Eso está cambiando.
+
+If you live in Mexico and don't have a bank account, paying your bills shouldn't be complicated. Yet for millions of Mexicans, every month means long lines at the bank, trips to payment centers, or depending on relatives who have a card. That's changing.
+
+Hoy, con solo un smartphone y efectivo en mano, puedes pagar tu CFE, Telmex, hacer recargas de celular y más de 26 servicios — sin tarjeta, sin cuenta bancaria, sin complicaciones. Esta guía te explica exactamente cómo hacerlo.
+
+Today, with just a smartphone and cash in hand, you can pay your CFE, Telmex, mobile top-ups, and 26+ services — no card, no bank account, no complications. This guide explains exactly how.
+
+---
+
+## ¿Por qué tantos mexicanos no tienen cuenta bancaria?
+### Why So Many Mexicans Don't Have a Bank Account
+
+Según datos del INEGI, más de 50 millones de adultos en México no tienen acceso a servicios bancarios formales. Las razones son variadas: falta de documentos, distancia geográfica a sucursales bancarias, desconfianza histórica en el sistema financiero, o simplemente que los costos de mantener una cuenta no justifican los beneficios.
+
+According to INEGI data, more than 50 million adults in Mexico lack access to formal banking services. The reasons vary: lack of documents, geographic distance from bank branches, historical distrust of the financial system, or simply that the costs of maintaining an account don't justify the benefits.
+
+Esto no significa que estas personas no necesiten pagar sus servicios. La CFE no acepta excusas. Telmex no perdona el vencimiento. Y una recarga de celular puede ser la diferencia entre comunicarse con la familia o quedarse incomunicado.
+
+This doesn't mean these people don't need to pay their bills. CFE doesn't accept excuses. Telmex doesn't forgive due dates. And a mobile top-up can be the difference between reaching family or going without communication.
+
+La buena noticia: ya existe una solución diseñada específicamente para ti.
+
+The good news: a solution designed specifically for you already exists.
+
+---
+
+## Qué es una billetera digital y cómo funciona en México
+### What Is a Digital Wallet and How Does It Work in Mexico
+
+Una billetera digital es una aplicación en tu celular que funciona como una cuenta de dinero — puedes depositar efectivo, guardar saldo y usarlo para pagar. No necesitas historial crediticio, no necesitas aval, y no necesitas ir al banco.
+
+A digital wallet is an app on your phone that works like a money account — you can deposit cash, store balance, and use it to pay. You don't need a credit history, you don't need a guarantor, and you don't need to go to the bank.
+
+PagoYa es la billetera digital diseñada para México. Funciona así:
+
+PagoYa is the digital wallet designed for Mexico. Here's how it works:
+
+1. Descarga la app — disponible para Android e iOS, gratis. / Download the app — available for Android and iOS, free.
+2. Recarga con efectivo en OXXO — ve a cualquier tienda OXXO, dile al cajero que quieres recargar tu billetera PagoYa, paga en efectivo y el saldo aparece en tu app en minutos. / Load with cash at OXXO — go to any OXXO store, tell the cashier you want to load your PagoYa wallet, pay cash, and the balance appears in your app within minutes.
+3. Paga tus servicios — selecciona el servicio que quieres pagar, ingresa tu número de cuenta o servicio, confirma el pago. Listo. / Pay your services — select the service you want to pay, enter your account or service number, confirm payment. Done.
+
+La comisión es fija: $15 MXN por transacción. Sin cargos por porcentaje, sin costos ocultos, sin sorpresas.
+
+The fee is flat: $15 MXN per transaction. No percentage charges, no hidden costs, no surprises.
+
+---
+
+## Los 26+ servicios que puedes pagar con PagoYa
+### The 26+ Services You Can Pay With PagoYa
+
+PagoYa cubre los servicios que más necesitas en tu vida diaria:
+
+PagoYa covers the services you need most in your daily life:
+
+### Servicios de luz, agua e internet / Electricity, Water & Internet
+- CFE (Comisión Federal de Electricidad) — paga tu recibo de luz en segundos / pay your electricity bill in seconds
+- Agua municipal — pago de recibos de agua potable / municipal water bill payments
+- Telmex — internet y teléfono fijo / internet and landline
+- Izzi — cable e internet / cable and internet
+- Totalplay — internet de fibra óptica / fiber optic internet
+- Megacable — cable e internet / cable and internet
+- Sky — televisión satelital / satellite television
+
+### Recargas de celular / Mobile Top-Ups
+- Telcel — el operador más grande de México / Mexico's largest carrier
+- AT&T México — cobertura nacional / nationwide coverage
+- Movistar — recargas prepago / prepaid top-ups
+
+### Otros servicios / Other Services
+- Predial — pago de impuesto predial / property tax payments
+- Streaming — servicios de entretenimiento / entertainment services
+- Renta — pago de renta de vivienda vía PagoSeguro / rent payments via PagoSeguro
+- Y más de 26 servicios en total / And 26+ services total
+
+¿Necesitas pagar tu CFE específicamente? Lee nuestra guía detallada: Cómo pagar CFE sin ir al banco → https://pagoyamx.com/pagar-cfe
+
+Need to pay CFE specifically? Read our detailed guide: How to pay CFE without going to the bank → https://pagoyamx.com/pagar-cfe
+
+---
+
+## Cómo recargar tu billetera PagoYa con efectivo en OXXO
+### How to Load Your PagoYa Wallet With Cash at OXXO
+
+OXXO tiene más de 20,000 tiendas en toda la República Mexicana — probablemente hay una a menos de 10 minutos de donde estás. Recargar tu billetera PagoYa en OXXO es tan fácil como comprar una botella de agua:
+
+OXXO has over 20,000 stores across Mexico — there's probably one less than 10 minutes from where you are. Loading your PagoYa wallet at OXXO is as easy as buying a bottle of water:
+
+Paso 1: Abre la app PagoYa y ve a la sección "Recargar saldo" para obtener tu código de depósito. / Open the PagoYa app and go to the "Recargar saldo" section to get your deposit code.
+
+Paso 2: Ve a cualquier tienda OXXO y dile al cajero: "Quiero hacer un depósito a mi billetera PagoYa." / Go to any OXXO store and tell the cashier: "I want to make a deposit to my PagoYa wallet."
+
+Paso 3: Muestra tu código o proporciona tu número de teléfono registrado. Paga el monto en efectivo. / Show your code or provide your registered phone number. Pay the amount in cash.
+
+Paso 4: El saldo aparece en tu app en minutos. / The balance appears in your app within minutes.
+
+¿Quieres más detalles? Lee la guía completa: Cómo depositar en OXXO paso a paso → https://pagoyamx.com/deposito-oxxo
+
+---
+
+## ¿Es seguro usar PagoYa?
+### Is PagoYa Safe to Use?
+
+Sí. PagoYa opera sobre los rieles de pago más seguros y regulados de México:
+
+Yes. PagoYa operates on Mexico's most secure and regulated payment rails:
+
+- STP/SPEI — el sistema de pagos interbancarios regulado directamente por Banco de México (Banxico). El mismo sistema que usan los bancos tradicionales. / the interbank payment system regulated directly by Banco de México (Banxico). The same system used by traditional banks.
+- Conekta — el agregador de pagos que procesa tus depósitos en OXXO, regulado en México y con miles de empresas clientes. / the payment aggregator that processes your OXXO deposits, regulated in Mexico with thousands of business clients.
+- Failover automático — PagoYa usa dos proveedores de pago (SIPREL y Evoluciona) con cambio automático entre ellos si uno falla. Tus pagos se procesan incluso si hay interrupciones. / PagoYa uses two payment providers (SIPREL and Evoluciona) with automatic switching between them if one fails. Your payments process even during outages.
+
+Tu dinero y tus pagos están protegidos. Los mismos rieles de pago que usa PagoYa son los que regulan todas las transferencias interbancarias en México.
+
+Your money and payments are protected. The same payment rails PagoYa uses are the ones that regulate all interbank transfers in Mexico.
+
+---
+
+## PagoYa vs. pagar en OXXO directamente: ¿cuál conviene?
+### PagoYa vs. Paying Directly at OXXO: Which Is Better?
+
+| | Pagar en OXXO directo | Pagar con PagoYa |
+|---|---|---|
+| ¿Necesitas hacer fila? | Sí, siempre | No — pagas desde tu celular |
+| ¿Disponible 24/7? | Solo en horario OXXO | Sí, a cualquier hora |
+| ¿Historial de pagos? | No | Sí, en la app |
+| ¿Cuántos servicios? | Limitado | 26+ servicios |
+| ¿Confirmación inmediata? | Ticket en papel | Notificación digital |
+| ¿Costo? | Comisión por servicio | $15 MXN fijo |
+
+La diferencia principal: con PagoYa, usas OXXO solo para recargar tu billetera — el pago real lo haces desde tu celular, en cualquier momento, sin filas, con historial completo.
+
+The main difference: with PagoYa, you use OXXO only to load your wallet — the actual payment happens from your phone, anytime, without lines, with complete history.
+
+---
+
+## ¿Puedo pagar la renta con PagoYa?
+### Can I Pay Rent With PagoYa?
+
+Sí. PagoYa incluye una vertical completa de pagos de renta llamada PagoSeguro, diseñada específicamente para el mercado de arrendamiento en México. Inquilinos pueden pagar su renta digitalmente — incluyendo en efectivo vía OXXO — y los propietarios reciben notificación automática por WhatsApp.
+
+Yes. PagoYa includes a complete rent payment vertical called PagoSeguro, designed specifically for Mexico's rental market. Tenants can pay rent digitally — including in cash via OXXO — and landlords receive automatic WhatsApp notification.
+
+Lee más: Cómo pagar renta sin cuenta bancaria → https://pagoyamx.com/pagar-renta
+
+---
+
+## Preguntas frecuentes / Frequently Asked Questions
+
+¿Cuánto cobra PagoYa por cada pago?
+$15 MXN fijo por transacción. Sin cargos adicionales, sin suscripción mensual obligatoria.
+How much does PagoYa charge per payment? A flat $15 MXN per transaction. No additional charges, no mandatory monthly subscription.
+
+¿PagoYa está disponible en toda la República Mexicana?
+Sí. PagoYa opera a nivel nacional, con cobertura de recarga OXXO en más de 20,000 tiendas en todo el país.
+Is PagoYa available across all of Mexico? Yes. PagoYa operates nationwide, with OXXO cash-in coverage at 20,000+ stores across the country.
+
+¿Qué pasa si hago un pago y no se aplica?
+PagoYa utiliza failover automático entre dos proveedores de pago. Si hay un error, el sistema reintenta automáticamente. Si el pago no se procesa, el saldo regresa a tu billetera.
+What happens if I make a payment and it doesn't go through? PagoYa uses automatic failover between two payment providers. If there's an error, the system automatically retries. If the payment doesn't process, the balance returns to your wallet.
+
+¿Necesito internet para usar PagoYa?
+Sí, necesitas conexión a internet para realizar pagos desde la app. Sin embargo, la recarga de saldo en OXXO no requiere que tú tengas internet en ese momento.
+Do I need internet to use PagoYa? Yes, you need an internet connection to make payments from the app. However, loading balance at OXXO doesn't require you to have internet at that moment.
+
+¿Puedo usar PagoYa si solo tengo un teléfono básico con Android?
+PagoYa está optimizado para funcionar en smartphones Android de gama baja y media. Si tu teléfono puede correr WhatsApp, puede correr PagoYa.
+Can I use PagoYa if I only have a basic Android phone? PagoYa is optimized to work on low- and mid-range Android smartphones. If your phone can run WhatsApp, it can run PagoYa.
+
+---
+
+## Empieza hoy / Get Started Today
+
+No necesitas cuenta bancaria. No necesitas tarjeta de crédito. No necesitas hacer filas.
+
+You don't need a bank account. You don't need a credit card. You don't need to stand in line.
+
+Solo necesitas tu celular y la app de PagoYa.
+
+You just need your phone and the PagoYa app.
+
+Descargar PagoYa gratis → https://pagoyamx.com/register
+Download PagoYa free → https://pagoyamx.com/register
+
+PagoYa es operado por Longview Meridian Technologies. Los pagos se procesan vía STP/SPEI regulado por Banxico y Conekta. Comisión fija de $15 MXN por transacción.
+
+---
+
+5. After building confirm:
+   - URL https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria returns HTTP 200
+   - Meta title reads: "Cómo Pagar Servicios en México Sin Cuenta Bancaria | PagoYa"
+   - Meta description is present
+   - Canonical tag is set correctly
+   - Page is linked from the site nav or homepage
+   - Build completes with no new errors
