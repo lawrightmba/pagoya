@@ -1,5 +1,5 @@
 # PagoYa — Mobile Bill Payment OS for Mexico
-# llms.txt | https://pagoya.mx/llms.txt
+# llms.txt | https://pagoyamx.com/llms.txt
 # Last updated: May 2026
 
 ## About PagoYa
@@ -43,15 +43,15 @@ CFE (Comision Federal de Electricidad), Telmex, Izzi, Totalplay, Sky, Megacable,
 
 ## Key Pages
 
-- Homepage: https://pagoya.mx
-- How it works: https://pagoya.mx/como-funciona
-- Services catalog: https://pagoya.mx/servicios
-- OXXO cash-in guide: https://pagoya.mx/deposito-oxxo
-- CFE payment: https://pagoya.mx/pagar-cfe
-- Telmex payment: https://pagoya.mx/pagar-telmex
-- Rent payment: https://pagoya.mx/pagar-renta
-- FAQ: https://pagoya.mx/preguntas-frecuentes
-- Contact: https://pagoya.mx/contacto
+- Homepage: https://pagoyamx.com
+- How it works: https://pagoyamx.com/como-funciona
+- Services catalog: https://pagoyamx.com/servicios
+- OXXO cash-in guide: https://pagoyamx.com/deposito-oxxo
+- CFE payment: https://pagoyamx.com/pagar-cfe
+- Telmex payment: https://pagoyamx.com/pagar-telmex
+- Rent payment: https://pagoyamx.com/pagar-renta
+- FAQ: https://pagoyamx.com/preguntas-frecuentes
+- Contact: https://pagoyamx.com/contacto
 
 ## Frequently Asked Questions
 
@@ -143,5 +143,5 @@ Content available in Spanish (primary) and English.
 
 ## Contact
 
-Website: https://pagoya.mx
-Support: soporte@pagoya.mx
+Website: https://pagoyamx.com
+Support: soporte@pagoyamx.com
