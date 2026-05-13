@@ -125,6 +125,7 @@ export default function Home() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
+        <meta name="robots" content="index, follow" />
         <meta name="description" content="Paga luz, agua, teléfono y más desde tu celular sin ir al banco. PagoYa es la app de pagos más fácil de Puerto Vallarta y Guadalajara." />
         <meta name="keywords" content="pagar servicios en línea, pago de luz Puerto Vallarta, pagar CFE, pago de agua, app de pagos México" />
         <meta property="og:title" content="PagoYa | Paga tus servicios desde tu celular" />
