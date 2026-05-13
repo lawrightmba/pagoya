@@ -8,7 +8,7 @@
 // Before live OXXO cash-ins will work you must register the webhook URL in the
 // Conekta / Digitalfemsa dashboard:
 //
-//   URL:    https://pagoya.replit.app/api/wallet/webhook/conekta
+//   URL:    https://pagoyamx.com/api/wallet/webhook/conekta
 //   Events: charge.paid, charge.expired
 //
 // The public key for signature verification is available in the dashboard under
