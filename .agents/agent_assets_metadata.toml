@@ -36,3 +36,15 @@ id = "hy4oglmTfNq-MQe87yHn4"
 uri = "file://artifacts/api-server/src/billpay/scripts/Matriz_Pruebas_PagoYa_Taecel_FINAL_CERTIFICADA.xlsx"
 type = "table"
 title = "Matriz_Pruebas_PagoYa_Taecel_FINAL_CERTIFICADA.xlsx"
+
+[[outputs]]
+id = "J0j7ODqTdFB8OdhskM6qE"
+uri = "file://PagoYa_Manual_Ventas_Campo.pdf"
+type = "pdf"
+title = "PagoYa — Manual de Ventas en Campo (PDF)"
+
+[[outputs]]
+id = "H7XvKxIXZX25zr0pP1edE"
+uri = "file://PagoYa_Manual_Ventas_Campo.docx"
+type = "word_document"
+title = "PagoYa — Manual de Ventas en Campo (Word)"
