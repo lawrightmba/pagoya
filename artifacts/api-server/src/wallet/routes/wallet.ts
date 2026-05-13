@@ -85,19 +85,6 @@ router.post("/load/oxxo", async (req: Request, res: Response) => {
 export async function handleConektaWebhook(req: Request, res: Response): Promise<void> {
   const rawBody = req.body as Buffer;
 
-  // --- TEMPORARY DEBUG LOGGING — remove before production hardening ---
-  const bodyStr0 = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : String(rawBody);
-  logger.info({
-    debug_webhook: true,
-    headers: req.headers,
-    rawBodyLength: bodyStr0.length,
-    rawBodyPreview: bodyStr0.substring(0, 100),
-    sig_conekta_signature: req.headers["conekta-signature"],
-    sig_digest: req.headers["digest"],
-    sig_x_conekta_signature: req.headers["x-conekta-signature"],
-  }, "conekta webhook: debug dump");
-  // --- END TEMPORARY DEBUG LOGGING ---
-
   const signatureHeader = (
     req.headers["conekta-signature"] ||
     req.headers["x-conekta-signature"] ||
@@ -137,7 +124,13 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
           .where(eq(walletTransactionsTable.conektaOrderId, conektaOrderId))
           .limit(1);
 
-        if (!tx || tx.status !== "pending") return;
+        if (!tx || tx.status !== "pending") {
+          logger.info(
+            { conektaOrderId, txStatus: tx?.status ?? "not_found" },
+            "conekta webhook: duplicate charge.paid delivery — already processed, skipping",
+          );
+          return;
+        }
 
         await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
 
@@ -309,16 +302,22 @@ router.get("/admin/stats", async (_req: Request, res: Response) => {
 // GET /api/wallet/test-conekta
 // Verifies Conekta credentials and API reachability without touching the DB.
 // Use this before registering the real webhook in the Conekta Dashboard.
+//
+// Note: CONEKTA_WEBHOOK_SECRET exists in Replit Secrets but is NOT used for
+// webhook verification. Signature verification relies on CONEKTA_WEBHOOK_PUBLIC_KEY
+// (or the legacy alias CONEKTA_PUBLIC_KEY) — an RSA public key, not a shared secret.
 router.get("/test-conekta", async (_req: Request, res: Response) => {
   const resolvedKey = process.env.CONEKTA_API_KEY;
   const apiKeyPresent = !!resolvedKey;
-  const webhookSecretPresent = !!process.env.CONEKTA_WEBHOOK_SECRET;
+  const webhookPublicKeyPresent = !!(
+    process.env.CONEKTA_WEBHOOK_PUBLIC_KEY ?? process.env.CONEKTA_PUBLIC_KEY
+  );
 
   if (!apiKeyPresent) {
     res.json({
       configured: false,
       apiKeyPresent: false,
-      webhookSecretPresent,
+      webhookPublicKeyPresent,
       conektaApiReachable: false,
       error: "CONEKTA_API_KEY no está configurado.",
     });
@@ -353,7 +352,7 @@ router.get("/test-conekta", async (_req: Request, res: Response) => {
   res.json({
     configured: apiKeyPresent && conektaApiReachable,
     apiKeyPresent,
-    webhookSecretPresent,
+    webhookPublicKeyPresent,
     conektaApiReachable,
     error,
   });

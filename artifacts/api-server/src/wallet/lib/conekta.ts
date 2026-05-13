@@ -1,3 +1,21 @@
+// ─── CONEKTA / DIGITAL FEMSA — OXXO CASH-IN ADAPTER ────────────────────────
+//
+// This module handles two responsibilities:
+//   1. Creating OXXO cash payment orders via the Digitalfemsa REST API
+//   2. Verifying webhook signatures for incoming charge.paid / charge.expired events
+//
+// ─── REQUIRED MANUAL STEP ────────────────────────────────────────────────────
+// Before live OXXO cash-ins will work you must register the webhook URL in the
+// Conekta / Digitalfemsa dashboard:
+//
+//   URL:    https://pagoya.replit.app/api/wallet/webhook/conekta
+//   Events: charge.paid, charge.expired
+//
+// The public key for signature verification is available in the dashboard under
+// Developers → Webhooks → Public Key. Store it as CONEKTA_WEBHOOK_PUBLIC_KEY
+// (or the legacy alias CONEKTA_PUBLIC_KEY) in Replit Secrets.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { createVerify } from "node:crypto";
 import { logger } from "../../lib/logger.js";
 
@@ -119,10 +137,14 @@ export function verifyConektaWebhookSignature(
   signatureHeader: string | undefined,
 ): boolean {
   if (!signatureHeader) return false;
-  const publicKey = process.env.CONEKTA_WEBHOOK_PUBLIC_KEY;
+  // Accept either the canonical name or the legacy alias stored in Replit Secrets
+  const publicKey =
+    process.env.CONEKTA_WEBHOOK_PUBLIC_KEY ?? process.env.CONEKTA_PUBLIC_KEY;
   if (!publicKey) {
     if (process.env.NODE_ENV !== "production") return true;
-    throw new Error("CONEKTA_WEBHOOK_PUBLIC_KEY no está configurado.");
+    throw new Error(
+      "CONEKTA_WEBHOOK_PUBLIC_KEY (or CONEKTA_PUBLIC_KEY) no está configurado.",
+    );
   }
   try {
     const verify = createVerify("SHA256");
