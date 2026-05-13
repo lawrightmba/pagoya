@@ -1,0 +1,47 @@
+Update the PagoYa command center at artifacts/pagoya/public/command-center.html. 
+
+In the Phase 1 checklist, mark ALL 11 items as checked/complete.
+
+In the Phase 2 checklist, mark the following items as checked/complete:
+- Set up blog/content section on pagoyamx.com
+- Set up blog/content section on pagoseguromx.com
+- Write PagoYa pillar page: "Guía completa para pagar servicios en México sin cuenta bancaria"
+- Write PagoSeguro pillar page: "Guía completa para cobrar renta digitalmente en México"
+- Publish CFE payment cluster article
+- Publish Telmex/Izzi/Totalplay cluster article
+- Publish recargas Telcel/AT&T cluster article
+- Publish OXXO Pay explainer article
+- Publish PagoSeguro: Pagar renta en OXXO guide
+- Publish PagoSeguro: Propietarios extranjeros guide
+- Internal linking complete between pillar and all cluster pages
+- All blog pages have FAQ schema added
+
+Leave the following Phase 2 item unchecked:
+- (none — all Phase 2 items are complete)
+
+In the Phase 3 checklist, mark the following as checked/complete:
+- (none yet — Phase 3 begins next)
+
+Also add a new section at the top of the command center, above the checklist, called "STP Integration" with the following status items displayed as a mini tracker:
+
+STP Integration — Active
+- ✅ Pedro Q&A responses received and reviewed
+- ✅ Confirmation email sent — Friday 11 AM call confirmed
+- ✅ Corporate documentation checklist requested
+- ⏳ Documentation checklist received from Pedro
+- ⏳ Corporate application submitted
+- ⏳ Prefix and account assigned
+- ⏳ Sandbox access activated
+- ⏳ VPN Site-to-Site IPSec configured
+- ⏳ Geolocation solution implemented for RegistraOrden
+- ⏳ Sandbox testing complete
+- ⏳ Production access live
+
+Display the STP tracker in a distinct color — use orange/amber to differentiate it from the blue/green/purple content calendar items. Show a progress count (e.g. "3 of 11 complete").
+
+After updating confirm:
+1. All Phase 1 items show as checked
+2. All Phase 2 items show as checked
+3. Progress bar reflects updated completion percentage
+4. STP Integration tracker is visible at the top with correct status items
+5. No existing functionality is broken

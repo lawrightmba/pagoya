@@ -252,6 +252,37 @@
   .section-note {
     font-size: 12px; color: #4b5563; padding: 10px 16px;
   }
+
+  /* ── STP TRACKER ── */
+  .stp-section {
+    margin: 12px 12px 0;
+    background: #1c1400;
+    border: 1px solid #92400e50;
+    border-top: 3px solid #f59e0b;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .stp-header {
+    padding: 12px 14px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #92400e40;
+  }
+  .stp-title { font-size: 13px; font-weight: 800; color: #f59e0b; letter-spacing: 0.02em; }
+  .stp-subtitle { font-size: 11px; color: #92400e; margin-top: 2px; }
+  .stp-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40;
+    white-space: nowrap;
+  }
+  .stp-progress-row { padding: 8px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #92400e30; }
+  .stp-bar { flex: 1; height: 4px; background: #2d2000; border-radius: 99px; overflow: hidden; }
+  .stp-fill { height: 100%; background: #f59e0b; border-radius: 99px; }
+  .stp-pct { font-size: 11px; font-weight: 600; color: #f59e0b; white-space: nowrap; }
+  .stp-items { padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 5px; }
+  .stp-item { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.4; }
+  .stp-item.done { color: #6b7280; }
+  .stp-item.pending { color: #d1d5db; }
+  .stp-icon { width: 16px; flex-shrink: 0; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -285,6 +316,34 @@
      PANEL 1 — DAYS 1–30 CHECKLIST
 ══════════════════════════════════════════════════════ -->
 <div class="panel active" id="panel-checklist">
+
+  <!-- STP INTEGRATION TRACKER -->
+  <div class="stp-section">
+    <div class="stp-header">
+      <div>
+        <div class="stp-title">⚡ STP Integration — Active</div>
+        <div class="stp-subtitle">SIPREL · CUENTA ARES · MX INTERBANK RAILS</div>
+      </div>
+      <div class="stp-badge">3 of 11 complete</div>
+    </div>
+    <div class="stp-progress-row">
+      <div class="stp-bar"><div class="stp-fill" style="width:27.3%"></div></div>
+      <div class="stp-pct">27%</div>
+    </div>
+    <div class="stp-items">
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Pedro Q&amp;A responses received and reviewed</span></div>
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Confirmation email sent — Friday 11 AM call confirmed</span></div>
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Corporate documentation checklist requested</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Documentation checklist received from Pedro</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Corporate application submitted</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Prefix and account assigned</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Sandbox access activated</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>VPN Site-to-Site IPSec configured</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Geolocation solution implemented for RegistraOrden</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Sandbox testing complete</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Production access live</span></div>
+    </div>
+  </div>
 
   <!-- PHASE 1 -->
   <div class="phase-header ph1">
@@ -734,6 +793,18 @@ function fmtDate(iso) {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 checks = loadChecks();
+
+// Pre-mark Phase 1 (all 11) and Phase 2 (all 12) items as done by default.
+// Runs once; after that localStorage state wins so user can toggle freely.
+const DEFAULTS_KEY = 'ck_defaults_ph1ph2_v1';
+if (!localStorage.getItem(DEFAULTS_KEY)) {
+  CHECKLIST.filter(i => i.phase === 1 || i.phase === 2).forEach(i => {
+    if (checks[i.id] === undefined) checks[i.id] = true;
+  });
+  saveChecks();
+  try { localStorage.setItem(DEFAULTS_KEY, '1'); } catch(e) {}
+}
+
 reminders = loadReminders();
 document.getElementById('today-badge').textContent = todayStr();
 renderChecklist();
