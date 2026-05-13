@@ -55,4 +55,6 @@ export interface ProviderAdapter {
   isAvailable(): boolean;
   pay(service: BillService, req: BillPayRequest): Promise<BillPayResult>;
   getSaldoBalance?(): Promise<TaecelBalance>;
+  getCatalog?(): Promise<unknown>;
+  getTransactionStatus?(transID: string): Promise<unknown>;
 }

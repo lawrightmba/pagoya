@@ -15,7 +15,8 @@ interface TaecelConfig {
 function getConfig(): TaecelConfig {
   const baseUrl = process.env.SIPREL_BASE_URL ?? "https://app.taecel.com/api/";
   const apiKey = process.env.SIPREL_API_KEY ?? "";
-  const nip = process.env.SIPREL_NIP ?? "";
+  // Accept SIPREL_PIN (new canonical name) or SIPREL_NIP (legacy alias)
+  const nip = process.env.SIPREL_PIN ?? process.env.SIPREL_NIP ?? "";
   return { baseUrl, apiKey, nip };
 }
 
@@ -328,10 +329,10 @@ export const siprelProvider: ProviderAdapter = {
   name: "siprel",
 
   isAvailable(): boolean {
+    // SIPREL_BASE_URL is optional — falls back to the default Taecel endpoint
     return !!(
       process.env.SIPREL_API_KEY &&
-      process.env.SIPREL_NIP &&
-      process.env.SIPREL_BASE_URL
+      (process.env.SIPREL_PIN ?? process.env.SIPREL_NIP)
     );
   },
 
@@ -439,6 +440,17 @@ export const siprelProvider: ProviderAdapter = {
   async getSaldoBalance(): Promise<{ tiempoAire: number; pagoServicios: number }> {
     const config = getConfig();
     return getBalance(config);
+  },
+
+  async getCatalog(): Promise<unknown> {
+    const config = getConfig();
+    return getProducts(config);
+  },
+
+  async getTransactionStatus(transID: string): Promise<unknown> {
+    const config = getConfig();
+    const res = await taecelPost<TaecelStatusTXNResponse>("statusTXN", config, { transID });
+    return res;
   },
 };
 

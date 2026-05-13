@@ -769,6 +769,9 @@ const TAECEL_TEST_BASE = "https://test.taecel.com/api/";
 /** Set env vars needed for the real Taecel provider to initialise */
 function setTaecelEnv() {
   process.env.SIPREL_API_KEY  = TAECEL_TEST_KEY;
+  // Set both names so the SIPREL_PIN ?? SIPREL_NIP fallback always
+  // resolves to the test value even when the real secret is present.
+  process.env.SIPREL_PIN      = TAECEL_TEST_NIP;
   process.env.SIPREL_NIP      = TAECEL_TEST_NIP;
   process.env.SIPREL_BASE_URL = TAECEL_TEST_BASE;
 }
@@ -776,6 +779,7 @@ function setTaecelEnv() {
 /** Remove test env vars so they don't leak into other suites */
 function clearTaecelEnv() {
   delete process.env.SIPREL_API_KEY;
+  delete process.env.SIPREL_PIN;
   delete process.env.SIPREL_NIP;
   delete process.env.SIPREL_BASE_URL;
 }
@@ -1665,6 +1669,92 @@ describe('17. "Error inesperado" + "En proceso" edge case', () => {
     }
 
     expect(testedRefs).toHaveLength(2);
+  });
+
+  it("33. successful recarga — Telcel $100 MXN resolves confirmed with folio and carrier", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnOk("TX_RECARGA_100");
+      if (u.includes("statusTXN")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            error: 0,
+            message: "Exitosa",
+            data: {
+              TransID: "TX_RECARGA_100",
+              Fecha: "2026-05-13 10:00:00",
+              Carrier: "Telcel",
+              Referencia: "5215551234567",
+              Folio: "RECARGA-FOLIO-100",
+              Status: "Exitosa",
+              Monto: "$100.00",
+              Cargo: "$100.00",
+              Bolsa: "Tiempo Aire",
+              "Saldo Final": "$2,800.00",
+            },
+            extra: null,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    const result = await realPay(
+      { id: "telcel_recarga_100" } as never,
+      { serviceId: "telcel_recarga_100", referencia: "5215551234567", monto: 100, telefono: "5215551234567" },
+    );
+
+    expect(result.status).toBe("confirmed");
+    expect(result.confirmationCode).toBe("RECARGA-FOLIO-100");
+    expect(result.provider).toBe("siprel");
+    const raw = result.rawResponse as Record<string, unknown>;
+    expect(raw.carrier).toBe("Telcel");
+    expect(raw.bolsaType).toBe("Tiempo Aire");
+  });
+
+  it("34. insufficient balance / authorizer unavailable — requestTXN error 9 throws AUTHORIZER_UNAVAILABLE", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) return reqTxnErr(9, "Autorizador no disponible");
+      return new Response("{}", { status: 200 });
+    });
+
+    await expect(
+      realPay(
+        { id: "cfe" } as never,
+        { serviceId: "cfe", referencia: "125478965412", monto: 850, telefono: "3221234567" },
+      ),
+    ).rejects.toThrow(/AUTHORIZER_UNAVAILABLE/i);
+  });
+
+  it("35. invalid carrier / unconfigured service — SKU_NOT_CONFIGURED thrown for unknown service id", async () => {
+    // "gas_natural_norte" is not in the SKU map at all (distinct from null/SKU_PENDING)
+    await expect(
+      realPay(
+        { id: "gas_natural_norte" } as never,
+        { serviceId: "gas_natural_norte", referencia: "123456", monto: 400, telefono: "3221234567" },
+      ),
+    ).rejects.toThrow(/SKU_NOT_CONFIGURED/i);
+  });
+
+  it("36. requestTXN network timeout — throws with descriptive network error message", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const u = url.toString();
+      if (u.includes("requestTXN")) {
+        const err = new DOMException("The operation was aborted", "AbortError");
+        throw err;
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    await expect(
+      realPay(
+        { id: "telcel_recarga_50" } as never,
+        { serviceId: "telcel_recarga_50", referencia: "5215559876543", monto: 50, telefono: "5215559876543" },
+      ),
+    ).rejects.toThrow(/network error/i);
   });
 
   it('32. rawResponse.transID is preserved when resolved after "Error inesperado"+"En proceso" retry', async () => {

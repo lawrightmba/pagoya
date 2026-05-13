@@ -253,6 +253,30 @@
     font-size: 12px; color: #4b5563; padding: 10px 16px;
   }
 
+  /* ── TAECEL BALANCE WIDGET ── */
+  .taecel-widget {
+    margin: 12px 12px 0;
+    background: #0d1f17;
+    border: 1px solid #1D9E7540;
+    border-left: 3px solid #1D9E75;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .taecel-widget-left { display: flex; align-items: center; gap: 10px; }
+  .taecel-widget-title { font-size: 12px; font-weight: 700; color: #1D9E75; }
+  .taecel-widget-sub { font-size: 10px; color: #4b5563; margin-top: 1px; }
+  .taecel-balances { display: flex; gap: 16px; flex-wrap: wrap; }
+  .taecel-bal-item { text-align: right; }
+  .taecel-bal-val { font-size: 14px; font-weight: 800; color: #fff; font-family: 'Space Mono', monospace; }
+  .taecel-bal-val.loading { color: #4b5563; }
+  .taecel-bal-label { font-size: 10px; color: #4b5563; margin-top: 1px; }
+  .taecel-refresh-btn {
+    font-size: 11px; color: #1D9E75; background: none; border: 1px solid #1D9E7540;
+    border-radius: 6px; padding: 3px 8px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .taecel-refresh-btn:active { opacity: 0.7; }
+
   /* ── STP TRACKER ── */
   .stp-section {
     margin: 12px 12px 0;
@@ -316,6 +340,27 @@
      PANEL 1 — DAYS 1–30 CHECKLIST
 ══════════════════════════════════════════════════════ -->
 <div class="panel active" id="panel-checklist">
+
+  <!-- TAECEL BALANCE WIDGET -->
+  <div class="taecel-widget" id="taecel-widget">
+    <div class="taecel-widget-left">
+      <div>
+        <div class="taecel-widget-title">💳 Taecel Wallet Balance</div>
+        <div class="taecel-widget-sub" id="taecel-updated">Loading…</div>
+      </div>
+    </div>
+    <div class="taecel-balances">
+      <div class="taecel-bal-item">
+        <div class="taecel-bal-val loading" id="taecel-ta">—</div>
+        <div class="taecel-bal-label">Tiempo Aire</div>
+      </div>
+      <div class="taecel-bal-item">
+        <div class="taecel-bal-val loading" id="taecel-ps">—</div>
+        <div class="taecel-bal-label">Pago Servicios</div>
+      </div>
+    </div>
+    <button class="taecel-refresh-btn" onclick="loadTaecelBalance()">↻ Refresh</button>
+  </div>
 
   <!-- STP INTEGRATION TRACKER -->
   <div class="stp-section">
@@ -781,6 +826,33 @@ async function syncNow() {
   setTimeout(() => { btn.textContent = '↻ Sync'; btn.disabled = false; }, 1200);
 }
 
+// ── TAECEL BALANCE ────────────────────────────────────────────────────────────
+
+async function loadTaecelBalance() {
+  const taEl = document.getElementById('taecel-ta');
+  const psEl = document.getElementById('taecel-ps');
+  const subEl = document.getElementById('taecel-updated');
+  if (!taEl || !psEl) return;
+
+  taEl.className = 'taecel-bal-val loading'; taEl.textContent = '…';
+  psEl.className = 'taecel-bal-val loading'; psEl.textContent = '…';
+  subEl.textContent = 'Fetching…';
+
+  try {
+    const res = await fetch('/api/bills/admin/balance', { credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const fmt = (n) => 'MX$' + parseFloat(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+    taEl.className = 'taecel-bal-val'; taEl.textContent = fmt(data.tiempoAire ?? data.balance?.tiempoAire);
+    psEl.className = 'taecel-bal-val'; psEl.textContent = fmt(data.pagoServicios ?? data.balance?.pagoServicios);
+    subEl.textContent = 'Updated ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    taEl.className = 'taecel-bal-val loading'; taEl.textContent = '—';
+    psEl.className = 'taecel-bal-val loading'; psEl.textContent = '—';
+    subEl.textContent = 'Unavailable (check API)';
+  }
+}
+
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 
 function escJs(s) { return s.replace(/'/g,"&#39;").replace(/"/g,'&quot;'); }
@@ -810,6 +882,7 @@ document.getElementById('today-badge').textContent = todayStr();
 renderChecklist();
 renderCalendar();
 updateReminderBadge();
+loadTaecelBalance();
 </script>
 </body>
 </html>
