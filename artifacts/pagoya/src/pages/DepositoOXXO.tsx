@@ -202,6 +202,17 @@ export default function DepositoOXXO() {
           </div>
         </article>
       </main>
+
+      {/* FOOTER */}
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "20px 24px", textAlign: "center" }}>
+        <p style={{ color: "#334155", fontSize: "12px" }}>
+          <a href="/" style={{ color: "#475569", textDecoration: "none" }}>PagoYa</a>
+          {" · "}
+          <a href="/terminos-y-condiciones" style={{ color: "#1D9E75" }}>Términos y Condiciones</a>
+          {" · "}
+          <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
+        </p>
+      </footer>
     </div>
   );
 }

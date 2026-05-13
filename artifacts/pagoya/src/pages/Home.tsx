@@ -574,6 +574,17 @@ export default function Home() {
         </section>
 
       </main>
+
+      {/* FOOTER */}
+      <footer style={{ background: "#060F1E", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", textAlign: "center" }}>
+        <p style={{ color: "#334155", fontSize: "12px" }}>
+          <span style={{ color: "#475569" }}>© 2026 PagoYa · Longview Meridian Technologies LLC</span>
+          {" · "}
+          <a href="/terminos-y-condiciones" style={{ color: "#1D9E75", textDecoration: "none" }}>Términos y Condiciones</a>
+          {" · "}
+          <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
+        </p>
+      </footer>
     </div>
   );
 }

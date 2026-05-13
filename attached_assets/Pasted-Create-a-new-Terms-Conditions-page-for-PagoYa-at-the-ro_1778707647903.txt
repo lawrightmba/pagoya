@@ -1,0 +1,43 @@
+Create a new Terms & Conditions page for PagoYa at the route /terminos-y-condiciones.
+
+Requirements:
+
+1. Create src/pages/TerminosCondiciones.tsx — a full legal Terms & Conditions page 
+   in Spanish that includes the following sections:
+
+   - Introducción: PagoYa is a digital payment platform operated by Longview 
+     Meridian Technologies LLC
+   - Servicios ofrecidos: bill payments, mobile top-ups (recargas), and OXXO 
+     cash wallet loading
+   - Uso de OXXO Pay (this section is required by Conekta/Digitalfemsa):
+     * OXXO Pay is processed by Digitalfemsa S. de R.L. de C.V.
+     * Payment limit: $10,000 MXN per transaction
+     * No refunds once payment is confirmed at OXXO
+     * Confirmation may take up to 24 hours after payment at OXXO store
+     * Vouchers expire after 3 days if not paid
+     * Users must present the barcode/reference at any OXXO store
+     * PagoYa is not responsible for OXXO store errors or downtime
+   - Comisiones: flat $15 MXN platform fee per transaction
+   - Privacidad: user data handled per Mexican Ley Federal de Protección 
+     de Datos Personales
+   - Limitación de responsabilidad: PagoYa is a technology intermediary, 
+     not a bank or financial institution
+   - Modificaciones: terms may be updated with notice via the app
+   - Contacto: soporte@pagoyamx.com
+   - Fecha de vigencia: May 2026
+
+2. Style it cleanly using existing Tailwind classes consistent with the rest 
+   of the app — readable typography, section headings, proper spacing. 
+   Mobile-first.
+
+3. Add the route in App.tsx:
+   /terminos-y-condiciones → TerminosCondiciones
+
+4. Add a footer link to /terminos-y-condiciones on the main landing page 
+   and the /deposito-oxxo page if a footer exists.
+
+5. Confirm the page is accessible at https://pagoyamx.com/terminos-y-condiciones 
+   after deployment — no auth required, publicly accessible.
+
+Do not modify any payment logic or existing routes. Run the full test suite 
+and confirm all 68 tests still pass.

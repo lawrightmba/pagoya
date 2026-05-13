@@ -23,6 +23,7 @@ import PagarCFE from "@/pages/PagarCFE";
 import PagarTelmex from "@/pages/PagarTelmex";
 import Recargas from "@/pages/Recargas";
 import DepositoOXXO from "@/pages/DepositoOXXO";
+import TerminosCondiciones from "@/pages/TerminosCondiciones";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/pagar-telmex" component={PagarTelmex} />
       <Route path="/recargas" component={Recargas} />
       <Route path="/deposito-oxxo" component={DepositoOXXO} />
+      <Route path="/terminos-y-condiciones" component={TerminosCondiciones} />
       <Route component={NotFound} />
     </Switch>
   );
