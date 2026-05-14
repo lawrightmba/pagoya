@@ -12,6 +12,7 @@ import proxyRouter from "./proxy";
 import autofillRouter from "./autofill.js";
 import loyaltyRouter from "./loyalty.js";
 import streetTeamRouter from "./street-team.js";
+import repsRouter from "./reps.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -25,6 +26,7 @@ router.use("/belvo-payments", belvoPaymentsRouter);
 router.use("/autofill", autofillRouter);
 router.use("/loyalty", loyaltyRouter);
 router.use("/street-team", streetTeamRouter);
+router.use("/reps", repsRouter);
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 

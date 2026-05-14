@@ -6,6 +6,10 @@ export const repsTable = pgTable("reps", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
+  status: text("status").notNull().default("active"),
+  repCode: text("rep_code").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
