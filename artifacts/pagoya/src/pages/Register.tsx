@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import PagoYaLogo from "@/components/PagoYaLogo";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+function getQueryParam(key: string): string | null {
+  try {
+    return new URLSearchParams(window.location.search).get(key);
+  } catch {
+    return null;
+  }
+}
 
 const CITIES = ["Puerto Vallarta", "Guadalajara"];
 
@@ -27,6 +35,13 @@ export default function Register() {
   const [colonia, setColonia] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [repId, setRepId] = useState<string | null>(null);
+  const [refCode, setRefCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRepId(getQueryParam("rep"));
+    setRefCode(getQueryParam("ref"));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +52,14 @@ export default function Register() {
       const res = await fetch(`${BASE_URL}/api/street-team/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), city, colonia }),
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          city,
+          colonia,
+          ...(repId   ? { repId }   : {}),
+          ...(refCode ? { refCode } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

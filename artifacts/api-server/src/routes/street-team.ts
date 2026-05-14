@@ -6,11 +6,13 @@ const router = Router();
 
 // POST /api/street-team/register
 router.post("/register", async (req: Request, res: Response) => {
-  const { name, phone, city, colonia } = req.body as {
+  const { name, phone, city, colonia, repId, refCode } = req.body as {
     name?: string;
     phone?: string;
     city?: string;
     colonia?: string;
+    repId?: string;
+    refCode?: string;
   };
 
   if (!name?.trim() || !phone?.trim() || !city?.trim() || !colonia?.trim()) {
@@ -37,7 +39,14 @@ router.post("/register", async (req: Request, res: Response) => {
   try {
     const [row] = await db
       .insert(streetTeamTable)
-      .values({ name: name.trim(), phone: phone.trim(), city: city.trim(), colonia: colonia.trim() })
+      .values({
+        name: name.trim(),
+        phone: phone.trim(),
+        city: city.trim(),
+        colonia: colonia.trim(),
+        repId: repId?.trim() || null,
+        refCode: refCode?.trim() || null,
+      })
       .onConflictDoNothing()
       .returning({ id: streetTeamTable.id, colonia: streetTeamTable.colonia });
 
@@ -46,7 +55,10 @@ router.post("/register", async (req: Request, res: Response) => {
       return;
     }
 
-    logger.info({ name: name.trim(), phone: phone.trim(), city, colonia }, "street-team: new registration");
+    logger.info(
+      { name: name.trim(), phone: phone.trim(), city, colonia, repId: repId ?? null, refCode: refCode ?? null },
+      "street-team: new registration",
+    );
     res.status(201).json({ success: true, id: row.id, colonia: row.colonia });
   } catch (err) {
     logger.error({ err }, "street-team: registration failed");

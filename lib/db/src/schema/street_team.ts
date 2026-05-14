@@ -18,6 +18,8 @@ export const streetTeamTable = pgTable(
     phone: text("phone").notNull(),
     city: text("city").notNull(),
     colonia: text("colonia").notNull().default(""),
+    repId: text("rep_id"),
+    refCode: text("ref_code"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
