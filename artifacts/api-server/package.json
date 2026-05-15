@@ -9,6 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:bills": "vitest run src/billpay/tests/billpay.test.ts",
+    "test:card": "vitest run src/wallet/tests/card-topup.test.ts",
     "test:sandbox": "tsx src/billpay/scripts/sandbox-test.ts"
   },
   "dependencies": {

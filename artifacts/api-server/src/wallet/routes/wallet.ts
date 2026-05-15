@@ -7,7 +7,7 @@ import {
   creditWallet,
   getRecentTransactions,
 } from "../services/wallet.js";
-import { createOxxoOrder, verifyConektaWebhookSignature } from "../lib/conekta.js";
+import { createOxxoOrder, createCardOrder, verifyConektaWebhookSignature } from "../lib/conekta.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
@@ -79,6 +79,75 @@ router.post("/load/oxxo", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/wallet/load/card
+// Creates a Conekta card charge and immediately credits the wallet if Conekta
+// returns a synchronous "paid" status.  If the charge is "pending_payment"
+// (3DS / async) the wallet will be credited by the charge.paid webhook instead.
+// Body: { walletId: string, amount: number, tokenId: string }
+router.post("/load/card", async (req: Request, res: Response) => {
+  const { walletId, amount, tokenId } = req.body as {
+    walletId?: string;
+    amount?: number;
+    tokenId?: string;
+  };
+
+  if (!walletId || !tokenId) {
+    res.status(400).json({ error: "Los campos walletId y tokenId son requeridos." });
+    return;
+  }
+
+  const amt = Number(amount);
+  if (isNaN(amt) || amt < 50) {
+    res.status(400).json({ error: "El monto mínimo para carga con tarjeta es $50 MXN." });
+    return;
+  }
+  if (amt > 10_000) {
+    res.status(400).json({ error: "El monto máximo para carga con tarjeta es $10,000 MXN." });
+    return;
+  }
+
+  try {
+    const cardOrder = await createCardOrder(walletId, amt, tokenId);
+
+    const description = `Carga con tarjeta PagoYa — $${amt.toFixed(2)} MXN`;
+
+    const [tx] = await db
+      .insert(walletTransactionsTable)
+      .values({
+        walletId,
+        type: "load_card",
+        amountMxn: amt.toFixed(2),
+        status: "pending",
+        conektaOrderId: cardOrder.orderId,
+        description,
+      })
+      .returning();
+
+    if (cardOrder.status === "paid") {
+      await creditWallet(tx.walletId, amt, tx.id);
+      const [walletRow] = await db
+        .select({ balanceMxn: walletsTable.balanceMxn })
+        .from(walletsTable)
+        .where(eq(walletsTable.id, walletId))
+        .limit(1);
+      const newBalance = parseFloat(walletRow?.balanceMxn ?? "0");
+      logger.info(
+        { walletId, amount: amt, orderId: cardOrder.orderId },
+        "wallet: card topup credited immediately",
+      );
+      res.json({ success: true, newBalance });
+      return;
+    }
+
+    res.json({ success: false, status: "pending" });
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Error al procesar el pago con tarjeta.";
+    logger.error({ err, walletId }, "wallet: card topup failed");
+    res.status(500).json({ error: message });
+  }
+});
+
 // POST /api/wallet/webhook/conekta
 // Receives Conekta charge.paid events. Must be mounted with raw body parser.
 // This handler is exported to be mounted in app.ts BEFORE express.json().
@@ -112,10 +181,17 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
 
       const event = JSON.parse(bodyStr) as {
         type: string;
-        data: { object: { id: string; amount?: number } };
+        data: {
+          object: {
+            id: string;
+            amount?: number;
+            metadata?: Record<string, string>;
+          };
+        };
       };
 
       const conektaOrderId = event.data.object.id;
+      const meta = event.data.object.metadata ?? {};
 
       if (event.type === "charge.paid") {
         const [tx] = await db
@@ -132,6 +208,17 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
           return;
         }
 
+        // ── Card top-up (sync paid already handled in route; this covers async 3DS) ──
+        if (tx.type === "load_card" || meta.type === "card_topup") {
+          await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
+          logger.info(
+            { conektaOrderId, walletId: tx.walletId, source: "card" },
+            "wallet: card_topup credited via webhook",
+          );
+          return;
+        }
+
+        // ── OXXO cash-in (existing flow) ──────────────────────────────────────────
         await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
 
         const telefono = await getUserTelefonoByWalletId(tx.walletId);

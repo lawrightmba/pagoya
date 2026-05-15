@@ -119,6 +119,68 @@ export async function createOxxoOrder(params: {
   };
 }
 
+export interface ConektaCardOrder {
+  orderId: string;
+  status: string;
+}
+
+export async function createCardOrder(
+  walletId: string,
+  amountMXN: number,
+  tokenId: string,
+): Promise<ConektaCardOrder> {
+  const apiKey = getConektaApiKey();
+
+  const body = {
+    currency: "MXN",
+    customer_info: {
+      email: `wallet-${walletId}@pagoya.mx`,
+      name: "PagoYa Card User",
+    },
+    line_items: [
+      {
+        name: "Carga con tarjeta PagoYa",
+        quantity: 1,
+        unit_price: Math.round(amountMXN * 100),
+      },
+    ],
+    charges: [
+      {
+        payment_method: {
+          type: "card",
+          token_id: tokenId,
+        },
+      },
+    ],
+    metadata: { walletId, type: "card_topup" },
+  };
+
+  const response = await fetch(`${CONEKTA_BASE_URL}/orders`, {
+    method: "POST",
+    headers: conektaHeaders(apiKey),
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Conekta error ${response.status}: ${text}`);
+  }
+
+  const data = (await response.json()) as {
+    id: string;
+    payment_status?: string;
+    charges: { data: Array<{ status: string }> };
+  };
+
+  const status =
+    data.charges?.data?.[0]?.status ?? data.payment_status ?? "pending_payment";
+
+  logger.info({ orderId: data.id, status, walletId }, "conekta: card order created");
+
+  return { orderId: data.id, status };
+}
+
 function normalizePemKey(raw: string): string {
   const key = raw.trim();
   if (key.includes("\n")) return key;
