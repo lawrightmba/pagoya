@@ -129,7 +129,15 @@ export async function createCardOrder(
   amountMXN: number,
   tokenId: string,
 ): Promise<ConektaCardOrder> {
-  const apiKey = getConektaApiKey();
+  const cardApiKey = process.env.CONEKTA_CARD_API_KEY;
+  if (!cardApiKey) throw new Error("CONEKTA_CARD_API_KEY no está configurado.");
+
+  const encoded = Buffer.from(`${cardApiKey}:`).toString("base64");
+  const cardHeaders = {
+    Authorization: `Basic ${encoded}`,
+    "Content-Type": "application/json",
+    Accept: "application/vnd.conekta-v2.2.0+json",
+  };
 
   const body = {
     currency: "MXN",
@@ -155,9 +163,9 @@ export async function createCardOrder(
     metadata: { walletId, type: "card_topup" },
   };
 
-  const response = await fetch(`${CONEKTA_BASE_URL}/orders`, {
+  const response = await fetch(`https://api.conekta.io/orders`, {
     method: "POST",
-    headers: conektaHeaders(apiKey),
+    headers: cardHeaders,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(10_000),
   });
