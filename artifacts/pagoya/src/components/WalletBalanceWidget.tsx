@@ -73,7 +73,15 @@ export default function WalletBalanceWidget() {
     }
 
     load();
-    return () => { cancelled = true; };
+
+    // Re-fetch when a card or OXXO load completes
+    const handleRefresh = () => { cancelled = false; load(); };
+    window.addEventListener("pagoya:wallet-refresh", handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pagoya:wallet-refresh", handleRefresh);
+    };
   }, [telefono]);
 
   /* No telefono stored yet — show an inviting entry point */

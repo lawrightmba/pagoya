@@ -299,6 +299,7 @@ router.get("/balance", async (req: Request, res: Response) => {
   try {
     const wallet = await getOrCreateWallet(telefono as string);
     res.json({
+      walletId: wallet.id,
       balanceMXN: parseFloat(wallet.balanceMxn ?? "0"),
       currency: wallet.currency,
       lastUpdated: wallet.updatedAt,
