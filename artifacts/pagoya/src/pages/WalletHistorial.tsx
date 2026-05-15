@@ -1,16 +1,56 @@
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, RefreshCw, Wallet } from "lucide-react";
+import { ArrowLeft, RefreshCw, Wallet, CreditCard, Store } from "lucide-react";
 
 interface WalletTx {
   id: string;
   type: string;
   amountMXN: number;
   status: "pending" | "confirmed" | "failed";
+  source?: string | null;
   description: string | null;
   createdAt: string;
   confirmedAt: string | null;
+}
+
+function SourceBadge({ source }: { source?: string | null }) {
+  if (!source) return null;
+
+  const normalized = source === "card_topup" ? "card" : source;
+
+  if (normalized === "card") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+        style={{ background: "#F0EFFE", color: "#7F77DD", border: "1px solid #D4D0FA" }}
+      >
+        <CreditCard className="w-3 h-3" />
+        Tarjeta
+      </span>
+    );
+  }
+
+  if (normalized === "oxxo") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+        style={{ background: "#FEF2EE", color: "#D85A30", border: "1px solid #F9CDBF" }}
+      >
+        <Store className="w-3 h-3" />
+        OXXO
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0"
+      style={{ background: "#F5F5F5", color: "#6B7280", border: "1px solid #E5E5E5" }}
+    >
+      {normalized}
+    </span>
+  );
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -342,13 +382,16 @@ export default function WalletHistorial() {
                       </div>
                     </div>
 
-                    {/* Amount */}
-                    <p
-                      className="text-sm font-black flex-shrink-0"
-                      style={{ color: amountColor }}
-                    >
-                      {amountSign}${tx.amountMXN.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                    </p>
+                    {/* Amount + source badge */}
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <p
+                        className="text-sm font-black"
+                        style={{ color: amountColor }}
+                      >
+                        {amountSign}${tx.amountMXN.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </p>
+                      <SourceBadge source={tx.source} />
+                    </div>
                   </div>
                 );
               })}

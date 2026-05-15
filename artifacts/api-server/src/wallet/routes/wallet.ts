@@ -445,6 +445,10 @@ router.get("/transactions", async (req: Request, res: Response) => {
         type: t.type,
         amountMXN: parseFloat(t.amountMxn),
         status: t.status,
+        source:
+          t.type === "load_card" ? "card"
+          : t.type === "load_oxxo" ? "oxxo"
+          : null,
         description: t.description,
         createdAt: t.createdAt,
         confirmedAt: t.confirmedAt,
