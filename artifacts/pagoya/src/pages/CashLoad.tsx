@@ -51,6 +51,15 @@ function luhnCheck(num: string): boolean {
 // ---------------------------------------------------------------------------
 // Conekta tokenization (Promise wrapper around the callback API)
 // ---------------------------------------------------------------------------
+interface ConektaTokenError {
+  message_to_purchaser?: string;
+  message?: string;
+  type?: string;
+  code?: string;
+  param?: string;
+  details?: Array<{ message?: string; code?: string; param?: string }>;
+}
+
 function tokenizeCard(card: {
   number: string;
   name: string;
@@ -60,11 +69,12 @@ function tokenizeCard(card: {
 }): Promise<string> {
   return new Promise((resolve, reject) => {
     const C = (window as unknown as { Conekta?: {
+      setPublicKey: (k: string) => void;
       token: {
         create: (
           data: { card: typeof card },
           ok: (t: { id: string }) => void,
-          err: (e: { message_to_purchaser?: string; message?: string }) => void
+          err: (e: ConektaTokenError) => void
         ) => void;
       };
     } }).Conekta;
@@ -77,14 +87,16 @@ function tokenizeCard(card: {
     C.token.create(
       { card },
       (token) => resolve(token.id),
-      (err) =>
-        reject(
-          new Error(
-            err.message_to_purchaser ??
-              err.message ??
-              "Error al procesar la tarjeta.",
-          ),
-        ),
+      (err) => {
+        // Log the full error object so it's visible in browser DevTools
+        console.error("[Conekta tokenize error]", JSON.stringify(err));
+        const detail =
+          err.details?.[0]?.message ??
+          err.message_to_purchaser ??
+          err.message ??
+          "Error al procesar la tarjeta.";
+        reject(new Error(detail));
+      },
     );
   });
 }
