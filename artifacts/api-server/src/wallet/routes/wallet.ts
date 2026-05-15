@@ -7,7 +7,7 @@ import {
   creditWallet,
   getRecentTransactions,
 } from "../services/wallet.js";
-import { createOxxoOrder, createCardOrder, verifyConektaWebhookSignature } from "../lib/conekta.js";
+import { createOxxoOrder, createCardOrder, verifyConektaWebhookSignature, verifyCardWebhookSignature } from "../lib/conekta.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
@@ -275,6 +275,124 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
       }
     } catch (err: unknown) {
       logger.error({ err }, "wallet: webhook processing error (non-fatal)");
+    }
+  });
+}
+
+// POST /api/wallet/webhook/conekta-card
+// Receives charge.paid / charge.failed events from api.conekta.io (card charges).
+// Mounted in app.ts with raw body parser BEFORE express.json().
+// Always returns 200 — Conekta retries indefinitely on non-200.
+export async function handleConektaCardWebhook(req: Request, res: Response): Promise<void> {
+  const rawBody = req.body as Buffer;
+
+  const signatureHeader = (
+    req.headers["digest"] ||
+    req.headers["x-conekta-hmac-sha256"]
+  ) as string | undefined;
+
+  const isValid = verifyCardWebhookSignature(rawBody, signatureHeader);
+  if (!isValid) {
+    res.status(401).json({ error: "Invalid signature" });
+    return;
+  }
+
+  res.status(200).json({ received: true });
+
+  setImmediate(async () => {
+    try {
+      const bodyStr = Buffer.isBuffer(rawBody)
+        ? rawBody.toString("utf8")
+        : typeof rawBody === "string"
+          ? rawBody
+          : rawBody && typeof rawBody === "object"
+            ? JSON.stringify(rawBody)
+            : "";
+
+      const event = JSON.parse(bodyStr) as {
+        type: string;
+        data: {
+          object: {
+            id: string;
+            order_id?: string;
+            amount?: number;
+            metadata?: Record<string, string>;
+          };
+        };
+      };
+
+      const meta = event.data.object.metadata ?? {};
+
+      // Resolve the order ID: charge events carry order_id; order events use id directly.
+      const candidateIds = [event.data.object.order_id, event.data.object.id].filter(
+        (v): v is string => typeof v === "string" && v.length > 0,
+      );
+
+      async function findPendingTx() {
+        for (const orderId of candidateIds) {
+          const [tx] = await db
+            .select()
+            .from(walletTransactionsTable)
+            .where(eq(walletTransactionsTable.conektaOrderId, orderId))
+            .limit(1);
+          if (tx) return tx;
+        }
+        return undefined;
+      }
+
+      if (event.type === "charge.paid") {
+        if (meta.type && meta.type !== "card_topup") return;
+
+        const tx = await findPendingTx();
+
+        if (!tx) {
+          logger.info(
+            { candidateIds },
+            "card webhook: charge.paid — no matching transaction, skipping",
+          );
+          return;
+        }
+
+        if (tx.status !== "pending") {
+          logger.info(
+            { conektaOrderId: tx.conektaOrderId, txStatus: tx.status },
+            "card webhook: charge.paid already processed (idempotency), skipping",
+          );
+          return;
+        }
+
+        await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
+        logger.info(
+          { conektaOrderId: tx.conektaOrderId, walletId: tx.walletId },
+          "wallet: card_topup credited via card webhook",
+        );
+      } else if (event.type === "charge.failed") {
+        if (meta.type && meta.type !== "card_topup") return;
+
+        const tx = await findPendingTx();
+
+        if (!tx || tx.status !== "pending") {
+          logger.info(
+            { candidateIds, txStatus: tx?.status ?? "not_found" },
+            "card webhook: charge.failed — no pending transaction, skipping",
+          );
+          return;
+        }
+
+        await db
+          .update(walletTransactionsTable)
+          .set({ status: "failed" })
+          .where(eq(walletTransactionsTable.id, tx.id));
+
+        logger.info(
+          { conektaOrderId: tx.conektaOrderId, walletId: tx.walletId },
+          "wallet: card_topup failed via card webhook",
+        );
+      } else {
+        logger.info({ eventType: event.type }, "card webhook: unhandled event type, ignoring");
+      }
+    } catch (err: unknown) {
+      logger.error({ err }, "wallet: card webhook processing error (non-fatal)");
     }
   });
 }

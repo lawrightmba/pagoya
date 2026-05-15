@@ -16,7 +16,7 @@
 // (or the legacy alias CONEKTA_PUBLIC_KEY) in Replit Secrets.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createVerify } from "node:crypto";
+import { createVerify, createHmac, timingSafeEqual } from "node:crypto";
 import { logger } from "../../lib/logger.js";
 
 const CONEKTA_BASE_URL = "https://api.digitalfemsa.io";
@@ -200,6 +200,39 @@ function normalizePemKey(raw: string): string {
   const lines = body.match(/.{1,64}/g) ?? [];
   logger.info({ bodyPreview: body.substring(0, 20) }, "conekta: normalizePemKey called");
   return "-----BEGIN PUBLIC KEY-----\n" + lines.join("\n") + "\n-----END PUBLIC KEY-----";
+}
+
+// ─── CARD WEBHOOK SIGNATURE VERIFICATION (api.conekta.io / HMAC-SHA256) ─────
+// Conekta v2.2 sends a Digest header: sha256=<base64-hmac-sha256>
+// using the shared secret configured in the Conekta dashboard for the webhook.
+// Store the secret as CONEKTA_CARD_WEBHOOK_SECRET in Replit Secrets.
+//
+//   Webhook URL:  https://pagoyamx.com/api/wallet/webhook/conekta-card
+//   Events:       charge.paid, charge.failed
+// ─────────────────────────────────────────────────────────────────────────────
+export function verifyCardWebhookSignature(
+  rawBody: Buffer,
+  signatureHeader: string | undefined,
+): boolean {
+  const secret = process.env.CONEKTA_CARD_WEBHOOK_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV !== "production") return true;
+    throw new Error("CONEKTA_CARD_WEBHOOK_SECRET no está configurado.");
+  }
+  if (!signatureHeader) return false;
+
+  const prefix = "sha256=";
+  const provided = signatureHeader.startsWith(prefix)
+    ? signatureHeader.slice(prefix.length)
+    : signatureHeader;
+
+  const expected = createHmac("sha256", secret).update(rawBody).digest("base64");
+
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+  } catch {
+    return false;
+  }
 }
 
 export function verifyConektaWebhookSignature(
