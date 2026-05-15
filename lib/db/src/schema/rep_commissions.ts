@@ -7,7 +7,6 @@ export const repCommissionsTable = pgTable("rep_commissions", {
   id: serial("id").primaryKey(),
   repId: text("rep_id").notNull(),
   billPaymentId: integer("bill_payment_id")
-    .notNull()
     .references(() => billPaymentsTable.id, { onDelete: "cascade" }),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   type: text("type").notNull(),

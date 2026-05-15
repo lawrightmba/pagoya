@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, sql as drizzleSql, count, sum } from "drizzle-orm";
-import { db, walletsTable, walletTransactionsTable } from "@workspace/db";
+import { db, walletsTable, walletTransactionsTable, repsTable, repCommissionsTable } from "@workspace/db";
 import {
   getOrCreateWallet,
   getBalance,
@@ -83,12 +83,13 @@ router.post("/load/oxxo", async (req: Request, res: Response) => {
 // Creates a Conekta card charge and immediately credits the wallet if Conekta
 // returns a synchronous "paid" status.  If the charge is "pending_payment"
 // (3DS / async) the wallet will be credited by the charge.paid webhook instead.
-// Body: { walletId: string, amount: number, tokenId: string }
+// Body: { walletId: string, amount: number, tokenId: string, rep_code?: string }
 router.post("/load/card", async (req: Request, res: Response) => {
-  const { walletId, amount, tokenId } = req.body as {
+  const { walletId, amount, tokenId, rep_code } = req.body as {
     walletId?: string;
     amount?: number;
     tokenId?: string;
+    rep_code?: string;
   };
 
   if (!walletId || !tokenId) {
@@ -125,6 +126,30 @@ router.post("/load/card", async (req: Request, res: Response) => {
 
     if (cardOrder.status === "paid") {
       await creditWallet(tx.walletId, amt, tx.id);
+
+      // Rep commission (non-blocking) — 5 MXN per card top-up, 7-day hold
+      if (rep_code) {
+        db.select({ id: repsTable.id })
+          .from(repsTable)
+          .where(eq(repsTable.repCode, rep_code))
+          .limit(1)
+          .then(([rep]) => {
+            if (!rep) return;
+            const holdUntil = new Date();
+            holdUntil.setDate(holdUntil.getDate() + 7);
+            return db.insert(repCommissionsTable).values({
+              repId: rep.id,
+              amount: "5.00",
+              type: "card_topup",
+              status: "pending",
+              holdUntil,
+            });
+          })
+          .catch((err: unknown) => {
+            logger.error({ err, repCode: rep_code, walletId }, "wallet: card topup commission insert failed");
+          });
+      }
+
       const [walletRow] = await db
         .select({ balanceMxn: walletsTable.balanceMxn })
         .from(walletsTable)

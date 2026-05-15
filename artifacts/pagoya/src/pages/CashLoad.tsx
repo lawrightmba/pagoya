@@ -105,6 +105,9 @@ export default function CashLoad() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  // Rep referral code from URL query string (?ref=CODE)
+  const repCode = new URLSearchParams(window.location.search).get("ref") || undefined;
+
   // ── Initialize Conekta public key ───────────────────────────────────────
   useEffect(() => {
     const key = import.meta.env.VITE_CONEKTA_PUBLIC_KEY as string | undefined;
@@ -307,7 +310,7 @@ export default function CashLoad() {
       const chargeRes = await fetch(`${window.location.origin}/api/wallet/load/card`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletId: balData.walletId, amount: amtNum, tokenId }),
+        body: JSON.stringify({ walletId: balData.walletId, amount: amtNum, tokenId, ...(repCode ? { rep_code: repCode } : {}) }),
       });
       const chargeData = await chargeRes.json();
       if (!chargeRes.ok) {

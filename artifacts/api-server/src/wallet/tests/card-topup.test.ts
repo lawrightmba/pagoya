@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import request from "supertest";
-import { db, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
+import { db, walletsTable, walletTransactionsTable, usersTable, repsTable, repCommissionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +15,7 @@ vi.mock("../lib/conekta.js", () => ({
     expiresAt: new Date(Date.now() + 5 * 86_400_000),
   }),
   verifyConektaWebhookSignature: vi.fn().mockReturnValue(true),
+  verifyCardWebhookSignature: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("../../lib/whatsapp.js", () => ({
@@ -163,5 +164,50 @@ describe("POST /api/wallet/load/card", () => {
 
     expect(res.status).toBe(400);
     expect(createCardOrder).not.toHaveBeenCalled();
+  });
+
+  it("valid rep_code on card top-up triggers 5 MXN commission attribution", async () => {
+    const TEST_REP_ID = "rep_card_commission_test_01";
+    const TEST_REP_CODE = "CARDTEST01";
+
+    // Create a test rep (idempotent — onConflictDoNothing handles reruns)
+    await db.insert(repsTable).values({
+      id: TEST_REP_ID,
+      name: "Test Rep Card",
+      phone: "+52000000000099",
+      email: "repcard01@pagoya.test",
+      repCode: TEST_REP_CODE,
+      status: "active",
+    }).onConflictDoNothing();
+
+    vi.mocked(createCardOrder).mockResolvedValueOnce({
+      orderId: "ord_card_rep_commission_001",
+      status: "paid",
+    });
+
+    const res = await request(app)
+      .post("/api/wallet/load/card")
+      .send({ walletId: testWalletId, amount: 200, tokenId: "tok_test_visa_4242", rep_code: TEST_REP_CODE });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Commission insert is non-blocking — wait for it to complete
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+    const [commission] = await db
+      .select()
+      .from(repCommissionsTable)
+      .where(eq(repCommissionsTable.repId, TEST_REP_ID))
+      .limit(1);
+
+    expect(commission).toBeDefined();
+    expect(parseFloat(commission.amount)).toBe(5);
+    expect(commission.type).toBe("card_topup");
+    expect(commission.status).toBe("pending");
+
+    // Cleanup rep data (wallet tx cleaned up by afterEach)
+    await db.delete(repCommissionsTable).where(eq(repCommissionsTable.repId, TEST_REP_ID));
+    await db.delete(repsTable).where(eq(repsTable.id, TEST_REP_ID));
   });
 });
