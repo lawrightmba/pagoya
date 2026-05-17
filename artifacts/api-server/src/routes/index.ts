@@ -15,6 +15,7 @@ import streetTeamRouter from "./street-team.js";
 import repsRouter from "./reps.js";
 import historialRouter from "./historial.js";
 import accountRecoveryRouter from "./accountRecovery.js";
+import savedCardsRouter from "./savedCards.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -31,6 +32,7 @@ router.use("/street-team", streetTeamRouter);
 router.use("/reps", repsRouter);
 router.use("/historial", historialRouter);
 router.use("/auth", accountRecoveryRouter);
+router.use("/cards", savedCardsRouter);
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 

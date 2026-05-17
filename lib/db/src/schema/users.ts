@@ -7,6 +7,7 @@ export const usersTable = pgTable("users", {
   telefono: text("telefono").notNull().unique(),
   referredByRepId: text("referred_by_rep_id"),
   recoveryEmail: text("recovery_email"),
+  conektaCustomerId: text("conekta_customer_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

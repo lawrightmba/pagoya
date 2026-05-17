@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock } from "lucide-react";
+import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 const logoUrl = "/pagoya-logo.png";
 
@@ -13,6 +13,13 @@ interface OxxoResult {
   expiresAt: string;
   transactionId: string;
   amountMXN: number;
+}
+
+interface SavedCard {
+  id: string;
+  lastFour: string;
+  brand: string;
+  isDefault: boolean;
 }
 
 function useStoredTelefono() {
@@ -205,11 +212,39 @@ export default function CashLoad() {
   const [cardName, setCardName] = useState("");
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
+  const [saveCard, setSaveCard] = useState(false);
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [savedCardsLoaded, setSavedCardsLoaded] = useState(false);
+  const [chargingCardId, setChargingCardId] = useState<string | null>(null);
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
   // Keep card phone in sync with stored telefono
   useEffect(() => {
     setCardTelInput(telefono);
   }, [telefono]);
+
+  const fetchSavedCards = async (tel: string) => {
+    if (tel.length < 10) {
+      setSavedCards([]);
+      setSavedCardsLoaded(true);
+      return;
+    }
+    setSavedCardsLoaded(false);
+    try {
+      const res = await fetch(
+        `${window.location.origin}/api/cards/${encodeURIComponent("+52" + tel)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setSavedCards(data.cards ?? []);
+      }
+    } catch {}
+    setSavedCardsLoaded(true);
+  };
+
+  useEffect(() => {
+    fetchSavedCards(cardTelInput);
+  }, [cardTelInput]);
 
   const handleCardAmountChip = (val: number) => {
     setCardAmount(String(val));
@@ -306,7 +341,33 @@ export default function CashLoad() {
         return;
       }
 
-      // ── Charge card ──────────────────────────────────────────────────
+      // ── Charge card (save path: create customer + persist source) ────
+      if (saveCard) {
+        const saveRes = await fetch(`${window.location.origin}/api/cards/charge-and-save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ telefono: "+52" + tel, amount_mxn: amtNum, save_card: true, tokenId }),
+        });
+        const saveData = await saveRes.json();
+        if (!saveRes.ok) {
+          setCardError(saveData.error ?? "Error al procesar el pago. Intenta de nuevo.");
+          return;
+        }
+        setTelefono("+52" + tel);
+        toast({
+          title: "¡Tarjeta guardada y saldo agregado!",
+          description: saveData.newBalance != null
+            ? `Tu nuevo saldo es $${saveData.newBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
+            : "Tu saldo ha sido actualizado.",
+        });
+        window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
+        await fetchSavedCards(tel);
+        setSaveCard(false);
+        setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardCvc(""); setCardName("");
+        return;
+      }
+
+      // ── Charge card (one-time path) ───────────────────────────────────
       const chargeRes = await fetch(`${window.location.origin}/api/wallet/load/card`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -345,6 +406,61 @@ export default function CashLoad() {
       );
     } finally {
       setCardLoading(false);
+    }
+  };
+
+  const handleSavedCardCharge = async (cardId: string) => {
+    const amtNum = parseInt(cardAmount, 10);
+    if (!amtNum || amtNum < 50) {
+      setCardError("Ingresa un monto antes de cobrar (mínimo $50 MXN).");
+      return;
+    }
+    setChargingCardId(cardId);
+    setCardError(null);
+    try {
+      const res = await fetch(`${window.location.origin}/api/cards/${cardId}/charge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_mxn: amtNum }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCardError(data.error ?? "Error al cobrar la tarjeta. Intenta de nuevo.");
+        return;
+      }
+      setTelefono("+52" + cardTelInput);
+      toast({
+        title: "¡Saldo agregado!",
+        description:
+          data.newBalance != null
+            ? `Tu nuevo saldo es $${data.newBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
+            : "Tu saldo ha sido actualizado.",
+      });
+      window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
+      setCardAmount("");
+    } catch {
+      setCardError("No se pudo conectar. Intenta de nuevo.");
+    } finally {
+      setChargingCardId(null);
+    }
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    setDeletingCardId(cardId);
+    try {
+      const res = await fetch(`${window.location.origin}/api/cards/${cardId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setSavedCards((prev) => prev.filter((c) => c.id !== cardId));
+      } else {
+        const data = await res.json();
+        setCardError(data.error ?? "Error al eliminar la tarjeta.");
+      }
+    } catch {
+      setCardError("No se pudo conectar. Intenta de nuevo.");
+    } finally {
+      setDeletingCardId(null);
     }
   };
 
@@ -698,6 +814,44 @@ export default function CashLoad() {
               ))}
             </div>
 
+            {/* Tarjetas guardadas */}
+            {savedCardsLoaded && savedCards.length > 0 && (
+              <div className="flex flex-col gap-2 pt-1">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Tarjetas guardadas
+                </p>
+                {savedCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="flex items-center gap-2 rounded-2xl px-4 py-3"
+                    style={{ background: "#F5F3FF", border: "1.5px solid #DDD8FB" }}
+                  >
+                    <CreditCard className="w-4 h-4 flex-shrink-0" style={{ color: "#7F77DD" }} />
+                    <span className="text-sm font-bold text-[#1F1F1F] flex-1">
+                      {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} ···{card.lastFour}
+                    </span>
+                    <button
+                      onClick={() => handleSavedCardCharge(card.id)}
+                      disabled={!!chargingCardId || !!deletingCardId || cardLoading}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-[0.95] disabled:opacity-50"
+                      style={{ background: "#7F77DD", color: "white" }}
+                    >
+                      {chargingCardId === card.id ? "..." : "Cobrar"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCard(card.id)}
+                      disabled={!!chargingCardId || !!deletingCardId || cardLoading}
+                      className="p-1.5 rounded-xl transition-all active:scale-[0.95] disabled:opacity-50"
+                      title="Eliminar tarjeta"
+                    >
+                      <Trash2 className="w-4 h-4" style={{ color: deletingCardId === card.id ? "#ccc" : "#E57373" }} />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 text-center mt-1">— o ingresa una tarjeta nueva —</p>
+              </div>
+            )}
+
             {/* Card number */}
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
@@ -805,6 +959,17 @@ export default function CashLoad() {
                 />
               </div>
             </div>
+
+            {/* Save card checkbox */}
+            <label className="flex items-center gap-2.5 cursor-pointer select-none py-1">
+              <input
+                type="checkbox"
+                checked={saveCard}
+                onChange={(e) => setSaveCard(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#7F77DD]"
+              />
+              <span className="text-sm text-gray-600 font-medium">Guardar esta tarjeta</span>
+            </label>
 
             {/* Helper text */}
             <p className="text-xs text-gray-400 text-center leading-relaxed">

@@ -1,0 +1,25 @@
+Add card-on-file tokenization to the existing Conekta wallet top-up flow. This is additive only — do not modify the existing one-time card charge flow, OXXO flow, or any other route.
+
+The existing card charge flow is at the Conekta integration — find it, read it, then add the following:
+
+New schema (new migration file only, do not edit existing schema):
+- Add to the users table: conekta_customer_id text nullable, and a new table saved_cards with columns: id (uuid pk), user_telefono (text, FK to users.telefono), conekta_card_token (text), last_four (text), brand (text), is_default (boolean default false), created_at (timestamptz default now())
+
+New backend routes in a new file artifacts/api-server/src/routes/savedCards.ts, mounted at /api/cards:
+- POST /api/cards/charge-and-save — accepts { telefono, amount_mxn, save_card: true/false }
+  - If save_card is false: behave exactly like the existing one-time charge (call existing logic, return)
+  - If save_card is true:
+    1. Create or retrieve a Conekta Customer for this telefono (store conekta_customer_id in users table)
+    2. Create a card token source on that customer via Conekta API
+    3. Charge the customer (not a raw card — charge the saved customer source)
+    4. On success: save to saved_cards table (last_four, brand from Conekta response), credit wallet via existing wallet credit logic
+- GET /api/cards/:telefono — returns list of saved cards (id, last_four, brand, is_default) — no raw tokens ever returned
+- DELETE /api/cards/:id — removes saved card, calls Conekta delete source API
+- POST /api/cards/:id/charge — charge a previously saved card by id, accepts { amount_mxn } — look up conekta_card_token, charge the Conekta customer, credit wallet on success
+
+New frontend: add a "Tarjetas guardadas" section to the existing wallet load / card tab UI
+- If the user has saved cards: show each as a pill (brand + ···XXXX) with a "Cobrar" button and a trash icon
+- Below saved cards: existing card form with an optional checkbox "Guardar esta tarjeta" (unchecked by default)
+- Charge buttons call the appropriate new endpoint
+
+Do not touch the OXXO flow, the existing card charge endpoint, or the wallets/wallet_transactions schema.
