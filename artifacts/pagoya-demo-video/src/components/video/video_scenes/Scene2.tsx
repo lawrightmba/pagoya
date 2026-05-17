@@ -1,145 +1,137 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import { Zap, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+function AnimatedNumber({ target, suffix = '', prefix = '', duration = 1.8 }: { target: number; suffix?: string; prefix?: string; duration?: number }) {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const step = target / (duration * 60);
+    const timer = setInterval(() => {
+      start = Math.min(start + step, target);
+      setCurrent(Math.floor(start));
+      if (start >= target) clearInterval(timer);
+    }, 1000 / 60);
+    return () => clearInterval(timer);
+  }, [target, duration]);
+
+  return <>{prefix}{current.toLocaleString()}{suffix}</>;
+}
+
+const stats = [
+  { value: 40, suffix: 'B', prefix: '$', label: 'mercado de pagos en México', unit: 'USD' },
+  { value: 52, suffix: 'M', prefix: '', label: 'adultos sin cuenta bancaria', unit: 'personas' },
+  { value: 45, suffix: ' min', prefix: '', label: 'tiempo promedio por pago', unit: 'promedio' },
+];
+
+const cardColors = ['#1D9E75', '#D85A30', '#3B82F6'];
 
 export function Scene2() {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 800),
-      setTimeout(() => setPhase(2), 2200),
-      setTimeout(() => setPhase(3), 3600),
+      setTimeout(() => setPhase(1), 200),
+      setTimeout(() => setPhase(2), 2000),
+      setTimeout(() => setPhase(3), 3800),
+      setTimeout(() => setPhase(4), 7000),
     ];
-    return () => timers.forEach(t => clearTimeout(t));
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
     <motion.div
-      className="absolute inset-0 pt-16 px-6 flex flex-col"
+      className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center"
       style={{ background: '#0A2540' }}
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.4 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5 }}
     >
-      {/* AI status header */}
-      <div className="flex items-center gap-3 mb-7">
-        <motion.div
-          className="w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ background: phase < 2 ? 'rgba(29,158,117,0.2)' : 'rgba(29,158,117,0.25)' }}
-          animate={{ rotate: phase < 2 ? 360 : 0 }}
-          transition={{ duration: 1.8, ease: 'linear', repeat: phase < 2 ? Infinity : 0 }}
-        >
-          {phase < 2
-            ? <Zap size={22} style={{ color: '#1D9E75' }} />
-            : <CheckCircle2 size={22} style={{ color: '#1D9E75' }} />}
-        </motion.div>
-        <div>
-          <h2 className="font-bold text-lg text-white">
-            {phase < 2 ? 'Analizando...' : 'Datos detectados'}
-          </h2>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            {phase < 2 ? 'IA procesando tu mensaje' : 'CFE Electricidad • $350.00'}
-          </p>
-        </div>
+      <motion.div
+        className="absolute top-[10%] left-[15%] w-[50vw] h-[50vw] rounded-full blur-[130px] opacity-20 pointer-events-none"
+        style={{ background: '#1D9E75' }}
+        animate={{ scale: [1, 1.25, 1] }}
+        transition={{ duration: 10, repeat: Infinity }}
+      />
+      <motion.div
+        className="absolute bottom-[5%] right-[5%] w-[35vw] h-[35vw] rounded-full blur-[100px] opacity-15 pointer-events-none"
+        style={{ background: '#D85A30' }}
+        animate={{ scale: [1.2, 1, 1.2] }}
+        transition={{ duration: 8, repeat: Infinity }}
+      />
+
+      <motion.p
+        className="mb-10 uppercase tracking-widest text-center"
+        style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)', fontSize: 'clamp(11px, 1vw, 15px)', letterSpacing: '0.18em' }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : -10 }}
+        transition={{ duration: 0.5 }}
+      >
+        La oportunidad de mercado
+      </motion.p>
+
+      <div className="flex items-stretch justify-center gap-[2vw] px-[6vw] w-full relative z-10">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={i}
+            className="flex-1 flex flex-col items-center justify-center rounded-3xl py-[4vh] px-[2vw] relative overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.09)`, maxWidth: '30vw' }}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{
+              opacity: phase >= i + 1 ? 1 : 0,
+              y: phase >= i + 1 ? 0 : 50,
+              scale: phase >= i + 1 ? 1 : 0.9,
+            }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl" style={{ background: cardColors[i] }} />
+
+            {phase >= i + 1 && (
+              <motion.div
+                style={{ fontFamily: 'var(--font-display)', fontWeight: 900, lineHeight: 0.9, color: cardColors[i], fontSize: 'clamp(56px, 8vw, 120px)' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {stat.prefix}
+                <AnimatedNumber target={stat.value} suffix={stat.suffix} />
+              </motion.div>
+            )}
+
+            <motion.p
+              className="mt-4 text-center"
+              style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(12px, 1.2vw, 18px)', fontWeight: 500, lineHeight: 1.35 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: phase >= i + 1 ? 1 : 0, y: phase >= i + 1 ? 0 : 8 }}
+              transition={{ delay: 0.3 }}
+            >
+              {stat.label}
+            </motion.p>
+
+            <motion.span
+              className="mt-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+              style={{ background: `${cardColors[i]}22`, color: cardColors[i], fontFamily: 'var(--font-body)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: phase >= i + 1 ? 1 : 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              {stat.unit}
+            </motion.span>
+          </motion.div>
+        ))}
       </div>
 
-      {/* NLP query chip */}
       <motion.div
-        className="text-sm px-3 py-2 rounded-lg mb-6 self-start"
-        style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        className="mt-10 px-6 py-3 rounded-2xl relative z-10"
+        style={{ background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.3)' }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: phase >= 4 ? 1 : 0, scale: phase >= 4 ? 1 : 0.9 }}
+        transition={{ duration: 0.5, type: 'spring' }}
       >
-        "pagar mi luz de CFE $350"
+        <p style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: 'clamp(13px, 1.3vw, 18px)', fontWeight: 600 }}>
+          El problema está sin resolver. Hasta ahora.
+        </p>
       </motion.div>
-
-      {/* AI processing bar */}
-      {phase < 2 && (
-        <motion.div
-          className="h-1 rounded-full mb-6 overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.1)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: '#1D9E75' }}
-            initial={{ width: '0%' }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 1.8, ease: 'easeInOut' }}
-          />
-        </motion.div>
-      )}
-
-      {/* Detected form */}
-      {phase >= 2 && (
-        <motion.div
-          className="rounded-2xl p-5 space-y-4"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: 'spring' }}
-        >
-          {/* Biller row */}
-          <div className="flex items-center gap-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base text-white" style={{ background: '#008A5E' }}>
-              CFE
-            </div>
-            <div>
-              <p className="font-semibold text-white">CFE Electricidad</p>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Recibo de luz</p>
-            </div>
-            <div className="ml-auto">
-              <CheckCircle2 size={20} style={{ color: '#1D9E75' }} />
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Monto a pagar
-            </label>
-            <motion.div
-              className="mt-1 text-3xl font-bold text-white"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: phase >= 3 ? 1 : 0, y: phase >= 3 ? 0 : 6 }}
-              transition={{ duration: 0.4 }}
-            >
-              $350.00
-            </motion.div>
-          </div>
-
-          {/* Ref number */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Número de servicio
-            </label>
-            <motion.div
-              className="mt-1 text-base font-mono px-3 py-2 rounded-lg"
-              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: phase >= 3 ? 1 : 0 }}
-            >
-              123 456 789 012
-            </motion.div>
-          </div>
-
-          {phase >= 3 && (
-            <motion.button
-              className="w-full font-bold py-3 rounded-xl text-white mt-2"
-              style={{ background: '#0A2540', border: '1px solid rgba(255,255,255,0.15)' }}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, type: 'spring' }}
-            >
-              Continuar al pago →
-            </motion.button>
-          )}
-        </motion.div>
-      )}
     </motion.div>
   );
 }

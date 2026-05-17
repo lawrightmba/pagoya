@@ -1,5 +1,16 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "M7CBX7NEwur_oY3Tg4wYJ"
+uri = "file://artifacts/pagoya-demo-video/public/images/fintech_data.png"
+type = "image"
+title = "Fintech data flow"
+
+[[generated]]
+id = "qs_AtqgcgQM-i98Rg0H5u"
+uri = "file://artifacts/pagoya-demo-video/public/images/mexico_map_nodes.png"
+type = "image"
+title = "Mexico map nodes"
 
 [[outputs]]
 id = "i4bav1kvkby8BLMYD6vwu"
@@ -54,3 +65,15 @@ id = "qBZNU-fSRgtapH9GlmVXn"
 uri = "file://PagoYa_YC_Application.docx"
 type = "word_document"
 title = "PagoYa — YC Application Responses"
+
+[[outputs]]
+id = "vKJkflCVNYq2JucYIpiFF"
+uri = "file://artifacts/pagoya-demo-video/public/images/oxxo_payment.jpg"
+type = "image"
+title = "Mexican woman paying at convenience store counter"
+
+[[outputs]]
+id = "pQA99IPoqJ56c5oQ0rXy9"
+uri = "file://artifacts/pagoya-demo-video/public/images/phone_success.jpg"
+type = "image"
+title = "person smiling looking at phone outdoors"
