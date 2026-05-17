@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Pagos | PagoYa</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0A2540" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PagoYa" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #F7F7F7;
+      color: #1F1F1F;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: #0A2540;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.22);
+      border-radius: 50%;
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.22); }
+    .header-logo {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+    header h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: white;
+      flex: 1;
+    }
+
+    /* ── Phone gate ──────────────────────────────────────────── */
+    .gate {
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+    .gate h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0A2540;
+      margin-bottom: 8px;
+    }
+    .gate p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 28px;
+    }
+    .phone-input-wrap {
+      display: flex;
+      gap: 10px;
+    }
+    .phone-input-wrap input {
+      flex: 1;
+      height: 48px;
+      border: 1.5px solid #D8D8D8;
+      border-radius: 12px;
+      padding: 0 16px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .phone-input-wrap input:focus { border-color: #1D9E75; }
+    .btn-primary {
+      height: 48px;
+      padding: 0 22px;
+      background: linear-gradient(135deg, #046C2C, #39A935);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(4,108,44,0.28);
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Main content ────────────────────────────────────────── */
+    main { max-width: 780px; margin: 0 auto; padding: 28px 20px 48px; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    /* ── Table card ──────────────────────────────────────────── */
+    .table-wrap {
+      background: white;
+      border-radius: 20px;
+      border: 1px solid #F0F0F0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #F9F9F9; }
+    th {
+      padding: 12px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-align: left;
+      border-bottom: 1px solid #F0F0F0;
+    }
+    td {
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #1F1F1F;
+      border-bottom: 1px solid #F7F7F7;
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #FAFAFA; }
+
+    .service-name { font-weight: 700; color: #0A2540; }
+    .ref-mono { font-family: monospace; font-size: 12px; color: #888; letter-spacing: 0.04em; }
+    .amount { font-weight: 800; color: #046C2C; }
+    .date-cell { font-size: 12px; color: #AAA; white-space: nowrap; }
+
+    /* ── Status badges ───────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-ok      { background: #F0FAF3; color: #046C2C; }
+    .badge-failed  { background: #FFF2F1; color: #E21A0A; }
+    .badge-pending { background: #F3F3F3; color: #888; }
+
+    /* ── Pagination ──────────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .page-btn {
+      height: 36px;
+      padding: 0 18px;
+      background: white;
+      border: 1.5px solid #E0E0E0;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: #1D9E75; color: #1D9E75; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-info { font-size: 13px; color: #999; }
+
+    /* ── States ──────────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 52px 20px;
+      color: #BBB;
+      font-size: 14px;
+    }
+    .empty span { display: block; font-size: 32px; margin-bottom: 12px; }
+    .loading {
+      text-align: center;
+      padding: 52px 20px;
+      color: #BBB;
+      font-size: 14px;
+    }
+    .error-msg {
+      background: #FFF2F1;
+      color: #E21A0A;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: #CCC;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────── -->
+<header>
+  <a class="back-btn" href="/" aria-label="Volver al inicio">&#8592;</a>
+  <img class="header-logo" src="/pagoya-logo.png" alt="PagoYa"
+       onerror="this.style.display='none';this.nextSibling.style.display='inline';" />
+  <span style="display:none;color:white;font-weight:900;font-size:20px;">
+    Pago<span style="color:#1D9E75">Ya</span>
+  </span>
+  <h1>Mis Pagos</h1>
+</header>
+
+<!-- ── Phone gate (shown until user enters phone) ────────────── -->
+<div class="gate" id="gate">
+  <h2>¿Cuál es tu número?</h2>
+  <p>Ingresa el número de teléfono con el que registraste tus pagos para ver tu historial.</p>
+  <div class="phone-input-wrap">
+    <input
+      type="tel"
+      id="phoneInput"
+      placeholder="Ej. 3221234567"
+      maxlength="15"
+      inputmode="numeric"
+    />
+    <button class="btn-primary" id="loadBtn" onclick="loadHistory()">Ver pagos</button>
+  </div>
+  <div class="error-msg" id="gateError" style="display:none;margin-top:16px;"></div>
+</div>
+
+<!-- ── Payment list (hidden until loaded) ────────────────────── -->
+<main id="main" style="display:none;">
+  <p class="section-label" id="sectionLabel"></p>
+
+  <div class="error-msg" id="mainError" style="display:none;"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th>Referencia</th>
+          <th>Total</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="loading" id="tableLoading" style="display:none;">Cargando pagos…</div>
+    <div class="empty" id="tableEmpty" style="display:none;">
+      <span>📋</span>
+      No encontramos pagos registrados para este número.
+    </div>
+  </div>
+
+  <div class="pagination" id="pagination" style="display:none;">
+    <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>&#8592; Anterior</button>
+    <span class="page-info" id="pageInfo"></span>
+    <button class="page-btn" id="nextBtn" onclick="changePage(1)">Siguiente &#8594;</button>
+  </div>
+</main>
+
+<footer>PagoYa &mdash; Longview Meridian Technologies LLC</footer>
+
+<script>
+  const PAGE_SIZE = 10;
+  let allPayments = [];
+  let currentPage = 1;
+
+  const phoneInput  = document.getElementById("phoneInput");
+  const loadBtn     = document.getElementById("loadBtn");
+  const gateEl      = document.getElementById("gate");
+  const mainEl      = document.getElementById("main");
+  const gateError   = document.getElementById("gateError");
+  const mainError   = document.getElementById("mainError");
+  const tableBody   = document.getElementById("tableBody");
+  const tableLoading = document.getElementById("tableLoading");
+  const tableEmpty  = document.getElementById("tableEmpty");
+  const pagination  = document.getElementById("pagination");
+  const pageInfo    = document.getElementById("pageInfo");
+  const prevBtn     = document.getElementById("prevBtn");
+  const nextBtn     = document.getElementById("nextBtn");
+  const sectionLabel = document.getElementById("sectionLabel");
+
+  phoneInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") loadHistory();
+  });
+
+  function formatDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+      + " " + d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function statusBadge(status) {
+    if (!status) return '<span class="badge badge-pending">Pendiente</span>';
+    const s = status.toLowerCase();
+    if (s === "confirmed" || s === "completado" || s === "success" || s === "paid")
+      return '<span class="badge badge-ok">Completado</span>';
+    if (s === "failed" || s === "error" || s === "fallido")
+      return '<span class="badge badge-failed">Fallido</span>';
+    return '<span class="badge badge-pending">Pendiente</span>';
+  }
+
+  function maskRef(ref) {
+    if (!ref) return "—";
+    const clean = String(ref).replace(/\s/g, "");
+    return "···" + clean.slice(-6);
+  }
+
+  function formatMXN(amount, fee) {
+    const total = (parseFloat(amount || "0") + parseFloat(fee || "15")).toFixed(2);
+    return "$" + Number(total).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN";
+  }
+
+  function renderPage() {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const slice = allPayments.slice(start, start + PAGE_SIZE);
+    const totalPages = Math.ceil(allPayments.length / PAGE_SIZE);
+
+    tableBody.innerHTML = slice.map(p => `
+      <tr>
+        <td><span class="service-name">${escHtml(p.service_name ?? "—")}</span></td>
+        <td><span class="ref-mono">${maskRef(p.reference_number)}</span></td>
+        <td><span class="amount">${formatMXN(p.amount, p.fee)}</span></td>
+        <td><span class="date-cell">${formatDate(p.created_at)}</span></td>
+        <td>${statusBadge(p.status)}</td>
+      </tr>
+    `).join("");
+
+    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+
+    if (totalPages > 1) {
+      pagination.style.display = "flex";
+    } else {
+      pagination.style.display = "none";
+    }
+  }
+
+  function changePage(delta) {
+    const totalPages = Math.ceil(allPayments.length / PAGE_SIZE);
+    currentPage = Math.max(1, Math.min(currentPage + delta, totalPages));
+    renderPage();
+    mainEl.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  async function loadHistory() {
+    const phone = phoneInput.value.trim();
+    if (!phone || phone.length < 7) {
+      gateError.textContent = "Ingresa un número de teléfono válido.";
+      gateError.style.display = "block";
+      return;
+    }
+    gateError.style.display = "none";
+    loadBtn.disabled = true;
+    loadBtn.textContent = "Buscando…";
+
+    try {
+      const res = await fetch(`/api/historial?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        gateError.textContent = data.error ?? "Error al cargar el historial.";
+        gateError.style.display = "block";
+        return;
+      }
+
+      allPayments = data.payments ?? [];
+      currentPage = 1;
+
+      gateEl.style.display = "none";
+      mainEl.style.display = "block";
+
+      sectionLabel.textContent = `Últimos ${allPayments.length} pagos`;
+
+      tableLoading.style.display = "none";
+      mainError.style.display = "none";
+
+      if (allPayments.length === 0) {
+        tableEmpty.style.display = "block";
+        tableBody.innerHTML = "";
+        pagination.style.display = "none";
+      } else {
+        tableEmpty.style.display = "none";
+        renderPage();
+      }
+    } catch (err) {
+      gateError.textContent = "No se pudo conectar. Revisa tu conexión e intenta de nuevo.";
+      gateError.style.display = "block";
+    } finally {
+      loadBtn.disabled = false;
+      loadBtn.textContent = "Ver pagos";
+    }
+  }
+</script>
+
+</body>
+</html>

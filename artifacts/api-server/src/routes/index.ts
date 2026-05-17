@@ -13,6 +13,7 @@ import autofillRouter from "./autofill.js";
 import loyaltyRouter from "./loyalty.js";
 import streetTeamRouter from "./street-team.js";
 import repsRouter from "./reps.js";
+import historialRouter from "./historial.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -27,6 +28,7 @@ router.use("/autofill", autofillRouter);
 router.use("/loyalty", loyaltyRouter);
 router.use("/street-team", streetTeamRouter);
 router.use("/reps", repsRouter);
+router.use("/historial", historialRouter);
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 
