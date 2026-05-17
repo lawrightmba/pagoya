@@ -307,6 +307,41 @@
   .stp-item.done { color: #6b7280; }
   .stp-item.pending { color: #d1d5db; }
   .stp-icon { width: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── ROADMAP ── */
+  .rd-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid #1e2028; cursor: pointer;
+  }
+  .rd-item:last-of-type { border-bottom: none; }
+  .rd-cb {
+    width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #444;
+    flex-shrink: 0; margin-top: 2px; display: flex; align-items: center;
+    justify-content: center; transition: all .15s;
+  }
+  .rd-cb.done { background: #1D9E75; border-color: #1D9E75; }
+  .rd-cb.done::after {
+    content: ""; width: 8px; height: 5px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px); display: block;
+  }
+  .rd-body { flex: 1; min-width: 0; }
+  .rd-title {
+    font-size: 13px; font-weight: 600; color: #e8eaf0;
+    margin-bottom: 3px; line-height: 1.4;
+  }
+  .rd-title.done { text-decoration: line-through; color: #555; }
+  .rd-desc { font-size: 12px; color: #666; line-height: 1.5; margin: 0; }
+  .rd-desc.done { color: #444; }
+  .rd-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 10px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .rd-now    { background: #3a1a1a; color: #E24B4A; }
+  .rd-w1     { background: #2a1f0a; color: #EF9F27; }
+  .rd-w2     { background: #0a1f2a; color: #378ADD; }
+  .rd-w34    { background: #1e2028; color: #888; }
+  .rd-weekly { background: #0a2a1a; color: #1D9E75; }
 </style>
 </head>
 <body>
@@ -328,6 +363,7 @@
   <button class="tab active" onclick="switchTab('checklist', this)">Days 1–30 Plan</button>
   <button class="tab" onclick="switchTab('calendar', this)">Content Calendar</button>
   <button class="tab" onclick="switchTab('reminders', this)">Reminders</button>
+  <button class="tab" onclick="switchTab('roadmap', this)">30-Day Roadmap</button>
 </div>
 
 <!-- PROGRESS (shown on checklist tab) -->
@@ -457,6 +493,297 @@
     </div>
     <div id="reminders-list"></div>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL 4 — 30-DAY ROADMAP
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-roadmap">
+<div style="padding: 16px; max-width: 900px; margin: 0 auto; padding-bottom: 64px;">
+
+  <!-- YC HEADER -->
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #252830;">
+    <div>
+      <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:3px;">30-Day Roadmap</div>
+      <div style="font-size:12px; color:#888;">May 16 – June 15, 2026 &nbsp;·&nbsp; pagoyamx.com</div>
+    </div>
+    <div style="background:#1D9E7520; border:1px solid #1D9E7540; border-radius:10px; padding:8px 14px; text-align:center; flex-shrink:0;">
+      <div style="font-size:10px; font-weight:600; color:#1D9E75; margin-bottom:2px; text-transform:uppercase; letter-spacing:.5px;">YC Decision</div>
+      <div style="font-size:26px; font-weight:700; color:#1D9E75; line-height:1;" id="yc-days-count">16</div>
+      <div style="font-size:10px; color:#1D9E75; opacity:.8; margin-top:2px;">days away · June 1</div>
+    </div>
+  </div>
+
+  <!-- CARD 1: TECHNICAL -->
+  <div style="background:#161921; border:1px solid #252830; border-radius:12px; padding:18px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #252830;">
+      <div style="width:34px; height:34px; border-radius:8px; background:#1a2a3a; display:flex; align-items:center; justify-content:center; font-size:17px;">⚙️</div>
+      <div>
+        <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:1px;">Technical &amp; development</div>
+        <div style="font-size:11px; color:#666;">Platform hardening + next rails</div>
+      </div>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Test AI chat on a real mobile device</div>
+        <div class="rd-desc">Open pagoyamx.com on Android or iOS. Verify the full-screen chat overlay renders and the keyboard doesn't cover the input. Your primary user is on a phone — this hasn't been validated on hardware yet.</div>
+      </div>
+      <span class="rd-tag rd-now">May 16–17</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">STP meeting — activate SPEI rail</div>
+        <div class="rd-desc">After the meeting: set STP_EMPRESA, STP_CLABE_RECEPTOR, STP_WEBHOOK_SECRET, STP_ENABLED=true. Webhook handler, wallet credit, and UI tab are fully built. Activation is four env vars and a deploy — under 10 minutes post-meeting.</div>
+      </div>
+      <span class="rd-tag rd-now">This week</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Add rate limiting to /api/historial</div>
+        <div class="rd-desc">The phone-gate accepts any phone number with no rate limit. Add 5 requests per IP per minute via existing middleware. Prevents enumeration of payment history. One-prompt fix — do before driving volume.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Issue 3 free-transaction tokens on registration</div>
+        <div class="rd-desc">Token infrastructure is built. Add a post-registration hook that issues 3 loyalty tokens to every new user — waiving the $15 MXN fee for their first three payments. Removes the biggest first-session friction point.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">OXXO pending deposit indicator in wallet UI</div>
+        <div class="rd-desc">Show a "Depósito pendiente: $X MXN" pill in the wallet balance widget when an open OXXO order exists in the last 48h. The get_pending_oxxo agent tool already queries this data — surface it in the UI.</div>
+      </div>
+      <span class="rd-tag rd-w2">May 26–30</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Add internal links between guide pages</div>
+        <div class="rd-desc">Each static guide page should link to 2–3 related ones. pagar-cfe.html → deposito-oxxo.html and recargas.html. Builds topical authority and passes PageRank. One prompt, pure HTML additions.</div>
+      </div>
+      <span class="rd-tag rd-w2">May 26–30</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">PWA push notifications</div>
+        <div class="rd-desc">Service worker + Web Push manifest so users receive payment confirmations and bill reminders natively on iOS/Android without requiring WhatsApp. Closes the notification gap for users who haven't enabled WhatsApp Business.</div>
+      </div>
+      <span class="rd-tag rd-w34">June 2–15</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Recurring payments (auto-pay) MVP</div>
+        <div class="rd-desc">Let users schedule CFE or Telmex to repeat monthly. Cron checks due dates, executes from wallet, sends WhatsApp confirmation. This converts a transactional user into a sticky one — the difference between 1 payment and 12 per year.</div>
+      </div>
+      <span class="rd-tag rd-w34">June 2–15</span>
+    </div>
+
+    <div style="height:3px; background:#252830; border-radius:2px; margin-top:14px;">
+      <div class="rd-prog-fill" id="prog-tech" style="height:100%; border-radius:2px; background:#378ADD; width:0%; transition:width .3s;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:4px;">
+      <span style="font-size:11px; color:#555;" id="prog-tech-label">0 of 8 complete</span>
+      <span style="font-size:11px; color:#555;" id="prog-tech-pct">0%</span>
+    </div>
+  </div>
+
+  <!-- CARD 2: FOUNDER -->
+  <div style="background:#161921; border:1px solid #252830; border-radius:12px; padding:18px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #252830;">
+      <div style="width:34px; height:34px; border-radius:8px; background:#2a1a0a; display:flex; align-items:center; justify-content:center; font-size:17px;">🚀</div>
+      <div>
+        <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:1px;">Founder marketing &amp; growth</div>
+        <div style="font-size:11px; color:#666;">Distribution is the product now</div>
+      </div>
+    </div>
+
+    <div style="background:#1a1a12; border-left:3px solid #555; border-radius:0 6px 6px 0; padding:8px 12px; margin-bottom:12px;">
+      <div style="font-size:12px; color:#888; font-style:italic; line-height:1.5; margin-bottom:3px;">"The next Bill Gates will not build an operating system. If you are copying these people, you are not learning from them. Dominate a small market first — then expand."</div>
+      <div style="font-size:10px; color:#555;">— Peter Thiel, Zero to One</div>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Activate William Shaw (ENG-01) with a colonia target</div>
+        <div class="rd-desc">Give Shaw a specific colonia and a weekly payment goal — not just a referral link. The rep system is built; what's missing is a structured territory. Stripe's early growth: one obsessed rep with a defined zone beats a broad campaign every time.</div>
+      </div>
+      <span class="rd-tag rd-now">May 16–17</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Send a YC progress update</div>
+        <div class="rd-desc">YC allows applicant updates before the decision. Send one now: SPEI rail built and meeting-ready, AI agent live on every page, 70+ passing tests, static SEO pages submitted to Google. Specificity of traction is what moves the needle.</div>
+      </div>
+      <span class="rd-tag rd-now">May 18–19</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Record a 3-minute founder story video</div>
+        <div class="rd-desc">Not a product demo — your story. Why underbanked Mexico, why now, why you. Post to LinkedIn and Instagram. Authenticity converts better than polish at this stage. Brian Chesky built Airbnb's early audience through personal narrative, not press.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Identify 10 colonia-level distribution partners</div>
+        <div class="rd-desc">Tienditas, lavanderías, farmacias, taqueros — anywhere underbanked PV residents congregate. Offer a referral arrangement or a printed QR code. Thiel's law: first distribution should feel embarrassingly small and direct. That's a feature, not a bug.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Post first "build in public" update</div>
+        <div class="rd-desc">One LinkedIn post: what shipped this week, one metric, one thing you learned. Start the weekly cadence now — it compounds. By June 1 you'll have a visible momentum trail that YC interviewers, investors, and future hires can find.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 23</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Get 10 users to complete a real bill payment</div>
+        <div class="rd-desc">Not signups. Completed payments. This is the only metric that matters right now. Sit with users, watch them pay, learn what breaks before you scale. Targeting this before June 1 gives you a real number for the YC decision window.</div>
+      </div>
+      <span class="rd-tag rd-w2">By June 1</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Map the Guadalajara expansion path</div>
+        <div class="rd-desc">Identify one colonia in Zapopan or Tlaquepaque — high OXXO density, low formal banking. Dominate one neighborhood completely before expanding. Document the playbook so it's replicable. This is also the answer to "what's your expansion plan?" in a YC interview.</div>
+      </div>
+      <span class="rd-tag rd-w34">June 2–8</span>
+    </div>
+
+    <div class="rd-item" data-card="founder" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Weekly "build in public" — maintain cadence</div>
+        <div class="rd-desc">One post per week, every week. Metric + what shipped + one insight. The compounding effect starts after 4–6 posts, not the first one. By June 15 you'll have a visible momentum trail any investor, hire, or partner can find.</div>
+      </div>
+      <span class="rd-tag rd-weekly">Weekly</span>
+    </div>
+
+    <div style="height:3px; background:#252830; border-radius:2px; margin-top:14px;">
+      <div class="rd-prog-fill" id="prog-founder" style="height:100%; border-radius:2px; background:#EF9F27; width:0%; transition:width .3s;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:4px;">
+      <span style="font-size:11px; color:#555;" id="prog-founder-label">0 of 8 complete</span>
+      <span style="font-size:11px; color:#555;" id="prog-founder-pct">0%</span>
+    </div>
+  </div>
+
+  <!-- CARD 3: SEO -->
+  <div style="background:#161921; border:1px solid #252830; border-radius:12px; padding:18px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #252830;">
+      <div style="width:34px; height:34px; border-radius:8px; background:#0a2a1a; display:flex; align-items:center; justify-content:center; font-size:17px;">🔍</div>
+      <div>
+        <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:1px;">SEO &amp; digital marketing</div>
+        <div style="font-size:11px; color:#666;">Organic compounding starts now</div>
+      </div>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Check Search Console Coverage report</div>
+        <div class="rd-desc">Return 48–72 hours after verification. Look for "Crawled — currently not indexed" on any guide page. If flagged: check that each page's canonical URL exactly matches its live URL with no trailing slash mismatch.</div>
+      </div>
+      <span class="rd-tag rd-now">May 18–19</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Add GA4 snippet to all 5 static guide pages</div>
+        <div class="rd-desc">GA4 (G-G8KN85JD5K) fires on the React app but not on static HTML guide pages. Add the gtag.js snippet directly to each page's head. You need to know which pages convert organic traffic before writing more content.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Set up Google Business Profile</div>
+        <div class="rd-desc">Create a Google Business Profile for PagoYa in Puerto Vallarta. Improves local search visibility for "pagar servicios Puerto Vallarta" and adds a knowledge panel to branded searches. Free, 30 minutes, immediate trust signal to Google.</div>
+      </div>
+      <span class="rd-tag rd-w1">May 19–23</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Write 2 new guide pages targeting GDL keywords</div>
+        <div class="rd-desc">"Pagar CFE Guadalajara sin banco" and "pagar agua Zapopan sin cuenta." Use SACMEX and SIAPA by name. GDL is 5x the population of PV — the SEO surface should reflect the expansion plan before you expand.</div>
+      </div>
+      <span class="rd-tag rd-w2">May 26–30</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Monitor first keyword rankings</div>
+        <div class="rd-desc">Search Console → Performance → filter by page. Any query with impressions but CTR below 3% needs a better title tag or meta description. Queries at position 8–15 are the quick wins — small copy tweaks move them to page 1.</div>
+      </div>
+      <span class="rd-tag rd-w2">May 30</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Build one backlink from a PV local publication</div>
+        <div class="rd-desc">Target: Vallarta Daily, Puerto Vallarta Tribune, or a local expat group with web presence. Guest post: "How to pay bills in PV without a Mexican bank account." Expats have this problem acutely. One quality local backlink outweighs 50 generic ones.</div>
+      </div>
+      <span class="rd-tag rd-w34">June 2–8</span>
+    </div>
+
+    <div class="rd-item" data-card="seo" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Pitch PagoYa to Mexico fintech newsletters</div>
+        <div class="rd-desc">Target: Fintech Nexus México, LATAM Fintech, Contxto. A mention is a high-authority backlink plus direct exposure to investors and early adopters. Draft a 3-sentence pitch: product, traction, unique angle.</div>
+      </div>
+      <span class="rd-tag rd-w34">June 8–15</span>
+    </div>
+
+    <div style="height:3px; background:#252830; border-radius:2px; margin-top:14px;">
+      <div class="rd-prog-fill" id="prog-seo" style="height:100%; border-radius:2px; background:#1D9E75; width:0%; transition:width .3s;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:4px;">
+      <span style="font-size:11px; color:#555;" id="prog-seo-label">0 of 7 complete</span>
+      <span style="font-size:11px; color:#555;" id="prog-seo-pct">0%</span>
+    </div>
+  </div>
+
+</div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
@@ -863,6 +1190,110 @@ function fmtDate(iso) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+
+// ── ROADMAP ──────────────────────────────────────────────────────────────────
+
+  const RD_KEY = 'cc_roadmap_v1';
+  const rdState = JSON.parse(localStorage.getItem(RD_KEY) || '{}');
+  const rdCounts = { tech: 8, founder: 8, seo: 7 };
+
+  function rdToggle(item) {
+    const cb = item.querySelector('.rd-cb');
+    const title = item.querySelector('.rd-title');
+    const desc = item.querySelector('.rd-desc');
+    const card = item.dataset.card;
+    const key = card + '_' + title.textContent.trim().slice(0, 40);
+    const done = !cb.classList.contains('done');
+    cb.classList.toggle('done', done);
+    title.classList.toggle('done', done);
+    desc.classList.toggle('done', done);
+    rdState[key] = done;
+    localStorage.setItem(RD_KEY, JSON.stringify(rdState));
+    rdUpdateProgress(card);
+  }
+
+  function rdUpdateProgress(card) {
+    const items = document.querySelectorAll('.rd-item[data-card="' + card + '"]');
+    const done = Array.from(items).filter(i => i.querySelector('.rd-cb.done')).length;
+    const total = rdCounts[card];
+    const pct = Math.round(done / total * 100);
+    document.getElementById('prog-' + card).style.width = pct + '%';
+    document.getElementById('prog-' + card + '-label').textContent = done + ' of ' + total + ' complete';
+    document.getElementById('prog-' + card + '-pct').textContent = pct + '%';
+  }
+
+  function rdInit() {
+    document.querySelectorAll('.rd-item').forEach(item => {
+      const card = item.dataset.card;
+      const key = card + '_' + item.querySelector('.rd-title').textContent.trim().slice(0, 40);
+      if (rdState[key]) {
+        item.querySelector('.rd-cb').classList.add('done');
+        item.querySelector('.rd-title').classList.add('done');
+        item.querySelector('.rd-desc').classList.add('done');
+      }
+    });
+    ['tech','founder','seo'].forEach(rdUpdateProgress);
+    const dec = new Date('2026-06-01');
+    const days = Math.max(0, Math.ceil((dec - new Date()) / 86400000));
+    const el = document.getElementById('yc-days-count');
+    if (el) el.textContent = days;
+  }
+
+  rdInit();
+
+  function rdReminders() {
+    const today = new Date();
+    const MM = today.getMonth();
+    const DD = today.getDate();
+
+    const schedule = [
+      { title: 'Test AI chat on a real mobile device',           dueMonth: 4, dueDay: 17 },
+      { title: 'Activate William Shaw (ENG-01)',                  dueMonth: 4, dueDay: 17 },
+      { title: 'STP meeting — activate SPEI rail',                dueMonth: 4, dueDay: 23 },
+      { title: 'Send a YC progress update',                       dueMonth: 4, dueDay: 19 },
+      { title: 'Add rate limiting to /api/historial',             dueMonth: 4, dueDay: 23 },
+      { title: 'Issue 3 free-transaction tokens on registration',  dueMonth: 4, dueDay: 23 },
+      { title: 'Record a 3-minute founder story video',           dueMonth: 4, dueDay: 23 },
+      { title: 'Identify 10 colonia-level distribution partners',  dueMonth: 4, dueDay: 23 },
+      { title: 'Post first "build in public" update',             dueMonth: 4, dueDay: 23 },
+      { title: 'Add GA4 snippet to all 5 static guide pages',     dueMonth: 4, dueDay: 23 },
+      { title: 'Set up Google Business Profile',                  dueMonth: 4, dueDay: 23 },
+      { title: 'OXXO pending deposit indicator in wallet UI',     dueMonth: 4, dueDay: 30 },
+      { title: 'Add internal links between guide pages',          dueMonth: 4, dueDay: 30 },
+      { title: 'Write 2 new guide pages targeting GDL keywords',  dueMonth: 4, dueDay: 30 },
+      { title: 'Monitor first keyword rankings',                  dueMonth: 4, dueDay: 30 },
+      { title: 'Get 10 users to complete a real bill payment',    dueMonth: 5, dueDay:  1 },
+      { title: 'PWA push notifications',                          dueMonth: 5, dueDay: 15 },
+      { title: 'Recurring payments (auto-pay) MVP',               dueMonth: 5, dueDay: 15 },
+      { title: 'Map the Guadalajara expansion path',              dueMonth: 5, dueDay:  8 },
+      { title: 'Build one backlink from a PV local publication',  dueMonth: 5, dueDay:  8 },
+      { title: 'Pitch PagoYa to Mexico fintech newsletters',      dueMonth: 5, dueDay: 15 },
+    ];
+
+    let overdueCount = 0;
+    schedule.forEach(reminder => {
+      const card = Object.keys(rdCounts).find(c =>
+        document.querySelector('.rd-item[data-card="' + c + '"] .rd-title')
+          ? Array.from(document.querySelectorAll('.rd-item[data-card="' + c + '"] .rd-title'))
+              .some(el => el.textContent.trim().startsWith(reminder.title.slice(0, 20)))
+          : false
+      );
+      const key = (card || 'tech') + '_' + reminder.title.slice(0, 40);
+      const isDone = rdState[key];
+      const isOverdue = !isDone && (MM > reminder.dueMonth || (MM === reminder.dueMonth && DD > reminder.dueDay));
+      if (isOverdue) overdueCount++;
+    });
+
+    const badge = document.querySelector('.reminder-badge');
+    if (badge && overdueCount > 0) {
+      badge.textContent = overdueCount + ' overdue';
+      badge.style.display = 'inline-block';
+    }
+  }
+
+  rdReminders();
+
+// ── CHECKLIST INIT ────────────────────────────────────────────────────────────
 
 checks = loadChecks();
 
