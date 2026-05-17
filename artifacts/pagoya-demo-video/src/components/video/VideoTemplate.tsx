@@ -86,15 +86,14 @@ export default function VideoTemplate() {
       />
 
       {/* Persistent Logo Mark */}
-      <motion.div 
-        className="absolute top-8 left-8 z-50 flex items-center justify-center bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: currentScene === 2 || currentScene === 11 ? 0 : 1 }} // Hide in Scene 3 (Reveal) and Scene 12 (Closing) where logo is hero
+      <motion.div
+        className="absolute top-6 right-8 z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: currentScene === 2 || currentScene === 11 ? 0 : 0.7, scale: currentScene === 2 || currentScene === 11 ? 0 : 1 }}
         transition={{ duration: 0.5 }}
+        style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0,0,0,0.4))' }}
       >
-        <div className="w-10 h-10 overflow-hidden relative flex items-center justify-center">
-            <img src={logoPng} alt="PagoYa Icon" className="h-full object-cover" style={{ objectPosition: 'left' }} />
-        </div>
+        <img src={logoPng} alt="PagoYa" style={{ height: '28px', width: 'auto' }} />
       </motion.div>
 
       {/* Main Content inside AnimatePresence */}
@@ -105,10 +104,10 @@ export default function VideoTemplate() {
       {/* Persistent Phone Mockup for Scenes 4-7 */}
       <motion.div
         className="absolute top-1/2 left-1/2 flex items-center justify-center pointer-events-none z-40"
-        initial={{ y: '100vh', x: '-50%', rotate: 5, scale: 0.8, opacity: 0 }}
+        initial={{ y: '100vh', x: '12vw', rotate: 5, scale: 0.8, opacity: 0 }}
         animate={{
           y: showPhone ? '-50%' : '100vh',
-          x: showPhone ? (currentScene === 6 ? '15vw' : '-50%') : '-50%', // Move right on scene 7
+          x: showPhone ? '12vw' : '12vw',
           rotate: showPhone ? 0 : 5,
           scale: showPhone ? 1 : 0.8,
           opacity: showPhone ? 1 : 0
