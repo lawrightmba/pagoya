@@ -35,5 +35,6 @@ Disallow: /admin
 Disallow: /rep-dashboard
 Disallow: /rep-login
 Disallow: /rep-signup
+Disallow: /login
 
 Sitemap: https://pagoyamx.com/sitemap.xml

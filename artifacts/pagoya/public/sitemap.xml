@@ -1,8 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://pagoyamx.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://pagoyamx.com/register</loc><priority>0.8</priority></url>
-  <url><loc>https://pagoyamx.com/login</loc><priority>0.6</priority></url>
-  <url><loc>https://pagoyamx.com/cargar</loc><priority>0.7</priority></url>
-  <url><loc>https://pagoyamx.com/wallet/historial</loc><priority>0.5</priority></url>
+
+  <!-- ── Primary landing page ─────────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- ── SEO service landing pages ────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/pagar-cfe</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-telmex</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/recargas</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/deposito-oxxo</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ── Blog / guide ──────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ── Legal ─────────────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/terminos-y-condiciones</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
 </urlset>
