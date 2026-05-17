@@ -25,6 +25,7 @@ import Recargas from "@/pages/Recargas";
 import DepositoOXXO from "@/pages/DepositoOXXO";
 import TerminosCondiciones from "@/pages/TerminosCondiciones";
 import RepLogin from "@/pages/RepLogin";
+import SupportChat from "@/components/SupportChat";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -70,6 +71,7 @@ function App() {
           </Elements>
         </PaymentProvider>
         <Toaster />
+        <SupportChat />
       </TooltipProvider>
     </QueryClientProvider>
   );
