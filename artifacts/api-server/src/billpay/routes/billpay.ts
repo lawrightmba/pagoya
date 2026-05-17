@@ -68,8 +68,6 @@ router.post("/pay", async (req: Request, res: Response) => {
     notas?: string;
     rep_id?: string;
     paymentSource?: "wallet" | "card";
-    // TODO: frontend must pass free_tx_token from localStorage["pagoya_free_tx_token"]
-    // (stored after /api/loyalty/redeem returns redemption_token) when applying a free-tx reward.
     free_tx_token?: string;
   };
 

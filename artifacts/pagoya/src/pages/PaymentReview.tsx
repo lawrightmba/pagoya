@@ -29,6 +29,8 @@ export default function PaymentReview() {
     setLoading(true);
     setApiError("");
 
+    const freeTxToken = localStorage.getItem("pagoya_free_tx_token");
+
     try {
       const res = await fetch(`${window.location.origin}/api/pagoya/payments`, {
         method: "POST",
@@ -40,6 +42,7 @@ export default function PaymentReview() {
           referencia: paymentData.referencia,
           telefono: paymentData.telefono,
           notas: paymentData.notas,
+          ...(freeTxToken ? { free_tx_token: freeTxToken } : {}),
         }),
       });
 
@@ -48,6 +51,9 @@ export default function PaymentReview() {
       }
 
       const data = await res.json();
+      if (freeTxToken) {
+        localStorage.removeItem("pagoya_free_tx_token");
+      }
       setClientSecret(data.clientSecret);
       setPendingPaymentIntentId(data.paymentIntentId);
       navigate("/tarjeta");

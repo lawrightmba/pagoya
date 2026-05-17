@@ -139,6 +139,9 @@ export default function LoyaltyDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        if (data.redemption_token) {
+          localStorage.setItem("pagoya_free_tx_token", data.redemption_token);
+        }
         setToast({ msg: es ? `✅ ¡Canjeado! Descuento de $${data.discount_applied} MXN aplicado.` : `✅ Redeemed! $${data.discount_applied} MXN discount applied.`, ok: true });
         setConfetti(true);
         setTimeout(() => setConfetti(false), 3000);
