@@ -48,3 +48,9 @@ id = "H7XvKxIXZX25zr0pP1edE"
 uri = "file://PagoYa_Manual_Ventas_Campo.docx"
 type = "word_document"
 title = "PagoYa — Manual de Ventas en Campo (Word)"
+
+[[outputs]]
+id = "qBZNU-fSRgtapH9GlmVXn"
+uri = "file://PagoYa_YC_Application.docx"
+type = "word_document"
+title = "PagoYa — YC Application Responses"
