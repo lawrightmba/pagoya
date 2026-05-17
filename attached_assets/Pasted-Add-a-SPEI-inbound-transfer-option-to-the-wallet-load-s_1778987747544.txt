@@ -1,0 +1,39 @@
+Add a SPEI inbound transfer option to the wallet load screen. This is a stub + real webhook receiver — the user sees a CLABE to send money to, and when STP confirms the transfer, their wallet is credited automatically.
+
+This does not require a live STP integration yet — the CLABE and STP webhook secret will come from environment variables, so the feature is fully buildable now and goes live the moment the STP meeting produces credentials.
+
+New env vars (add to .env.example with comments):
+- STP_EMPRESA (the empresa name assigned by STP)
+- STP_CLABE_RECEPTOR (the CLABE that receives all inbound transfers — a single pooled account)
+- STP_WEBHOOK_SECRET (shared secret for validating STP webhook signatures)
+- STP_ENABLED (boolean string "true"/"false" — gates the UI tab)
+
+New backend routes in a new file artifacts/api-server/src/routes/stpWebhook.ts, mounted at /api/stp:
+
+POST /api/stp/webhook — public route (no JWT auth, STP calls this):
+  - Validate the request using STP_WEBHOOK_SECRET (STP sends an HMAC-SHA256 signature in a header — validate it before processing anything)
+  - Parse the STP payload: look for fields claveRastreo, monto, conceptoPago, ordenante (sender name), fechaOperacion, estado
+  - Extract the telefono from conceptoPago — the user will be instructed to write their phone number as the payment concept
+  - Look up the user by telefono in the users table
+  - If found and estado indicates success: credit the wallet using the existing wallet credit logic, amount = monto (in MXN pesos, STP sends centavos so divide by 100)
+  - Insert to wallet_transactions with type='spei_in', reference = claveRastreo
+  - Send WhatsApp confirmation to the user via existing Twilio integration: "Tu transferencia SPEI de $[amount] MXN fue recibida y acreditada a tu monedero PagoYa."
+  - If telefono not found or estado is not success: log to a new table stpWebhookLog (id, raw_payload jsonb, status text, error text, received_at timestamptz) for manual reconciliation — do not crash
+
+GET /api/stp/instructions/:telefono — authenticated route:
+  - Returns { clabe: process.env.STP_CLABE_RECEPTOR, empresa: process.env.STP_EMPRESA, concept_instructions: "Escribe tu número de teléfono: [telefono]", enabled: process.env.STP_ENABLED === 'true' }
+
+New migration: create stpWebhookLog table only — no changes to existing tables
+
+Frontend — add "Transferencia SPEI" as a third tab on the wallet load screen, shown only if STP_ENABLED === 'true':
+  - Fetch /api/stp/instructions/:telefono on tab open
+  - If enabled: show a clean instruction card —
+    - CLABE: [clabe] with a copy button
+    - Empresa: [empresa]  
+    - Concepto de pago: [user's phone number] — bold, with a warning "Debes escribir exactamente tu número para que tu saldo se acredite automáticamente"
+    - Monto mínimo: $50 MXN
+    - Tiempo de acreditación: 2-5 minutos hábiles
+  - If not enabled: show "Próximamente — transferencias SPEI disponibles pronto"
+  - The tab is visible either way — if disabled it shows the coming-soon state
+
+Do not touch the OXXO flow, Conekta routes, wallets schema, or wallet_transactions schema (only add type='spei_in' as a new valid value if there's an enum — if it's a free text field, no change needed).

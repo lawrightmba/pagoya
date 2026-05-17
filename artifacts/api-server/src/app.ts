@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { handlePagoyaWebhook } from "./routes/pagoya";
 import { handleConektaWebhook, handleConektaCardWebhook } from "./wallet/routes/wallet.js";
+import { handleStpWebhook } from "./routes/stpWebhook.js";
 import { logger } from "./lib/logger";
 import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
 import { startReminderCron } from "./services/reminders.js";
@@ -54,6 +55,12 @@ app.post(
   "/api/wallet/webhook/conekta-card",
   express.raw({ type: "application/json" }),
   handleConektaCardWebhook,
+);
+
+app.post(
+  "/api/stp/webhook",
+  express.raw({ type: "application/json" }),
+  handleStpWebhook,
 );
 
 app.use(express.json());

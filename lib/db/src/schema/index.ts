@@ -34,3 +34,4 @@ export * from "./daily_reconciliation";
 export * from "./profiles";
 export * from "./street_team";
 export * from "./saved_cards";
+export * from "./stp_webhook_log";

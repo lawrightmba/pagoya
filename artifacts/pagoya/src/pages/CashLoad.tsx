@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 const logoUrl = "/pagoya-logo.png";
 
@@ -20,6 +20,13 @@ interface SavedCard {
   lastFour: string;
   brand: string;
   isDefault: boolean;
+}
+
+interface StpInstructions {
+  clabe: string | null;
+  empresa: string | null;
+  concept_instructions: string;
+  enabled: boolean;
 }
 
 function useStoredTelefono() {
@@ -218,6 +225,11 @@ export default function CashLoad() {
   const [chargingCardId, setChargingCardId] = useState<string | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'oxxo' | 'card' | 'spei'>('oxxo');
+  const [stpData, setStpData] = useState<StpInstructions | null>(null);
+  const [stpLoading, setStpLoading] = useState(false);
+  const [stpClabeCopiado, setStpClabeCopiado] = useState(false);
+
   // Keep card phone in sync with stored telefono
   useEffect(() => {
     setCardTelInput(telefono);
@@ -245,6 +257,34 @@ export default function CashLoad() {
   useEffect(() => {
     fetchSavedCards(cardTelInput);
   }, [cardTelInput]);
+
+  const fetchStpInstructions = async () => {
+    const tel = telefono || "+521234567890";
+    setStpLoading(true);
+    try {
+      const res = await fetch(
+        `${window.location.origin}/api/stp/instructions/${encodeURIComponent(tel)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setStpData(data as StpInstructions);
+      }
+    } catch {}
+    setStpLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'spei') {
+      fetchStpInstructions();
+    }
+  }, [activeTab, telefono]);
+
+  const handleCopiarClabe = async () => {
+    if (!stpData?.clabe) return;
+    await navigator.clipboard.writeText(stpData.clabe).catch(() => {});
+    setStpClabeCopiado(true);
+    setTimeout(() => setStpClabeCopiado(false), 2000);
+  };
 
   const handleCardAmountChip = (val: number) => {
     setCardAmount(String(val));
@@ -493,7 +533,48 @@ export default function CashLoad() {
 
       <main className="flex-1 flex flex-col gap-4 px-4 py-6 max-w-sm mx-auto w-full">
 
+        {/* Method selector tabs */}
+        <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "#ECECEC" }}>
+          <button
+            onClick={() => setActiveTab('oxxo')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all"
+            style={{
+              background: activeTab === 'oxxo' ? 'white' : 'transparent',
+              color: activeTab === 'oxxo' ? '#1F1F1F' : '#6B7280',
+              boxShadow: activeTab === 'oxxo' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+            }}
+          >
+            <Banknote className="w-3.5 h-3.5" />
+            Efectivo
+          </button>
+          <button
+            onClick={() => setActiveTab('card')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all"
+            style={{
+              background: activeTab === 'card' ? 'white' : 'transparent',
+              color: activeTab === 'card' ? '#1F1F1F' : '#6B7280',
+              boxShadow: activeTab === 'card' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+            }}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Tarjeta
+          </button>
+          <button
+            onClick={() => setActiveTab('spei')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all"
+            style={{
+              background: activeTab === 'spei' ? 'white' : 'transparent',
+              color: activeTab === 'spei' ? '#1F1F1F' : '#6B7280',
+              boxShadow: activeTab === 'spei' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+            }}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            SPEI
+          </button>
+        </div>
+
         {/* Section A — OXXO cash load */}
+        {activeTab === 'oxxo' && (
         <div
           className="bg-white rounded-3xl p-6"
           style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
@@ -720,8 +801,10 @@ export default function CashLoad() {
             </div>
           )}
         </div>
+        )}
 
         {/* Section B — Card load */}
+        {activeTab === 'card' && (
         <div
           className="bg-white rounded-3xl p-6"
           style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
@@ -1021,6 +1104,123 @@ export default function CashLoad() {
             </p>
           </div>
         </div>
+        )}
+
+        {/* Section C — SPEI transfer */}
+        {activeTab === 'spei' && (
+        <div
+          className="bg-white rounded-3xl p-6"
+          style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
+        >
+          {/* Section header */}
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE" }}
+            >
+              <Building2 className="w-5 h-5" style={{ color: "#2563EB" }} />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-[#1F1F1F] leading-tight">Transferencia SPEI</h2>
+              <p className="text-xs text-gray-400">Desde tu banco directo a PagoYa</p>
+            </div>
+          </div>
+
+          {stpLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <span
+                className="w-6 h-6 rounded-full border-2 border-[#2563EB] border-t-transparent"
+                style={{ animation: "spin 0.7s linear infinite" }}
+              />
+            </div>
+          ) : stpData?.enabled ? (
+            <div className="flex flex-col gap-4">
+              {/* CLABE */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                  CLABE interbancaria
+                </label>
+                <div
+                  className="flex items-center rounded-2xl px-4 py-3"
+                  style={{ background: "#F7F7F7", border: "1.5px solid #E5E5E5" }}
+                >
+                  <span className="flex-1 text-sm font-black text-[#1F1F1F] tracking-widest">
+                    {stpData.clabe}
+                  </span>
+                  <button
+                    onClick={handleCopiarClabe}
+                    className="flex-shrink-0 p-2 rounded-xl transition-all active:scale-[0.92]"
+                    style={{ background: stpClabeCopiado ? "#1D9E75" : "#ECECEC" }}
+                    title="Copiar CLABE"
+                  >
+                    {stpClabeCopiado
+                      ? <CheckCircle className="w-4 h-4 text-white" />
+                      : <Copy className="w-4 h-4 text-gray-500" />
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* Empresa */}
+              {stpData.empresa && (
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                    Empresa / beneficiario
+                  </label>
+                  <div
+                    className="rounded-2xl px-4 py-3"
+                    style={{ background: "#F7F7F7", border: "1.5px solid #E5E5E5" }}
+                  >
+                    <p className="text-sm font-bold text-[#1F1F1F]">{stpData.empresa}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Concept warning */}
+              <div
+                className="rounded-2xl px-4 py-4 flex flex-col gap-2"
+                style={{ background: "#FFF8E1", border: "1.5px solid #FBBF24" }}
+              >
+                <p className="text-xs font-black text-yellow-800 uppercase tracking-widest">
+                  ⚠️ Concepto de pago — obligatorio
+                </p>
+                <p className="text-lg font-black text-[#1F1F1F]">
+                  {telefono || "Tu número de teléfono"}
+                </p>
+                <p className="text-xs text-yellow-800 leading-relaxed">
+                  Debes escribir exactamente tu número de teléfono como concepto de pago para que tu saldo se acredite automáticamente.
+                </p>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="rounded-2xl px-4 py-3"
+                  style={{ background: "#F0FAF3", border: "1px solid #D4EDDA" }}
+                >
+                  <p className="text-xs text-gray-500 mb-0.5">Monto mínimo</p>
+                  <p className="text-sm font-black text-[#046C2C]">$50 MXN</p>
+                </div>
+                <div
+                  className="rounded-2xl px-4 py-3"
+                  style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}
+                >
+                  <p className="text-xs text-gray-500 mb-0.5">Acreditación</p>
+                  <p className="text-sm font-black text-[#2563EB]">2–5 min</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <p className="text-4xl">⏳</p>
+              <p className="text-base font-black text-[#1F1F1F]">Próximamente</p>
+              <p className="text-sm text-gray-400 text-center leading-relaxed">
+                Las transferencias SPEI estarán disponibles muy pronto en PagoYa.
+              </p>
+            </div>
+          )}
+        </div>
+        )}
 
       </main>
 

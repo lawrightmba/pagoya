@@ -15,6 +15,13 @@
       "when": 1747530000000,
       "tag": "0001_saved_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747530600000,
+      "tag": "0002_stp_webhook_log",
+      "breakpoints": true
     }
   ]
 }
