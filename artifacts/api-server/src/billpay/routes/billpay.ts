@@ -1,12 +1,12 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable } from "@workspace/db";
+import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable, walletsTable, walletTransactionsTable } from "@workspace/db";
 import { desc, eq, sql, and, gte } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
 import { taecelGetProducts } from "../providers/siprel.js";
 import { taecelProductCacheTable } from "@workspace/db";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
-import { getOrCreateWallet, getBalance, debitWallet } from "../../wallet/services/wallet.js";
+import { getOrCreateWallet, getBalance } from "../../wallet/services/wallet.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
@@ -53,8 +53,11 @@ router.get("/services/:serviceId", (req: Request, res: Response) => {
 });
 
 // POST /api/bills/pay
-// Routes a bill payment through SIPREL or Evoluciona (first success wins),
-// persists the confirmed record + audit log to DB, and sends a WhatsApp receipt.
+// Routes a bill payment through SIPREL or Evoluciona (first success wins).
+// Strict ordering: balance check → provider call → atomic DB commit (wallet debit
+// + bill_payment insert in one transaction). The wallet is only debited after the
+// provider confirms success. A failed provider call records a 'fallido' bill_payment
+// but never touches the wallet.
 // Body: { serviceId, referencia, monto, telefono, notas?, rep_id?, paymentSource? }
 router.post("/pay", async (req: Request, res: Response) => {
   const { serviceId, referencia, monto, telefono, notas, rep_id, paymentSource } = req.body as {
@@ -101,7 +104,7 @@ router.post("/pay", async (req: Request, res: Response) => {
     return;
   }
 
-  // 0a. Wallet balance pre-check (before we touch the DB or provider)
+  // ── Step 1: Wallet balance pre-check (no DB writes yet) ─────────────────────
   let walletId: string | null = null;
   if (paymentSource === "wallet") {
     try {
@@ -123,7 +126,7 @@ router.post("/pay", async (req: Request, res: Response) => {
     }
   }
 
-  // 0b. Resolve effective rep_id: body > user referral lookup
+  // Resolve effective rep_id: body > user referral lookup (no DB writes)
   let effectiveRepId: string | null = rep_id ?? null;
   if (!effectiveRepId && telefono) {
     try {
@@ -138,10 +141,16 @@ router.post("/pay", async (req: Request, res: Response) => {
     }
   }
 
-  // 1. Insert payment record (pendiente) + audit: payment.created
-  let paymentId: number;
+  // ── Step 2: Call the provider (no DB writes yet) ─────────────────────────────
+  let result: Awaited<ReturnType<typeof routePayment>>;
   try {
-    const [inserted] = await db.insert(billPaymentsTable).values({
+    result = await routePayment({ serviceId, referencia, monto: montoNum, telefono, notas });
+  } catch (providerErr: unknown) {
+    // Provider failed — wallet is untouched. Record the failure and return a clear message.
+    const message = providerErr instanceof Error ? providerErr.message : "Error al procesar el pago.";
+    logger.error({ serviceId, err: providerErr }, "billpay: payment failed");
+
+    await db.insert(billPaymentsTable).values({
       serviceId: service.id,
       serviceName: service.name,
       categoria: service.category,
@@ -149,37 +158,44 @@ router.post("/pay", async (req: Request, res: Response) => {
       monto: montoNum.toFixed(2),
       telefono,
       notas: notas ?? "",
-      provider: "pending",
-      providerUsed: null,
+      provider: "none",
+      providerUsed: "none",
       failoverUsed: false,
-      confirmationCode: "pending",
-      status: "pending",
+      confirmationCode: "failed",
+      status: "fallido",
       paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
       repId: effectiveRepId,
       platformFeeMxn: PLATFORM_FEE_MXN,
-    }).returning({ id: billPaymentsTable.id });
-    paymentId = inserted.id;
+    }).returning({ id: billPaymentsTable.id })
+      .then(([r]) =>
+        db.insert(billPaymentAuditTable).values({
+          paymentId: r.id,
+          event: "payment.failed",
+          details: message,
+        }),
+      )
+      .catch(() => {});
 
-    await db.insert(billPaymentAuditTable).values({
-      paymentId,
-      event: "payment.created",
-      details: JSON.stringify({ serviceId, referencia, monto: montoNum, telefono }),
-    });
-  } catch (dbErr: unknown) {
-    const message = dbErr instanceof Error ? dbErr.message : "Error al registrar el pago.";
-    logger.error({ serviceId, dbErr }, "billpay: DB insert failed before payment attempt");
-    res.status(500).json({ error: message });
+    res.status(502).json({ error: "Tu pago no se procesó. Tu saldo no fue afectado." });
     return;
   }
 
-  // 2. Route through provider
-  try {
-    const result = await routePayment({ serviceId, referencia, monto: montoNum, telefono, notas });
+  // ── Step 3: Provider confirmed — commit bill_payment + wallet debit atomically ─
+  const raw = result.rawResponse as Record<string, unknown> | undefined;
+  const maskedRef = `••••${referencia.slice(-4)}`;
+  let paymentId!: number;
 
-    // 3. Update record with success + Taecel enrichment fields
-    const raw = result.rawResponse as Record<string, unknown> | undefined;
-    await db.update(billPaymentsTable)
-      .set({
+  try {
+    await db.transaction(async (tx) => {
+      // 3a. Insert the confirmed bill_payment record
+      const [inserted] = await tx.insert(billPaymentsTable).values({
+        serviceId: service.id,
+        serviceName: service.name,
+        categoria: service.category,
+        referencia,
+        monto: montoNum.toFixed(2),
+        telefono,
+        notas: notas ?? "",
         provider: result.provider,
         providerUsed: result.provider,
         failoverUsed: result.failoverUsed,
@@ -190,113 +206,176 @@ router.post("/pay", async (req: Request, res: Response) => {
         taecelCarrier: typeof raw?.carrier === "string" ? raw.carrier : null,
         taecelCargoMxn: typeof raw?.cargoMxn === "number" ? String(raw.cargoMxn) : null,
         bolsaType: typeof raw?.bolsaType === "string" ? raw.bolsaType : null,
-      })
-      .where(eq(billPaymentsTable.id, paymentId));
-
-    await db.insert(billPaymentAuditTable).values({
-      paymentId,
-      event: "payment.confirmed",
-      details: JSON.stringify({
-        provider: result.provider,
-        failoverUsed: result.failoverUsed,
-        confirmationCode: result.confirmationCode,
-      }),
-    });
-
-    // 4. Rep commission (non-blocking) — 5 MXN per confirmed bill payment, 7-day hold
-    if (effectiveRepId) {
-      const holdUntil = new Date();
-      holdUntil.setDate(holdUntil.getDate() + COMMISSION_HOLD_DAYS);
-      db.insert(repCommissionsTable).values({
+        paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
         repId: effectiveRepId,
-        billPaymentId: paymentId,
-        amount: BILL_PAY_COMMISSION_AMOUNT,
-        type: "bill_pay",
-        status: "pending",
-        holdUntil,
-      }).catch((err: unknown) => {
-        logger.error({ err, repId: effectiveRepId, paymentId }, "billpay: commission insert failed");
-      });
-    }
+        platformFeeMxn: PLATFORM_FEE_MXN,
+      }).returning({ id: billPaymentsTable.id });
+      paymentId = inserted.id;
 
-    // 5. Wallet debit — only after provider confirms; non-fatal on failure
-    if (walletId) {
-      const maskedRef = `••••${referencia.slice(-4)}`;
-      debitWallet(
-        walletId,
-        montoNum,
-        `Pago ${service.name} — ref ${maskedRef}`,
-      ).catch((walletErr: unknown) => {
-        const msg = walletErr instanceof Error ? walletErr.message : String(walletErr);
+      // 3b. Audit: payment confirmed
+      await tx.insert(billPaymentAuditTable).values({
+        paymentId,
+        event: "payment.confirmed",
+        details: JSON.stringify({
+          provider: result.provider,
+          failoverUsed: result.failoverUsed,
+          confirmationCode: result.confirmationCode,
+        }),
+      });
+
+      // 3c. Wallet debit — inlined here so it shares this transaction
+      if (walletId) {
+        // Re-read balance inside the transaction to guard against concurrent payments
+        const [wallet] = await tx
+          .select({ balanceMxn: walletsTable.balanceMxn })
+          .from(walletsTable)
+          .where(eq(walletsTable.id, walletId))
+          .limit(1);
+        const currentBalance = parseFloat(wallet?.balanceMxn ?? "0");
+        if (currentBalance < montoNum) {
+          throw new Error("INSUFFICIENT_BALANCE");
+        }
+
+        await tx.insert(walletTransactionsTable).values({
+          walletId,
+          type: "bill_pay",
+          amountMxn: montoNum.toFixed(2),
+          status: "confirmed",
+          description: `Pago ${service.name} — ref ${maskedRef}`,
+          confirmedAt: new Date(),
+        });
+
+        await tx
+          .update(walletsTable)
+          .set({
+            balanceMxn: sql`balance_mxn - ${montoNum.toFixed(2)}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(walletsTable.id, walletId));
+      }
+    });
+  } catch (txErr: unknown) {
+    // ── Step 5: Rare — provider confirmed but DB transaction failed ─────────────
+    // The provider already processed the payment. Flag for manual reconciliation.
+    const txMsg = txErr instanceof Error ? txErr.message : String(txErr);
+    logger.error(
+      {
+        serviceId,
+        referencia,
+        telefono,
+        txErr: txMsg,
+        confirmationCode: result.confirmationCode,
+        provider: result.provider,
+      },
+      "billpay: DB transaction failed after provider success — MANUAL RECONCILIATION REQUIRED",
+    );
+
+    // Persist the confirmed payment record and discrepancy audit outside the failed transaction
+    db.insert(billPaymentsTable).values({
+      serviceId: service.id,
+      serviceName: service.name,
+      categoria: service.category,
+      referencia,
+      monto: montoNum.toFixed(2),
+      telefono,
+      notas: notas ?? "",
+      provider: result.provider,
+      providerUsed: result.provider,
+      failoverUsed: result.failoverUsed,
+      confirmationCode: result.confirmationCode,
+      status: result.status ?? "confirmed",
+      paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
+      repId: effectiveRepId,
+      platformFeeMxn: PLATFORM_FEE_MXN,
+    }).returning({ id: billPaymentsTable.id })
+      .then(([r]) =>
+        db.insert(billPaymentAuditTable).values({
+          paymentId: r.id,
+          event: "wallet_deduction_failed_post_provider_success",
+          details: JSON.stringify({
+            confirmationCode: result.confirmationCode,
+            provider: result.provider,
+            txError: txMsg,
+          }),
+        }),
+      )
+      .catch((saveErr) => {
         logger.error(
-          { walletId, paymentId, amount: montoNum, err: msg },
-          "wallet: debit failed after confirmed bill pay — flag for reconciliation",
+          { saveErr },
+          "billpay: could not persist reconciliation record — URGENT manual action required",
         );
       });
-    }
 
-    // 6. WhatsApp receipt (non-blocking)
-    sendWhatsAppReceipt({
-      telefono,
-      serviceName: service.name,
-      monto: montoNum,
-      referencia,
-      confirmationCode: result.confirmationCode,
-      provider: result.provider,
-    }).catch(() => {});
-
-    // 6b. Capture user profile for retention/reminders (non-blocking, never throws)
-    captureUserProfile({
-      phone: telefono,
-      billerId: serviceId,
-      billerName: service.name,
-      amount: montoNum,
-      repId: effectiveRepId ?? undefined,
-    }).catch(() => {});
-
-    // 6c. Loyalty points (non-blocking, never throws)
-    earnPoints(telefono, montoNum, "bill_pay", service.name, String(paymentId)).catch(() => {});
-
-    // 6. Check SIPREL saldo after successful payment (non-blocking)
-    if (siprelProvider.getSaldoBalance) {
-      siprelProvider.getSaldoBalance().then(async ({ pagoServicios }) => {
-        if (pagoServicios < SALDO_LOW_THRESHOLD) {
-          await sendLowSaldoAlert(pagoServicios);
-        }
-      }).catch(() => {});
-    }
-
-    logger.info({ serviceId, provider: result.provider, failoverUsed: result.failoverUsed, confirmationCode: result.confirmationCode }, "billpay: payment confirmed");
-
-    const receiptData = result.rawResponse as Record<string, unknown> | undefined;
-    res.status(201).json({
-      success: true,
-      confirmationCode: result.confirmationCode,
-      folio: receiptData?.folio ?? result.confirmationCode,
-      authCode: receiptData?.authCode ?? null,
-      provider: result.provider,
-      failoverUsed: result.failoverUsed,
-      timestamp: result.timestamp,
-      receiptData: result.rawResponse ?? null,
-      service: { id: service.id, name: service.name, category: service.category, logoEmoji: service.logoEmoji },
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Error al procesar el pago.";
-    logger.error({ serviceId, err }, "billpay: payment failed");
-
-    // Update record to failed + audit
-    await db.update(billPaymentsTable)
-      .set({ status: "failed", provider: "none", providerUsed: "none", confirmationCode: "failed" })
-      .where(eq(billPaymentsTable.id, paymentId)).catch(() => {});
-
-    await db.insert(billPaymentAuditTable).values({
-      paymentId,
-      event: "payment.failed",
-      details: message,
-    }).catch(() => {});
-
-    res.status(502).json({ error: message });
+    res.status(500).json({ error: "Tu pago no se procesó. Tu saldo no fue afectado." });
+    return;
   }
+
+  // ── Step 4: Non-blocking side effects (transaction already committed) ─────────
+
+  // Rep commission — 5 MXN per confirmed bill payment, 7-day hold
+  if (effectiveRepId) {
+    const holdUntil = new Date();
+    holdUntil.setDate(holdUntil.getDate() + COMMISSION_HOLD_DAYS);
+    db.insert(repCommissionsTable).values({
+      repId: effectiveRepId,
+      billPaymentId: paymentId,
+      amount: BILL_PAY_COMMISSION_AMOUNT,
+      type: "bill_pay",
+      status: "pending",
+      holdUntil,
+    }).catch((err: unknown) => {
+      logger.error({ err, repId: effectiveRepId, paymentId }, "billpay: commission insert failed");
+    });
+  }
+
+  // WhatsApp receipt
+  sendWhatsAppReceipt({
+    telefono,
+    serviceName: service.name,
+    monto: montoNum,
+    referencia,
+    confirmationCode: result.confirmationCode,
+    provider: result.provider,
+  }).catch(() => {});
+
+  // User profile capture for retention / reminders
+  captureUserProfile({
+    phone: telefono,
+    billerId: serviceId,
+    billerName: service.name,
+    amount: montoNum,
+    repId: effectiveRepId ?? undefined,
+  }).catch(() => {});
+
+  // Loyalty points
+  earnPoints(telefono, montoNum, "bill_pay", service.name, String(paymentId)).catch(() => {});
+
+  // SIPREL saldo low-balance alert
+  if (siprelProvider.getSaldoBalance) {
+    siprelProvider.getSaldoBalance().then(async ({ pagoServicios }) => {
+      if (pagoServicios < SALDO_LOW_THRESHOLD) {
+        await sendLowSaldoAlert(pagoServicios);
+      }
+    }).catch(() => {});
+  }
+
+  logger.info(
+    { serviceId, provider: result.provider, failoverUsed: result.failoverUsed, confirmationCode: result.confirmationCode },
+    "billpay: payment confirmed",
+  );
+
+  const receiptData = result.rawResponse as Record<string, unknown> | undefined;
+  res.status(201).json({
+    success: true,
+    confirmationCode: result.confirmationCode,
+    folio: receiptData?.folio ?? result.confirmationCode,
+    authCode: receiptData?.authCode ?? null,
+    provider: result.provider,
+    failoverUsed: result.failoverUsed,
+    timestamp: result.timestamp,
+    receiptData: result.rawResponse ?? null,
+    service: { id: service.id, name: service.name, category: service.category, logoEmoji: service.logoEmoji },
+  });
 });
 
 // GET /api/bills/history?limit=N

@@ -195,7 +195,7 @@ describe("3. Happy path — SIPREL success", () => {
     expect(payment.failoverUsed).toBe(false);
   });
 
-  it("bill_payment_audit has two rows: payment.created and payment.confirmed", async () => {
+  it("bill_payment_audit has one row: payment.confirmed (no pre-provider created row)", async () => {
     await request(app).post("/api/bills/pay").send(validCfePayload);
 
     const [payment] = await db
@@ -210,9 +210,8 @@ describe("3. Happy path — SIPREL success", () => {
       .where(eq(billPaymentAuditTable.paymentId, payment.id))
       .orderBy(billPaymentAuditTable.createdAt);
 
-    expect(auditRows).toHaveLength(2);
-    expect(auditRows[0].event).toBe("payment.created");
-    expect(auditRows[1].event).toBe("payment.confirmed");
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0].event).toBe("payment.confirmed");
   });
 });
 
@@ -264,7 +263,7 @@ describe("5. Both providers fail", () => {
     expect(res.body).toHaveProperty("error");
   });
 
-  it("bill_payments row has status=failed", async () => {
+  it("bill_payments row has status=fallido", async () => {
     await request(app).post("/api/bills/pay").send(validCfePayload);
 
     const payments = await db
@@ -274,10 +273,10 @@ describe("5. Both providers fail", () => {
       .limit(1);
 
     expect(payments).toHaveLength(1);
-    expect(payments[0].status).toBe("failed");
+    expect(payments[0].status).toBe("fallido");
   });
 
-  it("bill_payment_audit has payment.created and payment.failed rows", async () => {
+  it("bill_payment_audit has one payment.failed row (no pre-provider created row)", async () => {
     await request(app).post("/api/bills/pay").send(validCfePayload);
 
     const [payment] = await db
@@ -292,9 +291,8 @@ describe("5. Both providers fail", () => {
       .where(eq(billPaymentAuditTable.paymentId, payment.id))
       .orderBy(billPaymentAuditTable.createdAt);
 
-    expect(auditRows.length).toBeGreaterThanOrEqual(2);
-    expect(auditRows[0].event).toBe("payment.created");
-    expect(auditRows[auditRows.length - 1].event).toBe("payment.failed");
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0].event).toBe("payment.failed");
   });
 });
 
@@ -1128,7 +1126,7 @@ describe("12. Taecel Payment Flow", () => {
       .orderBy(desc(billPaymentsTable.createdAt))
       .limit(1);
 
-    expect(payment.status).toBe("failed");
+    expect(payment.status).toBe("fallido");
   });
 
   it("15. Error code 3129 (TRANSACTION_TABLE_FULL) — provider throws expected message", async () => {
