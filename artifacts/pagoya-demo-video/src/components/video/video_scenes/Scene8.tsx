@@ -2,9 +2,9 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 const rings = [
-  { label: 'TAM', sub: 'Mercado de pagos MX', value: '$40B', color: '#1D9E75', size: '42vw' },
-  { label: 'SAM', sub: 'Pagos no bancarizados', value: '$12B', color: '#D85A30', size: '28vw' },
-  { label: 'SOM', sub: 'Objetivo año 3', value: '$480M', color: '#3B82F6', size: '16vw' },
+  { label: 'TAM', sub: 'MX Payments Market', value: '$40B', color: '#1D9E75', size: '42vw' },
+  { label: 'SAM', sub: 'Unbanked Payments', value: '$12B', color: '#D85A30', size: '28vw' },
+  { label: 'SOM', sub: 'Year 3 Target', value: '$480M', color: '#3B82F6', size: '16vw' },
 ];
 
 export function Scene8() {
@@ -39,7 +39,7 @@ export function Scene8() {
             animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : -8 }}
             transition={{ duration: 0.45 }}
           >
-            Tamaño de mercado
+            Market size
           </motion.p>
 
           <div className="overflow-hidden mb-5">
@@ -49,7 +49,7 @@ export function Scene8() {
               animate={{ y: phase >= 1 ? '0%' : '110%' }}
               transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span style={{ color: '#1D9E75' }}>$40B</span><br />oportunidad
+              <span style={{ color: '#1D9E75' }}>$40B</span><br />opportunity
             </motion.h2>
           </div>
 
@@ -83,9 +83,9 @@ export function Scene8() {
             transition={{ duration: 0.5 }}
           >
             {[
-              '52M adultos sin cuenta bancaria en México',
-              'Crecimiento digital 3× post-pandemia',
-              '+500 servicios ya integrados',
+              '52M adults without a bank account in Mexico',
+              '3× digital growth post-pandemic',
+              '+500 services already integrated',
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#1D9E75' }} />
@@ -126,6 +126,7 @@ export function Scene8() {
           >
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: '#1D9E75', fontSize: 'clamp(44px, 6vw, 88px)', lineHeight: 0.9 }}>$40B</p>
             <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(12px, 1.1vw, 16px)', marginTop: 8 }}>TAM — USD</p>
+
           </motion.div>
         </div>
       </div>

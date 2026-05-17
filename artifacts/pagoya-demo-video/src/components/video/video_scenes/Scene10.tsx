@@ -2,14 +2,14 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 const streams = [
-  { label: 'Comisión por transacción', value: '$15 MXN', sub: '~$0.85 USD por pago', color: '#1D9E75', width: '100%' },
-  { label: 'Programa de Lealtad Premium', value: '$49 MXN/mes', sub: 'Recordatorios + historial + puntos extra', color: '#D85A30', width: '60%' },
-  { label: 'B2B White-label', value: 'Custom', sub: 'Para remesadoras y fintechs', color: '#3B82F6', width: '45%' },
+  { label: 'Transaction Fee', value: '$15 MXN', sub: '~$0.85 USD per payment', color: '#1D9E75', width: '100%' },
+  { label: 'Premium Loyalty Program', value: '$49 MXN/mo', sub: 'Reminders + history + bonus points', color: '#D85A30', width: '60%' },
+  { label: 'B2B White-label', value: 'Custom', sub: 'For remittance & fintech partners', color: '#3B82F6', width: '45%' },
 ];
 
 const economics = [
-  { label: 'LTV estimado', value: '$720 MXN' },
-  { label: 'CAC objetivo', value: '$40 MXN' },
+  { label: 'Est. LTV', value: '$720 MXN' },
+  { label: 'Target CAC', value: '$40 MXN' },
   { label: 'LTV/CAC', value: '18×' },
 ];
 
@@ -50,7 +50,7 @@ export function Scene10() {
             animate={{ opacity: phase >= 1 ? 1 : 0 }}
             transition={{ duration: 0.45 }}
           >
-            Modelo de negocio
+            Business model
           </motion.p>
 
           <div className="overflow-hidden mb-6">
@@ -61,7 +61,7 @@ export function Scene10() {
               transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
             >
               Simple.<br />
-              <span style={{ color: '#1D9E75' }}>Escalable.</span>
+              <span style={{ color: '#1D9E75' }}>Scalable.</span>
             </motion.h2>
           </div>
 
@@ -108,7 +108,7 @@ export function Scene10() {
           >
             <div className="absolute top-0 left-0 right-0 h-1" style={{ background: '#1D9E75' }} />
             <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
-              Ingreso por transacción
+              Revenue per Transaction
             </p>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: '#1D9E75', fontSize: 'clamp(48px, 7vw, 100px)', lineHeight: 0.9 }}>
               $15

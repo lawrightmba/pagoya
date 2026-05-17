@@ -37,7 +37,7 @@ export function Scene7() {
           transition={{ duration: 0.5 }}
         >
           <span style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            04 — Confirmación
+            04 — Confirmation
           </span>
         </motion.div>
 
@@ -48,8 +48,8 @@ export function Scene7() {
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
-            Comprobante<br />
-            <span style={{ color: '#1D9E75' }}>al instante</span>
+            Receipt<br />
+            <span style={{ color: '#1D9E75' }}>instantly</span>
           </motion.h2>
         </div>
 
@@ -59,7 +59,7 @@ export function Scene7() {
           animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 12 }}
           transition={{ duration: 0.5, delay: 0.15 }}
         >
-          Recibo digital vía WhatsApp.<br />Sin papel. Sin espera.
+          Digital receipt via WhatsApp.<br />Paperless. Instant.
         </motion.p>
 
         <motion.div
@@ -76,20 +76,20 @@ export function Scene7() {
             <div className="flex-1">
               <span style={{ fontFamily: 'var(--font-body)', color: 'white', fontWeight: 700, fontSize: '0.88rem' }}>WhatsApp · PagoYa</span>
             </div>
-            <span style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Ahora</span>
+            <span style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Now</span>
           </div>
           <div className="px-4 py-3">
             <p style={{ fontFamily: 'var(--font-body)', color: 'white', fontSize: 'clamp(13px, 1.2vw, 17px)', lineHeight: 1.5 }}>
-              ¡Hola! Tu pago de CFE por <strong>$350.00</strong> fue procesado exitosamente ✅<br />
-              <span style={{ opacity: 0.8, fontSize: '0.9em' }}>Folio: PAY-8921-X · Hoy, 10:42 AM</span>
+              Hi! Your CFE payment of <strong>$350.00</strong> was processed successfully ✅<br />
+              <span style={{ opacity: 0.8, fontSize: '0.9em' }}>Receipt: PAY-8921-X · Today, 10:42 AM</span>
             </p>
           </div>
         </motion.div>
 
         <div className="flex flex-col gap-2">
           {[
-            { icon: <Bell size={14} />, text: 'Recordatorios de vencimiento automáticos', delay: 0.1 },
-            { icon: <Star size={14} />, text: '+35 puntos PagoYa ganados en este pago', delay: 0.22 },
+            { icon: <Bell size={14} />, text: 'Automatic due-date reminders', delay: 0.1 },
+            { icon: <Star size={14} />, text: '+35 PagoYa points earned on this payment', delay: 0.22 },
           ].map((item, i) => (
             <motion.div
               key={i}

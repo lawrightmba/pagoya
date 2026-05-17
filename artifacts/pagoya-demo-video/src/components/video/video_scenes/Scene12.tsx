@@ -76,8 +76,8 @@ export function Scene12() {
             animate={{ y: phase >= 2 ? '0%' : '110%' }}
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
           >
-            Paga en{' '}
-            <span style={{ color: '#1D9E75' }}>2 minutos</span>
+            Pay in{' '}
+            <span style={{ color: '#1D9E75' }}>2 minutes</span>
           </motion.h1>
         </div>
 
@@ -87,7 +87,7 @@ export function Scene12() {
           animate={{ opacity: phase >= 3 ? 1 : 0, y: phase >= 3 ? 0 : 14 }}
           transition={{ duration: 0.6 }}
         >
-          Democratizando los pagos en México.<br />Sin banco. Sin fila. Con IA.
+          Democratizing payments in Mexico.<br />No bank. No lines. With AI.
         </motion.p>
 
         <motion.div
@@ -116,7 +116,7 @@ export function Scene12() {
           animate={{ opacity: phase >= 5 ? 1 : 0 }}
           transition={{ duration: 0.7 }}
         >
-          {['YC S25', '52M usuarios potenciales', 'México · Latam'].map((tag, i) => (
+          {['YC S25', '52M potential users', 'Mexico · Latam'].map((tag, i) => (
             <motion.div
               key={i}
               className="px-4 py-2 rounded-full"

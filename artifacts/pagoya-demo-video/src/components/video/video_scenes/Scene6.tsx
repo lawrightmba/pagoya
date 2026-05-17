@@ -37,7 +37,7 @@ export function Scene6() {
           transition={{ duration: 0.5 }}
         >
           <span style={{ fontFamily: 'var(--font-body)', color: '#D85A30', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            03 — Método de pago
+            03 — Payment Method
           </span>
         </motion.div>
 
@@ -48,8 +48,8 @@ export function Scene6() {
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
-            Paga como<br />
-            <span style={{ color: '#D85A30' }}>tú prefieras</span>
+            Pay<br />
+            <span style={{ color: '#D85A30' }}>your way</span>
           </motion.h2>
         </div>
 
@@ -59,12 +59,12 @@ export function Scene6() {
           animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 12 }}
           transition={{ duration: 0.5, delay: 0.15 }}
         >
-          Tarjeta de débito/crédito o código<br />de barras para pagar en efectivo.
+          Debit/credit card or barcode to pay<br />with cash at any OXXO store.
         </motion.p>
 
         {[
-          { icon: <Banknote size={22} />, label: 'Efectivo en OXXO', sub: '+19,000 tiendas en México', color: '#D85A30', delay: 0.1 },
-          { icon: <CreditCard size={22} />, label: 'Tarjeta de débito/crédito', sub: 'Visa, Mastercard, AMEX', color: '#1D9E75', delay: 0.22 },
+          { icon: <Banknote size={22} />, label: 'Cash at OXXO', sub: '+19,000 stores across Mexico', color: '#D85A30', delay: 0.1 },
+          { icon: <CreditCard size={22} />, label: 'Debit / Credit Card', sub: 'Visa, Mastercard, AMEX', color: '#1D9E75', delay: 0.22 },
         ].map((item, i) => (
           <motion.div
             key={i}
@@ -96,7 +96,7 @@ export function Scene6() {
           transition={{ duration: 0.45 }}
         >
           <p style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: 'clamp(12px, 1.1vw, 16px)', fontWeight: 500 }}>
-            🏪 OXXO cubre hasta la comunidad más remota de México
+            🏪 OXXO reaches even the most remote communities in Mexico
           </p>
         </motion.div>
       </div>

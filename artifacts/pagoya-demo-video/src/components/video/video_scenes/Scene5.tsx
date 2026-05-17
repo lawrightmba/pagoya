@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { Zap, CheckCircle2 } from 'lucide-react';
 
 const fields = [
-  { label: 'Servicio', value: 'CFE — Luz' },
-  { label: 'Monto', value: '$350.00' },
-  { label: 'No. de servicio', value: '123 456 789 012' },
-  { label: 'Región', value: 'Ciudad de México' },
+  { label: 'Service', value: 'CFE — Electricity' },
+  { label: 'Amount', value: '$350.00' },
+  { label: 'Service No.', value: '123 456 789 012' },
+  { label: 'Region', value: 'Mexico City' },
 ];
 
 export function Scene5() {
@@ -57,7 +57,7 @@ export function Scene5() {
         >
           <Zap size={13} color="#1D9E75" />
           <span style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            02 — IA Autocompletado
+            02 — AI Autocomplete
           </span>
         </motion.div>
 
@@ -68,8 +68,8 @@ export function Scene5() {
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
-            IA llena el formulario<br />
-            <span style={{ color: '#1D9E75' }}>automáticamente</span>
+            AI fills the form<br />
+            <span style={{ color: '#1D9E75' }}>automatically</span>
           </motion.h2>
         </div>
 
@@ -79,7 +79,7 @@ export function Scene5() {
           animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 12 }}
           transition={{ duration: 0.5, delay: 0.15 }}
         >
-          Claude detecta el servicio, el monto y el<br />número de cuenta sin que escribas nada más.
+          Claude detects the service, amount, and account<br />number — no extra typing needed.
         </motion.p>
 
         <div className="mt-8 flex flex-col gap-3">
@@ -116,7 +116,7 @@ export function Scene5() {
         >
           <span style={{ color: '#1D9E75', fontSize: '1.1rem' }}>✨</span>
           <span style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: 'clamp(12px, 1vw, 15px)', fontWeight: 600 }}>
-            94% precisión — sin errores de captura
+            94% accuracy — zero data entry errors
           </span>
         </motion.div>
       </div>

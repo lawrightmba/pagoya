@@ -4,20 +4,20 @@ import { useState, useEffect } from 'react';
 const reasons = [
   {
     emoji: '📱',
-    title: 'México es mobile-first',
-    body: '84% de mexicanos usan smartphone, pero solo 36% tiene cuenta bancaria. La brecha digital se cierra con apps, no con bancos.',
+    title: 'Mexico is mobile-first',
+    body: '84% of Mexicans own a smartphone, yet only 36% have a bank account. The gap closes with apps, not banks.',
     color: '#1D9E75',
   },
   {
     emoji: '🏪',
-    title: 'OXXO como infraestructura',
-    body: '+19,000 tiendas OXXO — una cada 800 personas — ya aceptan pagos con código de barras. La red está lista.',
+    title: 'OXXO as infrastructure',
+    body: '+19,000 OXXO stores — one for every 800 people — already accept barcode payments. The network is ready.',
     color: '#D85A30',
   },
   {
     emoji: '🤖',
-    title: 'IA hace el trabajo pesado',
-    body: 'LLMs como Claude permiten interfaces de lenguaje natural a costo marginal cero. El momento para PagoYa es ahora.',
+    title: 'AI does the heavy lifting',
+    body: 'LLMs like Claude enable natural language interfaces at near-zero marginal cost. The time for PagoYa is now.',
     color: '#3B82F6',
   },
 ];
@@ -58,7 +58,7 @@ export function Scene11() {
         animate={{ opacity: phase >= 1 ? 1 : 0 }}
         transition={{ duration: 0.4 }}
       >
-        Por qué ahora
+        Why now
       </motion.p>
 
       <div className="overflow-hidden mb-10">
@@ -68,7 +68,7 @@ export function Scene11() {
           animate={{ y: phase >= 1 ? '0%' : '110%' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          El momento es <span style={{ color: '#1D9E75' }}>perfecto</span>
+          The timing is <span style={{ color: '#1D9E75' }}>perfect</span>
         </motion.h2>
       </div>
 

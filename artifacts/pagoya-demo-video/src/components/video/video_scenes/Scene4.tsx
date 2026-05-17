@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 export function Scene4() {
   const [phase, setPhase] = useState(0);
 
-  const text = 'pagar mi luz de CFE $350';
+  const text = 'pay my CFE electricity bill $350';
   const [typed, setTyped] = useState('');
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function Scene4() {
           transition={{ duration: 0.5 }}
         >
           <span style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            01 — Búsqueda natural
+            01 — Natural Search
           </span>
         </motion.div>
 
@@ -61,8 +61,8 @@ export function Scene4() {
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
-            Habla en<br />
-            <span style={{ color: '#1D9E75' }}>español natural</span>
+            Speak<br />
+            <span style={{ color: '#1D9E75' }}>naturally</span>
           </motion.h2>
         </div>
 
@@ -72,7 +72,7 @@ export function Scene4() {
           animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 12 }}
           transition={{ duration: 0.5, delay: 0.15 }}
         >
-          Sin formularios complejos.<br />Escribe como le dirías a un amigo.
+          No complex forms.<br />Type like you'd text a friend.
         </motion.p>
 
         <motion.div
@@ -83,7 +83,7 @@ export function Scene4() {
           transition={{ duration: 0.5 }}
         >
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
-            El usuario escribe:
+            User types:
           </p>
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.88)', fontSize: 'clamp(14px, 1.4vw, 20px)', fontWeight: 500, minHeight: '1.6em' }}>
             "{typed}
@@ -105,7 +105,7 @@ export function Scene4() {
         >
           <div className="w-2 h-2 rounded-full" style={{ background: '#1D9E75' }} />
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(12px, 1vw, 15px)' }}>
-            IA procesando con Claude...
+            AI processing with Claude...
           </p>
           <motion.div
             className="h-1 rounded-full overflow-hidden flex-1"

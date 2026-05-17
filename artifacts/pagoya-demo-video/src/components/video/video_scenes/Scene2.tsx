@@ -19,9 +19,9 @@ function AnimatedNumber({ target, suffix = '', prefix = '', duration = 1.8 }: { 
 }
 
 const stats = [
-  { value: 40, suffix: 'B', prefix: '$', label: 'mercado de pagos en México', unit: 'USD' },
-  { value: 52, suffix: 'M', prefix: '', label: 'adultos sin cuenta bancaria', unit: 'personas' },
-  { value: 45, suffix: ' min', prefix: '', label: 'tiempo promedio por pago', unit: 'promedio' },
+  { value: 40, suffix: 'B', prefix: '$', label: 'payments market in Mexico', unit: 'USD' },
+  { value: 52, suffix: 'M', prefix: '', label: 'adults without a bank account', unit: 'people' },
+  { value: 45, suffix: ' min', prefix: '', label: 'average time per payment', unit: 'average' },
 ];
 
 const cardColors = ['#1D9E75', '#D85A30', '#3B82F6'];
@@ -68,7 +68,7 @@ export function Scene2() {
         animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : -10 }}
         transition={{ duration: 0.5 }}
       >
-        La oportunidad de mercado
+        The market opportunity
       </motion.p>
 
       <div className="flex items-stretch justify-center gap-[2vw] px-[6vw] w-full relative z-10">
@@ -129,7 +129,7 @@ export function Scene2() {
         transition={{ duration: 0.5, type: 'spring' }}
       >
         <p style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: 'clamp(13px, 1.3vw, 18px)', fontWeight: 600 }}>
-          El problema está sin resolver. Hasta ahora.
+          The problem remains unsolved. Until now.
         </p>
       </motion.div>
     </motion.div>

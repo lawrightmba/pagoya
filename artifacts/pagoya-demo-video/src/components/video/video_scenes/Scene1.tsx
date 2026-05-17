@@ -51,7 +51,7 @@ export function Scene1() {
             transition={{ duration: 1.2, repeat: Infinity }}
           />
           <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            El Problema
+            The Problem
           </span>
         </motion.div>
 
@@ -62,7 +62,7 @@ export function Scene1() {
             animate={{ y: phase >= 1 ? '0%' : '112%' }}
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
           >
-            52 <span style={{ color: '#1D9E75' }}>millones</span>
+            52 <span style={{ color: '#1D9E75' }}>million</span>
           </motion.h1>
         </div>
         <div className="overflow-hidden mb-10">
@@ -72,7 +72,7 @@ export function Scene1() {
             animate={{ y: phase >= 2 ? '0%' : '112%' }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            de mexicanos sin cuenta bancaria
+            Mexicans without a bank account
           </motion.h2>
         </div>
 
@@ -83,9 +83,9 @@ export function Scene1() {
           transition={{ duration: 0.6 }}
         >
           {[
-            { icon: '⏱', text: '45 minutos promedio en fila por pago' },
-            { icon: '💸', text: 'Recargos y cortes por pagos tardíos' },
-            { icon: '📄', text: 'Sin comprobante digital ni historial' },
+            { icon: '⏱', text: '45-minute average wait per payment' },
+            { icon: '💸', text: 'Late fees and service cuts for overdue bills' },
+            { icon: '📄', text: 'No digital receipt or payment history' },
           ].map((item, i) => (
             <motion.div
               key={i}
@@ -114,7 +114,7 @@ export function Scene1() {
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(10,37,64,0.8) 0%, transparent 45%, transparent 100%)' }} />
         <div className="absolute bottom-4 left-4 right-4 px-4 py-3 rounded-xl" style={{ background: 'rgba(10,37,64,0.85)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', textAlign: 'center' }}>
-            Realidad diaria de millones de familias mexicanas
+            Daily reality for millions of Mexican families
           </p>
         </div>
       </motion.div>

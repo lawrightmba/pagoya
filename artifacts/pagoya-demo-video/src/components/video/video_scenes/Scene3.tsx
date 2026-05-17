@@ -67,13 +67,13 @@ export function Scene3() {
               animate={{ y: phase >= 2 ? '0%' : '110%' }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              Paga en{' '}
+              Pay in{' '}
               <motion.span
                 style={{ color: '#1D9E75', display: 'inline-block' }}
                 animate={phase >= 3 ? { scale: [1, 1.08, 1] } : {}}
                 transition={{ duration: 0.4 }}
               >
-                2 minutos
+                2 minutes
               </motion.span>
             </motion.h1>
           </div>
@@ -84,7 +84,7 @@ export function Scene3() {
             animate={{ opacity: phase >= 3 ? 1 : 0, y: phase >= 3 ? 0 : 10 }}
             transition={{ duration: 0.55 }}
           >
-            Sin filas. Sin banco. Sin complicaciones.
+            No lines. No bank. No hassle.
           </motion.p>
 
           <motion.div
@@ -94,9 +94,9 @@ export function Scene3() {
             transition={{ duration: 0.5 }}
           >
             {[
-              { label: '+500 servicios', color: '#1D9E75' },
+              { label: '+500 services', color: '#1D9E75' },
               { label: 'OXXO cash', color: '#D85A30' },
-              { label: 'IA nativa', color: '#3B82F6' },
+              { label: 'Native AI', color: '#3B82F6' },
             ].map((badge, i) => (
               <motion.div
                 key={i}

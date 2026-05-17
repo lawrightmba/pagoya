@@ -17,10 +17,10 @@ function Counter({ target, suffix = '', prefix = '' }: { target: number; suffix?
 }
 
 const metrics = [
-  { value: 500, suffix: '+', prefix: '', label: 'servicios integrados', sub: 'CFE, Telmex, Telcel, Izzi y más', color: '#1D9E75' },
-  { value: 94, suffix: '%', prefix: '', label: 'precisión IA', sub: 'Tasa de autocompletado correcto', color: '#D85A30' },
-  { value: 19000, suffix: '+', prefix: '', label: 'puntos OXXO', sub: 'Cobertura nacional de pago', color: '#3B82F6' },
-  { value: 2, suffix: ' min', prefix: '<', label: 'por pago', sub: 'Tiempo promedio de usuario', color: '#8B5CF6' },
+  { value: 500, suffix: '+', prefix: '', label: 'integrated services', sub: 'CFE, Telmex, Telcel, Izzi & more', color: '#1D9E75' },
+  { value: 94, suffix: '%', prefix: '', label: 'AI accuracy', sub: 'Correct autocomplete rate', color: '#D85A30' },
+  { value: 19000, suffix: '+', prefix: '', label: 'OXXO locations', sub: 'National payment coverage', color: '#3B82F6' },
+  { value: 2, suffix: ' min', prefix: '<', label: 'per payment', sub: 'Average user time', color: '#8B5CF6' },
 ];
 
 export function Scene9() {
@@ -60,7 +60,7 @@ export function Scene9() {
         animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : -10 }}
         transition={{ duration: 0.45 }}
       >
-        Tracción
+        Traction
       </motion.p>
 
       <div className="overflow-hidden mb-10">
@@ -70,7 +70,7 @@ export function Scene9() {
           animate={{ y: phase >= 1 ? '0%' : '110%' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          Construido para <span style={{ color: '#1D9E75' }}>escalar</span>
+          Built to <span style={{ color: '#1D9E75' }}>scale</span>
         </motion.h2>
       </div>
 
@@ -108,7 +108,7 @@ export function Scene9() {
         transition={{ duration: 0.5 }}
       >
         <p style={{ fontFamily: 'var(--font-body)', color: '#1D9E75', fontSize: 'clamp(13px, 1.2vw, 18px)', fontWeight: 600, textAlign: 'center' }}>
-          Sin cuenta bancaria requerida — acceso universal
+          No bank account required — universal access
         </p>
       </motion.div>
     </motion.div>
