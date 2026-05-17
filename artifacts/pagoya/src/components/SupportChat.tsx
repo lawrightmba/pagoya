@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+const SCROLL_THRESHOLD = 500;
+
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 const STORAGE_KEY = "pagoya_chat_history";
 const LANG_KEY = "pagoya_lang";
@@ -16,9 +18,8 @@ const STRINGS = {
   es: {
     header: "Paula · PagoYa",
     placeholder: "Escribe tu mensaje...",
-    greetingWithTel: "¡Hola! Soy Paula 👋 ¿En qué te puedo ayudar hoy?",
-    greetingNoTel:
-      "¡Hola! Soy Paula, tu asistente de PagoYa 👋 ¿En qué te puedo ayudar? Si tienes dudas sobre tu cuenta, dime tu número de teléfono.",
+    greetingWithTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
+    greetingNoTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
     escalationBanner: "Un agente humano te contactará pronto por WhatsApp.",
     newConversation: "Nueva conversación",
     errorMsg: "Lo sentimos, ocurrió un error. Intenta de nuevo.",
@@ -26,9 +27,8 @@ const STRINGS = {
   en: {
     header: "Paula · PagoYa",
     placeholder: "Type your message...",
-    greetingWithTel: "Hi! I'm Paula 👋 How can I help you today?",
-    greetingNoTel:
-      "Hi! I'm Paula, your PagoYa assistant 👋 How can I help? If you have account questions, share your phone number.",
+    greetingWithTel: "How can I help? Ask me anything you need!",
+    greetingNoTel: "How can I help? Ask me anything you need!",
     escalationBanner: "A human agent will contact you soon on WhatsApp.",
     newConversation: "New conversation",
     errorMsg: "Sorry, something went wrong. Please try again.",
@@ -46,9 +46,11 @@ export default function SupportChat() {
   const [lang, setLang] = useState<"es" | "en">("es");
   const [initialized, setInitialized] = useState(false);
   const [greetingShown, setGreetingShown] = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasShownBubble = useRef(false);
 
   const s = STRINGS[lang];
 
@@ -82,6 +84,19 @@ export default function SupportChat() {
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // ── Show bubble after user scrolls past hero ──────────────────────────────────
+  useEffect(() => {
+    const onScroll = () => {
+      if (!hasShownBubble.current && window.scrollY > SCROLL_THRESHOLD) {
+        hasShownBubble.current = true;
+        setShowBubble(true);
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // ── Persist messages to localStorage ─────────────────────────────────────────
@@ -468,8 +483,8 @@ export default function SupportChat() {
         </div>
       )}
 
-      {/* ── "Hola" speech bubble ─────────────────────────────────────────────── */}
-      {!open && (
+      {/* ── "Hola" speech bubble — shown only after scrolling past hero ────── */}
+      {!open && showBubble && (
         <div
           className="pgchat-hola"
           onClick={() => { setOpen(true); setHasUnread(false); }}
@@ -520,7 +535,7 @@ export default function SupportChat() {
           });
         }}
         aria-label={open ? "Cerrar chat" : "Abrir chat de soporte"}
-        className="pgchat-fab"
+        className="pgchat-fab pgchat-fab-pos"
         style={{
           position: "fixed",
           bottom: 24,
@@ -626,8 +641,9 @@ export default function SupportChat() {
         }
         .pgchat-hola {
           animation: pgchat-popin 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
-          animation-delay: 0.6s;
-          opacity: 0;
+        }
+        @media (max-height: 700px) {
+          .pgchat-fab-pos { bottom: 44px !important; }
         }
         .pgchat-eye-l, .pgchat-eye-r {
           transform-origin: 50% 50%;

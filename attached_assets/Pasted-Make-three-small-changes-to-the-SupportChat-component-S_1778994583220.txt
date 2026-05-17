@@ -1,0 +1,43 @@
+Make three small changes to the SupportChat component (SupportChat.tsx) only. Do not touch any other file, any backend route, or the autofill bar.
+
+Read SupportChat.tsx fully before editing. Then:
+
+─── CHANGE 1: Update the opening greeting bubble text ───
+
+Find the hardcoded greeting message that is pushed into the message array when the chat opens for the first time (the one that fires without an API call).
+
+Change the Spanish greeting from whatever it currently says to:
+"¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!"
+
+Change the English greeting to:
+"How can I help? Ask me anything you need!"
+
+Do not change any other message text, toast, or system prompt.
+
+─── CHANGE 2: Delay the bubble appearance until user scrolls past the hero ───
+
+Currently the chat bubble or greeting tooltip appears on mount. Change this so:
+
+1. On mount: the floating button renders but NO greeting tooltip/bubble is shown and the chat panel is closed
+2. Add a scroll listener on window that checks if the user has scrolled past 500px from the top (this safely clears the hero section on any screen size)
+3. Once the 500px threshold is crossed: show the greeting bubble/tooltip on the floating button if it hasn't been shown yet in this session — use a ref or state flag (hasShownBubble) to ensure it only fires once per session, not every time the user scrolls
+4. Remove the scroll listener after the bubble appears (cleanup)
+5. Also remove the scroll listener on component unmount
+
+─── CHANGE 3: Ensure the floating button never overlaps the hero step explainer ───
+
+The floating button is fixed position bottom-right. On the home page the three-step explainer ("Escribe qué quieres pagar → IA llena el formulario → Listo") sits above the autofill bar near the bottom of the hero section. The button is covering step 3 on load.
+
+The fix: keep the button's existing bottom and right position values unchanged — only add a check so that on pages where the viewport height is less than 700px (small phones), increase the bottom offset by 20px to avoid overlapping low-sitting content. Use a CSS media query added as an inline style or a className — do not restructure the positioning logic.
+
+If the button already uses a fixed bottom value like 24px, change it to:
+- Default (all screens): bottom 24px, right 24px — unchanged
+- @media (max-height: 700px): bottom 44px, right 24px
+
+This is the minimal change — do not reposition the button on larger screens where it is not overlapping anything.
+
+─── CONSTRAINTS ───
+- Do not modify App.tsx, any page component, the autofill bar, or any backend file
+- Do not change the chat panel dimensions, colors, or any other behavior
+- The scroll threshold of 500px is a constant — do not make it configurable
+- Test mentally: on a tall desktop screen the bubble appears after scroll, on a short mobile screen the button sits 44px from the bottom
