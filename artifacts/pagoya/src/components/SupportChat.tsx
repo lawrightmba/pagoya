@@ -477,28 +477,33 @@ export default function SupportChat() {
           });
         }}
         aria-label={open ? "Cerrar chat" : "Abrir chat de soporte"}
+        className="pgchat-fab"
         style={{
           position: "fixed",
           bottom: 24,
           right: 24,
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           borderRadius: "50%",
-          background: "#046C2C",
-          border: "none",
+          background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
+          border: "2.5px solid rgba(255,255,255,0.18)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 4px 18px rgba(4,108,44,0.38)",
+          boxShadow: "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)",
           zIndex: 9999,
+          padding: 0,
+          overflow: "hidden",
           transition: "transform 0.2s, box-shadow 0.2s",
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(29,158,117,0.7), 0 0 0 6px rgba(29,158,117,0.15)";
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)";
         }}
       >
         {open ? (
@@ -515,8 +520,43 @@ export default function SupportChat() {
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          /* AI face avatar */
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Outer glow ring */}
+            <circle cx="22" cy="22" r="20" fill="rgba(255,255,255,0.06)" />
+
+            {/* Face base */}
+            <circle cx="22" cy="22" r="16" fill="rgba(255,255,255,0.12)" />
+
+            {/* Antenna */}
+            <line x1="22" y1="6" x2="22" y2="10" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="22" cy="5" r="1.5" fill="#7FFFB0" className="pgchat-blink-dot"/>
+
+            {/* Left eye */}
+            <rect x="13.5" y="17" width="6" height="5" rx="2.5" fill="rgba(255,255,255,0.2)" />
+            <rect x="14.5" y="17.8" width="4" height="3.4" rx="1.7" fill="white" className="pgchat-eye-l"/>
+            <circle cx="16.5" cy="19.5" r="1.1" fill="#0A2540" className="pgchat-pupil"/>
+            <circle cx="17" cy="19" r="0.4" fill="white"/>
+
+            {/* Right eye */}
+            <rect x="24.5" y="17" width="6" height="5" rx="2.5" fill="rgba(255,255,255,0.2)" />
+            <rect x="25.5" y="17.8" width="4" height="3.4" rx="1.7" fill="white" className="pgchat-eye-r"/>
+            <circle cx="27.5" cy="19.5" r="1.1" fill="#0A2540" className="pgchat-pupil"/>
+            <circle cx="28" cy="19" r="0.4" fill="white"/>
+
+            {/* Smile */}
+            <path d="M16 25.5 Q22 30 28 25.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+
+            {/* Chin detail dots */}
+            <circle cx="19" cy="31" r="0.7" fill="rgba(255,255,255,0.35)"/>
+            <circle cx="22" cy="32" r="0.7" fill="rgba(255,255,255,0.35)"/>
+            <circle cx="25" cy="31" r="0.7" fill="rgba(255,255,255,0.35)"/>
+
+            {/* Side circuit lines */}
+            <line x1="4" y1="19" x2="7" y2="19" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeLinecap="round"/>
+            <line x1="4" y1="22" x2="6" y2="22" stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeLinecap="round"/>
+            <line x1="37" y1="19" x2="40" y2="19" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeLinecap="round"/>
+            <line x1="38" y1="22" x2="40" y2="22" stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeLinecap="round"/>
           </svg>
         )}
 
@@ -525,10 +565,10 @@ export default function SupportChat() {
           <span
             style={{
               position: "absolute",
-              top: 3,
-              right: 3,
-              width: 12,
-              height: 12,
+              top: 4,
+              right: 4,
+              width: 13,
+              height: 13,
               borderRadius: "50%",
               background: "#EF4444",
               border: "2px solid white",
@@ -542,6 +582,34 @@ export default function SupportChat() {
         @keyframes pgchat-bounce {
           0%, 80%, 100% { transform: scale(0.65); opacity: 0.45; }
           40%           { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes pgchat-pulse {
+          0%, 100% { box-shadow: 0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4); }
+          50%       { box-shadow: 0 4px 24px rgba(29,158,117,0.55), 0 0 0 8px rgba(29,158,117,0); }
+        }
+        @keyframes pgchat-blink {
+          0%, 90%, 100% { transform: scaleY(1); }
+          95%           { transform: scaleY(0.1); }
+        }
+        @keyframes pgchat-antblink {
+          0%, 85%, 100% { opacity: 1; }
+          90%           { opacity: 0.1; }
+        }
+        .pgchat-fab {
+          animation: pgchat-pulse 2.8s ease-in-out infinite;
+        }
+        .pgchat-fab:hover {
+          animation: none;
+        }
+        .pgchat-eye-l, .pgchat-eye-r {
+          transform-origin: 50% 50%;
+          animation: pgchat-blink 4s ease-in-out infinite;
+        }
+        .pgchat-eye-r {
+          animation-delay: 0.06s;
+        }
+        .pgchat-blink-dot {
+          animation: pgchat-antblink 3s ease-in-out infinite;
         }
       `}</style>
     </>
