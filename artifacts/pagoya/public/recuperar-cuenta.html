@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Recuperar cuenta | PagoYa</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0A2540;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px 48px;
+      color: #fff;
+    }
+    .logo { height: 44px; width: auto; margin-bottom: 32px; }
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 36px 28px;
+    }
+    h1 {
+      font-size: clamp(22px, 5vw, 28px);
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    input[type="tel"] {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: #fff;
+      outline: none;
+      font-family: inherit;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.15s;
+    }
+    input[type="tel"]:focus { border-color: #1D9E75; }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      background: #1D9E75;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: -0.01em;
+      box-shadow: 0 4px 20px rgba(29,158,117,0.35);
+      transition: background 0.15s, transform 0.1s;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    button:disabled {
+      background: rgba(29,158,117,0.45);
+      cursor: not-allowed;
+    }
+    button:active:not(:disabled) { transform: scale(0.98); }
+    .msg {
+      margin-top: 16px;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.4;
+      min-height: 20px;
+    }
+    .msg.error { color: #F87171; }
+    .msg.success { color: #34D399; }
+    .success-card {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .success-card .icon { font-size: 48px; margin-bottom: 16px; }
+    .success-card h2 { font-size: 22px; font-weight: 900; margin-bottom: 10px; }
+    .success-card p { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+    .error-card {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .error-card .icon { font-size: 48px; margin-bottom: 16px; }
+    .error-card h2 { font-size: 20px; font-weight: 900; margin-bottom: 10px; color: #F87171; }
+    .error-card p { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <img src="/pagoya-logo.png" alt="PagoYa" class="logo" onerror="this.style.display='none'" />
+
+  <div class="card" id="card">
+    <!-- Content injected by JS -->
+  </div>
+
+  <script>
+    const API_BASE = "";
+    const card = document.getElementById("card");
+
+    function getToken() {
+      try {
+        return new URLSearchParams(window.location.search).get("token");
+      } catch {
+        return null;
+      }
+    }
+
+    function renderInvalidToken() {
+      card.innerHTML = `
+        <div class="error-card">
+          <div class="icon">🔗</div>
+          <h2>Enlace inválido o expirado</h2>
+          <p>Este enlace de recuperación ya no es válido.<br>Solicita uno nuevo desde la pantalla de inicio de sesión.</p>
+        </div>`;
+    }
+
+    function renderForm(token) {
+      card.innerHTML = `
+        <h1>Recuperar cuenta</h1>
+        <p class="subtitle">Ingresa tu nuevo número de WhatsApp para acceder a tu cuenta.</p>
+        <form id="recoveryForm">
+          <div>
+            <label>Nuevo número de WhatsApp</label>
+            <input
+              type="tel"
+              id="newPhone"
+              placeholder="+52 322 000 0000"
+              inputmode="tel"
+              autocomplete="tel"
+              required
+            />
+          </div>
+          <p class="msg error" id="errorMsg"></p>
+          <button type="submit" id="submitBtn">Cambiar número</button>
+        </form>`;
+
+      document.getElementById("recoveryForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const newPhone = document.getElementById("newPhone").value.trim();
+        const errorMsg = document.getElementById("errorMsg");
+        const submitBtn = document.getElementById("submitBtn");
+
+        errorMsg.textContent = "";
+
+        if (!newPhone || newPhone.length < 7) {
+          errorMsg.textContent = "Ingresa un número de teléfono válido.";
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Guardando…";
+
+        try {
+          const res = await fetch(`${API_BASE}/api/auth/complete-recovery`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, newPhone }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            errorMsg.textContent = data.error ?? "Error al actualizar el número.";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Cambiar número";
+            return;
+          }
+
+          card.innerHTML = `
+            <div class="success-card">
+              <div class="icon">✅</div>
+              <h2>¡Número actualizado!</h2>
+              <p>Tu número de teléfono ha sido cambiado exitosamente.<br>Ya puedes iniciar sesión con tu nuevo número.</p>
+            </div>`;
+        } catch {
+          errorMsg.textContent = "No se pudo conectar. Intenta de nuevo.";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Cambiar número";
+        }
+      });
+    }
+
+    const token = getToken();
+    if (!token) {
+      renderInvalidToken();
+    } else {
+      renderForm(token);
+    }
+  </script>
+</body>
+</html>

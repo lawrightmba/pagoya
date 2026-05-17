@@ -6,6 +6,7 @@ export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   telefono: text("telefono").notNull().unique(),
   referredByRepId: text("referred_by_rep_id"),
+  recoveryEmail: text("recovery_email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -33,6 +33,7 @@ export default function Register() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [colonia, setColonia] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [repId, setRepId] = useState<string | null>(null);
@@ -66,6 +67,14 @@ export default function Register() {
         setErrorMsg(data.error ?? "Error al registrarse.");
         setFormState("error");
         return;
+      }
+      const cleanPhone = phone.trim();
+      if (recoveryEmail.trim()) {
+        fetch(`${BASE_URL}/api/auth/add-recovery-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: cleanPhone, email: recoveryEmail.trim() }),
+        }).catch(() => {});
       }
       setFormState("success");
     } catch {
@@ -217,6 +226,38 @@ export default function Register() {
                   (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
                 }}
               />
+            </div>
+
+            {/* Recovery Email (optional) */}
+            <div>
+              <label style={{
+                display: "block", fontSize: "12px", fontWeight: 600,
+                color: "rgba(255,255,255,0.5)", letterSpacing: "0.05em",
+                textTransform: "uppercase", marginBottom: "6px",
+              }}>
+                Correo de recuperación{" "}
+                <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.32)", textTransform: "none", letterSpacing: 0 }}>
+                  (opcional)
+                </span>
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="tu@correo.com"
+                value={recoveryEmail}
+                onChange={(e) => setRecoveryEmail(e.target.value)}
+                inputMode="email"
+                style={inputStyle}
+                onFocus={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "#1D9E75";
+                }}
+                onBlur={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+                }}
+              />
+              <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
+                Para recuperar tu cuenta si pierdes acceso a tu número.
+              </p>
             </div>
 
             {/* City */}
