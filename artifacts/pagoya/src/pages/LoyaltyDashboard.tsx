@@ -96,7 +96,7 @@ export default function LoyaltyDashboard() {
     try { return (localStorage.getItem("pagoya_lang") as "es" | "en") ?? "es"; } catch { return "es"; }
   });
   const [phone] = useState<string>(() => {
-    try { return localStorage.getItem("pagoya_phone") ?? ""; } catch { return ""; }
+    try { return localStorage.getItem("pagoya_telefono") ?? ""; } catch { return ""; }
   });
 
   const [balance, setBalance] = useState<BalanceData | null>(null);
@@ -178,7 +178,7 @@ export default function LoyaltyDashboard() {
           <button
             onClick={() => {
               if (phoneInput.trim()) {
-                try { localStorage.setItem("pagoya_phone", phoneInput.trim()); } catch { /* */ }
+                try { localStorage.setItem("pagoya_telefono", phoneInput.trim()); } catch { /* */ }
                 window.location.reload();
               }
             }}

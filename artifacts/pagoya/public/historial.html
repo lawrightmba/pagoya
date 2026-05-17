@@ -384,8 +384,8 @@
       .replace(/"/g, "&quot;");
   }
 
-  async function loadHistory() {
-    const phone = phoneInput.value.trim();
+  async function loadHistory(overridePhone) {
+    const phone = overridePhone ?? phoneInput.value.trim();
     if (!phone || phone.length < 7) {
       gateError.textContent = "Ingresa un número de teléfono válido.";
       gateError.style.display = "block";
@@ -407,6 +407,15 @@
 
       allPayments = data.payments ?? [];
       currentPage = 1;
+
+      if (allPayments.length === 0 && overridePhone) {
+        // Auto-loaded but no results — keep gate visible with fallback message
+        gateEl.style.display = "block";
+        mainEl.style.display = "none";
+        gateError.textContent = "No encontramos pagos para este número — intenta con otro.";
+        gateError.style.display = "block";
+        return;
+      }
 
       gateEl.style.display = "none";
       mainEl.style.display = "block";
@@ -432,6 +441,17 @@
       loadBtn.textContent = "Ver pagos";
     }
   }
+
+  // ── Auto-populate from localStorage on load ───────────────────────────────
+  (function autoLoad() {
+    try {
+      const saved = localStorage.getItem("pagoya_telefono");
+      if (saved && /^\d{10}$/.test(saved.trim())) {
+        phoneInput.value = saved.trim();
+        loadHistory(saved.trim());
+      }
+    } catch { /* ignore */ }
+  })();
 </script>
 
 </body>

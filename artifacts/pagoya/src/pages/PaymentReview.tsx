@@ -8,6 +8,8 @@ export default function PaymentReview() {
   const { paymentData, setClientSecret, setPendingPaymentIntentId } = usePayment();
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [hasFreeToken] = useState(() => !!localStorage.getItem("pagoya_free_tx_token"));
+  const es = localStorage.getItem("pagoya_lang") !== "en";
 
   useEffect(() => {
     if (!paymentData.empresa) {
@@ -23,7 +25,7 @@ export default function PaymentReview() {
   };
 
   const montoNum = parseFloat(paymentData.monto) || 0;
-  const total = montoNum + PLATFORM_FEE;
+  const total = montoNum + (hasFreeToken ? 0 : PLATFORM_FEE);
 
   const handlePagar = async () => {
     setLoading(true);
@@ -109,7 +111,13 @@ export default function PaymentReview() {
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ fontSize: "13px", color: "#888888" }}>Tarifa de plataforma</span>
-                <span style={{ fontSize: "13px", color: "#888888" }}>$15.00 MXN</span>
+                {hasFreeToken ? (
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#046C2C", background: "#F0FAF3", padding: "3px 10px", borderRadius: "999px", border: "1px solid #D4EDDA" }}>
+                    🎁 {es ? "Comisión gratis — token aplicado" : "Free payment — token applied"}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "13px", color: "#888888" }}>$15.00 MXN</span>
+                )}
               </div>
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
               <div className="flex items-center justify-between py-2">
