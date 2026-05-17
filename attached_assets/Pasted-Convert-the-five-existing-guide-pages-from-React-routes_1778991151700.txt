@@ -1,0 +1,43 @@
+Convert the five existing guide pages from React routes into standalone static HTML files that Googlebot can fully index. Read each existing guide page component before writing anything — extract the actual content, headings, and body text from the React source. Do not invent content.
+
+The five pages are:
+- /pagar-cfe → pagar-cfe.html
+- /pagar-telmex → pagar-telmex.html
+- /recargas → recargas.html
+- /deposito-oxxo → deposito-oxxo.html
+- /guia-pagar-servicios-sin-cuenta-bancaria → guia-pagar-servicios-sin-cuenta-bancaria.html
+
+Find the React source files for each (likely in artifacts/pagoya/src/pages/ or similar). Read them. Then for each page create a static HTML file in artifacts/pagoya/public/ at the exact slug above.
+
+─── EACH STATIC HTML FILE MUST HAVE ───
+
+<head> requirements:
+- <title> matching the page topic — e.g. "Cómo pagar CFE sin ir al banco | PagoYa"
+- <meta name="description"> — 150-160 characters, includes the primary keyword and "PagoYa"
+- <meta name="robots" content="index, follow">
+- <link rel="canonical" href="https://pagoyamx.com/[slug]">
+- <meta property="og:title">, <meta property="og:description">, <meta property="og:url">
+- <meta name="viewport" content="width=device-width, initial-scale=1.0">
+- Link to the same shared CSS as other public HTML pages (copy the <head> pattern from historial.html which already has correct tokens)
+
+Content requirements:
+- One <h1> per page — the primary keyword phrase (e.g. "Cómo pagar CFE sin banco en Puerto Vallarta")
+- All existing body content from the React source preserved as semantic HTML (<h2>, <h3>, <p>, <ul><li>)
+- All text rendered as real HTML text — not JavaScript-rendered — so Googlebot reads it on first crawl
+- Structured content: intro paragraph, how-it-works steps, FAQ section if present in original
+
+─── CTA SECTION (add to every page, below main content) ───
+
+A sticky bottom bar AND an inline card midway through the content. Both link to pagoyamx.com (home, where the payment flow starts).
+
+Sticky bottom bar (fixed, bottom: 0, full width, z-index 100, background #046C2C):
+- Left: "PagoYa — paga sin banco desde tu celular"
+- Right: a button "Pagar ahora →" linking to https://pagoyamx.com
+- On mobile: stacks vertically, button full width
+- Dismiss X button that hides the bar and sets localStorage["pagoya_cta_dismissed"] = "1" so it doesn't reappear on the same session
+- On page load: check localStorage["pagoya_cta_dismissed"] — if "1", don't show the bar
+
+Inline CTA card (insert after the second <h2> in each page):
+- White card with green left border (#046C2C, 4px)
+- Heading: "Paga tu [service name] ahora desde tu celular"
+- Body: "Sin
