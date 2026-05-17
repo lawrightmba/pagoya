@@ -14,21 +14,21 @@ interface ChatMessage {
 
 const STRINGS = {
   es: {
-    header: "PagoYa Soporte",
+    header: "Paula · PagoYa",
     placeholder: "Escribe tu mensaje...",
-    greetingWithTel: "Hola, ¿en qué te puedo ayudar hoy?",
+    greetingWithTel: "¡Hola! Soy Paula 👋 ¿En qué te puedo ayudar hoy?",
     greetingNoTel:
-      "Hola, ¿en qué te puedo ayudar? Si tienes dudas sobre tu cuenta, dime tu número de teléfono.",
+      "¡Hola! Soy Paula, tu asistente de PagoYa 👋 ¿En qué te puedo ayudar? Si tienes dudas sobre tu cuenta, dime tu número de teléfono.",
     escalationBanner: "Un agente humano te contactará pronto por WhatsApp.",
     newConversation: "Nueva conversación",
     errorMsg: "Lo sentimos, ocurrió un error. Intenta de nuevo.",
   },
   en: {
-    header: "PagoYa Support",
+    header: "Paula · PagoYa",
     placeholder: "Type your message...",
-    greetingWithTel: "Hi, how can I help you today?",
+    greetingWithTel: "Hi! I'm Paula 👋 How can I help you today?",
     greetingNoTel:
-      "Hi, how can I help you? If you have questions about your account, tell me your phone number.",
+      "Hi! I'm Paula, your PagoYa assistant 👋 How can I help? If you have account questions, share your phone number.",
     escalationBanner: "A human agent will contact you soon on WhatsApp.",
     newConversation: "New conversation",
     errorMsg: "Sorry, something went wrong. Please try again.",
@@ -475,33 +475,38 @@ export default function SupportChat() {
           onClick={() => { setOpen(true); setHasUnread(false); }}
           style={{
             position: "fixed",
-            bottom: 34,
-            right: 100,
+            bottom: 100,
+            right: 16,
             background: "white",
             color: "#0A2540",
-            fontSize: 14,
-            fontWeight: 700,
-            padding: "7px 14px",
-            borderRadius: "20px 20px 4px 20px",
-            boxShadow: "0 4px 18px rgba(0,0,0,0.14)",
+            fontSize: 13,
+            fontWeight: 600,
+            padding: "10px 14px",
+            borderRadius: "14px 14px 14px 4px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.16)",
             cursor: "pointer",
             zIndex: 9998,
-            whiteSpace: "nowrap",
+            maxWidth: 180,
+            lineHeight: 1.45,
             userSelect: "none",
-            letterSpacing: "0.01em",
           }}
         >
-          Hola 👋
-          {/* tail pointing right toward avatar */}
+          <span style={{ display: "block", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
+            Hola, soy Paula 👋
+          </span>
+          <span style={{ display: "block", color: "#374151", fontSize: 12, fontWeight: 500 }}>
+            Estoy aquí para ayudarte. ¡Pregúntame lo que necesitas!
+          </span>
+          {/* tail pointing down-right toward avatar */}
           <span style={{
             position: "absolute",
-            right: -7,
-            bottom: 8,
+            right: 22,
+            bottom: -8,
             width: 0,
             height: 0,
-            borderTop: "6px solid transparent",
-            borderBottom: "6px solid transparent",
-            borderLeft: "8px solid white",
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderTop: "9px solid white",
           }} />
         </div>
       )}
