@@ -87,7 +87,7 @@ export default function VideoTemplate() {
 
       {/* Persistent Logo Mark */}
       <motion.div
-        className="absolute top-6 right-8 z-50"
+        className="absolute top-6 left-8 z-50"
         initial={{ opacity: 0 }}
         animate={{ opacity: currentScene === 2 || currentScene === 11 ? 0 : 1 }}
         transition={{ duration: 0.5 }}
