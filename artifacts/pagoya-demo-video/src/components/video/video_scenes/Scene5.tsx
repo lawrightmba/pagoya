@@ -61,25 +61,25 @@ export function Scene5() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-4">
+        <div className="overflow-hidden mb-5">
           <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.0, fontSize: 'clamp(30px, 3.8vw, 58px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.05, fontSize: 'clamp(28px, 3.4vw, 52px)' }}
             initial={{ y: '110%' }}
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
-            IA llena el<br />
-            <span style={{ color: '#1D9E75' }}>formulario solo</span>
+            IA llena el formulario<br />
+            <span style={{ color: '#1D9E75' }}>automáticamente</span>
           </motion.h2>
         </div>
 
         <motion.p
-          style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.58)', fontSize: 'clamp(14px, 1.3vw, 19px)', lineHeight: 1.5 }}
+          style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.58)', fontSize: 'clamp(13px, 1.2vw, 17px)', lineHeight: 1.6, marginBottom: '1.5rem' }}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 12 }}
           transition={{ duration: 0.5, delay: 0.15 }}
         >
-          Claude detecta el servicio, el monto<br />y el número de cuenta automáticamente.
+          Claude detecta el servicio, el monto y el<br />número de cuenta sin que escribas nada más.
         </motion.p>
 
         <div className="mt-8 flex flex-col gap-3">

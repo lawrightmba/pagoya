@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import logoPng from '@assets/pagoya_logo_web_1774491466855.png';
+import logoPng from '@assets/pagoya_logo_transparent.png';
 
 export function Scene3() {
   const [phase, setPhase] = useState(0);
@@ -52,13 +52,12 @@ export function Scene3() {
           transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
         >
           <motion.div
-            className="rounded-3xl px-10 py-5 mb-8"
-            style={{ background: 'white' }}
+            className="mb-8"
             initial={{ scale: 0.75, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <img src={logoPng} alt="PagoYa" style={{ height: 'clamp(40px, 5vh, 70px)', width: 'auto' }} />
+            <img src={logoPng} alt="PagoYa" style={{ height: 'clamp(48px, 6vh, 84px)', width: 'auto', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.4))' }} />
           </motion.div>
 
           <div className="overflow-hidden mb-3">

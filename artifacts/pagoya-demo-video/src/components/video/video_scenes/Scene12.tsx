@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import logoPng from '@assets/pagoya_logo_web_1774491466855.png';
+import logoPng from '@assets/pagoya_logo_transparent.png';
 
 export function Scene12() {
   const [phase, setPhase] = useState(0);
@@ -61,13 +61,12 @@ export function Scene12() {
 
       <div className="relative z-10 flex flex-col items-center">
         <motion.div
-          className="rounded-3xl px-12 py-6 mb-8"
-          style={{ background: 'white' }}
+          className="mb-8"
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: phase >= 1 ? 1 : 0.6, opacity: phase >= 1 ? 1 : 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src={logoPng} alt="PagoYa" style={{ height: 'clamp(44px, 5.5vh, 78px)', width: 'auto' }} />
+          <img src={logoPng} alt="PagoYa" style={{ height: 'clamp(52px, 6.5vh, 90px)', width: 'auto', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.5))' }} />
         </motion.div>
 
         <div className="overflow-hidden mb-4">

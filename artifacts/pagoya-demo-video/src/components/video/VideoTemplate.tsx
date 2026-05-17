@@ -13,7 +13,7 @@ import { Scene9 } from './video_scenes/Scene9';
 import { Scene10 } from './video_scenes/Scene10';
 import { Scene11 } from './video_scenes/Scene11';
 import { Scene12 } from './video_scenes/Scene12';
-import logoPng from '@assets/pagoya_logo_web_1774491466855.png';
+import logoPng from '@assets/pagoya_logo_transparent.png';
 
 export const SCENE_DURATIONS: Record<string, number> = {
   scene1: 15000,
@@ -89,11 +89,10 @@ export default function VideoTemplate() {
       <motion.div
         className="absolute top-6 right-8 z-50"
         initial={{ opacity: 0 }}
-        animate={{ opacity: currentScene === 2 || currentScene === 11 ? 0 : 0.7, scale: currentScene === 2 || currentScene === 11 ? 0 : 1 }}
+        animate={{ opacity: currentScene === 2 || currentScene === 11 ? 0 : 1 }}
         transition={{ duration: 0.5 }}
-        style={{ filter: 'brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0,0,0,0.4))' }}
       >
-        <img src={logoPng} alt="PagoYa" style={{ height: '28px', width: 'auto' }} />
+        <img src={logoPng} alt="PagoYa" style={{ height: '32px', width: 'auto', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }} />
       </motion.div>
 
       {/* Main Content inside AnimatePresence */}
