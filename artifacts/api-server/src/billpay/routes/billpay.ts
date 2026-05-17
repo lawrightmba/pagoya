@@ -60,7 +60,7 @@ router.get("/services/:serviceId", (req: Request, res: Response) => {
 // but never touches the wallet.
 // Body: { serviceId, referencia, monto, telefono, notas?, rep_id?, paymentSource? }
 router.post("/pay", async (req: Request, res: Response) => {
-  const { serviceId, referencia, monto, telefono, notas, rep_id, paymentSource } = req.body as {
+  const { serviceId, referencia, monto, telefono, notas, rep_id, paymentSource, free_tx_token } = req.body as {
     serviceId: string;
     referencia: string;
     monto: number;
@@ -68,6 +68,9 @@ router.post("/pay", async (req: Request, res: Response) => {
     notas?: string;
     rep_id?: string;
     paymentSource?: "wallet" | "card";
+    // TODO: frontend must pass free_tx_token from localStorage["pagoya_free_tx_token"]
+    // (stored after /api/loyalty/redeem returns redemption_token) when applying a free-tx reward.
+    free_tx_token?: string;
   };
 
   if (!serviceId || !referencia || !monto || !telefono) {
@@ -103,6 +106,23 @@ router.post("/pay", async (req: Request, res: Response) => {
     });
     return;
   }
+
+  // ── Token pre-validation (fail fast, no DB writes) ───────────────────────────
+  let freeTxTokenValid = false;
+  if (free_tx_token) {
+    const tokenCheck = await db.execute(
+      sql`SELECT id FROM loyalty_accounts
+          WHERE phone = ${telefono} AND ${free_tx_token} = ANY(redemption_tokens) LIMIT 1`,
+    );
+    if (!(tokenCheck.rows as unknown[]).length) {
+      res.status(400).json({ error: "Token de pago gratuito inválido o ya utilizado." });
+      return;
+    }
+    freeTxTokenValid = true;
+  }
+
+  // Fee is waived when a valid free-transaction token is supplied
+  const effectiveFee = freeTxTokenValid ? "0.00" : PLATFORM_FEE_MXN;
 
   // ── Step 1: Wallet balance pre-check (no DB writes yet) ─────────────────────
   let walletId: string | null = null;
@@ -165,7 +185,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       status: "fallido",
       paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
       repId: effectiveRepId,
-      platformFeeMxn: PLATFORM_FEE_MXN,
+      platformFeeMxn: effectiveFee,
     }).returning({ id: billPaymentsTable.id })
       .then(([r]) =>
         db.insert(billPaymentAuditTable).values({
@@ -208,7 +228,7 @@ router.post("/pay", async (req: Request, res: Response) => {
         bolsaType: typeof raw?.bolsaType === "string" ? raw.bolsaType : null,
         paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
         repId: effectiveRepId,
-        platformFeeMxn: PLATFORM_FEE_MXN,
+        platformFeeMxn: effectiveFee,
       }).returning({ id: billPaymentsTable.id });
       paymentId = inserted.id;
 
@@ -253,6 +273,24 @@ router.post("/pay", async (req: Request, res: Response) => {
           })
           .where(eq(walletsTable.id, walletId));
       }
+
+      // 3d. Free-tx token consumption — atomic with the payment insert above
+      if (freeTxTokenValid && free_tx_token) {
+        // Remove the token from the array so it cannot be reused
+        await tx.execute(
+          sql`UPDATE loyalty_accounts
+              SET redemption_tokens = array_remove(redemption_tokens, ${free_tx_token})
+              WHERE phone = ${telefono}`,
+        );
+        // Audit row in loyalty_transactions (table not in Drizzle schema — raw SQL)
+        await tx.execute(
+          sql`INSERT INTO loyalty_transactions
+                (account_id, phone, type, points, balance_after, description, payment_ref)
+              SELECT id, phone, 'token_consumed', 0, points_balance,
+                     'Free transaction token applied', ${String(paymentId)}
+              FROM loyalty_accounts WHERE phone = ${telefono} LIMIT 1`,
+        );
+      }
     });
   } catch (txErr: unknown) {
     // ── Step 5: Rare — provider confirmed but DB transaction failed ─────────────
@@ -286,7 +324,7 @@ router.post("/pay", async (req: Request, res: Response) => {
       status: result.status ?? "confirmed",
       paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
       repId: effectiveRepId,
-      platformFeeMxn: PLATFORM_FEE_MXN,
+      platformFeeMxn: effectiveFee,
     }).returning({ id: billPaymentsTable.id })
       .then(([r]) =>
         db.insert(billPaymentAuditTable).values({

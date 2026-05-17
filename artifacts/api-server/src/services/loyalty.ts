@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { sql, eq, and, gte, desc } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { getOrCreateWallet, creditWallet } from "../wallet/services/wallet.js";
 
 // ─── Raw SQL helpers (tables not in drizzle schema yet) ──────────────────────
 
@@ -368,7 +369,55 @@ export async function redeemReward(phone: string, rewardCode: string): Promise<{
     rewardCode,
   );
 
-  // If free_transaction, generate token
+  // ── FIX 1: wallet_credit — credit the wallet, roll back points on error ──────
+  if (reward.reward_type === "wallet_credit") {
+    try {
+      const wallet = await getOrCreateWallet(phone);
+      const rewardValueMxn = parseFloat(reward.reward_value);
+      const walletTxDescription = `Canje de puntos — ${reward.name_es}`;
+
+      // Insert pending wallet_transaction row (raw SQL — this table predates Drizzle schema here)
+      const wtResult = await db.execute(
+        sql`INSERT INTO wallet_transactions (wallet_id, type, amount_mxn, status, description)
+            VALUES (${wallet.id}, 'loyalty_redemption', ${reward.reward_value}, 'pending', ${walletTxDescription})
+            RETURNING id`,
+      );
+      const wtRows = wtResult.rows as Array<{ id: string }>;
+      const walletTxId = wtRows[0]?.id;
+      if (!walletTxId) throw new Error("wallet_transaction insert returned no id");
+
+      await creditWallet(wallet.id, rewardValueMxn, walletTxId);
+    } catch (creditErr) {
+      logger.error({ creditErr, phone, rewardCode }, "loyalty: wallet credit failed — rolling back points");
+
+      // Restore deducted points
+      await db.execute(
+        sql`UPDATE loyalty_accounts
+            SET points_balance = points_balance + ${reward.points_cost}, updated_at = now()
+            WHERE id = ${acct.id}`,
+      );
+      // Compensating ledger row so the history is auditable
+      await insertTransaction(
+        acct.id,
+        phone,
+        "redeem_reversal",
+        reward.points_cost,
+        acct.points_balance,
+        "Saldo no acreditado — puntos restaurados",
+        rewardCode,
+      );
+
+      return {
+        success: false,
+        discount_applied: 0,
+        new_balance: acct.points_balance,
+        reward_type: reward.reward_type,
+        error: "No se pudo acreditar el saldo. Tus puntos no fueron afectados.",
+      };
+    }
+  }
+
+  // ── FIX 2 (existing): free_transaction — generate and store token ────────────
   let redemptionToken: string | undefined;
   if (reward.reward_type === "free_transaction") {
     const token = `FREE-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -378,6 +427,19 @@ export async function redeemReward(phone: string, rewardCode: string): Promise<{
           WHERE id = ${acct.id}`,
     );
     redemptionToken = token;
+  }
+
+  // ── WhatsApp confirmation (non-blocking) ──────────────────────────────────────
+  if (reward.reward_type === "wallet_credit") {
+    sendWhatsApp(
+      phone,
+      `🎁 ¡Canjeaste ${reward.points_cost} puntos por $${parseFloat(reward.reward_value).toFixed(2)} MXN! Tu saldo fue acreditado en tu monedero PagoYa.`,
+    ).then(() => {}).catch((err) => logger.error({ err }, "loyalty: WhatsApp notification failed"));
+  } else if (reward.reward_type === "free_transaction" && redemptionToken) {
+    sendWhatsApp(
+      phone,
+      `🎁 ¡Canjeaste ${reward.points_cost} puntos por un pago gratuito! Tu token: ${redemptionToken}. Úsalo en tu próximo pago para eliminar la comisión de $15 MXN.`,
+    ).then(() => {}).catch((err) => logger.error({ err }, "loyalty: WhatsApp notification failed"));
   }
 
   return {

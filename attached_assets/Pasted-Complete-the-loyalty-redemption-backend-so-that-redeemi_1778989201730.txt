@@ -1,0 +1,51 @@
+Complete the loyalty redemption backend so that redeeming a reward actually delivers the benefit. The frontend (LoyaltyDashboard.tsx) and points deduction logic are already working — do not touch them. The UI already calls POST /api/loyalty/redeem and shows a toast. Only the backend benefit delivery is missing.
+
+Find the existing redeemReward service/function that handles POST /api/loyalty/redeem. Read it fully before making any changes. Then add the following, in the same file or as a direct extension of the existing function — do not create a new route:
+
+─── FIX 1: wallet_credit reward type ───
+
+After points are deducted and the loyalty_transactions ledger row is inserted, check if reward_type === 'wallet_credit'.
+
+If so: call the existing creditWallet() function (the same one used by the OXXO webhook, card charge, and STP webhook) with:
+  - telefono: the phone from the request
+  - amount_mxn: reward_value from the loyalty_rewards row
+  - type: 'loyalty_redemption'
+  - reference: the loyalty_transactions row id or a generated string like 'LOYALTY-{timestamp}'
+
+If creditWallet() throws: roll back the points deduction (re-add the points to loyalty_accounts.points_balance, insert a compensating loyalty_transactions row with type='redeem_reversal', description='wallet credit failed — points restored') and return a 500 with message "No se pudo acreditar el saldo. Tus puntos no fueron afectados." — do not leave the user with deducted points and no wallet credit.
+
+─── FIX 2: free_transaction token enforcement ───
+
+The token is already generated and stored in loyalty_accounts.redemption_tokens[] on redemption. Now wire it into the bill payment flow.
+
+Find the existing bill payment orchestration function in billpay.ts (the one refactored to be atomic). Read it fully. Then:
+
+1. Accept an optional field free_tx_token in the POST /api/billpay (or equivalent) request body — if not present, behavior is unchanged
+
+2. If free_tx_token is present:
+   a. Query loyalty_accounts WHERE phone = telefono AND $1 = ANY(redemption_tokens) — verify the token exists and belongs to this user
+   b. If not found: return 400 "Token de pago gratuito inválido o ya utilizado."
+   c. If found: set the transaction fee to 0 MXN for this payment (the $15 MXN platform fee is waived)
+   d. Inside the existing atomic db.transaction() (do not create a new one, add to the existing):
+      - Remove the token from redemption_tokens[]: UPDATE loyalty_accounts SET redemption_tokens = array_remove(redemption_tokens, $1) WHERE phone = telefono
+      - Insert bill_payments with fee = 0 (not 15)
+      - Insert loyalty_transactions with type='token_consumed', description='Free transaction token applied', payment_ref = the new payment id
+   e. If the token removal fails inside the transaction: the whole transaction rolls back — the payment does not go through and the token is not consumed. Return a clear error.
+
+3. The fee shown to the user: the frontend already shows amount + $15 fee. Do not change the frontend. The free_tx_token field will be passed by the frontend when it applies a token — this wiring is already in the LoyaltyDashboard flow (the token is returned from /api/loyalty/redeem as redemption_token). If the frontend is NOT yet passing free_tx_token to the billpay endpoint, add a note in a comment in billpay.ts: "// TODO: frontend must pass free_tx_token from localStorage or redemption response to waive the fee" — but do not modify any frontend files.
+
+─── SEND WhatsApp confirmation on successful redemption ───
+
+After a successful redemption of either type, send a non-blocking WhatsApp to the user's phone via the existing Twilio client:
+- wallet_credit: "🎁 ¡Canjeaste [points] puntos por $[reward_value] MXN! Tu saldo fue acreditado en tu monedero PagoYa."
+- free_transaction: "🎁 ¡Canjeaste [points] puntos por un pago gratuito! Tu token: [token]. Úsalo en tu próximo pago para eliminar la comisión de $15 MXN."
+
+Non-blocking means .then().catch(err => log(err)) — do not await it, do not let a WhatsApp failure affect the redemption response.
+
+─── CONSTRAINTS ───
+- Do not touch LoyaltyDashboard.tsx or any other frontend file
+- Do not change the loyalty_accounts or loyalty_transactions table structure
+- Do not change the existing creditWallet() function signature or behavior
+- Do not modify the atomic transaction structure in billpay.ts beyond adding the token removal step inside the existing transaction
+- All new DB queries must use the same raw db.execute(sql`...`) pattern already used in the loyalty service — do not introduce Drizzle ORM calls into the loyalty files
+- If creditWallet() is not importable from the loyalty service file due to circular deps or module boundaries, copy only the walle
