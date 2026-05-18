@@ -1,0 +1,17 @@
+Our stack is deliberately small and ship-fast: a TypeScript monorepo, a React SPA, and a single Express API. Everything is chosen for developer velocity and the constraints of the Mexican fintech ecosystem.
+Layer	Technology
+Frontend	React 19 + Vite, TypeScript, Wouter (client-side routing), Tailwind CSS + inline styles. Mobile-first, PWA-ready. No React Native — fully responsive and installable on iOS/Android.
+Backend	Node.js + Express (TypeScript), Drizzle ORM, PostgreSQL. pnpm monorepo with shared schema packages (lib/db) so frontend and backend stay in type-sync.
+Bill payment	SIPREL API (primary), Evoluciona (automatic failover). Supports 20+ Mexican service categories: CFE, Telmex, Telcel, Sky, Netflix, Izzi, Totalplay, AT&T, Movistar, streaming, and more.
+Payments / wallet	Conekta (Mexican card tokenization, saved cards), Stripe (international cards / Elements), SPEI inbound via STP webhook (bank transfers), OXXO Pay (cash vouchers).
+AI — product	Anthropic Claude (claude-haiku-4-5). Two product features: (1) bill autofill — parses natural-language intent, returns structured JSON; (2) support chat — tool-use agent loop with 4 live-data tools (payment history, wallet balance, pending OXXO, human escalation).
+AI — coding	Replit Agent (Claude). The entire product — bill payment engine, wallet, loyalty system, P2P transfers, KYC/CURP verification, and all API routes — was built using Replit Agent as the primary development tool. Zero external developers. Schema migrations, multi-provider payment failover, atomic DB transactions, and 70+ integration tests all written and iterated in AI-driven sessions.
+Notifications	Twilio WhatsApp Business API — payment receipts, loyalty point updates, free-transaction token delivery, low-balance alerts, agent escalation.
+Infrastructure	Replit (compute, PostgreSQL, secrets, custom domain TLS, deployment). Zero DevOps overhead at this stage.
+Monitoring / testing	Pino structured JSON logging, Bugsnag (frontend). Vitest + Supertest — 70+ passing API integration tests.
+
+Why this stack works for PagoYa specifically:
+●	Mexican payment infrastructure (Conekta, STP/SPEI, OXXO) is natively supported — we are not adapting a US-centric stack to a different market.
+●	Shared Drizzle schema in a monorepo means frontend and backend stay in type-sync without manual contract maintenance.
+●	Claude's tool-use loop is the right abstraction for a support agent: answers account-specific questions without exposing raw database access to the model.
+●	Replit Agent as a coding tool compresses a months-long engineering roadmap into weeks. The complete loyalty system — schema, earn/redeem service, API routes, frontend dashboard, token enforcement in the atomic payment transaction, and WhatsApp notifications — was designed, built, and tested in a single session.
