@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2, Building2 } from "lucide-react";
+import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2, Building2, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 const logoUrl = "/pagoya-logo.png";
 
@@ -1221,6 +1221,42 @@ export default function CashLoad() {
           )}
         </div>
         )}
+
+        {/* Débito directo — bank enrollment card */}
+        <div
+          onClick={() => window.location.href = "/vincular-banco"}
+          className="rounded-3xl p-5 cursor-pointer"
+          style={{
+            background: "linear-gradient(135deg, #0A2540 0%, #0F2336 100%)",
+            border: "1.5px solid #1E3A5F",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+          }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(29,158,117,0.15)", border: "1.5px solid #1D9E75" }}
+            >
+              <Building2 className="w-5 h-5" style={{ color: "#1D9E75" }} />
+            </div>
+            <div>
+              <div className="text-sm font-black text-white leading-tight">Débito directo desde tu banco</div>
+              <div className="text-xs mt-0.5" style={{ color: "#475569" }}>Sin ir al OXXO — paga en 1 toque</div>
+            </div>
+            <ChevronRight className="w-4 h-4 ml-auto" style={{ color: "#1D9E75" }} />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {["BBVA", "Banamex", "Santander", "HSBC", "Banorte"].map(bank => (
+              <span key={bank} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#0F2336", border: "1px solid #1E3A5F", color: "#64748B" }}>
+                {bank}
+              </span>
+            ))}
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#0F2336", border: "1px solid #1E3A5F", color: "#64748B" }}>+4 más</span>
+          </div>
+          <div className="mt-3 text-xs" style={{ color: "#1D9E75" }}>
+            Vincular mi cuenta →
+          </div>
+        </div>
 
       </main>
 
