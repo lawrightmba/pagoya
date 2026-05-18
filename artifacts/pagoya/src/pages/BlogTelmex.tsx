@@ -37,7 +37,7 @@ export default function BlogTelmex() {
       {
         "@type": "Question",
         "name": "¿Cuánto cuesta pagar Telmex con PagoYa?",
-        "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra una comisión fija de $15 MXN por transacción, independientemente del monto del recibo de Telmex." }
+        "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra una comisión fija de $25 MXN por transacción, independientemente del monto del recibo de Telmex." }
       },
       {
         "@type": "Question",
@@ -121,7 +121,7 @@ export default function BlogTelmex() {
 
         <h2 className="tmblog-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Paso a paso: pagar Telmex con PagoYa</h2>
         <ol className="tmblog-ol" style={{ marginBottom: "32px" }}>
-          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Ve a cualquier OXXO y pide cargar tu billetera PagoYa con el monto de tu recibo más $15 MXN de comisión.</li>
+          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Ve a cualquier OXXO y pide cargar tu billetera PagoYa con el monto de tu recibo más $25 MXN de comisión.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Abre PagoYa y selecciona "Pagar Servicios".</strong> En el listado de proveedores, elige Telmex (o Izzi, Totalplay, etc.).</li>
           <li><strong style={{ color: "#e2e8f0" }}>Ingresa tu número de cuenta.</strong> Para Telmex son 10 dígitos. Para Izzi y Totalplay, usa el número de contrato de tu recibo.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Verifica el monto y el titular.</strong> La app muestra el nombre registrado en la cuenta antes de confirmar.</li>
@@ -160,7 +160,7 @@ export default function BlogTelmex() {
         <h2 className="tmblog-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Preguntas frecuentes</h2>
         {[
           ["¿Puedo pagar Telmex sin tarjeta de crédito o débito?", "Sí. Con PagoYa cargas tu billetera con efectivo en OXXO y pagas desde la app. Sin tarjeta."],
-          ["¿Cuánto cuesta pagar Telmex con PagoYa?", "Comisión fija de $15 MXN por transacción, sin importar el monto del recibo."],
+          ["¿Cuánto cuesta pagar Telmex con PagoYa?", "Comisión fija de $25 MXN por transacción, sin importar el monto del recibo."],
           ["¿Con qué número pago Telmex?", "El número de cuenta de 10 dígitos que aparece en la parte superior de tu recibo mensual."],
           ["¿El pago queda registrado inmediatamente?", "Sí. PagoYa procesa el pago en tiempo real. Telmex actualiza el estatus en su sistema en minutos."],
         ].map(([q, a]) => (

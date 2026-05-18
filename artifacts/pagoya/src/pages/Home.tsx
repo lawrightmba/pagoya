@@ -351,8 +351,8 @@ export default function Home() {
               lineHeight: 1.4,
             }}>
               {es
-                ? "🔒 Pago seguro · Sin registro para tu primer pago · $15 MXN por transacción"
-                : "🔒 Secure payment · No signup for first payment · $15 MXN per transaction"}
+                ? "🔒 Pago seguro · Sin registro para tu primer pago · $25 MXN por transacción"
+                : "🔒 Secure payment · No signup for first payment · $25 MXN per transaction"}
             </p>
 
             {/* ── RENT VERTICAL COMPACT CARD ── */}

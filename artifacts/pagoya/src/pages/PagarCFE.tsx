@@ -252,10 +252,10 @@ export default function PagarCFE() {
           <p style={{ color: "#64748B", fontWeight: 500, marginBottom: "16px" }}>How Much Does PagoYa Charge to Pay My CFE?</p>
 
           <p style={{ lineHeight: 1.7, marginBottom: "14px" }}>
-            PagoYa cobra una comisión fija de <strong style={{ color: "#1D9E75" }}>$15 MXN por transacción</strong> — sin importar el monto de tu recibo de CFE. Si tu recibo es de $200 MXN o de $2,000 MXN, la comisión es siempre $15 MXN.
+            PagoYa cobra una comisión fija de <strong style={{ color: "#1D9E75" }}>$25 MXN por transacción</strong> — sin importar el monto de tu recibo de CFE. Si tu recibo es de $200 MXN o de $2,000 MXN, la comisión es siempre $25 MXN.
           </p>
           <p style={{ lineHeight: 1.7, marginBottom: "16px", color: "#94A3B8" }}>
-            PagoYa charges a flat fee of $15 MXN per transaction — regardless of your CFE bill amount. Whether your bill is $200 MXN or $2,000 MXN, the fee is always $15 MXN.
+            PagoYa charges a flat fee of $25 MXN per transaction — regardless of your CFE bill amount. Whether your bill is $200 MXN or $2,000 MXN, the fee is always $25 MXN.
           </p>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(29,158,117,0.10)", borderLeft: "3px solid #1D9E75", borderRadius: "4px" }}>
             Sin cargos por porcentaje. Sin costos ocultos. Sin sorpresas.{" "}
@@ -331,7 +331,7 @@ export default function PagarCFE() {
                   ["¿Tiempo requerido?", "20–45 min", "5 min", "2 min"],
                   ["¿Historial de pagos?", "No", "Sí", "Sí"],
                   ["¿Pago con efectivo?", "Sí", "No", "Sí (vía OXXO)"],
-                  ["¿Comisión?", "Variable", "$0 (con cuenta)", "$15 MXN fijo"],
+                  ["¿Comisión?", "Variable", "$0 (con cuenta)", "$25 MXN fijo"],
                 ].map(([label, col1, col2, col3]) => (
                   <tr key={label}>
                     <td style={{ color: "#CBD5E1", fontWeight: 500 }}>{label}</td>
@@ -446,7 +446,7 @@ export default function PagarCFE() {
               Descargar PagoYa y pagar mi CFE →
             </button>
             <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
-              PagoYa es operado por Longview Meridian Technologies. Pagos procesados vía SIPREL y Evoluciona con failover automático. Comisión fija de $15 MXN por transacción. Los tiempos de acreditación dependen de CFE.
+              PagoYa es operado por Longview Meridian Technologies. Pagos procesados vía SIPREL y Evoluciona con failover automático. Comisión fija de $25 MXN por transacción. Los tiempos de acreditación dependen de CFE.
             </p>
           </div>
         </article>

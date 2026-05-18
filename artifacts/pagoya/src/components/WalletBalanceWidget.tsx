@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Wallet, Plus, ArrowUpRight } from "lucide-react";
+import { Wallet, Plus, ArrowUpRight, ShieldCheck, ShieldAlert } from "lucide-react";
 
 interface WalletState {
   balance: number | null;
   hasPending: boolean;
   loading: boolean;
   error: boolean;
+}
+
+interface KycState {
+  kycLevel: number;
+  kycStatus: string;
+  monthlyLimitMxn: number;
+  loaded: boolean;
 }
 
 export default function WalletBalanceWidget() {
@@ -23,6 +30,13 @@ export default function WalletBalanceWidget() {
     error: false,
   });
 
+  const [kyc, setKyc] = useState<KycState>({
+    kycLevel: 0,
+    kycStatus: "none",
+    monthlyLimitMxn: 6_000,
+    loaded: false,
+  });
+
   useEffect(() => {
     if (!telefono) {
       setState({ balance: null, hasPending: false, loading: false, error: false });
@@ -33,12 +47,15 @@ export default function WalletBalanceWidget() {
 
     async function load() {
       try {
-        const [balRes, txRes] = await Promise.all([
+        const [balRes, txRes, kycRes] = await Promise.all([
           fetch(
             `${window.location.origin}/api/wallet/balance?telefono=${encodeURIComponent(telefono)}`,
           ),
           fetch(
             `${window.location.origin}/api/wallet/transactions?telefono=${encodeURIComponent(telefono)}&limit=10`,
+          ),
+          fetch(
+            `${window.location.origin}/api/kyc/status/${encodeURIComponent(telefono)}`,
           ),
         ]);
 
@@ -56,6 +73,18 @@ export default function WalletBalanceWidget() {
           hasPending = (txData.transactions ?? []).some(
             (t: { status: string }) => t.status === "pending",
           );
+        }
+
+        if (kycRes.ok) {
+          const kycData = await kycRes.json();
+          if (!cancelled) {
+            setKyc({
+              kycLevel: kycData.kycLevel ?? 0,
+              kycStatus: kycData.kycStatus ?? "none",
+              monthlyLimitMxn: kycData.monthlyLimitMxn ?? 6_000,
+              loaded: true,
+            });
+          }
         }
 
         if (cancelled) return;
@@ -141,6 +170,9 @@ export default function WalletBalanceWidget() {
       ? `$${state.balance.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
       : "$0.00 MXN";
 
+  const isVerified = kyc.loaded && kyc.kycLevel >= 2 && kyc.kycStatus === "verified";
+  const showKycPrompt = kyc.loaded && !isVerified && telefono;
+
   return (
     <div
       className="rounded-2xl px-5 pt-4 pb-4 space-y-3"
@@ -162,7 +194,7 @@ export default function WalletBalanceWidget() {
           <Wallet className="w-5 h-5" style={{ color: "#1D9E75" }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <p className="text-xs text-gray-400 font-semibold">Saldo PagoYa</p>
             {state.hasPending && (
               <span
@@ -172,11 +204,40 @@ export default function WalletBalanceWidget() {
                 Carga pendiente
               </span>
             )}
+            {isVerified && (
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-bold leading-none flex items-center gap-1"
+                style={{ background: "#F0FAF3", color: "#046C2C", border: "1px solid #D4EDDA" }}
+              >
+                <ShieldCheck style={{ width: 10, height: 10 }} />
+                Nivel 2
+              </span>
+            )}
           </div>
           <p className="text-lg font-black text-[#1F1F1F] leading-tight">{formatted}</p>
         </div>
         <span className="text-xs text-gray-400">Ver todo →</span>
       </button>
+
+      {/* KYC prompt — shown only when unverified and user is logged in */}
+      {showKycPrompt && (
+        <button
+          onClick={() => navigate("/verificar")}
+          className="w-full flex items-center gap-3 text-left rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
+          style={{ background: "#FFFBEB", border: "1px solid #FCD34D" }}
+        >
+          <ShieldAlert style={{ width: 16, height: 16, color: "#B45309", flexShrink: 0 }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold" style={{ color: "#92400E", margin: 0 }}>
+              Límite: $6,000 MXN/mes
+            </p>
+            <p className="text-xs" style={{ color: "#B45309", margin: 0 }}>
+              Verifica tu CURP → sube a $24,000/mes
+            </p>
+          </div>
+          <span className="text-xs font-bold" style={{ color: "#B45309", flexShrink: 0 }}>→</span>
+        </button>
+      )}
 
       {/* Action buttons */}
       <div className="grid grid-cols-2 gap-2">

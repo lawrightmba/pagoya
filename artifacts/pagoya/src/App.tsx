@@ -33,6 +33,7 @@ import BlogRecargasTelcel from "@/pages/BlogRecargasTelcel";
 import BlogAguaMexico from "@/pages/BlogAguaMexico";
 import BlogOXXOPay from "@/pages/BlogOXXOPay";
 import Enviar from "@/pages/Enviar";
+import Verificar from "@/pages/Verificar";
 import SupportChat from "@/components/SupportChat";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
       <Route path="/que-es-oxxo-pay" component={BlogOXXOPay} />
       <Route path="/enviar" component={Enviar} />
+      <Route path="/verificar" component={Verificar} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -114,7 +114,7 @@ export default function TerminosCondiciones() {
               4. Comisiones y tarifas
             </h2>
             <p style={{ marginBottom: "14px" }}>
-              PagoYa cobra una <strong style={{ color: "#E2E8F0" }}>comisión fija de $15 MXN</strong> por cada transacción de pago de servicio o recarga. Esta comisión se cobra al momento de confirmar el pago y se muestra claramente antes de que el usuario autorice la transacción.
+              PagoYa cobra una <strong style={{ color: "#E2E8F0" }}>comisión fija de $25 MXN</strong> por cada transacción de pago de servicio o recarga. Esta comisión se cobra al momento de confirmar el pago y se muestra claramente antes de que el usuario autorice la transacción.
             </p>
             <p>
               La carga de saldo a la billetera vía OXXO no tiene comisión adicional por parte de PagoYa; sin embargo, Digitalfemsa puede aplicar sus propias tarifas conforme a sus condiciones de servicio.

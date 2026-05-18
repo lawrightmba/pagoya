@@ -116,7 +116,7 @@ export default function PaymentReview() {
                     🎁 {es ? "Comisión gratis — token aplicado" : "Free payment — token applied"}
                   </span>
                 ) : (
-                  <span style={{ fontSize: "13px", color: "#888888" }}>$15.00 MXN</span>
+                  <span style={{ fontSize: "13px", color: "#888888" }}>$25.00 MXN</span>
                 )}
               </div>
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />

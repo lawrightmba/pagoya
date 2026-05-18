@@ -30,7 +30,7 @@ export default function BlogOXXOPay() {
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "¿Qué es OXXO Pay?", "acceptedAnswer": { "@type": "Answer", "text": "OXXO Pay es el sistema de pagos digitales de tiendas OXXO en México. Permite hacer depósitos a billeteras digitales, pagar servicios y realizar transferencias usando efectivo en cualquier sucursal OXXO del país." } },
-      { "@type": "Question", "name": "¿Cuánto cobra OXXO por hacer un depósito?", "acceptedAnswer": { "@type": "Answer", "text": "El costo depende del tipo de depósito y la plataforma. Para cargar la billetera PagoYa vía OXXO, la comisión de PagoYa es de $15 MXN por transacción. OXXO puede cobrar adicionalmente dependiendo del servicio." } },
+      { "@type": "Question", "name": "¿Cuánto cobra OXXO por hacer un depósito?", "acceptedAnswer": { "@type": "Answer", "text": "El costo depende del tipo de depósito y la plataforma. Para cargar la billetera PagoYa vía OXXO, la comisión de PagoYa es de $25 MXN por transacción. OXXO puede cobrar adicionalmente dependiendo del servicio." } },
       { "@type": "Question", "name": "¿Cuánto tarda en reflejarse un depósito de OXXO en PagoYa?", "acceptedAnswer": { "@type": "Answer", "text": "Los depósitos de OXXO en PagoYa se procesan en tiempo real gracias a Conekta. El saldo aparece en tu billetera en menos de 5 minutos." } }
     ]
   };
@@ -126,7 +126,7 @@ export default function BlogOXXOPay() {
           <table className="oxxoblog-table">
             <thead><tr><th>Tipo de operación</th><th>Costo OXXO</th><th>Costo PagoYa</th><th>Total</th></tr></thead>
             <tbody>
-              <tr><td>Cargar billetera PagoYa</td><td style={{ color: "#CBD5E1" }}>$0 (incluido)</td><td style={{ color: "#CBD5E1" }}>$15 MXN</td><td style={{ color: "#1D9E75" }}>$15 MXN</td></tr>
+              <tr><td>Cargar billetera PagoYa</td><td style={{ color: "#CBD5E1" }}>$0 (incluido)</td><td style={{ color: "#CBD5E1" }}>$25 MXN</td><td style={{ color: "#1D9E75" }}>$25 MXN</td></tr>
               <tr><td>Pago de servicios directo</td><td style={{ color: "#CBD5E1" }}>$12–15 MXN</td><td style={{ color: "#CBD5E1" }}>N/A</td><td style={{ color: "#CBD5E1" }}>$12–15 MXN</td></tr>
               <tr><td>Recargas celular en OXXO</td><td style={{ color: "#CBD5E1" }}>Incluido en el monto</td><td style={{ color: "#CBD5E1" }}>N/A</td><td style={{ color: "#CBD5E1" }}>Sin costo extra</td></tr>
             </tbody>

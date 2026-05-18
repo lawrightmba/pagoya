@@ -98,8 +98,8 @@ export default function PagarTelmex() {
             ))}
           </ul>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(29,158,117,0.10)", borderLeft: "3px solid #1D9E75", borderRadius: "4px" }}>
-            Todos desde una sola app. Un solo proceso de pago. Una sola comisión de <strong style={{ color: "#1D9E75" }}>$15 MXN</strong>.{" "}
-            <span style={{ color: "#94A3B8" }}>All from a single app. One payment process. One flat $15 MXN fee.</span>
+            Todos desde una sola app. Un solo proceso de pago. Una sola comisión de <strong style={{ color: "#1D9E75" }}>$25 MXN</strong>.{" "}
+            <span style={{ color: "#94A3B8" }}>All from a single app. One payment process. One flat $25 MXN fee.</span>
           </p>
 
           <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.10)", margin: "40px 0" }} />
@@ -147,10 +147,10 @@ export default function PagarTelmex() {
           {/* Comisión */}
           <h2 className="telmex-h2" style={{ color: "#FFFFFF", fontWeight: 700, marginBottom: "6px" }}>¿Cuánto cobra PagoYa?</h2>
           <p style={{ color: "#64748B", fontWeight: 500, marginBottom: "16px" }}>How Much Does PagoYa Charge?</p>
-          <p style={{ lineHeight: 1.7, marginBottom: "14px" }}><strong style={{ color: "#1D9E75" }}>$15 MXN fijo por transacción</strong> — sin importar el monto de tu recibo. <span style={{ color: "#94A3B8" }}>$15 MXN flat per transaction — regardless of your bill amount.</span></p>
+          <p style={{ lineHeight: 1.7, marginBottom: "14px" }}><strong style={{ color: "#1D9E75" }}>$25 MXN fijo por transacción</strong> — sin importar el monto de tu recibo. <span style={{ color: "#94A3B8" }}>$25 MXN flat per transaction — regardless of your bill amount.</span></p>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(255,255,255,0.04)", borderRadius: "8px" }}>
-            Si pagas Telmex ($399 MXN) y también Izzi ($450 MXN) el mismo mes, son dos transacciones separadas: $15 MXN cada una. Total de comisiones: <strong style={{ color: "#FFFFFF" }}>$30 MXN</strong> para quedarte sin filas ni viajes ese mes.{" "}
-            <span style={{ color: "#94A3B8", fontSize: "14px" }}>If you pay Telmex and Izzi the same month, those are two separate $15 MXN fees — $30 MXN total to stay line-free that month.</span>
+            Si pagas Telmex ($399 MXN) y también Izzi ($450 MXN) el mismo mes, son dos transacciones separadas: $25 MXN cada una. Total de comisiones: <strong style={{ color: "#FFFFFF" }}>$50 MXN</strong> para quedarte sin filas ni viajes ese mes.{" "}
+            <span style={{ color: "#94A3B8", fontSize: "14px" }}>If you pay Telmex and Izzi the same month, those are two separate $25 MXN fees — $50 MXN total to stay line-free that month.</span>
           </p>
 
           <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.10)", margin: "40px 0" }} />
@@ -191,7 +191,7 @@ export default function PagarTelmex() {
                   ["¿Pago con efectivo?", "No", "No", "Sí (vía OXXO)"],
                   ["¿Múltiples proveedores?", "No", "No (uno por uno)", "Sí — todos en una app"],
                   ["¿Historial centralizado?", "No", "No", "Sí"],
-                  ["¿Comisión?", "Variable", "$0 (con tarjeta)", "$15 MXN fijo"],
+                  ["¿Comisión?", "Variable", "$0 (con tarjeta)", "$25 MXN fijo"],
                 ].map(([label, c1, c2, c3]) => (
                   <tr key={label}>
                     <td style={{ color: "#CBD5E1", fontWeight: 500 }}>{label}</td>
@@ -247,7 +247,7 @@ export default function PagarTelmex() {
               Descargar PagoYa gratis →
             </button>
             <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
-              PagoYa es operado por Longview Meridian Technologies. Comisión fija de $15 MXN por transacción. Pagos procesados vía SIPREL y Evoluciona con failover automático.
+              PagoYa es operado por Longview Meridian Technologies. Comisión fija de $25 MXN por transacción. Pagos procesados vía SIPREL y Evoluciona con failover automático.
             </p>
           </div>
         </article>

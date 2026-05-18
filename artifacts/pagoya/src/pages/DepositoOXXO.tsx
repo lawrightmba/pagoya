@@ -205,7 +205,7 @@ export default function DepositoOXXO() {
               Descargar PagoYa gratis →
             </button>
             <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
-              PagoYa es operado por Longview Meridian Technologies. Depósitos OXXO procesados vía Conekta. Comisión fija de $15 MXN por transacción de pago.
+              PagoYa es operado por Longview Meridian Technologies. Depósitos OXXO procesados vía Conekta. Comisión fija de $25 MXN por transacción de pago.
             </p>
           </div>
         </article>

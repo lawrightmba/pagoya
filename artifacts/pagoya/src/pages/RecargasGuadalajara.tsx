@@ -101,7 +101,7 @@ export default function RecargasGuadalajara() {
 
         <div style={{ background: "rgba(29,158,117,0.1)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: "12px", padding: "20px 24px", marginBottom: "32px" }}>
           <div style={{ display: "flex", gap: "28px", flexWrap: "wrap" }}>
-            {[["📱", "Telcel, AT&T, Movistar", "Operadores disponibles"], ["⏱", "<60 seg", "Tiempo de acreditación"], ["💵", "$15 MXN", "Comisión por recarga"], ["🏪", "800+", "OXXO en el ZMG"]].map(([icon, val, label]) => (
+            {[["📱", "Telcel, AT&T, Movistar", "Operadores disponibles"], ["⏱", "<60 seg", "Tiempo de acreditación"], ["💵", "$25 MXN", "Comisión por recarga"], ["🏪", "800+", "OXXO en el ZMG"]].map(([icon, val, label]) => (
               <div key={label} style={{ textAlign: "center", minWidth: "90px" }}>
                 <div style={{ fontSize: "20px", marginBottom: "4px" }}>{icon}</div>
                 <div style={{ color: "#1D9E75", fontWeight: 800, fontSize: "15px" }}>{val}</div>

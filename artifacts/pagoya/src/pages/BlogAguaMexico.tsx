@@ -116,7 +116,7 @@ export default function BlogAguaMexico() {
 
         <h2 className="agua-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Paso a paso: pagar agua con PagoYa</h2>
         <ol className="agua-ol" style={{ marginBottom: "32px" }}>
-          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Deposita el monto de tu recibo más $15 MXN de comisión.</li>
+          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Deposita el monto de tu recibo más $25 MXN de comisión.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Abre PagoYa y selecciona tu organismo de agua.</strong> Busca por nombre del organismo o por estado.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Ingresa tu número de contrato.</strong> Lo encuentras en la parte superior de tu recibo de agua.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Verifica el monto y confirma.</strong> PagoYa muestra el adeudo actual antes de cobrar.</li>

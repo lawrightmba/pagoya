@@ -131,10 +131,10 @@ export default function Recargas() {
           {/* Comisión */}
           <h2 className="rec-h2" style={{ color: "#FFFFFF", fontWeight: 700, marginBottom: "6px" }}>¿Cuánto cobra PagoYa por las recargas?</h2>
           <p style={{ color: "#64748B", fontWeight: 500, marginBottom: "16px" }}>How Much Does PagoYa Charge for Top-Ups?</p>
-          <p style={{ lineHeight: 1.7, marginBottom: "14px" }}>La comisión es la misma para todos los servicios: <strong style={{ color: "#1D9E75" }}>$15 MXN fijo por transacción</strong>. <span style={{ color: "#94A3B8" }}>The fee is the same for all services: $15 MXN flat per transaction.</span></p>
+          <p style={{ lineHeight: 1.7, marginBottom: "14px" }}>La comisión es la misma para todos los servicios: <strong style={{ color: "#1D9E75" }}>$25 MXN fijo por transacción</strong>. <span style={{ color: "#94A3B8" }}>The fee is the same for all services: $25 MXN flat per transaction.</span></p>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(255,255,255,0.04)", borderRadius: "8px" }}>
-            Si recargas $100 MXN a Telcel, pagas $100 MXN de recarga + $15 MXN de comisión = <strong style={{ color: "#FFFFFF" }}>$115 MXN total</strong> descontados de tu billetera.{" "}
-            <span style={{ color: "#94A3B8", fontSize: "14px" }}>If you top up $100 MXN to Telcel, you pay $100 MXN + $15 MXN fee = $115 MXN total deducted from your wallet.</span>
+            Si recargas $100 MXN a Telcel, pagas $100 MXN de recarga + $25 MXN de comisión = <strong style={{ color: "#FFFFFF" }}>$125 MXN total</strong> descontados de tu billetera.{" "}
+            <span style={{ color: "#94A3B8", fontSize: "14px" }}>If you top up $100 MXN to Telcel, you pay $100 MXN + $25 MXN fee = $125 MXN total deducted from your wallet.</span>
           </p>
 
           <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.10)", margin: "40px 0" }} />
@@ -152,7 +152,7 @@ export default function Recargas() {
                   ["¿Puedes recargar a otro número?", "Sí", "Sí"],
                   ["¿Historial de recargas?", "No", "Sí, en la app"],
                   ["¿Cuántos operadores?", "Varios (en caja)", "Telcel, AT&T, Movistar"],
-                  ["¿Comisión?", "Variable por operador", "$15 MXN fijo"],
+                  ["¿Comisión?", "Variable por operador", "$25 MXN fijo"],
                 ].map(([label, c1, c2]) => (
                   <tr key={label}>
                     <td style={{ color: "#CBD5E1", fontWeight: 500 }}>{label}</td>
@@ -173,7 +173,7 @@ export default function Recargas() {
             <table className="rec-table">
               <thead><tr><th>Recarga</th><th>Comisión</th><th>Total billetera</th></tr></thead>
               <tbody>
-                {[["$50 MXN","$15 MXN","$65 MXN"],["$100 MXN","$15 MXN","$115 MXN"],["$200 MXN","$15 MXN","$215 MXN"],["$500 MXN","$15 MXN","$515 MXN"]].map(([r, c, t]) => (
+                {[["$50 MXN","$25 MXN","$75 MXN"],["$100 MXN","$25 MXN","$125 MXN"],["$200 MXN","$25 MXN","$225 MXN"],["$500 MXN","$25 MXN","$525 MXN"]].map(([r, c, t]) => (
                   <tr key={r}><td style={{ color: "#CBD5E1" }}>{r}</td><td style={{ color: "#94A3B8" }}>{c}</td><td style={{ color: "#1D9E75", fontWeight: 600 }}>{t}</td></tr>
                 ))}
               </tbody>
@@ -243,7 +243,7 @@ export default function Recargas() {
               Descargar PagoYa gratis →
             </button>
             <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
-              PagoYa es operado por Longview Meridian Technologies. Comisión fija de $15 MXN por transacción.
+              PagoYa es operado por Longview Meridian Technologies. Comisión fija de $25 MXN por transacción.
             </p>
           </div>
         </article>

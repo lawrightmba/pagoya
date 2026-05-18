@@ -438,7 +438,7 @@ export async function redeemReward(phone: string, rewardCode: string): Promise<{
   } else if (reward.reward_type === "free_transaction" && redemptionToken) {
     sendWhatsApp(
       phone,
-      `🎁 ¡Canjeaste ${reward.points_cost} puntos por un pago gratuito! Tu token: ${redemptionToken}. Úsalo en tu próximo pago para eliminar la comisión de $15 MXN.`,
+      `🎁 ¡Canjeaste ${reward.points_cost} puntos por un pago gratuito! Tu token: ${redemptionToken}. Úsalo en tu próximo pago para eliminar la comisión de $25 MXN.`,
     ).then(() => {}).catch((err) => logger.error({ err }, "loyalty: WhatsApp notification failed"));
   }
 

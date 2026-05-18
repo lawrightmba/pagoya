@@ -113,7 +113,7 @@ export default function PagarCFEGuadalajara() {
 
         <div style={{ background: "rgba(29,158,117,0.1)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: "12px", padding: "20px 24px", marginBottom: "32px" }}>
           <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-            {[["⚡", "2 min", "Tiempo promedio de pago"], ["💵", "$15 MXN", "Comisión fija"], ["🏪", "800+", "OXXO en Guadalajara"], ["✅", "24/7", "Disponible siempre"]].map(([icon, val, label]) => (
+            {[["⚡", "2 min", "Tiempo promedio de pago"], ["💵", "$25 MXN", "Comisión fija"], ["🏪", "800+", "OXXO en Guadalajara"], ["✅", "24/7", "Disponible siempre"]].map(([icon, val, label]) => (
               <div key={label} style={{ textAlign: "center", minWidth: "80px" }}>
                 <div style={{ fontSize: "22px", marginBottom: "4px" }}>{icon}</div>
                 <div style={{ color: "#1D9E75", fontWeight: 800, fontSize: "20px" }}>{val}</div>
@@ -125,7 +125,7 @@ export default function PagarCFEGuadalajara() {
 
         <h2 className="gdl-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Cómo pagar tu CFE en Guadalajara paso a paso</h2>
         <ol className="gdl-ol" style={{ marginBottom: "32px" }}>
-          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Ve a cualquiera de los más de 800 OXXO en el área metropolitana de Guadalajara — Zapopan, Tlaquepaque, Tlajomulco, Tonalá — y deposita el monto que quieras pagar más la comisión de $15 MXN.</li>
+          <li><strong style={{ color: "#e2e8f0" }}>Carga tu billetera en OXXO.</strong> Ve a cualquiera de los más de 800 OXXO en el área metropolitana de Guadalajara — Zapopan, Tlaquepaque, Tlajomulco, Tonalá — y deposita el monto que quieras pagar más la comisión de $25 MXN.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Abre PagoYa y selecciona CFE.</strong> En la app, toca "Pagar Servicios" y elige CFE en el listado de proveedores.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Ingresa tu número de servicio.</strong> Lo encuentras en la parte superior de tu recibo de luz CFE. Son 12 dígitos.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Confirma el pago.</strong> La app te muestra el monto y el nombre del titular. Confirma y listo — folio de confirmación en pantalla.</li>
@@ -139,7 +139,7 @@ export default function PagarCFEGuadalajara() {
               <tr><th>Opción</th><th>Tiempo de espera</th><th>Horario</th><th>Costo extra</th></tr>
             </thead>
             <tbody>
-              <tr><td><strong style={{ color: "#1D9E75" }}>PagoYa (app)</strong></td><td>0 minutos</td><td>24/7</td><td>$15 MXN fijos</td></tr>
+              <tr><td><strong style={{ color: "#1D9E75" }}>PagoYa (app)</strong></td><td>0 minutos</td><td>24/7</td><td>$25 MXN fijos</td></tr>
               <tr><td>Oficina CFE Guadalajara</td><td>20–60 min</td><td>Lun–Vie 8am–3pm</td><td>$0</td></tr>
               <tr><td>OXXO (pago directo)</td><td>5–15 min en fila</td><td>Varía</td><td>$12–15 MXN</td></tr>
               <tr><td>Banco en línea</td><td>Inmediato</td><td>24/7</td><td>Requiere cuenta</td></tr>

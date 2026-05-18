@@ -195,8 +195,8 @@ export default function GuiaBlog() {
           </ol>
 
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(29,158,117,0.12)", borderLeft: "3px solid #1D9E75", borderRadius: "4px" }}>
-            La comisión es fija: <strong style={{ color: "#1D9E75" }}>$15 MXN por transacción</strong>. Sin cargos por porcentaje, sin costos ocultos, sin sorpresas.{" "}
-            <span style={{ color: "#94A3B8" }}>The fee is flat: $15 MXN per transaction. No percentage charges, no hidden costs, no surprises.</span>
+            La comisión es fija: <strong style={{ color: "#1D9E75" }}>$25 MXN por transacción</strong>. Sin cargos por porcentaje, sin costos ocultos, sin sorpresas.{" "}
+            <span style={{ color: "#94A3B8" }}>The fee is flat: $25 MXN per transaction. No percentage charges, no hidden costs, no surprises.</span>
           </p>
 
           <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.10)", margin: "40px 0" }} />
@@ -362,7 +362,7 @@ export default function GuiaBlog() {
                   ["¿Historial de pagos?", "No", "Sí, en la app"],
                   ["¿Cuántos servicios?", "Limitado", "26+ servicios"],
                   ["¿Confirmación inmediata?", "Ticket en papel", "Notificación digital"],
-                  ["¿Costo?", "Comisión por servicio", "$15 MXN fijo"],
+                  ["¿Costo?", "Comisión por servicio", "$25 MXN fijo"],
                 ].map(([label, col1, col2]) => (
                   <tr key={label}>
                     <td style={{ color: "#CBD5E1", fontWeight: 500 }}>{label}</td>
@@ -407,9 +407,9 @@ export default function GuiaBlog() {
           {[
             {
               q: "¿Cuánto cobra PagoYa por cada pago?",
-              a: "$15 MXN fijo por transacción. Sin cargos adicionales, sin suscripción mensual obligatoria.",
+              a: "$25 MXN fijo por transacción. Sin cargos adicionales, sin suscripción mensual obligatoria.",
               en_q: "How much does PagoYa charge per payment?",
-              en_a: "A flat $15 MXN per transaction. No additional charges, no mandatory monthly subscription.",
+              en_a: "A flat $25 MXN per transaction. No additional charges, no mandatory monthly subscription.",
             },
             {
               q: "¿PagoYa está disponible en toda la República Mexicana?",
@@ -483,7 +483,7 @@ export default function GuiaBlog() {
               Descargar PagoYa gratis →
             </button>
             <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
-              PagoYa es operado por Longview Meridian Technologies. Los pagos se procesan vía STP/SPEI regulado por Banxico y Conekta. Comisión fija de $15 MXN por transacción.
+              PagoYa es operado por Longview Meridian Technologies. Los pagos se procesan vía STP/SPEI regulado por Banxico y Conekta. Comisión fija de $25 MXN por transacción.
             </p>
           </div>
         </article>

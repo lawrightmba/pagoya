@@ -110,7 +110,7 @@ export default function PagarServiciosGuadalajara() {
           {[
             "Más de 800 puntos OXXO para cargar efectivo en el ZMG",
             "Pago confirmado en menos de 2 minutos",
-            "Comisión fija de $15 MXN por transacción — sin sorpresas",
+            "Comisión fija de $25 MXN por transacción — sin sorpresas",
             "Disponible 24/7 — paga aunque sean las 11pm",
             "Soporte vía WhatsApp y chat en la app",
           ].map(i => <li key={i} style={{ color: "#CBD5E1", marginBottom: "8px", lineHeight: 1.6 }}>{i}</li>)}

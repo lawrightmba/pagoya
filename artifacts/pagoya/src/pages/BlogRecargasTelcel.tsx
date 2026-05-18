@@ -30,7 +30,7 @@ export default function BlogRecargasTelcel() {
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "¿Cómo recargo Telcel con efectivo?", "acceptedAnswer": { "@type": "Answer", "text": "Con PagoYa: deposita efectivo en OXXO para cargar tu billetera, selecciona Recargas en la app, elige Telcel, ingresa tu número y confirma. La recarga llega en menos de 60 segundos." } },
-      { "@type": "Question", "name": "¿Cuánto cuesta recargar Telcel con PagoYa?", "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra $15 MXN de comisión fija por cada recarga, sin importar el monto." } },
+      { "@type": "Question", "name": "¿Cuánto cuesta recargar Telcel con PagoYa?", "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra $25 MXN de comisión fija por cada recarga, sin importar el monto." } },
       { "@type": "Question", "name": "¿Puedo recargar el celular de otra persona con PagoYa?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Puedes ingresar cualquier número de celular mexicano, no tiene que ser el tuyo." } }
     ]
   };
@@ -109,7 +109,7 @@ export default function BlogRecargasTelcel() {
 
         <h2 className="recblog-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Pasos para recargar Telcel con efectivo</h2>
         <ol className="recblog-ol" style={{ marginBottom: "32px" }}>
-          <li><strong style={{ color: "#e2e8f0" }}>Ve a un OXXO.</strong> Hay más de 20,000 tiendas OXXO en México. Pide cargar tu billetera PagoYa con el monto que quieres recargar más $15 MXN.</li>
+          <li><strong style={{ color: "#e2e8f0" }}>Ve a un OXXO.</strong> Hay más de 20,000 tiendas OXXO en México. Pide cargar tu billetera PagoYa con el monto que quieres recargar más $25 MXN.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Abre PagoYa.</strong> En la pantalla principal selecciona "Recargas".</li>
           <li><strong style={{ color: "#e2e8f0" }}>Elige Telcel.</strong> También puedes elegir AT&T, Movistar o cualquier otro operador.</li>
           <li><strong style={{ color: "#e2e8f0" }}>Ingresa el número de celular.</strong> Puede ser el tuyo o el de cualquier otra persona.</li>
@@ -146,7 +146,7 @@ export default function BlogRecargasTelcel() {
         <h2 className="recblog-h2" style={{ color: "#fff", fontWeight: 700, marginBottom: "16px" }}>Preguntas frecuentes</h2>
         {[
           ["¿Cómo recargo Telcel con efectivo?", "Deposita en OXXO para cargar tu billetera PagoYa, elige Recargas > Telcel en la app, ingresa el número y confirma. Menos de 60 segundos."],
-          ["¿Cuánto cuesta la comisión?", "$15 MXN fijos por recarga, sin importar el monto."],
+          ["¿Cuánto cuesta la comisión?", "$25 MXN fijos por recarga, sin importar el monto."],
           ["¿Puedo recargar a otra persona?", "Sí, ingresa cualquier número de celular mexicano."],
           ["¿Qué pasa si la recarga no llega?", "PagoYa tiene soporte 24/7. Si la recarga no llega en 5 minutos, contáctanos y te resolvemos inmediatamente."],
         ].map(([q, a]) => (

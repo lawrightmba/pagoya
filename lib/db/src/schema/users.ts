@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,6 +9,15 @@ export const usersTable = pgTable("users", {
   recoveryEmail: text("recovery_email"),
   conektaCustomerId: text("conekta_customer_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  kycLevel: integer("kyc_level").notNull().default(0),
+  kycCurp: text("kyc_curp"),
+  kycFullName: text("kyc_full_name"),
+  kycDob: text("kyc_dob"),
+  kycStatus: text("kyc_status").notNull().default("none"),
+  kycSubmittedAt: timestamp("kyc_submitted_at", { withTimezone: true }),
+  kycVerifiedAt: timestamp("kyc_verified_at", { withTimezone: true }),
+  kycProvider: text("kyc_provider"),
+  kycProviderId: text("kyc_provider_id"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

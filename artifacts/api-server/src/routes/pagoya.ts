@@ -10,7 +10,7 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2025-03-31.basil" });
 }
 
-const PLATFORM_FEE_MXN = 15.00;
+const PLATFORM_FEE_MXN = 25.00;
 const PLATFORM_FEE_DESCRIPTION = "Tarifa de plataforma";
 const TAECEL_COST_PER_TXN_MXN = 5.00;
 const NET_MARGIN_PER_TXN_MXN = 3.00;
