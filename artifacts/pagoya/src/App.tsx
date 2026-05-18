@@ -25,6 +25,13 @@ import Recargas from "@/pages/Recargas";
 import DepositoOXXO from "@/pages/DepositoOXXO";
 import TerminosCondiciones from "@/pages/TerminosCondiciones";
 import RepLogin from "@/pages/RepLogin";
+import PagarCFEGuadalajara from "@/pages/PagarCFEGuadalajara";
+import PagarServiciosGuadalajara from "@/pages/PagarServiciosGuadalajara";
+import RecargasGuadalajara from "@/pages/RecargasGuadalajara";
+import BlogTelmex from "@/pages/BlogTelmex";
+import BlogRecargasTelcel from "@/pages/BlogRecargasTelcel";
+import BlogAguaMexico from "@/pages/BlogAguaMexico";
+import BlogOXXOPay from "@/pages/BlogOXXOPay";
 import SupportChat from "@/components/SupportChat";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
@@ -54,6 +61,13 @@ function Router() {
       <Route path="/deposito-oxxo" component={DepositoOXXO} />
       <Route path="/terminos-y-condiciones" component={TerminosCondiciones} />
       <Route path="/rep-login" component={RepLogin} />
+      <Route path="/pagar-cfe-guadalajara" component={PagarCFEGuadalajara} />
+      <Route path="/pagar-servicios-guadalajara" component={PagarServiciosGuadalajara} />
+      <Route path="/recargas-guadalajara" component={RecargasGuadalajara} />
+      <Route path="/pagar-telmex-sin-tarjeta" component={BlogTelmex} />
+      <Route path="/recargas-telcel-efectivo" component={BlogRecargasTelcel} />
+      <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
+      <Route path="/que-es-oxxo-pay" component={BlogOXXOPay} />
       <Route component={NotFound} />
     </Switch>
   );

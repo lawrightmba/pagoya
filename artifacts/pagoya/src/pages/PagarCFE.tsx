@@ -21,12 +21,16 @@ export default function PagarCFE() {
           "headline": "Cómo pagar tu recibo de CFE sin ir al banco",
           "description": "Paga tu recibo de CFE desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas.",
           "url": "https://pagoyamx.com/pagar-cfe",
-          "publisher": {
-            "@type": "Organization",
-            "name": "PagoYa",
-            "url": "https://pagoyamx.com"
-          },
+          "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
           "inLanguage": ["es", "en"]
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Pagar CFE", "item": "https://pagoyamx.com/pagar-cfe" }
+          ]
         })}</script>
       </Helmet>
 

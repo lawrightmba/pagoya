@@ -77,6 +77,52 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "react-core";
+          }
+          if (id.includes("node_modules/@stripe") || id.includes("node_modules/stripe")) {
+            return "stripe";
+          }
+          if (id.includes("node_modules/@tanstack")) {
+            return "tanstack";
+          }
+          if (id.includes("node_modules/react-helmet-async") || id.includes("node_modules/wouter")) {
+            return "routing";
+          }
+          if (id.includes("node_modules/")) {
+            return "vendor";
+          }
+          if (
+            id.includes("/pages/PagarCFEGuadalajara") ||
+            id.includes("/pages/PagarServiciosGuadalajara") ||
+            id.includes("/pages/RecargasGuadalajara")
+          ) {
+            return "pages-guadalajara";
+          }
+          if (
+            id.includes("/pages/BlogTelmex") ||
+            id.includes("/pages/BlogRecargasTelcel") ||
+            id.includes("/pages/BlogAguaMexico") ||
+            id.includes("/pages/BlogOXXOPay") ||
+            id.includes("/pages/GuiaBlog")
+          ) {
+            return "pages-blog";
+          }
+          if (
+            id.includes("/pages/PagarCFE") ||
+            id.includes("/pages/PagarTelmex") ||
+            id.includes("/pages/Recargas") ||
+            id.includes("/pages/DepositoOXXO") ||
+            id.includes("/pages/TerminosCondiciones")
+          ) {
+            return "pages-seo";
+          }
+        },
+      },
+    },
   },
   server: {
     port,

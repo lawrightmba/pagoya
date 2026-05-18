@@ -24,6 +24,14 @@ export default function DepositoOXXO() {
           "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
           "inLanguage": ["es", "en"]
         })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Depósito OXXO", "item": "https://pagoyamx.com/deposito-oxxo" }
+          ]
+        })}</script>
       </Helmet>
 
       <style>{`

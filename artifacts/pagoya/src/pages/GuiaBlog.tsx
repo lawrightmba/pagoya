@@ -21,12 +21,16 @@ export default function GuiaBlog() {
           "headline": "Guía completa para pagar servicios en México sin cuenta bancaria",
           "description": "Guía completa para pagar CFE, Telmex, recargas y más de 26 servicios en México sin cuenta bancaria.",
           "url": "https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria",
-          "publisher": {
-            "@type": "Organization",
-            "name": "PagoYa",
-            "url": "https://pagoyamx.com"
-          },
+          "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
           "inLanguage": ["es", "en"]
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Guía completa sin banco", "item": "https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria" }
+          ]
         })}</script>
       </Helmet>
 

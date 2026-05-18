@@ -24,6 +24,14 @@ export default function PagarTelmex() {
           "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
           "inLanguage": ["es", "en"]
         })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Pagar Telmex", "item": "https://pagoyamx.com/pagar-telmex" }
+          ]
+        })}</script>
       </Helmet>
 
       <style>{`
