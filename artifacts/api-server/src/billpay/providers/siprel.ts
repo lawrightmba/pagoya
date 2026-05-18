@@ -46,10 +46,10 @@ const SIPREL_SKU_MAP: Record<string, SkuEntry | null> = {
   att_recarga_100:   { sku: "MOV100", bolsa: "tiempoAire" },
   att_recarga_120:   { sku: "MOV120", bolsa: "tiempoAire" },
   att_recarga_150:   { sku: "MOV150", bolsa: "tiempoAire" },
-  // — SKU_PENDING (pending confirmation from Taecel) ——
-  izzi:              null,
-  totalplay:         null,
-  gas_natural:       null,
+  // — Bill Payments (confirmed SKUs) ——
+  izzi:              { sku: "IZZ000", bolsa: "pagoServicios" },
+  totalplay:         { sku: "TOT000", bolsa: "pagoServicios" },
+  gas_natural:       { sku: "GAS000", bolsa: "pagoServicios" },
 };
 
 // ─── TAECEL API RESPONSE TYPES ───────────────────────────────────────────────

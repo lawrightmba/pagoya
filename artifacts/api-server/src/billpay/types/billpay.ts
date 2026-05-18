@@ -23,6 +23,7 @@ export interface BillService {
   siprelServiceId?: string;
   evolucionaServiceId?: string;
   minReferencia?: number;
+  maxReferencia?: number;
   minAmount?: number;
   isTopup?: boolean;
 }

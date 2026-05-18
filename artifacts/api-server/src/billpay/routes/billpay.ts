@@ -32,6 +32,7 @@ router.get("/catalog", (_req: Request, res: Response) => {
       logoEmoji: s.logoEmoji,
       providers: s.providers,
       minReferencia: s.minReferencia,
+      maxReferencia: s.maxReferencia,
       minAmount: s.minAmount,
     })),
     providers: {
@@ -94,6 +95,13 @@ router.post("/pay", async (req: Request, res: Response) => {
   if (service.minReferencia && referencia.replace(/\D/g, "").length < service.minReferencia) {
     res.status(400).json({
       error: `La referencia para ${service.name} debe tener al menos ${service.minReferencia} dígitos.`,
+    });
+    return;
+  }
+
+  if (service.maxReferencia && referencia.replace(/\D/g, "").length > service.maxReferencia) {
+    res.status(400).json({
+      error: `La referencia para ${service.name} debe tener máximo ${service.maxReferencia} dígitos.`,
     });
     return;
   }

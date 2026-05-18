@@ -1001,13 +1001,9 @@ describe("11. SKU Code Map", () => {
 
   it("9. Megacable service maps to producto 'MEG000'", () => assertProducto("megacable", "MEG000"));
 
-  it("10. Service with SKU_PENDING (izzi) returns SKU_NOT_CONFIGURED error WITHOUT calling the API", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    await expect(
-      realPay({ id: "izzi" } as never, { serviceId: "izzi", referencia: "125478965412", monto: 100, telefono: "3221234567" }),
-    ).rejects.toThrow(/SKU/i);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
+  it("10. Izzi service maps to producto 'IZZ000'", () => assertProducto("izzi", "IZZ000"));
+  it("10b. TotalPlay service maps to producto 'TOT000'", () => assertProducto("totalplay", "TOT000"));
+  it("10c. Gas Natural service maps to producto 'GAS000'", () => assertProducto("gas_natural", "GAS000"));
 });
 
 // ---------------------------------------------------------------------------
