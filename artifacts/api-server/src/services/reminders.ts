@@ -14,24 +14,29 @@ function buildMessage(params: {
   language: string;
   name: string | null;
   billerName: string;
+  billerId: string;
   reminderDaysBefore: number;
   phone: string;
 }): string {
-  const { language, name, billerName, reminderDaysBefore, phone } = params;
+  const { language, name, billerName, billerId, reminderDaysBefore, phone } = params;
   const displayName = name ?? "usuario";
-  const ref = encodeURIComponent(phone);
+  // Deep link pre-fills the payment form: service name + ID + user phone stored on landing
+  const link =
+    `https://pagoyamx.com/?pagar=${encodeURIComponent(billerName)}` +
+    `&service=${encodeURIComponent(billerId)}` +
+    `&tel=${encodeURIComponent(phone)}`;
 
   if (language === "en") {
     return (
       `💡 Hi ${displayName}, your ${billerName} is due in ` +
       `${reminderDaysBefore} day${reminderDaysBefore !== 1 ? "s" : ""}. ` +
-      `Pay in under 2 min: https://pagoyamx.com/?ref=${ref}`
+      `Pay in under 2 min — tap to open pre-filled: ${link}`
     );
   }
   return (
     `💡 Hola ${displayName}, tu ${billerName} vence en ` +
     `${reminderDaysBefore} día${reminderDaysBefore !== 1 ? "s" : ""}. ` +
-    `Paga en menos de 2 min: https://pagoyamx.com/?ref=${ref}`
+    `Paga en menos de 2 min — abre directo: ${link}`
   );
 }
 
@@ -99,6 +104,7 @@ export async function runDailyReminders(): Promise<void> {
         language: biller.language,
         name: biller.name,
         billerName: biller.billerName,
+        billerId: biller.billerId,
         reminderDaysBefore,
         phone: biller.phone,
       });

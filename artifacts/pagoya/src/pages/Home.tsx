@@ -73,6 +73,30 @@ export default function Home() {
   const [notifSent, setNotifSent]   = useState(false);
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
 
+  // Handle WhatsApp deep-link pre-fill: ?pagar=CFE&service=cfe&tel=521234567890
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const pagar   = params.get("pagar");
+      const service = params.get("service");
+      const tel     = params.get("tel");
+      if (pagar) {
+        if (tel) {
+          localStorage.setItem("pagoya_telefono", tel);
+          localStorage.setItem("pagoya_phone", tel);
+        }
+        // Normalise service ID: lowercase, strip accents/spaces → "cfe", "telmex", etc.
+        const categoria = service
+          ? service.toLowerCase()
+          : pagar.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
+        setPaymentData({ ...paymentData, empresa: pagar, categoria });
+        // Clean URL then navigate to payment form
+        window.history.replaceState({}, "", window.location.pathname);
+        navigate("/pagar");
+      }
+    } catch { /* ignore */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load points balance from localStorage phone
   useEffect(() => {
     const storedPhone = (() => { try { return localStorage.getItem("pagoya_phone") ?? ""; } catch { return ""; } })();
@@ -354,6 +378,38 @@ export default function Home() {
                 ? "🔒 Pago seguro · Sin registro para tu primer pago · $25 MXN por transacción"
                 : "🔒 Secure payment · No signup for first payment · $25 MXN per transaction"}
             </p>
+
+            {/* ── TRUST BAR ── */}
+            <div style={{
+              marginTop: "20px",
+              padding: "12px 16px",
+              borderRadius: "14px",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "6px",
+            }}>
+              {[
+                { icon: "🔐", label: "Conekta" },
+                { icon: "🏪", label: "OXXO Pay" },
+                { icon: "🏦", label: "SPEI" },
+                { icon: "🇲🇽", label: "Banxico" },
+              ].map((item, i, arr) => (
+                <div key={item.label} style={{ display: "contents" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}>
+                    <span style={{ fontSize: "16px", lineHeight: 1 }}>{item.icon}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.04em", textAlign: "center" }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ width: "1px", height: "28px", background: "rgba(255,255,255,0.10)", flexShrink: 0 }} />
+                  )}
+                </div>
+              ))}
+            </div>
 
             {/* ── RENT VERTICAL COMPACT CARD ── */}
             <div style={{

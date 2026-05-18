@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, RefreshCw, Wallet, CreditCard, Store, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw, Wallet, CreditCard, Store, ArrowUpRight, ArrowDownLeft, RotateCcw } from "lucide-react";
+import { usePayment } from "@/context/PaymentContext";
 
 interface WalletTx {
   id: string;
@@ -12,6 +13,15 @@ interface WalletTx {
   description: string | null;
   createdAt: string;
   confirmedAt: string | null;
+}
+
+interface BillPayment {
+  id: string;
+  service_name: string;
+  reference_number: string | null;
+  amount: string | number;
+  status: string;
+  created_at: string;
 }
 
 function SourceBadge({ source }: { source?: string | null }) {
@@ -108,10 +118,12 @@ export default function WalletHistorial() {
   const [, navigate] = useLocation();
   const storedTelefono = localStorage.getItem("pagoya_telefono") ?? "";
 
+  const { setPaymentData, paymentData } = usePayment();
   const [telefono, setTelefono] = useState(storedTelefono);
   const [telefonoInput, setTelefonoInput] = useState(storedTelefono);
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<WalletTx[]>([]);
+  const [billPayments, setBillPayments] = useState<BillPayment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
@@ -121,9 +133,10 @@ export default function WalletHistorial() {
     setLoading(true);
     setError(null);
     try {
-      const [balRes, txRes] = await Promise.all([
+      const [balRes, txRes, histRes] = await Promise.all([
         fetch(`${window.location.origin}/api/wallet/balance?telefono=${encodeURIComponent(tel)}`),
         fetch(`${window.location.origin}/api/wallet/transactions?telefono=${encodeURIComponent(tel)}&limit=50`),
+        fetch(`${window.location.origin}/api/historial?phone=${encodeURIComponent(tel)}`),
       ]);
 
       if (!balRes.ok || !txRes.ok) {
@@ -134,9 +147,15 @@ export default function WalletHistorial() {
 
       const balData = await balRes.json();
       const txData = await txRes.json();
+      const histData = histRes.ok ? await histRes.json() : { payments: [] };
 
       setBalance(typeof balData.balanceMXN === "number" ? balData.balanceMXN : null);
       setTransactions(txData.transactions ?? []);
+      // Keep last 3 confirmed bill payments for the "pay again" shortcut
+      const confirmed = (histData.payments ?? []).filter(
+        (p: BillPayment) => p.status === "completed" || p.status === "confirmed"
+      );
+      setBillPayments(confirmed.slice(0, 3));
       setLastRefreshed(new Date());
     } catch {
       setError("Sin conexión. Verifica tu red e intenta de nuevo.");
@@ -300,6 +319,84 @@ export default function WalletHistorial() {
                 <ArrowUpRight className="w-3.5 h-3.5" />
                 Enviar
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── PAGAR DE NUEVO ── */}
+        {billPayments.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">
+              Pagar de nuevo
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {billPayments.map((bp) => {
+                const emoji = (() => {
+                  const n = bp.service_name.toLowerCase();
+                  if (n.includes("cfe") || n.includes("luz")) return "⚡";
+                  if (n.includes("telmex") || n.includes("internet")) return "🌐";
+                  if (n.includes("telcel") || n.includes("movistar") || n.includes("at&t")) return "📱";
+                  if (n.includes("izzi") || n.includes("sky") || n.includes("cable")) return "📺";
+                  if (n.includes("netflix")) return "🎬";
+                  if (n.includes("agua")) return "💧";
+                  if (n.includes("gas")) return "🔥";
+                  return "🧾";
+                })();
+                const amount = parseFloat(String(bp.amount));
+                const categoria = bp.service_name
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/\s+/g, "_")
+                  .replace(/[^a-z_]/g, "");
+
+                return (
+                  <button
+                    key={bp.id}
+                    onClick={() => {
+                      setPaymentData({
+                        ...paymentData,
+                        empresa: bp.service_name,
+                        categoria,
+                        referencia: bp.reference_number ?? "",
+                        monto: "",
+                      });
+                      navigate("/pagar");
+                    }}
+                    className="flex-shrink-0 flex flex-col items-start gap-2 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.96]"
+                    style={{
+                      background: "white",
+                      border: "1.5px solid #E8F5F0",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+                      minWidth: "140px",
+                    }}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="text-xl">{emoji}</span>
+                      <span className="text-xs font-black text-[#1F1F1F] truncate flex-1">
+                        {bp.service_name}
+                      </span>
+                    </div>
+                    {!isNaN(amount) && (
+                      <span className="text-xs text-gray-400">
+                        Último: ${amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
+                      </span>
+                    )}
+                    {bp.reference_number && (
+                      <span className="text-xs text-gray-300 truncate w-full">
+                        Ref {bp.reference_number}
+                      </span>
+                    )}
+                    <div
+                      className="w-full py-2 rounded-xl text-center text-xs font-bold mt-1"
+                      style={{ background: "#1D9E75", color: "white" }}
+                    >
+                      <RotateCcw className="w-3 h-3 inline mr-1 -mt-0.5" />
+                      Pagar de nuevo
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
