@@ -35,6 +35,7 @@ import BlogOXXOPay from "@/pages/BlogOXXOPay";
 import Enviar from "@/pages/Enviar";
 import Verificar from "@/pages/Verificar";
 import SupportChat from "@/components/SupportChat";
+import BottomNav from "@/components/BottomNav";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -85,6 +86,7 @@ function App() {
           <Elements stripe={stripePromise}>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
+              <BottomNav />
             </WouterRouter>
           </Elements>
         </PaymentProvider>
