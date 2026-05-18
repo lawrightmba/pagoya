@@ -7,6 +7,13 @@ import {
   creditWallet,
   getRecentTransactions,
 } from "../services/wallet.js";
+import {
+  lookupUser,
+  p2pTransfer,
+  getDailyTransferTotal,
+  P2P_DAILY_LIMIT_MXN,
+  P2P_MIN_MXN,
+} from "../services/p2p.js";
 import { createOxxoOrder, createCardOrder, verifyConektaWebhookSignature, verifyCardWebhookSignature } from "../lib/conekta.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
@@ -591,6 +598,132 @@ router.get("/test-conekta", async (_req: Request, res: Response) => {
     conektaApiReachable,
     error,
   });
+});
+
+// GET /api/wallet/transfer/limits
+// Returns the sender's daily transfer limit status.
+// Query: { telefono }
+router.get("/transfer/limits", async (req: Request, res: Response) => {
+  const { telefono } = req.query as { telefono?: string };
+  if (!telefono) {
+    res.status(400).json({ error: "El campo telefono es requerido." });
+    return;
+  }
+  try {
+    const dailyTotal = await getDailyTransferTotal(telefono);
+    res.json({
+      dailyLimitMXN: P2P_DAILY_LIMIT_MXN,
+      dailyUsedMXN: dailyTotal,
+      dailyRemainingMXN: Math.max(0, P2P_DAILY_LIMIT_MXN - dailyTotal),
+      minTransferMXN: P2P_MIN_MXN,
+    });
+  } catch (err) {
+    logger.error({ err, telefono }, "p2p: limits check failed");
+    res.status(500).json({ error: "Error al consultar límites de transferencia." });
+  }
+});
+
+// POST /api/wallet/transfer/lookup
+// Checks whether a phone number is a registered PagoYa user.
+// Body: { telefono }
+router.post("/transfer/lookup", async (req: Request, res: Response) => {
+  const { telefono } = req.body as { telefono?: string };
+  if (!telefono) {
+    res.status(400).json({ error: "El campo telefono es requerido." });
+    return;
+  }
+  const normalized = telefono.replace(/\D/g, "");
+  if (normalized.length < 10) {
+    res.status(400).json({ error: "Número de teléfono inválido." });
+    return;
+  }
+  try {
+    const result = await lookupUser(normalized);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err, telefono }, "p2p: lookup failed");
+    res.status(500).json({ error: "Error al buscar usuario." });
+  }
+});
+
+// POST /api/wallet/transfer
+// Executes a P2P transfer between two wallets.
+// Body: { senderTelefono, receiverTelefono, amountMXN, memo? }
+router.post("/transfer", async (req: Request, res: Response) => {
+  const { senderTelefono, receiverTelefono, amountMXN, memo } = req.body as {
+    senderTelefono?: string;
+    receiverTelefono?: string;
+    amountMXN?: number;
+    memo?: string;
+  };
+
+  if (!senderTelefono || !receiverTelefono) {
+    res.status(400).json({ error: "Se requieren los teléfonos del emisor y receptor." });
+    return;
+  }
+
+  const amount = Number(amountMXN);
+  if (isNaN(amount) || amount <= 0) {
+    res.status(400).json({ error: "Monto inválido." });
+    return;
+  }
+
+  try {
+    const result = await p2pTransfer(senderTelefono, receiverTelefono, amount, memo);
+
+    // Non-blocking: notify sender
+    const senderMsg =
+      `✅ Transferencia enviada\n\n` +
+      `Enviaste *$${amount.toFixed(2)} MXN* a ${receiverTelefono}\n` +
+      (memo ? `Nota: ${memo}\n` : "") +
+      `Saldo restante: $${result.newSenderBalance.toFixed(2)} MXN\n\n` +
+      `_PagoYa — pagoyamx.com_`;
+    sendWhatsApp(senderTelefono, senderMsg).catch(() => {});
+
+    // Non-blocking: notify receiver
+    const receiverMsg =
+      `💸 Recibiste una transferencia\n\n` +
+      `*$${amount.toFixed(2)} MXN* de ${senderTelefono}\n` +
+      (memo ? `Nota: ${memo}\n` : "") +
+      `\nYa puedes usar tu saldo para pagar servicios.\n_PagoYa — pagoyamx.com_`;
+    sendWhatsApp(receiverTelefono, receiverMsg).catch(() => {});
+
+    logger.info({ senderTelefono, receiverTelefono, amount }, "p2p: transfer route completed");
+
+    res.status(201).json({
+      senderTxId: result.senderTxId,
+      receiverTxId: result.receiverTxId,
+      newSenderBalance: result.newSenderBalance,
+      amountMXN: amount,
+    });
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    if (code === "INSUFFICIENT_BALANCE") {
+      const balance = (err as { currentBalance?: number }).currentBalance ?? 0;
+      res.status(422).json({ error: "INSUFFICIENT_BALANCE", currentBalance: balance });
+      return;
+    }
+    if (code === "DAILY_LIMIT_EXCEEDED") {
+      const e = err as { dailyTotal?: number; remaining?: number };
+      res.status(422).json({
+        error: "DAILY_LIMIT_EXCEEDED",
+        dailyTotal: e.dailyTotal,
+        remaining: e.remaining,
+        limitMXN: P2P_DAILY_LIMIT_MXN,
+      });
+      return;
+    }
+    if (code === "SAME_ACCOUNT") {
+      res.status(400).json({ error: "No puedes enviarte dinero a ti mismo." });
+      return;
+    }
+    if (code === "BELOW_MINIMUM") {
+      res.status(400).json({ error: `El monto mínimo de transferencia es $${P2P_MIN_MXN} MXN.` });
+      return;
+    }
+    logger.error({ err, senderTelefono, receiverTelefono, amount }, "p2p: transfer failed");
+    res.status(500).json({ error: "Error al procesar la transferencia." });
+  }
 });
 
 export default router;

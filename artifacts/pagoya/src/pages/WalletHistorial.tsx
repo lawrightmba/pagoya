@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, RefreshCw, Wallet, CreditCard, Store } from "lucide-react";
+import { ArrowLeft, RefreshCw, Wallet, CreditCard, Store, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 interface WalletTx {
   id: string;
@@ -59,6 +59,8 @@ const TYPE_LABELS: Record<string, string> = {
   bill_pay: "Pago de servicio",
   refund: "Reembolso",
   adjustment: "Ajuste",
+  transfer_send: "Transferencia enviada",
+  transfer_receive: "Transferencia recibida",
 };
 
 const STATUS_CONFIG = {
@@ -68,7 +70,7 @@ const STATUS_CONFIG = {
 };
 
 function isCredit(type: string) {
-  return type.startsWith("load_") || type === "refund" || type === "adjustment";
+  return type.startsWith("load_") || type === "refund" || type === "adjustment" || type === "transfer_receive";
 }
 
 function formatDate(iso: string) {
@@ -282,13 +284,23 @@ export default function WalletHistorial() {
                 </p>
               )}
             </div>
-            <button
-              onClick={() => navigate("/cargar")}
-              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-[0.95]"
-              style={{ background: "rgba(255,255,255,0.22)", color: "white" }}
-            >
-              + Cargar
-            </button>
+            <div className="flex flex-col gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => navigate("/cargar")}
+                className="px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-[0.95]"
+                style={{ background: "rgba(255,255,255,0.22)", color: "white" }}
+              >
+                + Cargar
+              </button>
+              <button
+                onClick={() => navigate("/enviar")}
+                className="px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-[0.95] flex items-center gap-1 justify-center"
+                style={{ background: "rgba(255,255,255,0.15)", color: "white" }}
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                Enviar
+              </button>
+            </div>
           </div>
         )}
 

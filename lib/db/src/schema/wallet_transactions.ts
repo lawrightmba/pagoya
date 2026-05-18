@@ -19,6 +19,7 @@ export const walletTransactionsTable = pgTable(
     voucherUrl: text("voucher_url"),
     voucherExpiresAt: timestamp("voucher_expires_at", { withTimezone: true }),
     description: text("description"),
+    peerTransferId: uuid("peer_transfer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   },
