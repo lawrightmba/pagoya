@@ -98,9 +98,13 @@
   .ph2 { background: #0d2318; }
   .ph2 .phase-title { color: #34d399; }
   .ph2 .phase-count { color: #34d399; }
+  .ph0 { background: #0a2318; }
+  .ph0 .phase-title { color: #1D9E75; }
+  .ph0 .phase-count { color: #1D9E75; }
   .ph3 { background: #1e1505; }
   .ph3 .phase-title { color: #fbbf24; }
   .ph3 .phase-count { color: #fbbf24; }
+  .item-ts { font-size: 10px; color: #1D9E75; font-weight: 700; margin-top: 2px; }
 
   /* ── CHECKLIST ITEMS ── */
   .items-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -425,6 +429,13 @@
       <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Production access live</span></div>
     </div>
   </div>
+
+  <!-- PHASE 0 — SHIPPED -->
+  <div class="phase-header ph0">
+    <span class="phase-title">✅ Shipped — Product Engineering</span>
+    <span class="phase-count" id="ph0-count">0 / 10</span>
+  </div>
+  <div class="items-list" id="ph0-list"></div>
 
   <!-- PHASE 1 -->
   <div class="phase-header ph1">
@@ -808,6 +819,18 @@
 // ── DATA ────────────────────────────────────────────────────────────────────
 
 const CHECKLIST = [
+  // Phase 0 — Shipped Product Engineering (10 items)
+  { phase:0, id:'p0-01', title:'Transaction fee updated $15 → $25 MXN across all surfaces (API, UI, blog pages)' },
+  { phase:0, id:'p0-02', title:'KYC Nivel 2 verification flow — CURP-based, RENAPO-ready, unlocks $24,000/month wallet limit' },
+  { phase:0, id:'p0-03', title:'P2P wallet transfers — atomic debit/credit, auto-creates wallet + WhatsApp invite for new recipients' },
+  { phase:0, id:'p0-04', title:'YC application document updated — $25 fee, P2P + KYC listed as shipped, React 19 + AI coding row updated' },
+  { phase:0, id:'p0-05', title:'Site republished to pagoyamx.com with all changes live' },
+  { phase:0, id:'p0-06', title:'Trust bar on home screen — Conekta · OXXO Pay · SPEI · Banxico (handles "¿es seguro?" objection)' },
+  { phase:0, id:'p0-07', title:'WhatsApp reminder deep links — ?pagar=CFE&service=cfe&tel=... pre-fills payment form on tap' },
+  { phase:0, id:'p0-08', title:'"Pagar de nuevo" — Historial shows last 3 confirmed bills as swipeable cards, one-tap repeat with pre-filled service + reference' },
+  { phase:0, id:'p0-09', title:'Bottom navigation bar — Inicio · Pagar · Enviar · Cargar · Historial, fixed to bottom, always visible' },
+  { phase:0, id:'p0-10', title:'P2P /enviar page live and discoverable via bottom navigation bar' },
+
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
   { phase:1, id:'p1-02', title:'Sitemaps submitted to Google Search Console — pagoseguromx.com' },
@@ -944,21 +967,25 @@ function updateProgress() {
   document.getElementById('prog-label').textContent = done + ' / ' + TOTAL;
 
   // Phase counts
-  [1,2,3].forEach(ph => {
+  [0,1,2,3].forEach(ph => {
+    const el = document.getElementById('ph' + ph + '-count');
+    if (!el) return;
     const items = CHECKLIST.filter(i => i.phase === ph);
     const donePh = items.filter(i => checks[i.id]).length;
-    document.getElementById('ph' + ph + '-count').textContent = donePh + ' / ' + items.length;
+    el.textContent = donePh + ' / ' + items.length;
   });
 }
 
 // ── CHECKLIST RENDER ─────────────────────────────────────────────────────────
 
 function renderChecklist() {
-  [1,2,3].forEach(ph => {
+  [0,1,2,3].forEach(ph => {
     const container = document.getElementById('ph' + ph + '-list');
+    if (!container) return;
     container.innerHTML = '';
     CHECKLIST.filter(i => i.phase === ph).forEach(item => {
       const isDone = !!checks[item.id];
+      const doneDate = typeof checks[item.id] === 'string' ? checks[item.id] : null;
       const hasReminder = !!reminders[item.id];
       const div = document.createElement('div');
       div.className = 'item' + (isDone ? ' done' : '');
@@ -969,6 +996,7 @@ function renderChecklist() {
           <div class="item-main">
             <div class="item-title">${item.title}</div>
             <div class="item-meta">
+              ${isDone && doneDate ? '<span class="item-ts">✓ Completado: ' + fmtDate(doneDate) + '</span>' : ''}
               <span class="reminder-dot ${hasReminder ? 'on' : ''}" id="dot-${item.id}"></span>
               ${hasReminder ? '<span class="item-day" id="rdate-'+item.id+'">' + fmtDate(reminders[item.id].date) + '</span>' : ''}
             </div>
@@ -986,13 +1014,9 @@ function renderChecklist() {
 }
 
 function toggleCheck(id) {
-  checks[id] = !checks[id];
+  checks[id] = checks[id] ? false : todayISO();
   saveChecks();
-  const item = document.getElementById('item-' + id);
-  const chk = document.getElementById('chk-' + id);
-  if (checks[id]) { item.classList.add('done'); chk.classList.add('checked'); }
-  else { item.classList.remove('done'); chk.classList.remove('checked'); }
-  updateProgress();
+  renderChecklist();
 }
 
 // ── CALENDAR RENDER ──────────────────────────────────────────────────────────
@@ -1296,6 +1320,17 @@ function fmtDate(iso) {
 // ── CHECKLIST INIT ────────────────────────────────────────────────────────────
 
 checks = loadChecks();
+
+// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-18.
+// Runs once; after that localStorage state wins so user can toggle freely.
+const SHIPPED_KEY = 'ck_defaults_ph0_v1';
+if (!localStorage.getItem(SHIPPED_KEY)) {
+  CHECKLIST.filter(i => i.phase === 0).forEach(i => {
+    if (!checks[i.id]) checks[i.id] = '2026-05-18';
+  });
+  saveChecks();
+  try { localStorage.setItem(SHIPPED_KEY, '1'); } catch(e) {}
+}
 
 // Pre-mark Phase 1 (all 11) and Phase 2 (all 12) items as done by default.
 // Runs once; after that localStorage state wins so user can toggle freely.
