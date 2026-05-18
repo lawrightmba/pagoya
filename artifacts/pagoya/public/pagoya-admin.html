@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -156,7 +156,7 @@
     .color-amber { color: #F59E0B !important; }
     .color-red   { color: #D85A30 !important; }
 
-    /* ── Saldo recharge note ── */
+    /* ── Balance recharge note ── */
     .recharge-note {
       padding: 10px 16px;
       border-top: 1px solid rgba(255,255,255,0.05);
@@ -293,33 +293,33 @@
         <div class="title">Dashboard</div>
         <div class="header-meta">
           <span class="status-dot" id="statusDot"></span>
-          <span class="meta-text" id="lastUpdated">Cargando…</span>
-          <button class="refresh-btn" onclick="loadAll()">↻ actualizar</button>
+          <span class="meta-text" id="lastUpdated">Loading…</span>
+          <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
         </div>
       </div>
-      <div class="meta-text">Auto-refresh: 30s · Endpoints en vivo</div>
+      <div class="meta-text">Auto-refresh: 30s · Live endpoints</div>
     </div>
 
-    <!-- Section 1: Taecel Saldo -->
+    <!-- Section 1: Taecel Balance -->
     <div class="section">
-      <div class="section-title">01 · Taecel Saldo SIPREL</div>
+      <div class="section-title">01 · Taecel SIPREL Balance</div>
       <div class="panel">
-        <div class="panel-header">Bolsas disponibles · GET /api/bills/admin/balance</div>
+        <div class="panel-header">Available wallets · GET /api/bills/admin/balance</div>
         <div class="card-grid card-grid-2" id="saldoGrid">
           <div class="stat-card"><div class="stat-value skel" style="width:80px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
           <div class="stat-card"><div class="stat-value skel" style="width:80px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
         </div>
         <div class="recharge-note">
-          Recargar saldo: <a href="https://siprel.mx/portal" target="_blank" rel="noopener">siprel.mx/portal</a> → Cuentas Disponibles
+          Top up balance: <a href="https://siprel.mx/portal" target="_blank" rel="noopener">siprel.mx/portal</a> → Available Accounts
         </div>
       </div>
     </div>
 
     <!-- Section 2: Platform Revenue -->
     <div class="section">
-      <div class="section-title">02 · Ingresos por Plataforma</div>
+      <div class="section-title">02 · Platform Revenue</div>
       <div class="panel panel-teal">
-        <div class="panel-header">Tarifa $15.00 MXN / transacción · GET /api/bills/admin/revenue</div>
+        <div class="panel-header">Fee $15.00 MXN / transaction · GET /api/bills/admin/revenue</div>
         <div class="card-grid card-grid-4" id="revenueGrid">
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:40px;height:10px;margin:0 auto;">&nbsp;</div></div>
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:50px;height:10px;margin:0 auto;">&nbsp;</div></div>
@@ -327,17 +327,17 @@
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
         </div>
         <div class="pill-row">
-          <span class="pill">Tarifa por transacción: $15.00 MXN</span>
-          <span class="pill">Margen neto por transacción: $3.00 MXN</span>
+          <span class="pill">Fee per transaction: $15.00 MXN</span>
+          <span class="pill">Net margin per transaction: $3.00 MXN</span>
         </div>
       </div>
     </div>
 
     <!-- Section 3: Transaction Stats -->
     <div class="section">
-      <div class="section-title">03 · Transacciones</div>
+      <div class="section-title">03 · Transactions</div>
       <div class="panel">
-        <div class="panel-header">Conteo de transacciones confirmadas</div>
+        <div class="panel-header">Confirmed transaction count</div>
         <div class="card-grid card-grid-3" id="txStatsGrid">
           <div class="stat-card"><div class="stat-value skel" style="width:50px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
           <div class="stat-card"><div class="stat-value skel" style="width:50px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:70px;height:10px;margin:0 auto;">&nbsp;</div></div>
@@ -352,7 +352,7 @@
       <div class="panel" id="healthPanel">
         <div class="panel-header">GET /api/bills/admin/health</div>
         <div class="health-row">
-          <span class="health-label">Estado SIPREL</span>
+          <span class="health-label">SIPREL Status</span>
           <span class="health-value skel" style="width:120px;height:14px;" id="healthStatus">&nbsp;</span>
         </div>
         <div class="health-row">
@@ -360,11 +360,11 @@
           <span class="health-value" style="color:#5a7080;font-size:0.5rem;">https://api-v1-fixedip.taecel.com/api/</span>
         </div>
         <div class="health-row">
-          <span class="health-label">Credenciales</span>
+          <span class="health-label">Credentials</span>
           <span class="health-value" id="healthCreds">&nbsp;</span>
         </div>
         <div class="health-row">
-          <span class="health-label">Última verificación</span>
+          <span class="health-label">Last checked</span>
           <span class="health-value" id="healthTime" style="color:#5a7080;">&nbsp;</span>
         </div>
       </div>
@@ -372,24 +372,24 @@
 
     <!-- Section 5: Recent Transactions -->
     <div class="section">
-      <div class="section-title">05 · Últimas Transacciones</div>
+      <div class="section-title">05 · Recent Transactions</div>
       <div class="panel" style="overflow-x:auto;">
         <div class="panel-header">GET /api/bills/history?limit=10</div>
         <div id="txTableWrap">
           <table class="tx-table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Servicio</th>
-                <th>Referencia</th>
-                <th>Monto</th>
-                <th>Tarifa</th>
+                <th>Date</th>
+                <th>Service</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Fee</th>
                 <th>Status</th>
                 <th>Folio</th>
               </tr>
             </thead>
             <tbody id="txBody">
-              <tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">Cargando…</td></tr>
+              <tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -398,12 +398,12 @@
 
     <!-- Section 6: Quick Actions -->
     <div class="section">
-      <div class="section-title">06 · Acciones Rápidas</div>
+      <div class="section-title">06 · Quick Actions</div>
       <div class="action-grid">
-        <a class="action-btn" href="/api/bills/catalog" target="_blank">📋 Ver catálogo de servicios</a>
-        <a class="action-btn" href="/api/bills/admin/products" target="_blank">📦 Consultar productos Taecel</a>
-        <a class="action-btn" href="https://siprel.mx/portal" target="_blank" rel="noopener">💳 Recargar saldo SIPREL</a>
-        <a class="action-btn" href="/api/bills/history?limit=50" target="_blank">🧾 Ver todos los pagos</a>
+        <a class="action-btn" href="/api/bills/catalog" target="_blank">📋 View service catalog</a>
+        <a class="action-btn" href="/api/bills/admin/products" target="_blank">📦 Browse Taecel products</a>
+        <a class="action-btn" href="https://siprel.mx/portal" target="_blank" rel="noopener">💳 Top up SIPREL balance</a>
+        <a class="action-btn" href="/api/bills/history?limit=50" target="_blank">🧾 View all payments</a>
       </div>
     </div>
 
@@ -413,12 +413,12 @@
     const fmt = (n) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtDate = (iso) => {
       const d = new Date(iso);
-      return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' }) +
-             ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) +
+             ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     };
     const saldoColor = (v, greenT, amberT) => v > greenT ? 'color-green' : v > amberT ? 'color-amber' : 'color-red';
 
-    // ── Load Saldo ──
+    // ── Load Balance ──
     async function loadSaldo() {
       try {
         const r = await fetch('/api/bills/admin/balance');
@@ -432,19 +432,19 @@
             <div class="stat-value ${ta !== null ? saldoColor(ta, 1000, 200) : ''}">
               ${ta !== null ? fmt(ta) : d.configured ? '❌ Error' : '—'}
             </div>
-            <div class="stat-label">Bolsa Tiempo Aire</div>
-            ${ta !== null && ta < 200 ? '<div class="stat-sub color-red">⚠ Saldo bajo</div>' : ''}
+            <div class="stat-label">Airtime Wallet</div>
+            ${ta !== null && ta < 200 ? '<div class="stat-sub color-red">⚠ Low balance</div>' : ''}
           </div>
           <div class="stat-card">
             <div class="stat-value ${ps !== null ? saldoColor(ps, 500, 100) : ''}">
-              ${ps !== null ? fmt(ps) : d.configured ? '❌ Error' : 'No configurado'}
+              ${ps !== null ? fmt(ps) : d.configured ? '❌ Error' : 'Not configured'}
             </div>
-            <div class="stat-label">Bolsa Pago de Servicios</div>
-            ${ps !== null && ps < 500 ? '<div class="stat-sub color-amber">⚠ Saldo bajo</div>' : ''}
+            <div class="stat-label">Bill Payment Wallet</div>
+            ${ps !== null && ps < 500 ? '<div class="stat-sub color-amber">⚠ Low balance</div>' : ''}
           </div>`;
       } catch {
         document.getElementById('saldoGrid').innerHTML =
-          '<div class="stat-card" style="grid-column:span 2;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">No se pudo contactar la API</div></div>';
+          '<div class="stat-card" style="grid-column:span 2;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">Could not reach API</div></div>';
       }
     }
 
@@ -457,37 +457,37 @@
         document.getElementById('revenueGrid').innerHTML = `
           <div class="stat-card">
             <div class="stat-value color-teal">${fmt(d.today)}</div>
-            <div class="stat-label">Hoy</div>
+            <div class="stat-label">Today</div>
           </div>
           <div class="stat-card">
             <div class="stat-value color-teal">${fmt(d.thisMonth)}</div>
-            <div class="stat-label">Este mes</div>
+            <div class="stat-label">This month</div>
           </div>
           <div class="stat-card">
             <div class="stat-value color-teal">${fmt(d.allTime)}</div>
-            <div class="stat-label">Total acumulado</div>
+            <div class="stat-label">All time</div>
           </div>
           <div class="stat-card">
             <div class="stat-value color-green">${fmt(d.projectedMonthlyRevenue)}</div>
-            <div class="stat-label">Proyección mensual</div>
+            <div class="stat-label">Monthly projection</div>
           </div>`;
 
         document.getElementById('txStatsGrid').innerHTML = `
           <div class="stat-card">
             <div class="stat-value">${d.transactionCount.today}</div>
-            <div class="stat-label">Transacciones hoy</div>
+            <div class="stat-label">Transactions today</div>
           </div>
           <div class="stat-card">
             <div class="stat-value">${d.transactionCount.thisMonth}</div>
-            <div class="stat-label">Este mes</div>
+            <div class="stat-label">This month</div>
           </div>
           <div class="stat-card">
             <div class="stat-value">${d.transactionCount.allTime}</div>
-            <div class="stat-label">Total histórico</div>
+            <div class="stat-label">All time</div>
           </div>`;
       } catch {
         document.getElementById('revenueGrid').innerHTML =
-          '<div class="stat-card" style="grid-column:span 4;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">No se pudo cargar revenue</div></div>';
+          '<div class="stat-card" style="grid-column:span 4;text-align:center;"><div class="stat-value color-red">Error</div><div class="stat-label">Could not load revenue</div></div>';
       }
     }
 
@@ -501,19 +501,19 @@
 
         document.getElementById('healthStatus').outerHTML =
           `<span class="health-value ${ok ? 'color-teal' : 'color-red'}" id="healthStatus">
-            ${ok ? '✅ Configurado · ' + siprel.status : '❌ No configurado'}
+            ${ok ? '✅ Configured · ' + siprel.status : '❌ Not configured'}
           </span>`;
         document.getElementById('healthCreds').outerHTML =
           `<span class="health-value ${ok ? 'color-teal' : 'color-red'}" id="healthCreds">
-            ${ok ? '✅ Credenciales configuradas' : '❌ Faltan credenciales'}
+            ${ok ? '✅ Credentials configured' : '❌ Missing credentials'}
           </span>`;
         document.getElementById('healthTime').outerHTML =
           `<span class="health-value" style="color:#5a7080;" id="healthTime">
-            ${new Date(d.timestamp).toLocaleTimeString('es-MX')}
+            ${new Date(d.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
           </span>`;
       } catch {
         document.getElementById('healthStatus').outerHTML =
-          '<span class="health-value color-red" id="healthStatus">❌ Error al conectar</span>';
+          '<span class="health-value color-red" id="healthStatus">❌ Connection error</span>';
       }
     }
 
@@ -526,7 +526,7 @@
 
         if (!payments.length) {
           document.getElementById('txBody').innerHTML =
-            '<tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">Sin transacciones aún</td></tr>';
+            '<tr><td colspan="7" style="text-align:center;padding:20px;color:#3d5060;">No transactions yet</td></tr>';
           return;
         }
 
@@ -548,23 +548,23 @@
         }).join('');
       } catch {
         document.getElementById('txBody').innerHTML =
-          '<tr><td colspan="7" style="text-align:center;padding:20px;color:#D85A30;">Error al cargar transacciones</td></tr>';
+          '<tr><td colspan="7" style="text-align:center;padding:20px;color:#D85A30;">Error loading transactions</td></tr>';
       }
     }
 
     // ── Load All ──
     async function loadAll() {
-      document.getElementById('lastUpdated').textContent = 'Actualizando…';
+      document.getElementById('lastUpdated').textContent = 'Updating…';
       document.getElementById('statusDot').className = 'status-dot';
 
       try {
         await Promise.all([loadSaldo(), loadRevenue(), loadHealth(), loadTransactions()]);
         document.getElementById('statusDot').className = 'status-dot ok';
         document.getElementById('lastUpdated').textContent =
-          'Última actualización: ' + new Date().toLocaleTimeString('es-MX');
+          'Last updated: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       } catch {
         document.getElementById('statusDot').className = 'status-dot err';
-        document.getElementById('lastUpdated').textContent = 'Error al actualizar';
+        document.getElementById('lastUpdated').textContent = 'Update failed';
       }
     }
 
