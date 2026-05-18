@@ -1,0 +1,51 @@
+Q1 — How far along are you?
+PagoYa is live, deployed, and processing real transactions at pagoyamx.com today. Mexican consumers use it right now to pay utilities, telecom bills, streaming services, and recurring expenses in under two minutes — without a bank account, without an app download, and without going to OXXO.
+
+This is not a prototype. Every feature below is in production.
+
+What has been shipped 
+•	Free-transaction loyalty tokens — atomically enforced inside the payment DB transaction. Waiving the fee is not a UI trick; consuming the token and recording the payment are a single Postgres operation that rolls back together if either fails.
+•	Payment history at /historial — full ledger with masked references, status badges, and bilingual pagination. Auto-populates from stored phone number on load — no re-entry required.
+•	Card-on-file wallet top-up — one-tap reloads from saved cards. Conekta tokenization stores the card source on a Conekta Customer object; subsequent charges hit the saved source, not a raw card number.
+•	Three wallet loading rails live: OXXO cash, saved-card charge, with SPEI inbound webhook (STP-ready): CLABE instructions shown in-app, webhook validates HMAC-SHA256 signature, credits wallet on confirmed transfer. Activated by flipping one env variable when STP credentials are issued.
+•	AI support chat widget on every page — a Claude tool-use agent that answers account-specific questions (balance, history, pending OXXO deposit) with live DB queries, and escalates to a human via WhatsApp. It knows who the user is without asking.
+
+Full production feature set
+•	Bill payment engine: SIPREL (primary) + Evoluciona (automatic failover). 35+ billers across CFE, Telmex, Telcel, Izzi, Totalplay, Sky, Megacable, AT&T, Movistar, water, internet, streaming. $15 MXN flat fee.
+•	Digital wallet, three rails: OXXO cash vouchers (Conekta), saved-card tokenized charges (Conekta), SPEI inbound bank transfer (STP webhook). Wallet debited atomically with every payment — balance is only deducted when the provider confirms success.
+•	AI bill autofill: Natural-language home screen: “CFE 350 pesos” pre-fills service, amount, and reference. Backed by Claude Haiku server-side.
+•	Loyalty & rewards: 1 pt / $10 MXN, Bronze / Silver / Gold tiers. Two redemption types: wallet credit (MXN deposited directly) and free-transaction token (fee waived, enforced atomically in payment transaction).
+•	Street-team referral network: Unique referral codes, 5 MXN commission per confirmed payment, 7-day hold, rep earnings dashboard.
+•	WhatsApp receipts & alerts via Twilio: Post-payment receipts, loyalty updates, token delivery, low-SIPREL-balance alerts (hourly cron, dual-pool check). All non-blocking.
+•	Operational monitoring: SIPREL saldo monitored hourly. Alert fires when either payment pool drops below threshold. Two-minute fix: Replit env var flip activates SPEI rail.
+•	Reliability: 70+ passing API integration tests. Atomic wallet deduction with TOCTOU guard. SIPREL/Evoluciona failover. Reconciliation audit trail for post-provider DB failures.
+
+What’s in progress
+•	Merchant/biller self-service onboarding portal
+•	Scheduled recurring payments (auto-pay for monthly bills)
+•	KYC / identity verification for higher wallet limits under CNBV guidelines
+•	iOS and Android PWA push notifications
+•	Static HTML guide pages with CTAs for SEO indexing (pagoyamx.com/pagar-cfe etc.)
+
+The product has been built and iterated entirely in-house. We have live users in Mexico, a functional referral network being seeded in Puerto Vallarta, and an active go-to-market push into underbanked markets in Jalisco and CDMX. We have a meeting scheduled with STP — Mexico’s real-time payment infrastructure — to activate the SPEI rail, which is already fully built and awaiting credentials.
+
+Q2 — What tech stack are you using?
+Our stack is deliberately small, ship-fast, and chosen for the constraints of the Mexican fintech ecosystem — not adapted from a US-centric template.
+
+Layer	Technology
+Frontend	React 18 + Vite, TypeScript, Wouter (client-side routing), Tailwind CSS. Mobile-first, PWA-ready. No React Native — fully responsive and installable on iOS/Android without an App Store submission.
+Backend	Node.js + Express (TypeScript), Drizzle ORM, PostgreSQL. pnpm monorepo with a shared lib/db schema package so frontend and backend stay in type-sync without manual contract maintenance.
+Bill payment	SIPREL API (primary) + Evoluciona (automatic failover). 35+ Mexican service categories: CFE, Telmex, Telcel, Sky, Netflix, Izzi, Totalplay, AT&T, Movistar, streaming, and more.
+Payments / wallet	Conekta (Mexican card tokenization + saved cards + OXXO Pay cash vouchers), SPEI inbound via STP webhook (bank transfers, activated at credential flip).
+AI — product	Anthropic Claude (claude-haiku-4-5). Two product surfaces: (1) bill autofill — natural-language intent parsed server-side, returns structured JSON; (2) support chat — tool-use agent loop with 4 live-data tools (payment history, wallet balance, pending OXXO deposit, human escalation via WhatsApp).
+AI — coding	Replit Agent (Claude). The entire product was built using Replit Agent as the primary development tool. Zero external developers. The complete loyalty system — schema, earn/redeem service, atomic token enforcement in the payment transaction, and WhatsApp notifications — was designed, built, and tested in a single session.
+Notifications	Twilio WhatsApp Business API — payment receipts, loyalty point updates, free-transaction token delivery, low-SIPREL-balance alerts, agent escalation. All non-blocking fire-and-forget.
+Infrastructure	Replit (compute, PostgreSQL, secrets, custom domain TLS, deployment). Zero DevOps overhead at this stage. UptimeRobot monitoring live.
+Testing	Vitest + Supertest — 70+ passing API integration tests covering atomic wallet deduction, provider failover, token enforcement, and reconciliation audit paths.
+
+Why this stack wins for PagoYa specifically
+•	Mexican payment infrastructure (Conekta, STP/SPEI, OXXO) is natively supported — we are not adapting a US-centric fintech stack to a different regulatory and banking environment.
+•	Claude’s tool-use loop is the right abstraction for a support agent that needs to answer account-specific questions with live data, without exposing raw database access to the model or building a custom NLU pipeline.
+•	Replit Agent as a coding tool compresses a months-long engineering roadmap into weeks. The speed advantage is not marginal — features that would take a two-person team a sprint ship in hours. This is the primary reason we have a complete, tested, production fintech platform with no external dev budget.
+•	Shared Drizzle schema in a monorepo means product velocity stays high as the codebase grows — type errors at the schema boundary catch integration bugs before they reach production.
+
