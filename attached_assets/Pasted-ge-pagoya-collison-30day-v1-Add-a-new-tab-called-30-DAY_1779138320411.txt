@@ -1,0 +1,232 @@
+ge: pagoya_collison_30day_v1
+Add a new tab called "30-DAY SPRINT" to the file at artifacts/pagoya/public/command-center.html.
+
+Study the existing tab structure, CSS variables, and JavaScript patterns in that file carefully before making any changes. Match the existing design system exactly — same tab button style, same show/hide pattern, same color scheme.
+
+STEP 1 — Add a tab button
+Add a new tab button labeled "30-DAY SPRINT" to the existing tab navigation row, following the exact same pattern as the other tab buttons.
+
+STEP 2 — Add a tab panel
+Create the corresponding tab panel div. It should only show when that tab is active, following the same show/hide logic used by all other tabs.
+
+STEP 3 — Paste this entire block as the content of the new tab panel. It is fully self-contained. All class names are prefixed with "cs-" to avoid conflicts with existing styles.
+
+--- BEGIN TAB CONTENT ---
+
+
+
+
+
+
+  
+The Collison Principle — 30 Days
+
+  
+Stripe's first 20 users were all manually activated. Patrick and John showed up, grabbed the laptop, and set them up on the spot. Paul Graham named it the "Collison Installation." Growth was word-of-mouth because the product was so much better that users told friends unprompted. The first 30 days is not about scale — it's about 10 perfect customers who become evangelists. Do the same in Vallarta.
+
+
+
+28
+Total actions
+0
+Completed
+12
+Founder-only
+0%
+30-day progress
+
+
+
+  
+30-Day Collison Sprint
+0 / 28
+
+  
+
+
+
+All actions
+Founder-only
+Critical
+Daily habits
+Done
+
+
+Week 1: The Collison Installation — own your first 20 users
+Days 1–7
+0/7 done
+Activate William Shaw for daily street ops
+Brief William on the Collison protocol: "Dame tu teléfono." His job this week is 5 in-person activations per day in his colonias. Set a daily 6pm WhatsApp check-in.
+Stripe parallel: Collison brothers personally activated every early user. William is your co-founder surrogate on the ground.
+Critical
+Founder-only
+Fix the 3 missing SKUs before street launch
+Contact Taecel support for Izzi, Totalplay, and Gas Natural SKU codes. Hide these 3 from the service selector today until confirmed — a user hitting SKU_PENDING on first use kills the word-of-mouth moment.
+Stripe parallel: Stripe's product had to work perfectly for the first 20 users. One broken flow = one lost evangelist.
+Critical
+Set ADMIN_WHATSAPP_NUMBER secret right now
+Add your WhatsApp number as ADMIN_WHATSAPP_NUMBER in Replit secrets. Two-minute fix. You need instant alerts on low SIPREL balance and any credential failure during live street activations.
+Critical
+Define your 3 target colonias only — no expansion yet
+Pick exactly 3 colonias for Week 1–2: 5 de Diciembre, Versalles, Emiliano Zapata. William's rep code ENG-01 is already scoped there. Do not expand to Guadalajara yet.
+Stripe parallel: "Keep the fire contained at first to get it really hot before adding more logs." — Paul Graham
+Founder-only
+Build a 60-second bilingual demo script
+Write a tight script: "¿Pagas CFE en el OXXO? Te voy a mostrar cómo hacerlo en 60 segundos." Walk through: open link → register → wallet → pay bill. Practice until reflexive.
+Stripe parallel: The brothers had the demo cold. Speed of activation is what makes the Collison install work.
+Critical
+Founder-only
+Create WhatsApp group: "PagoYa Vallarta Pioneros"
+Invite first 10–15 activated users into a private WhatsApp group. This is your feedback loop, support channel, and social proof factory. Respond to every message personally this month.
+Stripe parallel: Stripe invited customers to management meetings every two weeks. Your Pioneros group is that feedback loop.
+Founder-only
+Pull SIPREL cost-per-transaction from Taecel tariff sheet
+Before street team drives real volume, know your margin. If SIPREL cost is $15 MXN and fee is $25 MXN, you have $10 headroom. Model unit economics now before you scale.
+Founder-only
+Week 2: Word of mouth — make the product so good users sell it
+Days 8–14
+0/6 done
+Do 5 Collison installations yourself as founder
+Not William — you. Go to a tianguis, a corner store, a taquería. Find someone paying a bill and say "Dame tu teléfono, te muestro algo." Activate them on the spot. This surfaces every friction point.
+Stripe parallel: Patrick and John did this personally for every early user. Founders' direct touch makes the feedback loop tight.
+Critical
+Founder-only
+Trigger first P2P sends to activate the virality loop
+Have your first 20 users each send $50 MXN to one contact. This fires the auto-wallet creation + WhatsApp invite. Track: how many invites converted to registrations?
+Stripe parallel: Stripe's virality was unexpected — users sold it to friends. Your P2P loop is engineered virality. Activate it.
+Critical
+Capture 3 video testimonials from Week 1 users
+Ask 3 first users to send a WhatsApp voice note or short video: "¿Cómo te ayudó PagoYa?" Post raw, authentic clips to Instagram Stories with Vallarta location tag.
+Stripe parallel: Blog posts by real users drove more Stripe signups than any marketing. Your version is WhatsApp forwards and IG Stories.
+Founder-only
+Publish your first "why we built this" Instagram post
+Personal post from Lloyd: photo at a CFE kiosk or OXXO with a caption about why PagoYa exists. Story of the problem, not a product pitch. Tag Puerto Vallarta. Boost with $200 MXN.
+Stripe parallel: Collisons wrote blog posts for developers. Your audience is the colonias. Speak to them directly.
+Founder-only
+Personally call your top 3 activated users
+Phone call — not WhatsApp. Ask: what worked? What confused you? Would you tell a friend? What would make you use it every month? This is your bi-weekly customer meeting.
+Stripe parallel: Stripe invited customers into management meetings every two weeks. Personal calls are your version.
+Founder-only
+Daily habit
+Confirm STP onboarding status with Jaime Marquez
+SPEI inbound is shown as live in the UI. If STP is not confirmed, that flow is broken. Get written confirmation or ETA this week before users try to fund via SPEI and hit a dead end.
+Critical
+Week 3: Deepen before widening — make your colonias feel owned
+Days 15–21
+0/6 done
+Recruit rep #2 in a new colonia
+William owns ENG-01 territory. Week 3 recruit rep #2 for Pitillal or Centro via /rep-signup. Brief them with the street team guide. Going from 1 to 2 reps is harder than 2 to N — do it deliberately.
+Stripe parallel: "Going from 1 to 2 is often harder than going from 2 to N." Stripe said this about countries. Same applies to reps.
+Founder-only
+Run a 48-hour manual loyalty incentive
+WhatsApp broadcast to Pioneros: "Paga 3 servicios esta semana y ganas un pago gratis." Manually award the free-transaction token to anyone who hits it. Unscalable — exactly right for this stage.
+Stripe parallel: "Some startups could be entirely manual at first... gradually automate the bottlenecks." This is your manual loyalty sprint.
+Map your P2P senders — find your next rep candidates
+Pull wallet_transactions and identify users who have sent P2P transfers. These are your most engaged users. Contact each one personally. They are your next rep candidates.
+Stripe parallel: Stripe's highest-value early users became employees. Your most engaged users become reps.
+Founder-only
+Publish a CFE payment guide for Vallarta
+Write a 300-word SEO guide: "Cómo pagar CFE División Occidente desde tu teléfono en Puerto Vallarta." Targets exact colonia keywords already in your Google Search Console sitemap.
+Stripe parallel: Stripe's developer blog posts drove organic discovery. Your local SEO guides do the same for unbanked Vallarta.
+Weekly metric review every Monday
+Every Monday: count new wallets, % who completed first payment, P2P sends, OXXO vs card vs SPEI funding split, rep commissions paid. This is your weekly what-is-working signal.
+Stripe parallel: The Collisons tracked what was working weekly and iterated fast. Without measurement you cannot iterate.
+Founder-only
+Daily habit
+Run a colonia pop-up activation event
+Set up a table at Mercado Emiliano Zapata or the Sunday tianguis. Bring a laminated QR and a sign: "Paga tu CFE aquí gratis hoy." You and William. Target 20 activations in 3 hours.
+Stripe parallel: Airbnb went door to door in New York with rolling bags. This is PagoYa's door-to-door moment.
+Critical
+Founder-only
+Week 4: Build the engine — traction narrative and Conekta readiness
+Days 22–30
+0/9 done
+Stage all Conekta KYB documents for same-day upload
+While paperwork is in review, have every remaining KYB doc ready to upload same-day as approval. Conekta live = card top-up + OXXO production confirmed. Don't let a missing doc cost 48 hours.
+Critical
+Founder-only
+Compile your first 30-day traction narrative
+By Day 30: total wallets, total transactions, total MXN processed, P2P sends, colonia coverage, rep count. This is your YC application story — real numbers from real streets.
+Stripe parallel: "100,000 developer accounts" was the number Stripe led with 10 months after launch. Your equivalent is wallets and transactions.
+Founder-only
+Write personal thank-you WhatsApps to first 20 users
+Not a broadcast — individual messages. "Gracias por ser de los primeros en usar PagoYa. Tu feedback ha mejorado la app." Unscalable and that is exactly the point. Creates evangelists.
+Stripe parallel: "Tim Cook can't send you a handwritten note. But you can." — Paul Graham. This is your handwritten note.
+Critical
+Founder-only
+Identify top 3 super-users for a monthly feedback call
+From Pioneros group and P2P senders, find 3 people who have completed 3+ transactions. Invite them to a 20-min monthly WhatsApp voice call. They become your informal advisory board.
+Stripe parallel: Stripe customers joined management meetings. Your super-users join monthly calls.
+Founder-only
+Update pre-mortem risk board with 30-day ground truth
+What risks materialized? Which assumptions were wrong? Update the pre-mortem with real data: unit economics, street team CAC, fraud rate, colonia conversion rate.
+Founder-only
+Draft first two sections of YC application
+YC asks: "What is your company doing?" and "What is your traction?" By Day 30 you have real answers. Write the first two sections using actual numbers from the street.
+Stripe parallel: Stripe was in YC before founding. The YC application is your equivalent access to the next level.
+Founder-only
+DAILY: 3 in-person founder activations every day
+Every single day, you personally activate 3 users. Not William — you. 30 days × 3 = 90 founder-activated users. These are your core evangelists. Most important daily habit of the sprint.
+Stripe parallel: "At least one founder will have to spend a lot of time on sales and marketing." — Paul Graham
+Critical
+Founder-only
+Daily habit
+DAILY: respond to every Pioneros WhatsApp message
+No message goes unanswered more than 2 hours during business hours. Unscalable service level that creates loyalty. Do it yourself, every day, all 30 days.
+Stripe parallel: "It's not the product that should be insanely great, but the experience of being your user." — Paul Graham
+Founder-only
+Daily habit
+DAILY: check SIPREL balance and yesterday's transaction log
+Every morning: verify SIPREL saldo is above $2,000 MXN. Review yesterday's transactions for failed payments. Fix failures personally — call the user if needed.
+Stripe parallel: The Collisons monitored everything manually in the early days. Founders see things dashboards miss.
+Daily habit
+
+
+
+  
+Stripe → PagoYa translation map
+
+  
+Stripe did
+First 20 users were YC founders — a pre-existing trusted community
+You do
+First 20 users are local business owners in Colonia 5 de Diciembre, Versalles, Emiliano Zapata — William's rep territory
+
+  
+Stripe did
+"Give me your laptop" — immediate on-the-spot activation, no follow-up link
+You do
+"Dame tu teléfono" — open pagoyamx.com, register them, complete their first bill payment right there in person
+
+  
+Stripe did
+Manually handled merchant accounts behind the scenes so the product felt instant
+You do
+White-glove the first 20 users — handle any OXXO or wallet friction manually so they feel zero friction
+
+  
+Stripe did
+Kept fire contained — Harvard only first, then Ivy League, then all colleges
+You do
+Own 3 colonias in Puerto Vallarta completely before expanding to Guadalajara. Depth before breadth.
+
+  
+Stripe did
+Word-of-mouth virality — users sold it to friends because nothing else was close
+You do
+P2P send is your virality loop — every transfer to an unregistered phone creates a new wallet + WhatsApp invite
+
+
+
+
+
+
+
+--- END TAB CONTENT ---
+
+STEP 4 — Commit and push
+After adding the tab, commit the change to GitHub with message:
+  feat: add 30-day Collison sprint tab to command center
+
+STEP 5 — Verify
+Confirm the new "30-DAY SPRINT" tab appears at pagoya.replit.app/command-center.html and the checklist renders correctly with all 4 week sections visible.
