@@ -36,6 +36,7 @@ import BlogOXXOPay from "@/pages/BlogOXXOPay";
 import Enviar from "@/pages/Enviar";
 import Verificar from "@/pages/Verificar";
 import BankLink from "@/pages/BankLink";
+import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -84,6 +85,7 @@ function Router() {
       <Route path="/enviar" component={Enviar} />
       <Route path="/verificar" component={Verificar} />
       <Route path="/vincular-banco" component={BankLink} />
+      <Route path="/aviso-de-privacidad" component={AvisoPrivacidad} />
       <Route component={NotFound} />
     </Switch>
   );

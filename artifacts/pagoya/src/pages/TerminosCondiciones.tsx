@@ -209,6 +209,8 @@ export default function TerminosCondiciones() {
           {" · "}
           <a href="/terminos-y-condiciones" style={{ color: "#1D9E75" }}>Términos y Condiciones</a>
           {" · "}
+          <a href="/aviso-de-privacidad" style={{ color: "#475569", textDecoration: "none" }}>Aviso de Privacidad</a>
+          {" · "}
           <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>
       </footer>
