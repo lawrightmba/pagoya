@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import { ArrowLeft, Search, Send, CheckCircle, AlertCircle, User, ChevronRight } from "lucide-react";
+import { ArrowLeft, Search, Send, CheckCircle, AlertCircle, User, ChevronRight, UserPlus } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL ?? `${import.meta.env.BASE_URL}api`;
 
@@ -37,6 +37,7 @@ export default function Enviar() {
   const [memo, setMemo] = useState("");
   const [step, setStep] = useState<Step>("phone");
   const [recipientExists, setRecipientExists] = useState<boolean | null>(null);
+  const [recipientIsNew, setRecipientIsNew] = useState(false);
   const [limits, setLimits] = useState<LimitsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +79,9 @@ export default function Enviar() {
       const lims = await limitsRes.json();
 
       setRecipientExists(lookup.exists);
+      setRecipientIsNew(!lookup.exists);
       setLimits(lims);
 
-      if (!lookup.exists) {
-        setError("Ese número no tiene cuenta en PagoYa. El destinatario debe registrarse primero.");
-        return;
-      }
       if (lims.dailyRemainingMXN < 10) {
         setError(`Alcanzaste el límite diario de $${lims.dailyLimitMXN.toFixed(2)} MXN en transferencias.`);
         return;
@@ -250,15 +248,40 @@ export default function Enviar() {
         {step === "amount" && (
           <div className="space-y-4">
             {/* Recipient card */}
-            <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "rgba(29,158,117,0.15)", border: "1px solid rgba(29,158,117,0.3)" }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: teal }}>
-                <User className="w-5 h-5 text-white" />
+            <div
+              className="rounded-2xl p-4 flex items-center gap-3"
+              style={{
+                background: recipientIsNew ? "rgba(255,165,0,0.1)" : "rgba(29,158,117,0.15)",
+                border: `1px solid ${recipientIsNew ? "rgba(255,165,0,0.3)" : "rgba(29,158,117,0.3)"}`,
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: recipientIsNew ? "rgba(255,165,0,0.3)" : teal }}
+              >
+                {recipientIsNew ? <UserPlus className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-white" />}
               </div>
               <div>
                 <p className="text-white font-semibold">{maskPhone(recipientPhone)}</p>
-                <p className="text-xs" style={{ color: "#1D9E75" }}>Usuario registrado en PagoYa ✓</p>
+                {recipientIsNew ? (
+                  <p className="text-xs" style={{ color: "rgba(255,200,80,0.9)" }}>
+                    Aún no tiene cuenta — les enviaremos invitación por WhatsApp
+                  </p>
+                ) : (
+                  <p className="text-xs" style={{ color: "#1D9E75" }}>Usuario registrado en PagoYa ✓</p>
+                )}
               </div>
             </div>
+
+            {/* Invite callout for new users */}
+            {recipientIsNew && (
+              <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.2)" }}>
+                <UserPlus className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "rgba(255,200,80,0.9)" }} />
+                <p className="text-xs leading-relaxed" style={{ color: "rgba(255,200,80,0.9)" }}>
+                  Su saldo quedará guardado. Recibirán un WhatsApp con el link para entrar a PagoYa y usarlo.
+                </p>
+              </div>
+            )}
 
             {/* Amount input */}
             <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -372,6 +395,15 @@ export default function Enviar() {
                 </div>
               </div>
             </div>
+
+            {recipientIsNew && (
+              <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.2)" }}>
+                <UserPlus className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "rgba(255,200,80,0.9)" }} />
+                <p className="text-xs leading-relaxed" style={{ color: "rgba(255,200,80,0.9)" }}>
+                  Este número aún no está registrado. Su saldo quedará reservado y recibirán un WhatsApp para reclamarlo en pagoyamx.com.
+                </p>
+              </div>
+            )}
 
             <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
               Esta transferencia es inmediata e irreversible. Verifica el número antes de confirmar.

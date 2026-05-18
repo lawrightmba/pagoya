@@ -60,6 +60,8 @@ export async function p2pTransfer(
   }
 
   const senderWallet = await getOrCreateWallet(senderTelefono);
+  const existingReceiver = await lookupUser(receiverTelefono);
+  const receiverIsNew = !existingReceiver.exists;
   const receiverWallet = await getOrCreateWallet(receiverTelefono);
 
   const description = memo?.trim()
@@ -148,5 +150,5 @@ export async function p2pTransfer(
     "p2p: transfer completed",
   );
 
-  return { senderTxId: senderTxId!, receiverTxId: receiverTxId!, newSenderBalance: newSenderBalance! };
+  return { senderTxId: senderTxId!, receiverTxId: receiverTxId!, newSenderBalance: newSenderBalance!, receiverIsNew };
 }

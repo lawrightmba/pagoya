@@ -680,12 +680,17 @@ router.post("/transfer", async (req: Request, res: Response) => {
       `_PagoYa — pagoyamx.com_`;
     sendWhatsApp(senderTelefono, senderMsg).catch(() => {});
 
-    // Non-blocking: notify receiver
-    const receiverMsg =
-      `💸 Recibiste una transferencia\n\n` +
-      `*$${amount.toFixed(2)} MXN* de ${senderTelefono}\n` +
-      (memo ? `Nota: ${memo}\n` : "") +
-      `\nYa puedes usar tu saldo para pagar servicios.\n_PagoYa — pagoyamx.com_`;
+    // Non-blocking: notify receiver (invite if new user, receipt if existing)
+    const receiverMsg = result.receiverIsNew
+      ? `💸 ¡Te enviaron dinero!\n\n` +
+        `*${senderTelefono}* te mandó *$${amount.toFixed(2)} MXN* a través de PagoYa.\n` +
+        (memo ? `Nota: "${memo}"\n\n` : "\n") +
+        `Tu saldo ya está guardado. Entra a *pagoyamx.com* para usarlo y pagar CFE, agua, Telmex y más — sin banco, sin app.\n\n` +
+        `👉 pagoyamx.com\n_PagoYa — paga cualquier servicio en 2 minutos_`
+      : `💸 Recibiste una transferencia\n\n` +
+        `*$${amount.toFixed(2)} MXN* de ${senderTelefono}\n` +
+        (memo ? `Nota: ${memo}\n` : "") +
+        `\nYa puedes usar tu saldo para pagar servicios.\n_PagoYa — pagoyamx.com_`;
     sendWhatsApp(receiverTelefono, receiverMsg).catch(() => {});
 
     logger.info({ senderTelefono, receiverTelefono, amount }, "p2p: transfer route completed");
