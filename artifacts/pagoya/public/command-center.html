@@ -913,11 +913,11 @@
       </div>
     </div>
 
-    <div class="cs-item" id="cs-w1-2" data-tags="critical" onclick="csToggle('cs-w1-2')">
+    <div class="cs-item" id="cs-w1-2" data-tags="critical" data-predone="true" onclick="csToggle('cs-w1-2')">
       <div class="cs-cb"></div>
       <div class="cs-body">
         <div class="cs-item-title">Fix the 3 missing SKUs before street launch</div>
-        <div class="cs-item-desc">Contact Taecel support for Izzi, Totalplay, and Gas Natural SKU codes. Hide these 3 from the service selector today until confirmed — a user hitting SKU_PENDING on first use kills the word-of-mouth moment.</div>
+        <div class="cs-item-desc">✅ Done May 18 — Confirmed via Taecel sandbox + support email. Izzi → IZZ000 (8-digit ref), TotalPlay → TOT000 (17-digit ref), Gas Natural → GAS000 (14–28 digit ref). All use pagoServicios bolsa. Route validation (min + max ref length), catalog, and tests updated. Deployed to production.</div>
         <div class="cs-parallel">Stripe parallel: Stripe's product had to work perfectly for the first 20 users. One broken flow = one lost evangelist.</div>
         <div class="cs-tags"><span class="cs-tag cs-tag-critical">Critical</span></div>
       </div>
@@ -1256,6 +1256,11 @@
   const CS_KEY = 'cs_sprint_v1';
   let csChecks = {};
   try { csChecks = JSON.parse(localStorage.getItem(CS_KEY) || '{}'); } catch(e) {}
+  // Pre-seed items marked data-predone="true" that the user hasn't manually touched
+  document.querySelectorAll('[data-predone="true"]').forEach(el => {
+    if (csChecks[el.id] === undefined) csChecks[el.id] = true;
+  });
+  try { localStorage.setItem(CS_KEY, JSON.stringify(csChecks)); } catch(e) {}
 
   const CS_IDS = [
     'cs-w1-1','cs-w1-2','cs-w1-3','cs-w1-4','cs-w1-5','cs-w1-6','cs-w1-7',

@@ -1,5 +1,9 @@
 # Workspace
 
+## User Preferences
+
+- **Command Center auto-update**: At the end of every working session, always update `artifacts/pagoya/public/command-center.html` to reflect any tasks completed, decisions made, or new items discovered during that session — without waiting to be asked.
+
 ## Overview
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
