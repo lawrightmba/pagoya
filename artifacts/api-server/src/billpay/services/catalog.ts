@@ -28,12 +28,12 @@ export const BILL_CATALOG: BillService[] = [
   { id: "agua_jalisco", name: "SIAPA Jalisco", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SIAPA" },
 
   // ── GAS ───────────────────────────────────────────────────────────────────
-  { id: "gas_natural", name: "Gas Natural Fenosa", category: "Gas", providers: ["siprel", "evoluciona"], logoEmoji: "🔥", siprelServiceId: undefined, evolucionaServiceId: "GAS_NATURAL" },
+  // gas_natural: SKU_PENDING — hidden until Taecel provides SKU
   { id: "zeta_gas", name: "Zeta Gas", category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "ZETA_GAS" },
 
   // ── INTERNET ─────────────────────────────────────────────────────────────
-  { id: "izzi", name: "Izzi", category: "Internet", providers: ["siprel", "evoluciona"], logoEmoji: "📡", siprelServiceId: undefined, evolucionaServiceId: "IZZI_INTERNET" },
-  { id: "totalplay", name: "Totalplay", category: "Internet", providers: ["siprel"], logoEmoji: "📡", siprelServiceId: undefined },
+  // izzi: SKU_PENDING — hidden until Taecel provides SKU
+  // totalplay: SKU_PENDING — hidden until Taecel provides SKU
   {
     id: "megacable", name: "Megacable", category: "Internet",
     providers: ["siprel", "evoluciona"], logoEmoji: "📡",
