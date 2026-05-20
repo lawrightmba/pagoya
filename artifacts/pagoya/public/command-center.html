@@ -369,6 +369,7 @@
   <button class="tab" onclick="switchTab('reminders', this)">Reminders</button>
   <button class="tab" onclick="switchTab('roadmap', this)">30-Day Roadmap</button>
   <button class="tab" onclick="switchTab('sprint', this)">30-DAY SPRINT</button>
+  <button class="tab" onclick="switchTab('completed', this)">✓ Completed</button>
 </div>
 
 <!-- PROGRESS (shown on checklist tab) -->
@@ -410,19 +411,20 @@
         <div class="stp-title">⚡ STP Integration — Active</div>
         <div class="stp-subtitle">SIPREL · CUENTA ARES · MX INTERBANK RAILS</div>
       </div>
-      <div class="stp-badge">3 of 11 complete</div>
+      <div class="stp-badge">6 of 12 complete</div>
     </div>
     <div class="stp-progress-row">
-      <div class="stp-bar"><div class="stp-fill" style="width:27.3%"></div></div>
-      <div class="stp-pct">27%</div>
+      <div class="stp-bar"><div class="stp-fill" style="width:50%"></div></div>
+      <div class="stp-pct">50%</div>
     </div>
     <div class="stp-items">
       <div class="stp-item done"><span class="stp-icon">✅</span><span>Pedro Q&amp;A responses received and reviewed</span></div>
       <div class="stp-item done"><span class="stp-icon">✅</span><span>Confirmation email sent — Friday 11 AM call confirmed</span></div>
       <div class="stp-item done"><span class="stp-icon">✅</span><span>Corporate documentation checklist requested</span></div>
-      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Documentation checklist received from Pedro</span></div>
-      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Corporate application submitted</span></div>
-      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Prefix and account assigned</span></div>
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Documentation checklist received from Pedro</span></div>
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Corporate documents submitted — May 20</span></div>
+      <div class="stp-item done"><span class="stp-icon">✅</span><span>Go-live credentials requested from STP — May 20</span></div>
+      <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Go-live credentials received (prefix + account assigned)</span></div>
       <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Sandbox access activated</span></div>
       <div class="stp-item pending"><span class="stp-icon">⏳</span><span>VPN Site-to-Site IPSec configured</span></div>
       <div class="stp-item pending"><span class="stp-icon">⏳</span><span>Geolocation solution implemented for RegistraOrden</span></div>
@@ -884,7 +886,6 @@
     <button class="cs-filter-btn" onclick="csFilter('founder', this)">Founder-only</button>
     <button class="cs-filter-btn" onclick="csFilter('critical', this)">Critical</button>
     <button class="cs-filter-btn" onclick="csFilter('daily', this)">Daily habits</button>
-    <button class="cs-filter-btn" onclick="csFilter('done', this)">Done</button>
   </div>
 
   <!-- WEEK 1 -->
@@ -1248,6 +1249,19 @@
 
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     PANEL — COMPLETED
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-completed">
+  <div style="padding:16px 16px 0;">
+    <div style="background:#161921; border:1px solid #1D9E7530; border-radius:12px; padding:16px 18px; margin-bottom:4px;">
+      <div style="font-size:14px; font-weight:700; color:#1D9E75; margin-bottom:4px;">Completed Sprint Items</div>
+      <div style="font-size:12px; color:#555;">Items checked off the 30-Day Sprint. Tap any item to uncheck and move it back to the sprint.</div>
+    </div>
+  </div>
+  <div id="cs-completed-list" style="padding:8px 16px 32px;"></div>
+</div>
+
 <script>
 (function() {
   const CS_KEY = 'cs_sprint_v1';
@@ -1317,6 +1331,32 @@
       const weekDone = ids.filter(id => !!csChecks[id]).length;
       const countEl = document.getElementById(prefix + '-count');
       if (countEl) countEl.textContent = weekDone + '/' + ids.length + ' done';
+    });
+
+    csRenderCompleted();
+  }
+
+  window.csRenderCompleted = function csRenderCompleted() {
+    const container = document.getElementById('cs-completed-list');
+    if (!container) return;
+    container.innerHTML = '';
+    const doneIds = CS_IDS.filter(id => !!csChecks[id]);
+    if (doneIds.length === 0) {
+      container.innerHTML = '<div style="padding:40px 16px; text-align:center; color:#555; font-size:13px;">No completed items yet — check off sprint items and they\'ll appear here.</div>';
+      return;
+    }
+    doneIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const clone = el.cloneNode(true);
+      clone.id = 'done-' + id;
+      clone.classList.remove('cs-done', 'cs-hidden');
+      clone.style.display = '';
+      clone.style.opacity = '0.7';
+      clone.onclick = function() { csToggle(id); };
+      const cb = clone.querySelector('.cs-cb');
+      if (cb) { cb.style.background = '#1D9E75'; cb.style.borderColor = '#1D9E75'; cb.innerHTML = '<span style="font-size:11px;color:#fff;font-weight:700;">✓</span>'; }
+      container.appendChild(clone);
     });
   }
 
@@ -1484,6 +1524,7 @@ function switchTab(id, btn) {
   btn.classList.add('active');
   document.getElementById('progress-wrap').style.display = id === 'checklist' ? 'flex' : 'none';
   if (id === 'reminders') renderRemindersPanel();
+  if (id === 'completed' && window.csRenderCompleted) window.csRenderCompleted();
 }
 
 // ── PROGRESS ─────────────────────────────────────────────────────────────────
