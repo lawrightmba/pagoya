@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/pagoya-pitch-deck/"
+title = "PagoYa — 500 Global LATAM Pitch Deck"
+version = "1.0.0"
+id = "artifacts/pagoya-pitch-deck"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/pagoya-pitch-deck/" ]
+localPort = 23103
+
+[services.development]
+run = "pnpm --filter @workspace/pagoya-pitch-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pagoya-pitch-deck", "run", "build" ]
+publicDir = "artifacts/pagoya-pitch-deck/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23103"
+BASE_PATH = "/pagoya-pitch-deck/"
