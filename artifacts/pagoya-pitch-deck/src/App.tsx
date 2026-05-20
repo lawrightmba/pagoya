@@ -124,14 +124,29 @@ function SlideEditor() {
     };
   }, [currentIndex, navigate]);
 
+  const base = import.meta.env.BASE_URL;
+
   return (
     <div className="select-none">
       {slides.map((slide, index) => (
         <div
           key={slide.id}
-          style={{ display: index === currentIndex ? "block" : "none" }}
+          style={{ display: index === currentIndex ? "block" : "none", position: "relative" }}
         >
           <slide.Component />
+          <img
+            src={`${base}pagoya-logo.png`}
+            alt="PagoYa"
+            style={{
+              position: "absolute",
+              top: "2.8vh",
+              left: "3vw",
+              height: "8.5vh",
+              width: "auto",
+              pointerEvents: "none",
+              zIndex: 100,
+            }}
+          />
         </div>
       ))}
     </div>

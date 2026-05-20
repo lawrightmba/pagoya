@@ -161,13 +161,7 @@ export default function Slide12Ask() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between" style={{ marginTop: "3vh" }}>
-          <img
-            src={`${import.meta.env.BASE_URL}pagoya-logo.png`}
-            crossOrigin="anonymous"
-            alt="PagoYa"
-            style={{ height: "5vh", width: "auto" }}
-          />
+        <div className="flex items-center justify-end" style={{ marginTop: "3vh" }}>
           <div className="flex flex-col items-end gap-[0.5vh]">
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB" }}>
               Lloyd A. Wright, MBA

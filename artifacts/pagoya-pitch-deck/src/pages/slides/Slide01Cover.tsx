@@ -16,15 +16,6 @@ export default function Slide01Cover() {
       />
 
       <div className="absolute inset-0 flex flex-col justify-between" style={{ padding: "7vh 8vw" }}>
-        <div style={{ opacity: 0.95 }}>
-          <img
-            src={`${base}pagoya-logo.png`}
-            crossOrigin="anonymous"
-            alt="PagoYa"
-            style={{ height: "6vh", width: "auto" }}
-          />
-        </div>
-
         <div style={{ maxWidth: "62vw" }}>
           <p
             style={{
