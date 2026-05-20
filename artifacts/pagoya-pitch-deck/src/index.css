@@ -3,6 +3,7 @@
 @theme inline {
   --color-primary: var(--slide-primary);
   --color-accent: var(--slide-accent);
+  --color-coral: var(--slide-coral);
   --color-bg: var(--slide-bg);
   --color-text: var(--slide-text);
   --color-muted: var(--slide-muted);
@@ -11,15 +12,15 @@
 }
 
 :root {
-  /* Replace these with brand colors */
-  --slide-primary: #4f46e5;
-  --slide-accent: #06b6d4;
-  --slide-bg: #f8fafc;
-  --slide-text: #0f172a;
-  --slide-muted: #64748b;
-  --font-display-family: "Inter", system-ui, sans-serif;
-  --font-body-family: "Inter", system-ui, sans-serif;
-  color-scheme: light;
+  --slide-primary: #1D9E75;
+  --slide-accent: #1D9E75;
+  --slide-coral: #D85A30;
+  --slide-bg: #0A2540;
+  --slide-text: #F5F0EB;
+  --slide-muted: #8BA8C0;
+  --font-display-family: "Barlow Condensed", sans-serif;
+  --font-body-family: "DM Sans", sans-serif;
+  color-scheme: dark;
 }
 
 html,

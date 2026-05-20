@@ -12,6 +12,18 @@ uri = "file://artifacts/pagoya-demo-video/public/images/mexico_map_nodes.png"
 type = "image"
 title = "Mexico map nodes"
 
+[[generated]]
+id = "hQeUlwxet_DVb338fhviH"
+uri = "file://artifacts/pagoya-pitch-deck/public/hero-colonia.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "d1aZbOtAZrWJoxDcaZkH2"
+uri = "file://artifacts/pagoya-pitch-deck/public/hero-gtm.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "i4bav1kvkby8BLMYD6vwu"
 uri = "file://artifacts/api-server/src/billpay/scripts/tabla-resultados-pagoya.xlsx"
