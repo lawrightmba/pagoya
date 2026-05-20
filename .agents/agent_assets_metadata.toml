@@ -89,3 +89,15 @@ id = "pQA99IPoqJ56c5oQ0rXy9"
 uri = "file://artifacts/pagoya-demo-video/public/images/phone_success.jpg"
 type = "image"
 title = "person smiling looking at phone outdoors"
+
+[[outputs]]
+id = "CF1UFa17IiPL175NkktkX"
+uri = "file://.local/outputs/PagoYa-500-Global-LATAM-Pitch-Deck.pptx"
+type = "slides"
+title = "PagoYa — 500 Global LATAM Pitch Deck (PPTX)"
+
+[[outputs]]
+id = "QohcWzs26jRAnl5WpoGih"
+uri = "file://.local/outputs/PagoYa-500-Global-LATAM-Pitch-Deck.pdf"
+type = "pdf"
+title = "PagoYa — 500 Global LATAM Pitch Deck (PDF)"
