@@ -346,6 +346,119 @@
   .rd-w2     { background: #0a1f2a; color: #378ADD; }
   .rd-w34    { background: #1e2028; color: #888; }
   .rd-weekly { background: #0a2a1a; color: #1D9E75; }
+
+  /* ── TRACTION REPORT ── */
+  #panel-traction { padding-bottom: 80px; }
+  .tr-week-nav {
+    display: flex; gap: 6px; padding: 12px 12px 0; flex-wrap: wrap;
+  }
+  .tr-w-btn {
+    flex: 1; min-width: 44px; height: 36px;
+    background: #1a1d27; border: 1px solid #252830; border-radius: 8px;
+    color: #6b7280; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .tr-w-btn.active {
+    background: #0d2318; border-color: #1D9E75; color: #1D9E75;
+  }
+  .tr-w-btn:active { opacity: 0.75; }
+  .tr-section-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #1D9E75; padding: 14px 16px 6px;
+  }
+  .tr-card-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 0 12px;
+  }
+  .tr-card {
+    background: #1a1d27; border: 1px solid #252830; border-top: 3px solid #252830;
+    border-radius: 10px; padding: 10px 10px 8px; transition: border-color 0.2s;
+  }
+  .tr-card.filled { border-top-color: #1D9E75; }
+  .tr-card-label { font-size: 10px; color: #6b7280; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+  .tr-card input {
+    width: 100%; background: #0f1117; border: 1px solid #353a47; border-radius: 6px;
+    color: #e8eaf0; font-size: 13px; font-weight: 700; padding: 6px 8px;
+    outline: none; font-family: inherit;
+  }
+  .tr-card input:focus { border-color: #1D9E75; }
+  .tr-narrative {
+    display: flex; flex-direction: column; gap: 8px; padding: 0 12px;
+  }
+  .tr-narr-label { font-size: 11px; font-weight: 700; color: #9ca3af; margin-bottom: 4px; }
+  .tr-narrative textarea {
+    width: 100%; background: #1a1d27; border: 1px solid #252830; border-radius: 8px;
+    color: #d1d5db; font-size: 13px; padding: 10px 12px; resize: vertical;
+    outline: none; font-family: inherit; line-height: 1.5; min-height: 64px;
+  }
+  .tr-narrative textarea:focus { border-color: #1D9E75; }
+  .tr-ms-list { padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
+  .tr-ms-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #1a1d27; border: 1px solid #252830; border-radius: 8px;
+    padding: 10px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .tr-ms-item.done { opacity: 0.55; }
+  .tr-ms-cb {
+    width: 18px; height: 18px; min-width: 18px; border: 2px solid #3a3f50;
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px; transition: all 0.15s;
+  }
+  .tr-ms-cb.checked { background: #1D9E75; border-color: #1D9E75; }
+  .tr-ms-cb.checked::after {
+    content: ''; display: block; width: 4px; height: 8px;
+    border: 2px solid #fff; border-top: none; border-left: none;
+    transform: rotate(45deg) translate(-1px,-1px);
+  }
+  .tr-ms-text { flex: 1; font-size: 12px; color: #d1d5db; line-height: 1.4; }
+  .tr-ms-item.done .tr-ms-text { text-decoration: line-through; color: #4b5563; }
+  .tr-ms-week { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .tr-pipe-table {
+    margin: 0 12px; background: #1a1d27; border: 1px solid #252830;
+    border-radius: 10px; overflow: hidden;
+  }
+  .tr-pipe-table table { width: 100%; border-collapse: collapse; }
+  .tr-pipe-table th {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #6b7280; padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid #252830; background: #161921;
+  }
+  .tr-pipe-table td {
+    font-size: 12px; color: #d1d5db; padding: 9px 10px;
+    border-bottom: 1px solid #1e2130; vertical-align: top; line-height: 1.4;
+  }
+  .tr-pipe-table tr:last-child td { border-bottom: none; }
+  .tr-status-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; white-space: nowrap;
+  }
+  .tr-st-active { background: #0d2318; color: #34d399; }
+  .tr-st-warm   { background: #1c1a08; color: #fbbf24; }
+  .tr-st-cold   { background: #1e2028; color: #6b7280; }
+  .tr-blocker-list { padding: 0 12px; display: flex; flex-direction: column; gap: 6px; }
+  .tr-blocker {
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.5; border-left: 3px solid;
+  }
+  .tr-blocker-dep  { background: #1a1528; border-color: #a78bfa; color: #c4b5fd; }
+  .tr-blocker-blk  { background: #1c0a0a; border-color: #ef4444; color: #fca5a5; }
+  .tr-blocker-done { background: #0d2318; border-color: #1D9E75; color: #6ee7b7; }
+  .tr-blocker strong { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; opacity: 0.75; }
+  .tr-save-row {
+    display: flex; gap: 8px; padding: 12px 12px 0;
+  }
+  .tr-save-btn {
+    flex: 1; height: 42px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    border: none; cursor: pointer;
+  }
+  .tr-save-btn.primary { background: #1D9E75; color: #fff; }
+  .tr-save-btn.secondary { background: #252830; color: #9ca3af; }
+  .tr-save-btn:active { opacity: 0.8; }
+  .tr-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1D9E75; color: #fff; font-size: 13px; font-weight: 700;
+    padding: 10px 20px; border-radius: 20px; opacity: 0;
+    transition: all 0.25s; pointer-events: none; z-index: 999;
+  }
+  .tr-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -370,6 +483,7 @@
   <button class="tab" onclick="switchTab('roadmap', this)">30-Day Roadmap</button>
   <button class="tab" onclick="switchTab('sprint', this)">30-DAY SPRINT</button>
   <button class="tab" onclick="switchTab('completed', this)">✓ Completed</button>
+  <button class="tab" onclick="switchTab('traction', this)">📈 Traction</button>
 </div>
 
 <!-- PROGRESS (shown on checklist tab) -->
@@ -1383,6 +1497,126 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════
+     PANEL — TRACTION REPORT (60-Day Investor Tracker)
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-traction">
+
+  <div class="tr-week-nav" id="tr-week-nav">
+    <button class="tr-w-btn active" onclick="trSelectWeek(1,this)">W1</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(2,this)">W2</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(3,this)">W3</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(4,this)">W4</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(5,this)">W5</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(6,this)">W6</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(7,this)">W7</button>
+    <button class="tr-w-btn" onclick="trSelectWeek(8,this)">W8</button>
+  </div>
+
+  <div class="tr-section-title">Core Metrics — <span id="tr-week-label">Week 1</span></div>
+  <div class="tr-card-grid">
+    <div class="tr-card" id="tr-card-users">
+      <div class="tr-card-label">Registered Users (total)</div>
+      <input type="text" id="tr-users" placeholder="0" oninput="trMarkFilled('tr-card-users','tr-users')">
+    </div>
+    <div class="tr-card" id="tr-card-txwk">
+      <div class="tr-card-label">Transactions this week</div>
+      <input type="text" id="tr-txwk" placeholder="0" oninput="trMarkFilled('tr-card-txwk','tr-txwk')">
+    </div>
+    <div class="tr-card" id="tr-card-txttl">
+      <div class="tr-card-label">Total transactions (cumulative)</div>
+      <input type="text" id="tr-txttl" placeholder="0" oninput="trMarkFilled('tr-card-txttl','tr-txttl')">
+    </div>
+    <div class="tr-card" id="tr-card-vol">
+      <div class="tr-card-label">Wallet volume (MXN loaded)</div>
+      <input type="text" id="tr-vol" placeholder="$0" oninput="trMarkFilled('tr-card-vol','tr-vol')">
+    </div>
+    <div class="tr-card" id="tr-card-reps">
+      <div class="tr-card-label">Active reps (street team)</div>
+      <input type="text" id="tr-reps" placeholder="0" oninput="trMarkFilled('tr-card-reps','tr-reps')">
+    </div>
+    <div class="tr-card" id="tr-card-rev">
+      <div class="tr-card-label">Fee revenue (MXN this week)</div>
+      <input type="text" id="tr-rev" placeholder="$0" oninput="trMarkFilled('tr-card-rev','tr-rev')">
+    </div>
+  </div>
+
+  <div class="tr-section-title">Weekly Narrative</div>
+  <div class="tr-narrative">
+    <div>
+      <div class="tr-narr-label">What we shipped</div>
+      <textarea id="tr-shipped" placeholder="Features, fixes, and launches this week…"></textarea>
+    </div>
+    <div>
+      <div class="tr-narr-label">What's working</div>
+      <textarea id="tr-working" placeholder="Channels, messages, or tactics gaining traction…"></textarea>
+    </div>
+    <div>
+      <div class="tr-narr-label">Biggest obstacle</div>
+      <textarea id="tr-obstacle" placeholder="The one thing slowing us down most…"></textarea>
+    </div>
+    <div>
+      <div class="tr-narr-label">Next 7 days — 3 commitments</div>
+      <textarea id="tr-next" placeholder="1. …&#10;2. …&#10;3. …"></textarea>
+    </div>
+    <div>
+      <div class="tr-narr-label">Insight / learning</div>
+      <textarea id="tr-insight" placeholder="What surprised us or changed our thinking…"></textarea>
+    </div>
+  </div>
+
+  <div class="tr-save-row">
+    <button class="tr-save-btn primary" onclick="trSave()">Save update</button>
+    <button class="tr-save-btn secondary" onclick="trClearWeek()">Clear week</button>
+  </div>
+
+  <div class="tr-section-title">Milestone Checklist</div>
+  <div class="tr-ms-list" id="tr-ms-list"></div>
+
+  <div class="tr-section-title">Investor &amp; Accelerator Pipeline</div>
+  <div class="tr-pipe-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Type</th><th>Status</th><th>Next Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Y Combinator</strong></td><td>Accelerator</td><td><span class="tr-status-badge tr-st-active">Active</span></td><td>Await interview / decision</td></tr>
+        <tr><td><strong>Parallel18 (PR)</strong></td><td>Accelerator</td><td><span class="tr-status-badge tr-st-warm">Warm</span></td><td>Apply — underbanked thesis fit</td></tr>
+        <tr><td><strong>Platzi Ventures</strong></td><td>Accelerator</td><td><span class="tr-status-badge tr-st-cold">Not started</span></td><td>Research batch dates</td></tr>
+        <tr><td><strong>Startups MX</strong></td><td>Accelerator</td><td><span class="tr-status-badge tr-st-cold">Not started</span></td><td>Identify program contacts</td></tr>
+        <tr><td><strong>Rice MBA network</strong></td><td>Angel</td><td><span class="tr-status-badge tr-st-warm">Warm</span></td><td>Identify 3 fintech-adjacent alums</td></tr>
+        <tr><td><strong>Houston SBDC</strong></td><td>Angel/Grant</td><td><span class="tr-status-badge tr-st-warm">Warm</span></td><td>Leverage director relationships</td></tr>
+        <tr><td><strong>Taecel/SIPREL (Oyuki)</strong></td><td>Vendor-partner</td><td><span class="tr-status-badge tr-st-active">Active</span></td><td>2-week follow-up cadence</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tr-section-title">Open Blockers</div>
+  <div class="tr-blocker-list">
+    <div class="tr-blocker tr-blocker-dep">
+      <strong>Dependency</strong>
+      Conekta live keys — panel.conekta.com approval pending. Escalate if no response by end of W1.
+    </div>
+    <div class="tr-blocker tr-blocker-dep">
+      <strong>Dependency</strong>
+      SIPREL levantamiento tecnológico — external dependency on Oyuki/Taecel. 2-week follow-up cadence set.
+    </div>
+    <div class="tr-blocker tr-blocker-blk">
+      <strong>Blocker</strong>
+      Card top-up unavailable until Conekta live keys received. Mitigate: run OXXO-only onboarding in interim.
+    </div>
+    <div class="tr-blocker tr-blocker-done">
+      <strong>Resolved ✓</strong>
+      OXXO cash-in via Digital Femsa / Conekta — live in sandbox, confirmed working.
+    </div>
+  </div>
+
+</div><!-- /panel-traction -->
+
+<div class="tr-toast" id="tr-toast">Saved ✓</div>
+
 <script>
 // ── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1402,6 +1636,7 @@ const CHECKLIST = [
   { phase:0, id:'p0-12', title:'Pitch deck exported as PPTX + PDF — PagoYa-500-Global-LATAM-Pitch-Deck.pptx / .pdf (12 slides, 30 MB / 6.6 MB)' },
   { phase:0, id:'p0-13', title:'pagoyamx.com/deck live — full-screen pitch deck iframe embedded in main app, no DNS changes required' },
   { phase:0, id:'p0-14', title:'pagoyamx.com/video live — full-screen demo video iframe embedded in main app, both routes verified post-deploy' },
+  { phase:0, id:'p0-15', title:'Traction Report tab added to Command Center — 8-week tracker, 6 core metrics, 5 narrative fields, 18 milestones, pipeline table, open blockers, localStorage persistence' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -1922,6 +2157,139 @@ renderChecklist();
 renderCalendar();
 updateReminderBadge();
 loadTaecelBalance();
+
+// ── TRACTION REPORT ──────────────────────────────────────────────────────────
+
+const TR_MILESTONES = [
+  { id:'ms-01', text:'OXXO cash-in fully live and tested with 10 real users', week:'W1–2' },
+  { id:'ms-02', text:'Street team at 3+ active reps (William + 2 new)', week:'W1–2' },
+  { id:'ms-03', text:'Conekta live keys activated and card top-up live', week:'W2–3' },
+  { id:'ms-04', text:'SIPREL levantamiento tecnológico submitted + acknowledged', week:'W1' },
+  { id:'ms-05', text:'First 25 transactions processed (any rail)', week:'W2–3' },
+  { id:'ms-06', text:'3 anchor landlords using PagoSeguro cross-selling to PagoYa', week:'W2–4' },
+  { id:'ms-07', text:'First 50 registered users with wallet balance', week:'W3–4' },
+  { id:'ms-08', text:'SIPREL bill pay rail live in production', week:'W3–5' },
+  { id:'ms-09', text:'First bill payment processed end-to-end via SIPREL', week:'W4–5' },
+  { id:'ms-10', text:'100 total transactions milestone hit', week:'W4–6' },
+  { id:'ms-11', text:'2+ video testimonials from real users captured', week:'W3–5' },
+  { id:'ms-12', text:'YC interview or decision received', week:'W4–6' },
+  { id:'ms-13', text:'2nd accelerator application submitted (Platzi/P18/MX)', week:'W3–4' },
+  { id:'ms-14', text:'Warm investor intro made via Rice/Houston/SBDC network', week:'W4–6' },
+  { id:'ms-15', text:'$15 MXN fee confirmed sustainable — model validated', week:'W5–7' },
+  { id:'ms-16', text:'DiMo/STP scoping call completed with Jaime Marquez', week:'W5–8' },
+  { id:'ms-17', text:'250 registered users total', week:'W6–8' },
+  { id:'ms-18', text:'MoM transaction growth positive for 2 consecutive weeks', week:'W6–8' },
+];
+
+const TR_METRIC_FIELDS = ['users','txwk','txttl','vol','reps','rev'];
+const TR_NARR_FIELDS   = ['shipped','working','obstacle','next','insight'];
+const TR_MS_KEY        = 'pagoya_tr_milestones';
+
+let trCurrentWeek = 1;
+
+function trKey(week, field) {
+  return 'pagoya_tr_w' + week + '_' + field;
+}
+
+function trLoadField(week, field) {
+  try { return localStorage.getItem(trKey(week, field)) || ''; } catch(e) { return ''; }
+}
+
+function trSaveField(week, field, value) {
+  try { localStorage.setItem(trKey(week, field), value); } catch(e) {}
+}
+
+function trLoadMilestones() {
+  try { return JSON.parse(localStorage.getItem(TR_MS_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function trSaveMilestones(state) {
+  try { localStorage.setItem(TR_MS_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function trMarkFilled(cardId, inputId) {
+  const val = document.getElementById(inputId).value.trim();
+  document.getElementById(cardId).classList.toggle('filled', val.length > 0);
+}
+
+function trSelectWeek(n, btn) {
+  trCurrentWeek = n;
+  document.querySelectorAll('.tr-w-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tr-week-label').textContent = 'Week ' + n;
+  trLoadWeek(n);
+}
+
+function trLoadWeek(n) {
+  TR_METRIC_FIELDS.forEach(f => {
+    const el = document.getElementById('tr-' + f);
+    if (!el) return;
+    const val = trLoadField(n, f);
+    el.value = val;
+    const cardId = 'tr-card-' + f;
+    document.getElementById(cardId).classList.toggle('filled', val.length > 0);
+  });
+  TR_NARR_FIELDS.forEach(f => {
+    const el = document.getElementById('tr-' + f);
+    if (el) el.value = trLoadField(n, f);
+  });
+}
+
+function trSave() {
+  const n = trCurrentWeek;
+  TR_METRIC_FIELDS.forEach(f => {
+    const el = document.getElementById('tr-' + f);
+    if (el) trSaveField(n, f, el.value.trim());
+  });
+  TR_NARR_FIELDS.forEach(f => {
+    const el = document.getElementById('tr-' + f);
+    if (el) trSaveField(n, f, el.value);
+  });
+  const toast = document.getElementById('tr-toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function trClearWeek() {
+  const n = trCurrentWeek;
+  TR_METRIC_FIELDS.forEach(f => {
+    trSaveField(n, f, '');
+    const el = document.getElementById('tr-' + f);
+    if (el) el.value = '';
+    const cardId = 'tr-card-' + f;
+    document.getElementById(cardId).classList.remove('filled');
+  });
+  TR_NARR_FIELDS.forEach(f => {
+    trSaveField(n, f, '');
+    const el = document.getElementById('tr-' + f);
+    if (el) el.value = '';
+  });
+}
+
+function trToggleMilestone(id) {
+  const state = trLoadMilestones();
+  state[id] = !state[id];
+  trSaveMilestones(state);
+  trRenderMilestones();
+}
+
+function trRenderMilestones() {
+  const state = trLoadMilestones();
+  const list = document.getElementById('tr-ms-list');
+  if (!list) return;
+  list.innerHTML = TR_MILESTONES.map(ms => {
+    const done = !!state[ms.id];
+    return '<div class="tr-ms-item' + (done ? ' done' : '') + '" onclick="trToggleMilestone(\'' + ms.id + '\')">' +
+      '<div class="tr-ms-cb' + (done ? ' checked' : '') + '"></div>' +
+      '<div class="tr-ms-text">' + ms.text +
+        '<div class="tr-ms-week">Target: ' + ms.week + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+trRenderMilestones();
+trLoadWeek(1);
 </script>
 </body>
 </html>

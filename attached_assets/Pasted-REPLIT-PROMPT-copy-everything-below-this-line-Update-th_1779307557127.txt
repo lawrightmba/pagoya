@@ -1,0 +1,76 @@
+REPLIT PROMPT — copy everything below this line:
+
+Update the PagoYa command center at artifacts/pagoya/public/command-center.html to add a 60-Day Traction Report section. Do everything automatically, do not stop and ask.
+What to add:
+Add a new tab called "Traction Report" to the existing tab navigation in the command center. The tab content should be a fully self-contained 60-day investor traction tracker with the following:
+
+WEEK NAVIGATION
+8 week buttons (W1–W8) at the top. Clicking a week loads that week's saved data. Active week is visually highlighted.
+CORE METRICS (6 fields per week, saved per week)
+Display as an editable card grid — 3 columns, 2 rows:
+
+Registered Users (total)
+Transactions this week
+Total transactions (cumulative)
+Wallet volume (MXN loaded)
+Active reps (street team count)
+Fee revenue (MXN this week, at $15 MXN flat fee)
+
+Each metric is a text input. When filled, a green top-border indicator activates on the card.
+WEEKLY NARRATIVE (5 text areas, saved per week)
+
+What we shipped
+What's working
+Biggest obstacle
+Next 7 days (3 commitments)
+Insight / learning
+
+MILESTONE CHECKLIST (18 items, persistent across weeks — check off as completed)
+Pre-load these exact milestones with their week targets:
+
+OXXO cash-in fully live and tested with 10 real users — W1–2
+Street team at 3+ active reps (William + 2 new) — W1–2
+Conekta live keys activated and card top-up live — W2–3
+SIPREL levantamiento tecnológico submitted + acknowledged — W1
+First 25 transactions processed (any rail) — W2–3
+3 anchor landlords using PagoSeguro cross-selling to PagoYa — W2–4
+First 50 registered users with wallet balance — W3–4
+SIPREL bill pay rail live in production — W3–5
+First bill payment processed end-to-end via SIPREL — W4–5
+100 total transactions milestone hit — W4–6
+2+ video testimonials from real users captured — W3–5
+YC interview or decision received — W4–6
+2nd accelerator application submitted (Platzi/P18/MX) — W3–4
+Warm investor intro made via Rice/Houston/SBDC network — W4–6
+$15 MXN fee confirmed sustainable — model validated — W5–7
+DiMo/STP scoping call completed with Jaime Marquez — W5–8
+250 registered users total — W6–8
+MoM transaction growth positive for 2 consecutive weeks — W6–8
+
+Each milestone row is clickable to toggle done/not done. Done items show a green checkmark and strikethrough. State persists in localStorage.
+INVESTOR & ACCELERATOR PIPELINE TABLE
+Static display table with these pre-loaded rows:
+NameTypeStatusLast TouchNext ActionY CombinatorAcceleratorActiveApp submittedAwait interview / decisionParallel18 (PR)AcceleratorWarm—Apply — underbanked thesis fitPlatzi VenturesAcceleratorNot started—Research batch datesStartups MXAcceleratorNot started—Identify program contactsRice MBA networkAngelWarm—Identify 3 fintech-adjacent alumsHouston SBDC networkAngel/GrantWarm—Leverage director relationshipsTaecel/SIPREL (Oyuki)Vendor-partnerActiveTest matrix v2 sent2-week follow-up cadenceSTP / Jaime MarquezRail partnerSentOutreach sentFollow up W3
+OPEN BLOCKERS
+Four pre-loaded items displayed as colored alert rows:
+
+DEPENDENCY: Conekta live keys — panel.conekta.com approval pending. Escalate if no response by end of W1.
+DEPENDENCY: SIPREL levantamiento tecnológico — external dependency on Oyuki/Taecel. 2-week follow-up cadence set.
+BLOCKER: Card top-up unavailable until Conekta live keys received. Mitigate: run OXXO-only onboarding in interim.
+RESOLVED: OXXO cash-in via Digital Femsa / Conekta — live in sandbox, confirmed working.
+
+SAVE / CLEAR BUTTONS
+
+"Save update" button saves all current week fields to localStorage with key pattern pagoya_tr_w{N}_{field}
+"Clear week" button clears only current week's metrics and narrative (not milestones)
+Show a brief "Saved ✓" toast confirmation on save
+
+
+TECHNICAL REQUIREMENTS:
+
+Match the existing command center's visual style, color scheme, fonts, and tab structure exactly — do not redesign the page
+All data persists via localStorage
+No external dependencies beyond what the command center already uses
+The traction report tab must work on mobile (the command center is used on mobile)
+Do not touch any other tab, any existing functionality, /api/ routes, or api-server/public/
+The symlink serving from artifacts/pagoya/public/ must continue to work — only edit artifacts/pagoya/public/command-center.html
