@@ -101,3 +101,9 @@ id = "QohcWzs26jRAnl5WpoGih"
 uri = "file://.local/outputs/PagoYa-500-Global-LATAM-Pitch-Deck.pdf"
 type = "pdf"
 title = "PagoYa — 500 Global LATAM Pitch Deck (PDF)"
+
+[[outputs]]
+id = "M4ym9BUkB3Sv8KIkBn_7B"
+uri = "file://.local/outputs/Brand-New-App.pdf"
+type = "pdf"
+title = "Brand New App.pdf"
