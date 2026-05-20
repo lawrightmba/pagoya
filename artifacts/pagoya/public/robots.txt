@@ -23,9 +23,21 @@ Allow: /
 # ── Standard search crawlers ─────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
+Disallow: /login
+Disallow: /admin
+Disallow: /rep-dashboard
+Disallow: /rep-login
+Disallow: /rep-signup
+Disallow: /command-center
 
 User-agent: Bingbot
 Allow: /
+Disallow: /login
+Disallow: /admin
+Disallow: /rep-dashboard
+Disallow: /rep-login
+Disallow: /rep-signup
+Disallow: /command-center
 
 # ── Global rule — allow all other crawlers, block internal/admin paths ────────
 User-agent: *
