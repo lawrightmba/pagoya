@@ -162,18 +162,22 @@ export default function Slide12Ask() {
         </div>
 
         <div className="flex items-center justify-between" style={{ marginTop: "3vh" }}>
-          <div className="flex items-center gap-[1.2vw]">
-            <div style={{ width: "0.45vw", height: "3.5vh", background: "#1D9E75", borderRadius: "2px" }} />
-            <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 700, color: "#1D9E75", letterSpacing: "0.1em" }}>
-              PagoYa
+          <svg viewBox="0 0 180 50" style={{ height: "4.5vh" }} aria-label="PagoYa" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="4" width="42" height="42" rx="10" fill="#1D9E75" />
+            <text x="21" y="33" textAnchor="middle" fontSize="26" fontWeight="900" fill="white" fontFamily="system-ui, sans-serif">P</text>
+            <text x="55" y="36" fontSize="26" fontWeight="800" fill="#F5F0EB" fontFamily="system-ui, sans-serif">ago</text>
+            <text x="108" y="36" fontSize="26" fontWeight="800" fill="#1D9E75" fontFamily="system-ui, sans-serif">Ya</text>
+            <circle cx="162" cy="12" r="7" fill="#D85A30" />
+            <text x="162" y="16.5" textAnchor="middle" fontSize="9" fontWeight="700" fill="white" fontFamily="system-ui, sans-serif">MX</text>
+          </svg>
+          <div className="flex flex-col items-end gap-[0.5vh]">
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB" }}>
+              Lloyd A. Wright, MBA
+            </span>
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#1D9E75" }}>
+              lloyd@pagoyamx.com · pagoyamx.com
             </span>
           </div>
-          <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0" }}>
-            pagoyamx.com
-          </span>
-          <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0" }}>
-            [Your name] — [contact]
-          </span>
         </div>
       </div>
     </div>
