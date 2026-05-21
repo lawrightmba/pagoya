@@ -33,6 +33,13 @@ import BlogTelmex from "@/pages/BlogTelmex";
 import BlogRecargasTelcel from "@/pages/BlogRecargasTelcel";
 import BlogAguaMexico from "@/pages/BlogAguaMexico";
 import BlogOXXOPay from "@/pages/BlogOXXOPay";
+import BlogPagarIzzi from "@/pages/BlogPagarIzzi";
+import BlogPredialPV from "@/pages/BlogPredialPV";
+import BlogSeguroCelular from "@/pages/BlogSeguroCelular";
+import BlogCFETarde from "@/pages/BlogCFETarde";
+import BlogMejoresApps from "@/pages/BlogMejoresApps";
+import BlogServiciosPV from "@/pages/BlogServiciosPV";
+import BlogDineroElectronico from "@/pages/BlogDineroElectronico";
 import Enviar from "@/pages/Enviar";
 import Verificar from "@/pages/Verificar";
 import BankLink from "@/pages/BankLink";
@@ -84,6 +91,13 @@ function Router() {
       <Route path="/recargas-telcel-efectivo" component={BlogRecargasTelcel} />
       <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
       <Route path="/que-es-oxxo-pay" component={BlogOXXOPay} />
+      <Route path="/pagar-izzi-sin-cuenta-bancaria" component={BlogPagarIzzi} />
+      <Route path="/pagar-predial-puerto-vallarta" component={BlogPredialPV} />
+      <Route path="/es-seguro-pagar-servicios-celular-mexico" component={BlogSeguroCelular} />
+      <Route path="/que-pasa-si-pago-cfe-tarde" component={BlogCFETarde} />
+      <Route path="/mejores-apps-pagar-servicios-mexico" component={BlogMejoresApps} />
+      <Route path="/pagar-servicios-puerto-vallarta" component={BlogServiciosPV} />
+      <Route path="/que-es-dinero-electronico-mexico" component={BlogDineroElectronico} />
       <Route path="/enviar" component={Enviar} />
       <Route path="/verificar" component={Verificar} />
       <Route path="/vincular-banco" component={BankLink} />
