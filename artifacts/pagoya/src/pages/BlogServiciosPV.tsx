@@ -46,11 +46,17 @@ export default function BlogServiciosPV() {
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <html lang="es" />
+        <html lang="es-MX" />
         <title>Cómo Pagar Luz, Agua y Gas en Puerto Vallarta desde tu Celular | PagoYa</title>
         <meta name="description" content="Guía completa para pagar CFE, agua SEAPAL, gas y más servicios en Puerto Vallarta desde tu celular. Sin filas, sin banco, en menos de 2 minutos." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
+        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
+        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
+        <meta name="geo.region" content="MX-JAL" />
+        <meta name="geo.placename" content="Puerto Vallarta, Jalisco, México" />
+        <meta name="geo.position" content="20.6534;-105.2253" />
+        <meta name="ICBM" content="20.6534, -105.2253" />
         <meta property="og:title" content="Pagar Luz, Agua y Gas en Puerto Vallarta desde tu Celular | PagoYa" />
         <meta property="og:description" content="CFE, agua SEAPAL, gas, internet y predial en Puerto Vallarta. Paga todo desde el celular sin ir a ninguna oficina." />
         <meta property="og:type" content="article" />

@@ -91,11 +91,15 @@ export default function BlogMejoresApps() {
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <html lang="es" />
+        <html lang="es-MX" />
         <title>Las Mejores Apps para Pagar Servicios en México sin Banco 2026 | PagoYa</title>
         <meta name="description" content="Comparativa de las mejores apps para pagar CFE, Telmex, agua y más en México. Cuál funciona sin banco, cuánto cobran y cuál es más rápida en 2026." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/mejores-apps-pagar-servicios-mexico" />
+        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/mejores-apps-pagar-servicios-mexico" />
+        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/mejores-apps-pagar-servicios-mexico" />
+        <meta name="geo.region" content="MX" />
+        <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Las Mejores Apps para Pagar Servicios en México sin Banco 2026 | PagoYa" />
         <meta property="og:description" content="Comparativa honesta: PagoYa vs Mercado Pago vs OXXO Pay vs BBVA. Cuál es más rápida, más barata y funciona sin cuenta bancaria." />
         <meta property="og:type" content="article" />

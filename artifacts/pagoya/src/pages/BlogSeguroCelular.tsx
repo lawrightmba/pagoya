@@ -38,11 +38,15 @@ export default function BlogSeguroCelular() {
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <html lang="es" />
+        <html lang="es-MX" />
         <title>¿Es Seguro Pagar Servicios desde el Celular en México? | PagoYa</title>
         <meta name="description" content="¿Puedes confiar en las apps de pago de servicios en México? Explicamos qué hace segura a una plataforma, qué señales de alerta evitar y cómo protegerte." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/es-seguro-pagar-servicios-celular-mexico" />
+        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/es-seguro-pagar-servicios-celular-mexico" />
+        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/es-seguro-pagar-servicios-celular-mexico" />
+        <meta name="geo.region" content="MX" />
+        <meta name="geo.placename" content="México" />
         <meta property="og:title" content="¿Es Seguro Pagar Servicios desde el Celular en México? | PagoYa" />
         <meta property="og:description" content="Resolvemos la duda más común sobre pagos digitales en México. Qué buscar, qué evitar y cómo saber si una app es confiable." />
         <meta property="og:type" content="article" />

@@ -39,11 +39,15 @@ export default function BlogCFETarde() {
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <html lang="es" />
+        <html lang="es-MX" />
         <title>¿Qué Pasa si Pago mi CFE Tarde? Multas y Reconexión | PagoYa</title>
         <meta name="description" content="¿Cuánto cobra CFE por pago tardío? ¿Cuándo cortan la luz? ¿Cuánto cuesta la reconexión? Todo lo que necesitas saber sobre pagar el recibo de luz fuera de fecha." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/que-pasa-si-pago-cfe-tarde" />
+        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/que-pasa-si-pago-cfe-tarde" />
+        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/que-pasa-si-pago-cfe-tarde" />
+        <meta name="geo.region" content="MX" />
+        <meta name="geo.placename" content="México" />
         <meta property="og:title" content="¿Qué Pasa si Pago mi CFE Tarde? Multas y Reconexión | PagoYa" />
         <meta property="og:description" content="Recargos, fechas de corte y cómo reconectar tu luz rápido. Todo sobre el pago tardío del recibo CFE en México." />
         <meta property="og:type" content="article" />

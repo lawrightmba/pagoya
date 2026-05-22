@@ -39,11 +39,17 @@ export default function BlogPredialPV() {
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <html lang="es" />
+        <html lang="es-MX" />
         <title>Cómo Pagar el Predial en Puerto Vallarta sin Filas | PagoYa</title>
         <meta name="description" content="Guía completa para pagar tu predial en Puerto Vallarta en 2026. Pago en línea, descuentos por pronto pago, clave catastral y cómo evitar las filas en tesorería municipal." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-predial-puerto-vallarta" />
+        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-predial-puerto-vallarta" />
+        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-predial-puerto-vallarta" />
+        <meta name="geo.region" content="MX-JAL" />
+        <meta name="geo.placename" content="Puerto Vallarta, Jalisco, México" />
+        <meta name="geo.position" content="20.6534;-105.2253" />
+        <meta name="ICBM" content="20.6534, -105.2253" />
         <meta property="og:title" content="Pagar Predial en Puerto Vallarta sin Filas | PagoYa" />
         <meta property="og:description" content="Cómo pagar el predial en Puerto Vallarta en línea. Descuentos, fechas clave y paso a paso sin ir a las oficinas municipales." />
         <meta property="og:type" content="article" />
