@@ -35,3 +35,5 @@ export * from "./profiles";
 export * from "./street_team";
 export * from "./saved_cards";
 export * from "./stp_webhook_log";
+export * from "./rep_velocity_flags";
+export * from "./signup_bonus_config";

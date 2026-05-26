@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -18,6 +18,15 @@ export const usersTable = pgTable("users", {
   kycVerifiedAt: timestamp("kyc_verified_at", { withTimezone: true }),
   kycProvider: text("kyc_provider"),
   kycProviderId: text("kyc_provider_id"),
+  // ── Street team signup bonus ─────────────────────────────────────────────────
+  signupBonusEligible: boolean("signup_bonus_eligible").default(false),
+  signupBonusClaimed: boolean("signup_bonus_claimed").default(false),
+  signupRefCode: varchar("signup_ref_code", { length: 50 }),
+  // ── OTP verification ─────────────────────────────────────────────────────────
+  otpCode: varchar("otp_code", { length: 6 }),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpVerified: boolean("otp_verified").default(false),
+  otpAttempts: integer("otp_attempts").default(0),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({
