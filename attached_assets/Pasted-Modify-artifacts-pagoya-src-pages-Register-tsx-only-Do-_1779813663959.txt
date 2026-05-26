@@ -1,0 +1,77 @@
+Modify artifacts/pagoya/src/pages/Register.tsx only.
+Do not touch any other files.
+
+─────────────────────────────────────────
+CHANGES TO PHONE FIELD:
+─────────────────────────────────────────
+Replace the current 10-digit Mexican phone input with 
+an international phone field using two inputs side by side:
+
+LEFT INPUT — Country code selector:
+  - Dropdown or short text input showing country code
+  - Default: +52 (Mexico) with MX flag emoji 🇲🇽
+  - Include at minimum these options in the dropdown:
+      🇲🇽 +52  México
+      🇺🇸 +1   Estados Unidos
+      🇨🇦 +1   Canadá
+      🇬🇹 +502 Guatemala
+      🇭🇳 +504 Honduras
+      🇸🇻 +503 El Salvador
+      🇳🇮 +505 Nicaragua
+      🇨🇴 +57  Colombia
+      🇻🇪 +58  Venezuela
+      🇪🇸 +34  España
+  - Styled compactly — country code takes ~30% width
+  - Shows flag + code only when collapsed
+
+RIGHT INPUT — Local number:
+  - Takes remaining ~70% width
+  - Numeric only
+  - Placeholder: "Número de teléfono"
+  - No fixed length validation — different countries 
+    have different lengths (7–12 digits)
+  - Minimum 7 digits, maximum 15 digits validation
+  - Error: "Ingresa un número válido (7–15 dígitos)"
+
+When building the POST body, combine as:
+  phone: [countryCode][localNumber]
+  e.g. "+523221234567" or "+13051234567"
+
+Pass this combined value to:
+  - /api/street-team/signup-with-bonus (form submit)
+  - /api/street-team/verify-bonus-otp (OTP verify)
+  - The OTP screen masked display: show last 4 digits 
+    of the combined number
+
+─────────────────────────────────────────
+WHATSAPP COMPATIBILITY:
+─────────────────────────────────────────
+The combined phone format (+52XXXXXXXXXX) is already 
+what Twilio expects for WhatsApp — no backend changes needed.
+The existing generateOTP and verify flows accept any 
+phone string — no changes to those services.
+
+─────────────────────────────────────────
+FIELD-LEVEL VALIDATION UPDATE:
+─────────────────────────────────────────
+Remove the existing "must be 10 digits" Mexican 
+phone validation.
+
+Replace with:
+  Empty local number: "Por favor ingresa tu número de teléfono"
+  Less than 7 digits: "Ingresa un número válido (mínimo 7 dígitos)"
+  More than 15 digits: "Número demasiado largo (máximo 15 dígitos)"
+  Non-numeric: "Solo se permiten números"
+
+─────────────────────────────────────────
+CONSTRAINTS:
+─────────────────────────────────────────
+- Do not add any npm packages — build with React state only
+- Do not modify any backend files
+- Do not modify any other frontend files
+- Preserve all existing ?rep= and ?ref= URL param logic
+- Preserve all other field validations added in the 
+  previous prompt
+- Mobile-first — dropdown must be finger-friendly, 
+  minimum 44px touch targets
+- All text in Spanish

@@ -26,7 +26,20 @@ const COLONIAS = [
   "Otra / Other",
 ];
 
-// ── CURP format: 4 letters + 6 digits + H/M + 2 letters + 3 letters + 1 alphanum + 1 digit
+const COUNTRY_CODES = [
+  { code: "+52",  flag: "🇲🇽", label: "México" },
+  { code: "+1",   flag: "🇺🇸", label: "Estados Unidos" },
+  { code: "+1",   flag: "🇨🇦", label: "Canadá" },
+  { code: "+502", flag: "🇬🇹", label: "Guatemala" },
+  { code: "+504", flag: "🇭🇳", label: "Honduras" },
+  { code: "+503", flag: "🇸🇻", label: "El Salvador" },
+  { code: "+505", flag: "🇳🇮", label: "Nicaragua" },
+  { code: "+57",  flag: "🇨🇴", label: "Colombia" },
+  { code: "+58",  flag: "🇻🇪", label: "Venezuela" },
+  { code: "+34",  flag: "🇪🇸", label: "España" },
+];
+
+// ── CURP format: 4 letters + 6 digits + H/M + 2 state letters + 3 consonants + 1 alphanum + 1 digit
 const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
 
 type Screen = "form" | "otp" | "success";
@@ -45,15 +58,12 @@ function validateName(val: string): string {
   return "";
 }
 
-function validatePhone(val: string): string {
-  if (!val.trim()) return "Por favor ingresa tu número de teléfono";
-  const stripped = val.replace(/[\s\-\(\)]/g, "");
-  const withoutPlus = stripped.replace(/^\+/, "");
-  if (/[a-zA-Z]/.test(withoutPlus)) return "Solo se permiten números";
-  const digits = withoutPlus.replace(/\D/g, "");
-  if (digits.length !== 10 && !(digits.length === 12 && digits.startsWith("52"))) {
-    return "El número debe tener 10 dígitos";
-  }
+function validatePhone(localNum: string): string {
+  if (!localNum.trim()) return "Por favor ingresa tu número de teléfono";
+  if (/[a-zA-Z]/.test(localNum)) return "Solo se permiten números";
+  const digits = localNum.replace(/\D/g, "");
+  if (digits.length < 7) return "Ingresa un número válido (mínimo 7 dígitos)";
+  if (digits.length > 15) return "Número demasiado largo (máximo 15 dígitos)";
   return "";
 }
 
@@ -140,7 +150,8 @@ const apiErrorBoxStyle: React.CSSProperties = {
 export default function Register() {
   // ── Form fields ───────────────────────────────────────────────────────────
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+52");
+  const [localNumber, setLocalNumber] = useState("");
   const [curp, setCurp] = useState("");
   const [city, setCity] = useState("");
   const [colonia, setColonia] = useState("");
@@ -216,13 +227,16 @@ export default function Register() {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
+  // ── Combined phone (what gets sent to API and Twilio) ─────────────────────
+  const combinedPhone = `${countryCode}${localNumber.replace(/\D/g, "")}`;
+
   // ── Blur validators ───────────────────────────────────────────────────────
   const setFieldError = (field: keyof FieldErrors, msg: string) => {
     setFieldErrors((prev) => ({ ...prev, [field]: msg }));
   };
 
   const handleNameBlur = () => setFieldError("name", validateName(name));
-  const handlePhoneBlur = () => setFieldError("phone", validatePhone(phone));
+  const handlePhoneBlur = () => setFieldError("phone", validatePhone(localNumber));
   const handleCurpBlur = () => setFieldError("curp", validateCurp(curp));
   const handleCityBlur = () => setFieldError("city", validateCity(city));
   const handleColoniaBlur = () => setFieldError("colonia", validateColonia(colonia));
@@ -230,7 +244,7 @@ export default function Register() {
   // ── Build form payload ────────────────────────────────────────────────────
   const buildPayload = () => ({
     name: name.trim(),
-    phone: phone.trim(),
+    phone: combinedPhone,
     curp: curp.trim().toUpperCase(),
     city,
     colonia,
@@ -243,10 +257,9 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Run all validations on submit too
     const errs: FieldErrors = {
       name: validateName(name),
-      phone: validatePhone(phone),
+      phone: validatePhone(localNumber),
       curp: validateCurp(curp),
       city: validateCity(city),
       colonia: validateColonia(colonia),
@@ -266,7 +279,7 @@ export default function Register() {
       const data = await res.json();
 
       if (data.status === "otp_required") {
-        phoneRef.current = phone.trim();
+        phoneRef.current = combinedPhone;
         setDigits(["", "", "", "", "", ""]);
         setOtpError("");
         setOtpInputsDisabled(false);
@@ -455,7 +468,6 @@ export default function Register() {
             </>
           )}
 
-          {/* WhatsApp CTA */}
           {waNumber && (
             <a
               href={`https://wa.me/${waNumber}?text=${encodeURIComponent("Hola PagoYa, acabo de registrarme 👋")}`}
@@ -563,14 +575,12 @@ export default function Register() {
             ))}
           </div>
 
-          {/* OTP error */}
           {otpError && (
             <div style={{ ...apiErrorBoxStyle, marginBottom: "16px", textAlign: "center" }}>
               {otpError}
             </div>
           )}
 
-          {/* Verify button */}
           <button
             onClick={handleVerify}
             disabled={otpSubmitting || digits.join("").length < 6 || otpInputsDisabled}
@@ -587,7 +597,6 @@ export default function Register() {
             {otpSubmitting ? "Verificando…" : "Verificar"}
           </button>
 
-          {/* Resend */}
           <div style={{ textAlign: "center", marginTop: "20px" }}>
             {resendActive ? (
               <button
@@ -680,27 +689,69 @@ export default function Register() {
             {fieldErrors.name && <p style={fieldErrorStyle}>{fieldErrors.name}</p>}
           </div>
 
-          {/* Phone */}
+          {/* WhatsApp — country code + local number */}
           <div>
             <label style={labelStyle}>WhatsApp</label>
-            <input
-              type="tel"
-              autoComplete="tel"
-              placeholder="+52 322 000 0000"
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); setFieldError("phone", ""); }}
-              required
-              inputMode="tel"
-              style={{
-                ...inputStyle,
-                borderColor: fieldErrors.phone ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
-              }}
-              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-              onBlur={(e) => {
-                handlePhoneBlur();
-                if (!fieldErrors.phone) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
-              }}
-            />
+            <div style={{ display: "flex", gap: "8px" }}>
+
+              {/* Country code selector — ~30% width */}
+              <div style={{ position: "relative", flexShrink: 0, width: "30%" }}>
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    width: "100%",
+                    paddingRight: "28px",
+                    paddingLeft: "10px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    borderColor: fieldErrors.phone ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+                  }}
+                  onFocus={(e) => { (e.target as HTMLSelectElement).style.borderColor = "#1D9E75"; }}
+                  onBlur={(e) => { (e.target as HTMLSelectElement).style.borderColor = fieldErrors.phone ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)"; }}
+                >
+                  {COUNTRY_CODES.map((c, i) => (
+                    <option
+                      key={`${c.code}-${i}`}
+                      value={c.code}
+                      style={{ background: "#0A2540", color: "#FFFFFF" }}
+                    >
+                      {c.flag} {c.code}
+                    </option>
+                  ))}
+                </select>
+                <span style={{
+                  position: "absolute", right: "8px", top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(255,255,255,0.4)", pointerEvents: "none", fontSize: "11px",
+                }}>▾</span>
+              </div>
+
+              {/* Local number — remaining ~70% */}
+              <input
+                type="tel"
+                autoComplete="tel-national"
+                placeholder="Número de teléfono"
+                value={localNumber}
+                onChange={(e) => {
+                  setLocalNumber(e.target.value);
+                  setFieldError("phone", "");
+                }}
+                required
+                inputMode="numeric"
+                style={{
+                  ...inputStyle,
+                  flex: 1,
+                  borderColor: fieldErrors.phone ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+                }}
+                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
+                onBlur={(e) => {
+                  handlePhoneBlur();
+                  if (!fieldErrors.phone) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+                }}
+              />
+            </div>
             {fieldErrors.phone && <p style={fieldErrorStyle}>{fieldErrors.phone}</p>}
           </div>
 
@@ -734,7 +785,7 @@ export default function Register() {
             }
           </div>
 
-          {/* Recovery Email (optional — no validation required) */}
+          {/* Recovery Email */}
           <div>
             <label style={labelStyle}>
               Correo de recuperación{" "}
@@ -833,11 +884,7 @@ export default function Register() {
           </div>
 
           {/* API error box */}
-          {formError && (
-            <div style={apiErrorBoxStyle}>
-              {formError}
-            </div>
-          )}
+          {formError && <div style={apiErrorBoxStyle}>{formError}</div>}
 
           {/* Submit */}
           <button
