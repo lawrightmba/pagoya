@@ -1,0 +1,68 @@
+I need to add an inbound WhatsApp webhook to the PagoYa project. Here is exactly what already exists — do not recreate or modify any of it:
+
+ALREADY BUILT (do not touch):
+- sendWhatsApp(to, message) — Twilio outbound function, fully working
+- Claude AI agent with tools (payment history, wallet balance, OXXO status, escalate to support) at POST /api/agent/chat — accepts { message, conversationHistory } and returns { response, conversationHistory }
+- All Twilio env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM
+- Anthropic SDK already initialized on the server
+
+THE GAP — build only these three things:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SESSION STORE (in-memory, same file or separate module)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+A Map keyed by WhatsApp phone number (waId) storing:
+{
+  conversationHistory: [],  // array of {role, content} — passed to existing agent
+  repCode: null,            // detected from first message e.g. "ENG-01"
+  profileName: null,        // from Twilio ProfileName field
+  lastActivity: Date.now()  // for TTL
+}
+- getSession(waId) — returns existing or creates fresh session
+- saveSession(waId, data) — updates session, refreshes lastActivity
+- Cleanup: setInterval every 5 min, delete sessions idle > 30 min
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. INBOUND WEBHOOK — POST /api/whatsapp-agent
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Create routes/whatsapp-agent.js:
+
+a) Parse Twilio POST body: Body (message text), WaId (phone), ProfileName
+
+b) Detect rep code: if first message matches pattern /[A-Z]{2,4}-\d{2}/i (e.g. ENG-01), save to session.repCode. Do not pass rep code string to the agent as a user message — instead prepend it silently to the system context or just save it and send a welcome: "¡Hola [ProfileName]! Bienvenido/a a PagoYa 💜 ¿En qué te puedo ayudar?"
+
+c) Load session. Append new user message to session.conversationHistory.
+
+d) Call the EXISTING agent logic. Do not rewrite the agent. Instead make an internal function call or HTTP POST to the same handler that /api/agent/chat uses — pass { message: Body, conversationHistory: session.conversationHistory }. Get back { response, conversationHistory }.
+
+e) Update session.conversationHistory with the returned conversationHistory.
+
+f) Call sendWhatsApp(WaId, response) to send the reply.
+
+g) Return empty TwiML to Twilio:
+res.set('Content-Type', 'text/xml');
+res.send('');
+
+h) Error handling: if agent call fails, sendWhatsApp(WaId, "Lo siento, ocurrió un error. Intenta de nuevo en un momento. 🙏") and still return empty TwiML — never let Twilio retry loop.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. ROUTER MOUNT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Mount the new route in index.js (or wherever routes are registered):
+app.use('/api', whatsappAgentRouter)
+
+Also log to console on startup: "✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT CONSTRAINTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Do NOT add Twilio request validation middleware yet — we want to test quickly first
+- Do NOT modify the existing /api/agent/chat route or the Claude agent tools
+- Do NOT rewrite sendWhatsApp()
+- Keep the session store simple — no Redis, no DB writes, just the in-memory Map
+- The WaId from Twilio arrives as "whatsapp:+521XXXXXXXXXX" — strip the "whatsapp:+" prefix before using as the session key and as the `to` parameter in sendWhatsApp()
+
+After building, tell me:
+1. The exact URL to set in the Twilio console as the inbound webhook (will be https://[replit-domain]/api/whatsapp-agent)
+2. Which file the session store lives in
+3. Confirmation that the existing agent and sendWhatsApp are untouched
