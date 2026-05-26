@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
-import { db, usersTable, walletsTable, streetTeamTable } from "@workspace/db";
+import { eq, and, count, sum } from "drizzle-orm";
+import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
 import { generateOTP, verifyOTP, clearOTP } from "../services/otpService.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
@@ -255,6 +255,73 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
   } catch (err) {
     logger.error({ err }, "streetTeamBonus: verify-bonus-otp error");
     res.status(500).json({ error: "Error interno. Intenta de nuevo." });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/street-team/rep-profile
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/rep-profile", async (req: Request, res: Response) => {
+  const repId = (req.query.repId as string | undefined)?.trim();
+  if (!repId) {
+    res.status(400).json({ error: "Se requiere repId." });
+    return;
+  }
+  try {
+    const [rep] = await db
+      .select({ id: repsTable.id, name: repsTable.name, repCode: repsTable.repCode, status: repsTable.status })
+      .from(repsTable)
+      .where(eq(repsTable.id, repId))
+      .limit(1);
+
+    if (!rep) {
+      res.status(404).json({ error: "Rep no encontrado." });
+      return;
+    }
+    res.json({ id: rep.id, name: rep.name, rep_code: rep.repCode ?? null, status: rep.status });
+  } catch (err) {
+    logger.error({ err, repId }, "rep-profile: query error");
+    res.status(500).json({ error: "Error interno." });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/street-team/rep-recruitment-stats
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/rep-recruitment-stats", async (req: Request, res: Response) => {
+  const repCode = (req.query.repCode as string | undefined)?.trim();
+  if (!repCode) {
+    res.status(400).json({ error: "Se requiere repCode." });
+    return;
+  }
+  try {
+    // Count users who signed up with this rep code
+    const [referidosRow] = await db
+      .select({ total: count() })
+      .from(usersTable)
+      .where(eq(usersTable.signupRefCode, repCode));
+
+    const referidos = Number(referidosRow?.total ?? 0);
+
+    // Count and sum SIGNUP_BONUS wallet transactions for this rep code
+    const bonusDesc = `Bono de bienvenida — ref: ${repCode}`;
+    const [bonusRow] = await db
+      .select({ bonos: count(), valor: sum(walletTransactionsTable.amountMxn) })
+      .from(walletTransactionsTable)
+      .where(
+        and(
+          eq(walletTransactionsTable.type, "SIGNUP_BONUS"),
+          eq(walletTransactionsTable.description, bonusDesc),
+        )
+      );
+
+    const bonos_acreditados = Number(bonusRow?.bonos ?? 0);
+    const valor_total = parseFloat(bonusRow?.valor ?? "0") || 0;
+
+    res.json({ referidos, bonos_acreditados, valor_total });
+  } catch (err) {
+    logger.error({ err, repCode }, "rep-recruitment-stats: query error");
+    res.status(500).json({ error: "Error interno." });
   }
 });
 

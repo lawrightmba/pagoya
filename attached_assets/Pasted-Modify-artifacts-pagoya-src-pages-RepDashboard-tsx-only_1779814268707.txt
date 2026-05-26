@@ -1,0 +1,102 @@
+Modify artifacts/pagoya/src/pages/RepDashboard.tsx only.
+Do not touch any other files.
+
+─────────────────────────────────────────
+PART A — FETCH REP CODE ON LOAD
+─────────────────────────────────────────
+On component mount, fetch the rep's full record using 
+the existing repId from the URL query param.
+
+GET /api/street-team/rep-profile?repId=[repId]
+
+If this endpoint does not exist, also create it in 
+the appropriate routes file — it should:
+  - Accept repId as a query param
+  - Query the reps table for that id
+  - Return { id, name, rep_code, status }
+  - Return 404 if not found
+
+Store rep_code in component state.
+
+If rep_code is null or empty, show a notice in the 
+recruitment section:
+  "Tu código de referido aún no está configurado. 
+   Contacta al administrador."
+And do not render the QR or copy button.
+
+─────────────────────────────────────────
+PART B — RECRUITMENT SECTION UI
+─────────────────────────────────────────
+Add a new section to the dashboard ABOVE the 
+existing transaction list. Do not move or modify 
+any existing sections.
+
+Section header: "Tu Enlace de Reclutamiento"
+
+Construct the signup URL as:
+  [window.location.origin]/register?ref=[rep_code]
+
+Show three elements:
+
+1. SIGNUP LINK BOX
+   - Displays the full URL in a rounded box
+   - Monospace font, truncated if too long for mobile
+   - "Copiar enlace" button to the right
+     On tap: copies URL to clipboard
+     Button text changes to "¡Copiado! ✓" for 2 seconds
+     then reverts
+
+2. QR CODE
+   - Generate using the qrcode npm package IF already 
+     installed in the pagoya app, otherwise use this 
+     no-dependency approach:
+     Fetch from the free QR API:
+     https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=[encodeURIComponent(signupUrl)]
+     Display as an <img> tag, 200x200px, centered
+   - Label below: "Escanea para registrarte"
+   - "Descargar QR" button below the image
+     On tap: opens the QR image URL in a new tab 
+     (user can long-press to save on mobile)
+
+3. RECRUITMENT STATS ROW
+   Three small stat cards in a row below the QR:
+   - "Referidos" — count of users where signup_ref_code = rep_code
+   - "Bonos Acreditados" — count of SIGNUP_BONUS wallet transactions 
+     where ref_code = rep_code
+   - "Valor Total" — sum of those SIGNUP_BONUS amounts in MXN
+
+   Fetch from a new endpoint:
+   GET /api/street-team/rep-recruitment-stats?repCode=[rep_code]
+
+   This endpoint should:
+   - Count users where signup_ref_code = rep_code
+   - Count and sum wallet_transactions where 
+     type = 'SIGNUP_BONUS' and ref_code embedded 
+     in description matches rep_code
+   - Return { referidos, bonos_acreditados, valor_total }
+   - Add to the same routes file as rep-profile above
+
+─────────────────────────────────────────
+STYLE:
+─────────────────────────────────────────
+- Match existing dashboard card style exactly
+- QR code centered in its own card with white background
+  (QR needs white background to scan correctly)
+- Stat cards same size and style as existing 
+  Total Ganado / En Espera / Pagado cards
+- "Copiar enlace" and "Descargar QR" buttons styled 
+  as secondary buttons (outline style, not filled)
+- Mobile-first — QR at 200px renders well on any screen
+- All text in Spanish
+
+─────────────────────────────────────────
+CONSTRAINTS:
+─────────────────────────────────────────
+- Do not add any npm packages unless qrcode is 
+  already installed — use the QR API URL approach
+- Do not modify any other frontend files
+- Do not modify any existing dashboard sections, 
+  cards, or transaction list
+- If rep_code is null show the notice and skip 
+  QR/link rendering entirely
+- All API calls handle loading and error states inline
