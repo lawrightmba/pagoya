@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { ArrowLeft, Banknote, CreditCard, ExternalLink, Copy, CheckCircle, Lock, Trash2, Building2, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PaulaHint from "@/components/PaulaHint";
 const logoUrl = "/pagoya-logo.png";
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
@@ -681,6 +682,12 @@ export default function CashLoad() {
           ) : (
             /* ── FORM STATE ── */
             <div className="flex flex-col gap-4">
+              <div style={{ textAlign: "center" }}>
+                <PaulaHint
+                  message="¿Cómo hago el depósito en OXXO? No entiendo cómo funciona el voucher."
+                  label="¿Cómo funciona el depósito en OXXO?"
+                />
+              </div>
               {/* Telefono input */}
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">

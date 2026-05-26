@@ -5,6 +5,7 @@ import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 import AutofillInput from "@/components/AutofillInput";
 import BillerTicker from "@/components/BillerTicker";
+import PaulaHint from "@/components/PaulaHint";
 
 // ─── Language helpers ──────────────────────────────────────────────────────────
 
@@ -340,6 +341,14 @@ export default function Home() {
               onAutofill={handleAutofill}
               dark
             />
+
+            <div style={{ textAlign: "center", margin: "10px 0 4px" }}>
+              <PaulaHint
+                message="Hola Paula, ¿cómo funciona PagoYa? ¿Puedo usarlo sin tener cuenta bancaria?"
+                label="¿Tienes dudas? Pregúntale a Paula"
+                variant="dark"
+              />
+            </div>
 
             {/* CTA button — teal #1D9E75, unchanged */}
             <button

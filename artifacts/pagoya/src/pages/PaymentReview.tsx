@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Edit2, CreditCard, ShieldCheck } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
 import { useEffect, useState } from "react";
+import PaulaHint from "@/components/PaulaHint";
 
 export default function PaymentReview() {
   const [, navigate] = useLocation();
@@ -119,6 +120,14 @@ export default function PaymentReview() {
                   <span style={{ fontSize: "13px", color: "#888888" }}>$25.00 MXN</span>
                 )}
               </div>
+              {!hasFreeToken && (
+                <div style={{ marginTop: "-4px" }}>
+                  <PaulaHint
+                    message="¿Por qué se cobra la tarifa de plataforma? ¿Hay alguna forma de pagarla gratis?"
+                    label="¿Por qué hay una comisión?"
+                  />
+                </div>
+              )}
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
               <div className="flex items-center justify-between py-2">
                 <span className="text-sm font-semibold text-gray-500">Total</span>

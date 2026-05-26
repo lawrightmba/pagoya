@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import PagoYaLogo from "@/components/PagoYaLogo";
+import PaulaHint from "@/components/PaulaHint";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -621,6 +622,13 @@ export default function Register() {
               </span>
             )}
           </div>
+          <div style={{ textAlign: "center", marginTop: "14px" }}>
+            <PaulaHint
+              message="No recibí mi código de verificación por WhatsApp. ¿Qué puedo hacer?"
+              label="¿No recibiste el código?"
+              variant="dark"
+            />
+          </div>
         </div>
       </div>
     );
@@ -783,6 +791,15 @@ export default function Register() {
                   Tu CURP aparece en tu INE o acta de nacimiento
                 </p>
             }
+            {!fieldErrors.curp && (
+              <div style={{ marginTop: "6px" }}>
+                <PaulaHint
+                  message="¿Dónde encuentro mi CURP? No tengo claro en qué documento aparece."
+                  label="¿Dónde encuentro mi CURP?"
+                  variant="dark"
+                />
+              </div>
+            )}
           </div>
 
           {/* Recovery Email */}

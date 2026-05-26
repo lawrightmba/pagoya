@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
+import PaulaHint from "@/components/PaulaHint";
 
 const CATEGORIAS = [
   "Luz", "Agua", "Gas", "Internet", "Cable",
@@ -159,6 +160,10 @@ export default function PaymentForm() {
                 style={inputStyle("referencia", !!errors.referencia)}
               />
             </Field>
+            <PaulaHint
+              message={`¿Dónde encuentro el número de referencia de ${form.empresa || "mi servicio"}?`}
+              label="¿Dónde encuentro mi número de referencia?"
+            />
 
             <Field label="Número de teléfono" error={errors.telefono}>
               <input
