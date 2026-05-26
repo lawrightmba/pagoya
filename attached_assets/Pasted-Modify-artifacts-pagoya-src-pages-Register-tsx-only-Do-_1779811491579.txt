@@ -1,0 +1,133 @@
+Modify artifacts/pagoya/src/pages/Register.tsx only.
+Do not touch any other files.
+
+─────────────────────────────────────────
+CURRENT BEHAVIOR TO PRESERVE:
+─────────────────────────────────────────
+- Reads ?rep= and ?ref= from URL query string — keep exactly
+- Collects name, phone, city, colonia, recovery email — keep all fields
+- Mobile-first styling — preserve exactly
+
+─────────────────────────────────────────
+CHANGES TO THE FORM:
+─────────────────────────────────────────
+1. Add a CURP field after the phone field:
+   - Label: "CURP"
+   - Placeholder: "Ej: LOAM850101HDFPLN09"
+   - Required
+   - Uppercase transform on input (auto-capitalize as user types)
+   - Small helper text below: "Tu CURP aparece en tu INE o acta de nacimiento"
+
+2. Change the form POST target from 
+   /api/street-team/register 
+   to 
+   /api/street-team/signup-with-bonus
+
+3. Include curp in the POST body alongside existing fields.
+   Also ensure ref_code (from ?ref= param) is included in the body.
+
+─────────────────────────────────────────
+NEW STATE MACHINE — THREE SCREENS:
+─────────────────────────────────────────
+Use a state variable: 
+  screen: 'form' | 'otp' | 'success'
+
+Starting state: 'form'
+
+The existing form renders when screen === 'form'.
+Do not change its layout or styling.
+
+─────────────────────────────────────────
+SCREEN: 'otp'
+─────────────────────────────────────────
+Triggered when POST returns { status: 'otp_required' }
+
+Store phone in a useRef (not state) so it persists 
+across renders without causing re-renders.
+
+Show:
+- Heading: "Verifica tu número"
+- Subtext: "Enviamos un código de 6 dígitos por WhatsApp 
+  al ****[last 4 digits of phone]"
+- Six individual single-character inputs in a row
+  - Each input: type="tel", maxLength=1, 48x48px minimum
+  - Auto-advance focus to next input on digit entry
+  - Backspace on empty input moves focus to previous input
+  - On paste: distribute digits across boxes automatically
+- "Verificar" button (full width, same style as existing submit button)
+- "Reenviar código" text link below button:
+  - Shows countdown "Reenviar en 60s" for 60 seconds
+  - After 60s becomes tappable, styled as a link
+  - On tap: re-POSTs original form payload to 
+    /api/street-team/signup-with-bonus to trigger new OTP
+    Resets 60s countdown
+- Error message area: hidden by default, shows below inputs
+
+OTP input refs: use an array of useRef for the 6 boxes
+so focus management works correctly in React.
+
+On "Verificar" tap:
+  POST to /api/street-team/verify-bonus-otp:
+  { phone: phoneRef.current, code: digits.join('') }
+
+  { verified: false, reason: 'invalid' }:
+    Show: "Código incorrecto. Inténtalo de nuevo."
+    Clear all 6 inputs, focus first box
+
+  { verified: false, reason: 'expired' }:
+    Show: "El código expiró. Solicita uno nuevo."
+    Disable inputs and verify button
+    Make resend link immediately active
+
+  { verified: false, reason: 'max_attempts' }:
+    Show: "Demasiados intentos. Solicita un nuevo código."
+    Disable inputs and verify button
+    Make resend link immediately active
+
+  { success: true }:
+    Store bonusCredited and bonusAmount in state
+    Set screen = 'success'
+
+─────────────────────────────────────────
+SCREEN: 'success'
+─────────────────────────────────────────
+Centered layout, same background as existing page.
+
+If bonusCredited === true:
+  Large checkmark or wallet icon (use an emoji if no 
+  icon library is available: ✅ or 💳)
+  "¡Bienvenido a PagoYa! 🎉"
+  "$[bonusAmount] MXN han sido acreditados a tu cartera."
+  "Revisa tu WhatsApp para más detalles."
+
+If bonusCredited === false:
+  "¡Registro exitoso!"
+  "Revisa tu WhatsApp para más detalles."
+
+No button, no redirect. User stays on this screen.
+
+─────────────────────────────────────────
+ERROR HANDLING ON FORM SUBMIT:
+─────────────────────────────────────────
+{ eligible: false, reason: 'inactive' }:
+  Show inline: "El programa de bonos no está activo en este momento."
+
+{ eligible: false, reason: 'duplicate' }:
+  Show inline: "Este número o CURP ya está registrado en PagoYa."
+
+{ eligible: false, reason: 'rep_not_eligible' }:
+  Show inline: "Este código de referido no es válido."
+
+Generic error fallback:
+  Show inline: "Ocurrió un error. Intenta de nuevo."
+
+─────────────────────────────────────────
+CONSTRAINTS:
+─────────────────────────────────────────
+- Do not modify any backend files
+- Do not modify any other React components or pages
+- Do not add any new npm packages
+- Preserve all existing ?rep= and ?ref= URL param logic
+- All user-facing text in Spanish
+- Touch targets minimum 44px — this runs on phones
+  at street activations
