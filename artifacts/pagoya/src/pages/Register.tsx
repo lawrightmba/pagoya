@@ -26,8 +26,55 @@ const COLONIAS = [
   "Otra / Other",
 ];
 
+// ── CURP format: 4 letters + 6 digits + H/M + 2 letters + 3 letters + 1 alphanum + 1 digit
+const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
+
 type Screen = "form" | "otp" | "success";
 
+interface FieldErrors {
+  name: string;
+  phone: string;
+  curp: string;
+  city: string;
+  colonia: string;
+}
+
+// ── Validation helpers ────────────────────────────────────────────────────────
+function validateName(val: string): string {
+  if (!val.trim()) return "Por favor ingresa tu nombre completo";
+  return "";
+}
+
+function validatePhone(val: string): string {
+  if (!val.trim()) return "Por favor ingresa tu número de teléfono";
+  const stripped = val.replace(/[\s\-\(\)]/g, "");
+  const withoutPlus = stripped.replace(/^\+/, "");
+  if (/[a-zA-Z]/.test(withoutPlus)) return "Solo se permiten números";
+  const digits = withoutPlus.replace(/\D/g, "");
+  if (digits.length !== 10 && !(digits.length === 12 && digits.startsWith("52"))) {
+    return "El número debe tener 10 dígitos";
+  }
+  return "";
+}
+
+function validateCurp(val: string): string {
+  if (!val.trim()) return "Por favor ingresa tu CURP";
+  if (val.length < 18) return "La CURP debe tener 18 caracteres";
+  if (!CURP_REGEX.test(val)) return "Formato de CURP inválido — ejemplo: LOAM850101HDFPLN09";
+  return "";
+}
+
+function validateCity(val: string): string {
+  if (!val) return "Por favor selecciona tu ciudad";
+  return "";
+}
+
+function validateColonia(val: string): string {
+  if (!val) return "Por favor ingresa tu colonia";
+  return "";
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "14px 16px",
@@ -53,17 +100,24 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "6px",
 };
 
-const submitBtnStyle = (submitting: boolean): React.CSSProperties => ({
+const fieldErrorStyle: React.CSSProperties = {
+  margin: "5px 0 0",
+  fontSize: "14px",
+  color: "#F87171",
+  lineHeight: 1.4,
+};
+
+const submitBtnStyle = (disabled: boolean): React.CSSProperties => ({
   marginTop: "8px",
   width: "100%",
   padding: "16px",
   fontSize: "16px",
   fontWeight: 800,
-  background: submitting ? "rgba(29,158,117,0.5)" : "#1D9E75",
+  background: disabled ? "rgba(29,158,117,0.5)" : "#1D9E75",
   color: "#FFFFFF",
   border: "none",
   borderRadius: "14px",
-  cursor: submitting ? "not-allowed" : "pointer",
+  cursor: disabled ? "not-allowed" : "pointer",
   letterSpacing: "-0.01em",
   boxShadow: "0 4px 20px rgba(29,158,117,0.35)",
   transition: "background 0.15s, transform 0.1s",
@@ -72,8 +126,19 @@ const submitBtnStyle = (submitting: boolean): React.CSSProperties => ({
   minHeight: "54px",
 });
 
+const apiErrorBoxStyle: React.CSSProperties = {
+  margin: "4px 0 0",
+  padding: "12px 14px",
+  background: "rgba(239,68,68,0.1)",
+  border: "1.5px solid rgba(239,68,68,0.45)",
+  borderRadius: "10px",
+  fontSize: "14px",
+  color: "#FCA5A5",
+  lineHeight: 1.5,
+};
+
 export default function Register() {
-  // ── Form fields ──────────────────────────────────────────────────────────
+  // ── Form fields ───────────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [curp, setCurp] = useState("");
@@ -83,12 +148,17 @@ export default function Register() {
   const [repId, setRepId] = useState<string | null>(null);
   const [refCode, setRefCode] = useState<string | null>(null);
 
-  // ── Screen state ─────────────────────────────────────────────────────────
+  // ── Field-level errors ────────────────────────────────────────────────────
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
+    name: "", phone: "", curp: "", city: "", colonia: "",
+  });
+
+  // ── Screen state ──────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>("form");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // ── OTP state ────────────────────────────────────────────────────────────
+  // ── OTP state ─────────────────────────────────────────────────────────────
   const phoneRef = useRef<string>("");
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const otpRefs = [
@@ -106,7 +176,7 @@ export default function Register() {
   const [resendActive, setResendActive] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Success state ────────────────────────────────────────────────────────
+  // ── Success state ─────────────────────────────────────────────────────────
   const [bonusCredited, setBonusCredited] = useState(false);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [waNumber, setWaNumber] = useState<string | null>(null);
@@ -125,7 +195,7 @@ export default function Register() {
       .catch(() => {});
   }, [screen]);
 
-  // ── Countdown logic ──────────────────────────────────────────────────────
+  // ── Countdown logic ───────────────────────────────────────────────────────
   const startCountdown = useCallback(() => {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setResendCountdown(60);
@@ -143,10 +213,19 @@ export default function Register() {
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
+
+  // ── Blur validators ───────────────────────────────────────────────────────
+  const setFieldError = (field: keyof FieldErrors, msg: string) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: msg }));
+  };
+
+  const handleNameBlur = () => setFieldError("name", validateName(name));
+  const handlePhoneBlur = () => setFieldError("phone", validatePhone(phone));
+  const handleCurpBlur = () => setFieldError("curp", validateCurp(curp));
+  const handleCityBlur = () => setFieldError("city", validateCity(city));
+  const handleColoniaBlur = () => setFieldError("colonia", validateColonia(colonia));
 
   // ── Build form payload ────────────────────────────────────────────────────
   const buildPayload = () => ({
@@ -160,10 +239,21 @@ export default function Register() {
     ...(recoveryEmail.trim() ? { recoveryEmail: recoveryEmail.trim() } : {}),
   });
 
-  // ── SCREEN: form submit ──────────────────────────────────────────────────
+  // ── SCREEN: form submit ───────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim() || !curp.trim() || !city || !colonia) return;
+
+    // Run all validations on submit too
+    const errs: FieldErrors = {
+      name: validateName(name),
+      phone: validatePhone(phone),
+      curp: validateCurp(curp),
+      city: validateCity(city),
+      colonia: validateColonia(colonia),
+    };
+    setFieldErrors(errs);
+    if (Object.values(errs).some(Boolean)) return;
+
     setSubmitting(true);
     setFormError("");
 
@@ -189,20 +279,22 @@ export default function Register() {
       if (!res.ok) {
         if (data.eligible === false) {
           const reasons: Record<string, string> = {
-            inactive: "El programa de bonos no está activo en este momento.",
-            duplicate: "Este número o CURP ya está registrado en PagoYa.",
-            rep_not_eligible: "Este código de referido no es válido.",
+            inactive: "El programa de bonos no está disponible en este momento. Intenta más tarde.",
+            duplicate: "Este número de teléfono o CURP ya tiene una cuenta en PagoYa. ¿Ya eres usuario? Descarga la app para iniciar sesión.",
+            rep_not_eligible: "El código de referido no es válido. Pide al representante que te dé un nuevo enlace.",
           };
-          setFormError(reasons[data.reason] ?? "Ocurrió un error. Intenta de nuevo.");
+          setFormError(reasons[data.reason] ?? "Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
+        } else if (data.status === "otp_send_failed") {
+          setFormError("No pudimos enviar el código por WhatsApp. Verifica que tu número sea correcto e intenta de nuevo.");
         } else {
-          setFormError(data.error ?? "Ocurrió un error. Intenta de nuevo.");
+          setFormError(data.error ?? "Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
         }
         return;
       }
 
-      setFormError("Ocurrió un error. Intenta de nuevo.");
+      setFormError("Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
     } catch {
-      setFormError("No se pudo conectar. Intenta de nuevo.");
+      setFormError("Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -214,9 +306,7 @@ export default function Register() {
     const next = [...digits];
     next[index] = digit;
     setDigits(next);
-    if (digit && index < 5) {
-      otpRefs[index + 1].current?.focus();
-    }
+    if (digit && index < 5) otpRefs[index + 1].current?.focus();
   };
 
   const handleDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -232,11 +322,10 @@ export default function Register() {
     const next = ["", "", "", "", "", ""];
     pasted.split("").forEach((ch, i) => { next[i] = ch; });
     setDigits(next);
-    const focusIdx = Math.min(pasted.length, 5);
-    otpRefs[focusIdx].current?.focus();
+    otpRefs[Math.min(pasted.length, 5)].current?.focus();
   };
 
-  // ── SCREEN: OTP — verify ─────────────────────────────────────────────────
+  // ── SCREEN: OTP — verify ──────────────────────────────────────────────────
   const handleVerify = async () => {
     const code = digits.join("");
     if (code.length < 6) return;
@@ -261,34 +350,34 @@ export default function Register() {
       if (data.verified === false) {
         const reason = data.reason as string;
         if (reason === "invalid") {
-          setOtpError("Código incorrecto. Inténtalo de nuevo.");
+          setOtpError("Código incorrecto. Revisa tu WhatsApp e inténtalo de nuevo.");
           setDigits(["", "", "", "", "", ""]);
           setTimeout(() => otpRefs[0].current?.focus(), 80);
         } else if (reason === "expired") {
-          setOtpError("El código expiró. Solicita uno nuevo.");
+          setOtpError("El código expiró. Toca 'Reenviar código' para recibir uno nuevo.");
           setOtpInputsDisabled(true);
           setResendActive(true);
           if (countdownRef.current) clearInterval(countdownRef.current);
         } else if (reason === "max_attempts") {
-          setOtpError("Demasiados intentos. Solicita un nuevo código.");
+          setOtpError("Demasiados intentos incorrectos. Toca 'Reenviar código' para recibir un nuevo código.");
           setOtpInputsDisabled(true);
           setResendActive(true);
           if (countdownRef.current) clearInterval(countdownRef.current);
         } else {
-          setOtpError("Ocurrió un error. Intenta de nuevo.");
+          setOtpError("Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
         }
         return;
       }
 
-      setOtpError("Ocurrió un error. Intenta de nuevo.");
+      setOtpError("Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
     } catch {
-      setOtpError("No se pudo conectar. Intenta de nuevo.");
+      setOtpError("Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");
     } finally {
       setOtpSubmitting(false);
     }
   };
 
-  // ── SCREEN: OTP — resend ─────────────────────────────────────────────────
+  // ── SCREEN: OTP — resend ──────────────────────────────────────────────────
   const handleResend = async () => {
     if (!resendActive) return;
     setOtpError("");
@@ -300,16 +389,14 @@ export default function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
       });
-    } catch {
-      // Ignore — new OTP silently regenerated
-    }
+    } catch { /* silent */ }
     startCountdown();
     setTimeout(() => otpRefs[0].current?.focus(), 80);
   };
 
   const phoneLastFour = phoneRef.current.slice(-4);
 
-  // ── Shared page wrapper ──────────────────────────────────────────────────
+  // ── Shared page wrapper ───────────────────────────────────────────────────
   const pageWrap: React.CSSProperties = {
     minHeight: "100dvh",
     background: "#0A2540",
@@ -321,9 +408,9 @@ export default function Register() {
     boxSizing: "border-box",
   };
 
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   // SCREEN: success
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   if (screen === "success") {
     return (
       <div style={pageWrap}>
@@ -368,7 +455,7 @@ export default function Register() {
             </>
           )}
 
-          {/* WhatsApp CTA — starts a conversation with Paula */}
+          {/* WhatsApp CTA */}
           {waNumber && (
             <a
               href={`https://wa.me/${waNumber}?text=${encodeURIComponent("Hola PagoYa, acabo de registrarme 👋")}`}
@@ -403,9 +490,9 @@ export default function Register() {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   // SCREEN: otp
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   if (screen === "otp") {
     return (
       <div style={pageWrap}>
@@ -443,12 +530,7 @@ export default function Register() {
           </p>
 
           {/* Six OTP inputs */}
-          <div style={{
-            display: "flex",
-            gap: "8px",
-            justifyContent: "center",
-            marginBottom: "12px",
-          }}>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "12px" }}>
             {digits.map((d, i) => (
               <input
                 key={i}
@@ -481,17 +563,11 @@ export default function Register() {
             ))}
           </div>
 
-          {/* Error message */}
+          {/* OTP error */}
           {otpError && (
-            <p style={{
-              fontSize: "13px",
-              color: "#F87171",
-              textAlign: "center",
-              margin: "0 0 16px",
-              lineHeight: 1.4,
-            }}>
+            <div style={{ ...apiErrorBoxStyle, marginBottom: "16px", textAlign: "center" }}>
               {otpError}
-            </p>
+            </div>
           )}
 
           {/* Verify button */}
@@ -511,7 +587,7 @@ export default function Register() {
             {otpSubmitting ? "Verificando…" : "Verificar"}
           </button>
 
-          {/* Resend link */}
+          {/* Resend */}
           <div style={{ textAlign: "center", marginTop: "20px" }}>
             {resendActive ? (
               <button
@@ -531,7 +607,7 @@ export default function Register() {
                 Reenviar código
               </button>
             ) : (
-              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", fontFamily: "inherit" }}>
+              <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)" }}>
                 Reenviar en {resendCountdown}s
               </span>
             )}
@@ -541,9 +617,9 @@ export default function Register() {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   // SCREEN: form
-  // ════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════
   return (
     <div style={pageWrap}>
       <Helmet>
@@ -589,12 +665,19 @@ export default function Register() {
               autoComplete="name"
               placeholder="Tu nombre completo"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setFieldError("name", ""); }}
               required
-              style={inputStyle}
+              style={{
+                ...inputStyle,
+                borderColor: fieldErrors.name ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+              }}
               onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-              onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+              onBlur={(e) => {
+                handleNameBlur();
+                if (!fieldErrors.name) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+              }}
             />
+            {fieldErrors.name && <p style={fieldErrorStyle}>{fieldErrors.name}</p>}
           </div>
 
           {/* Phone */}
@@ -605,13 +688,20 @@ export default function Register() {
               autoComplete="tel"
               placeholder="+52 322 000 0000"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setFieldError("phone", ""); }}
               required
               inputMode="tel"
-              style={inputStyle}
+              style={{
+                ...inputStyle,
+                borderColor: fieldErrors.phone ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+              }}
               onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-              onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+              onBlur={(e) => {
+                handlePhoneBlur();
+                if (!fieldErrors.phone) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+              }}
             />
+            {fieldErrors.phone && <p style={fieldErrorStyle}>{fieldErrors.phone}</p>}
           </div>
 
           {/* CURP */}
@@ -622,19 +712,29 @@ export default function Register() {
               autoComplete="off"
               placeholder="Ej: LOAM850101HDFPLN09"
               value={curp}
-              onChange={(e) => setCurp(e.target.value.toUpperCase())}
+              onChange={(e) => { setCurp(e.target.value.toUpperCase()); setFieldError("curp", ""); }}
               required
               maxLength={18}
-              style={{ ...inputStyle, letterSpacing: "0.06em" }}
+              style={{
+                ...inputStyle,
+                letterSpacing: "0.06em",
+                borderColor: fieldErrors.curp ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+              }}
               onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-              onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+              onBlur={(e) => {
+                handleCurpBlur();
+                if (!fieldErrors.curp) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+              }}
             />
-            <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
-              Tu CURP aparece en tu INE o acta de nacimiento
-            </p>
+            {fieldErrors.curp
+              ? <p style={fieldErrorStyle}>{fieldErrors.curp}</p>
+              : <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
+                  Tu CURP aparece en tu INE o acta de nacimiento
+                </p>
+            }
           </div>
 
-          {/* Recovery Email */}
+          {/* Recovery Email (optional — no validation required) */}
           <div>
             <label style={labelStyle}>
               Correo de recuperación{" "}
@@ -664,16 +764,20 @@ export default function Register() {
             <div style={{ position: "relative" }}>
               <select
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => { setCity(e.target.value); setFieldError("city", ""); }}
                 required
                 style={{
                   ...inputStyle,
                   color: city ? "#FFFFFF" : "rgba(255,255,255,0.35)",
                   cursor: "pointer",
                   paddingRight: "40px",
+                  borderColor: fieldErrors.city ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
                 }}
                 onFocus={(e) => { (e.target as HTMLSelectElement).style.borderColor = "#1D9E75"; }}
-                onBlur={(e) => { (e.target as HTMLSelectElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+                onBlur={(e) => {
+                  handleCityBlur();
+                  if (!fieldErrors.city) (e.target as HTMLSelectElement).style.borderColor = "rgba(255,255,255,0.12)";
+                }}
               >
                 <option value="" disabled style={{ background: "#0A2540", color: "rgba(255,255,255,0.4)" }}>
                   Selecciona tu ciudad
@@ -688,6 +792,7 @@ export default function Register() {
                 color: "rgba(255,255,255,0.4)", pointerEvents: "none", fontSize: "12px",
               }}>▾</span>
             </div>
+            {fieldErrors.city && <p style={fieldErrorStyle}>{fieldErrors.city}</p>}
           </div>
 
           {/* Colonia */}
@@ -696,16 +801,20 @@ export default function Register() {
             <div style={{ position: "relative" }}>
               <select
                 value={colonia}
-                onChange={(e) => setColonia(e.target.value)}
+                onChange={(e) => { setColonia(e.target.value); setFieldError("colonia", ""); }}
                 required
                 style={{
                   ...inputStyle,
                   color: colonia ? "#FFFFFF" : "rgba(255,255,255,0.35)",
                   cursor: "pointer",
                   paddingRight: "40px",
+                  borderColor: fieldErrors.colonia ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
                 }}
                 onFocus={(e) => { (e.target as HTMLSelectElement).style.borderColor = "#1D9E75"; }}
-                onBlur={(e) => { (e.target as HTMLSelectElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+                onBlur={(e) => {
+                  handleColoniaBlur();
+                  if (!fieldErrors.colonia) (e.target as HTMLSelectElement).style.borderColor = "rgba(255,255,255,0.12)";
+                }}
               >
                 <option value="" disabled style={{ background: "#0A2540", color: "rgba(255,255,255,0.4)" }}>
                   Selecciona tu colonia
@@ -720,13 +829,14 @@ export default function Register() {
                 color: "rgba(255,255,255,0.4)", pointerEvents: "none", fontSize: "12px",
               }}>▾</span>
             </div>
+            {fieldErrors.colonia && <p style={fieldErrorStyle}>{fieldErrors.colonia}</p>}
           </div>
 
-          {/* Form error */}
+          {/* API error box */}
           {formError && (
-            <p style={{ margin: 0, fontSize: "13px", color: "#F87171", textAlign: "center", lineHeight: 1.4 }}>
+            <div style={apiErrorBoxStyle}>
               {formError}
-            </p>
+            </div>
           )}
 
           {/* Submit */}

@@ -1,0 +1,85 @@
+Modify artifacts/pagoya/src/pages/Register.tsx only.
+Do not touch any other files.
+
+The form currently shows a generic error state when 
+submission fails. Replace all error displays with 
+specific, actionable Spanish messages shown inline 
+directly below the relevant field where possible, 
+or below the submit button for general errors.
+
+─────────────────────────────────────────
+FIELD-LEVEL VALIDATION (before submit):
+─────────────────────────────────────────
+Show error below each field immediately on blur 
+(when user leaves the field), not just on submit.
+
+name:
+  Empty: "Por favor ingresa tu nombre completo"
+
+phone:
+  Empty: "Por favor ingresa tu número de teléfono"
+  Not 10 digits: "El número debe tener 10 dígitos"
+  Non-numeric: "Solo se permiten números"
+
+curp:
+  Empty: "Por favor ingresa tu CURP"
+  Less than 18 chars: "La CURP debe tener 18 caracteres"
+  Invalid format: "Formato de CURP inválido — ejemplo: LOAM850101HDFPLN09"
+
+city:
+  Empty: "Por favor selecciona tu ciudad"
+
+colonia:
+  Empty: "Por favor ingresa tu colonia"
+
+─────────────────────────────────────────
+API ERROR MESSAGES (after submit):
+─────────────────────────────────────────
+Show these below the submit button in a clearly 
+visible error box (red border, light red background):
+
+{ eligible: false, reason: 'inactive' }:
+  "El programa de bonos no está disponible en este momento. 
+   Intenta más tarde."
+
+{ eligible: false, reason: 'duplicate' }:
+  "Este número de teléfono o CURP ya tiene una cuenta en PagoYa. 
+   ¿Ya eres usuario? Descarga la app para iniciar sesión."
+
+{ eligible: false, reason: 'rep_not_eligible' }:
+  "El código de referido no es válido. 
+   Pide al representante que te dé un nuevo enlace."
+
+{ otp_send_failed }:
+  "No pudimos enviar el código por WhatsApp. 
+   Verifica que tu número sea correcto e intenta de nuevo."
+
+Generic / network error:
+  "Ocurrió un error inesperado. 
+   Verifica tu conexión e intenta de nuevo."
+
+─────────────────────────────────────────
+OTP SCREEN ERROR MESSAGES:
+─────────────────────────────────────────
+Show below the 6 input boxes:
+
+reason: 'invalid':
+  "Código incorrecto. Revisa tu WhatsApp e inténtalo de nuevo."
+
+reason: 'expired':
+  "El código expiró. Toca 'Reenviar código' para recibir uno nuevo."
+
+reason: 'max_attempts':
+  "Demasiados intentos incorrectos. 
+   Toca 'Reenviar código' para recibir un nuevo código."
+
+─────────────────────────────────────────
+STYLE:
+─────────────────────────────────────────
+- Field-level errors: small red text directly below 
+  the field, same pattern for every field
+- API errors: red-bordered box below submit button, 
+  padding 12px, readable on mobile
+- Error text size minimum 14px — legible on phone screens
+- Do not change any layout, spacing, or styling 
+  outside of error states
