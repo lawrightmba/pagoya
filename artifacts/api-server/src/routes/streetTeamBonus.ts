@@ -1,0 +1,261 @@
+import { Router, type Request, type Response } from "express";
+import { eq } from "drizzle-orm";
+import { db, usersTable, walletsTable, streetTeamTable } from "@workspace/db";
+import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
+import { generateOTP, verifyOTP, clearOTP } from "../services/otpService.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
+import { logger } from "../lib/logger.js";
+
+const router = Router();
+
+// Extend express-session with our pending registration shape
+declare module "express-session" {
+  interface SessionData {
+    pending_bonus_registration?: {
+      name: string;
+      phone: string;
+      curp: string;
+      city: string;
+      colonia: string;
+      ref_code: string;
+    };
+  }
+}
+
+// ── Validation helpers ────────────────────────────────────────────────────────
+
+const MX_PHONE_RE = /^\d{10}$/;
+
+function validatePhone(phone: string): boolean {
+  return MX_PHONE_RE.test(phone);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/street-team/signup-with-bonus
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/signup-with-bonus", async (req: Request, res: Response) => {
+  const { name, phone, curp, city, colonia, ref_code } = req.body as {
+    name?: string;
+    phone?: string;
+    curp?: string;
+    city?: string;
+    colonia?: string;
+    ref_code?: string;
+  };
+
+  // ── Required field validation ──────────────────────────────────────────────
+  if (!name?.trim()) {
+    res.status(400).json({ error: "Se requiere el nombre.", field: "name" });
+    return;
+  }
+  if (!phone?.trim()) {
+    res.status(400).json({ error: "Se requiere el teléfono.", field: "phone" });
+    return;
+  }
+  if (!curp?.trim()) {
+    res.status(400).json({ error: "Se requiere el CURP.", field: "curp" });
+    return;
+  }
+  if (!city?.trim()) {
+    res.status(400).json({ error: "Se requiere la ciudad.", field: "city" });
+    return;
+  }
+  if (!colonia?.trim()) {
+    res.status(400).json({ error: "Se requiere la colonia.", field: "colonia" });
+    return;
+  }
+  if (!ref_code?.trim()) {
+    res.status(400).json({ error: "Se requiere el código de referido.", field: "ref_code" });
+    return;
+  }
+
+  // ── Phone format validation ────────────────────────────────────────────────
+  const phoneCleaned = phone.trim().replace(/\D/g, "").slice(-10);
+  if (!validatePhone(phoneCleaned)) {
+    res.status(400).json({ error: "El teléfono debe ser un número mexicano de 10 dígitos.", field: "phone" });
+    return;
+  }
+
+  try {
+    // ── 1. Bonus eligibility check ─────────────────────────────────────────
+    const eligibility = await checkBonusEligibility(phoneCleaned, curp.trim().toUpperCase(), ref_code.trim());
+    if (!eligibility.eligible) {
+      logger.info({ phone: phoneCleaned, reason: eligibility.reason }, "streetTeamBonus: not eligible");
+      res.status(400).json({ eligible: false, reason: eligibility.reason });
+      return;
+    }
+
+    // ── 2. Send OTP ────────────────────────────────────────────────────────
+    const otpResult = await generateOTP(phoneCleaned);
+    if (!otpResult.success) {
+      logger.error({ phone: phoneCleaned, error: otpResult.error }, "streetTeamBonus: OTP send failed");
+      res.status(500).json({ error: "otp_send_failed" });
+      return;
+    }
+
+    // ── 3. Store registration payload in session ───────────────────────────
+    req.session.pending_bonus_registration = {
+      name: name.trim(),
+      phone: phoneCleaned,
+      curp: curp.trim().toUpperCase(),
+      city: city.trim(),
+      colonia: colonia.trim(),
+      ref_code: ref_code.trim(),
+    };
+
+    // ── 4. Return OTP challenge ────────────────────────────────────────────
+    res.status(200).json({ status: "otp_required" });
+  } catch (err) {
+    logger.error({ err, phone: phoneCleaned }, "streetTeamBonus: signup-with-bonus error");
+    res.status(500).json({ error: "Error interno. Intenta de nuevo." });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/street-team/verify-bonus-otp
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
+  const { phone, code } = req.body as { phone?: string; code?: string };
+
+  try {
+    // ── 1. Load session payload ────────────────────────────────────────────
+    const pending = req.session.pending_bonus_registration;
+    if (!pending) {
+      res.status(400).json({ error: "session_expired" });
+      return;
+    }
+
+    // ── 2. Verify OTP ─────────────────────────────────────────────────────
+    const otpResult = await verifyOTP(pending.phone, code ?? "");
+    if (!otpResult.verified) {
+      res.status(400).json({ verified: false, reason: otpResult.reason });
+      return;
+    }
+
+    // ── 3. Rep velocity check (BLOCK does not abort — continue) ───────────
+    const velocity = await checkRepVelocity(pending.ref_code);
+    const bonusBlocked = velocity.flag === "BLOCK";
+    if (bonusBlocked) {
+      logger.warn({ repCode: pending.ref_code }, "streetTeamBonus: rep BLOCKED — skipping bonus credit");
+    }
+
+    // ── 4. Create user record ──────────────────────────────────────────────
+    let userId: number;
+    try {
+      const [newUser] = await db
+        .insert(usersTable)
+        .values({
+          telefono: pending.phone,
+          kycFullName: pending.name,
+          kycCurp: pending.curp,
+          signupBonusEligible: !bonusBlocked,
+          signupRefCode: pending.ref_code,
+        })
+        .onConflictDoNothing()
+        .returning({ id: usersTable.id });
+
+      if (newUser) {
+        userId = newUser.id;
+      } else {
+        // Conflict — user already exists; fetch their id
+        const [existing] = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(eq(usersTable.telefono, pending.phone))
+          .limit(1);
+
+        if (!existing) {
+          res.status(500).json({ error: "user_creation_failed" });
+          return;
+        }
+        userId = existing.id;
+      }
+    } catch (err) {
+      logger.error({ err, phone: pending.phone }, "streetTeamBonus: user creation failed");
+      res.status(500).json({ error: "user_creation_failed" });
+      return;
+    }
+
+    // ── 5. Create wallet record ────────────────────────────────────────────
+    try {
+      await db
+        .insert(walletsTable)
+        .values({ userId: pending.phone })
+        .onConflictDoNothing();
+    } catch (err) {
+      logger.error({ err, phone: pending.phone }, "streetTeamBonus: wallet creation failed");
+      // Non-fatal — wallet may already exist; continue
+    }
+
+    // ── 6. Insert street_team lead row ────────────────────────────────────
+    try {
+      await db
+        .insert(streetTeamTable)
+        .values({
+          name: pending.name,
+          phone: pending.phone,
+          city: pending.city,
+          colonia: pending.colonia,
+          refCode: pending.ref_code,
+        })
+        .onConflictDoNothing();
+    } catch (err) {
+      logger.warn({ err, phone: pending.phone }, "streetTeamBonus: street_team insert failed (non-fatal)");
+      // Non-fatal — lead record is nice-to-have
+    }
+
+    // ── 7. Credit signup bonus (skip if rep is blocked) ───────────────────
+    let bonusCredited = false;
+    let bonusAmount = 0;
+
+    if (!bonusBlocked) {
+      // Re-read the config amount via eligibility (amount came from config row)
+      // Use the amount stored at eligibility check time by calling checkBonusEligibility again,
+      // or fall back to the signupBonusService which reads from config row id=1
+      const eligibility = await checkBonusEligibility(pending.phone, pending.curp, pending.ref_code);
+      const creditAmount = eligibility.eligible ? parseFloat(eligibility.amount) : 0;
+
+      if (creditAmount > 0) {
+        const creditResult = await creditSignupBonus(userId, pending.ref_code, creditAmount);
+        if (creditResult.success) {
+          bonusCredited = true;
+          bonusAmount = creditResult.amount ?? 0;
+        } else {
+          logger.warn({ userId, reason: creditResult.reason }, "streetTeamBonus: bonus credit failed");
+        }
+      }
+    }
+
+    // ── 8. Clear OTP ──────────────────────────────────────────────────────
+    await clearOTP(pending.phone);
+
+    // ── 9. Clear session ──────────────────────────────────────────────────
+    delete req.session.pending_bonus_registration;
+
+    // ── 10. WhatsApp confirmation ──────────────────────────────────────────
+    try {
+      let message =
+        `¡Bienvenido a PagoYa, ${pending.name}! 🎉 Tu cuenta está lista. ` +
+        `Paga tu luz, agua, teléfono y más — sin filas, sin efectivo.`;
+
+      if (bonusCredited) {
+        message +=
+          ` Además, hemos acreditado $${bonusAmount.toFixed(2)} MXN a tu cartera` +
+          ` como bono de bienvenida. Úsalos en tu primer pago.`;
+      }
+
+      await sendWhatsApp(pending.phone, message);
+    } catch (err) {
+      logger.warn({ err, phone: pending.phone }, "streetTeamBonus: WhatsApp confirmation failed (non-fatal)");
+    }
+
+    // ── 11. Respond ───────────────────────────────────────────────────────
+    logger.info({ userId, bonusCredited, bonusAmount }, "streetTeamBonus: verify-bonus-otp complete");
+    res.status(200).json({ success: true, userId, bonusCredited, bonusAmount: bonusAmount ?? 0 });
+  } catch (err) {
+    logger.error({ err }, "streetTeamBonus: verify-bonus-otp error");
+    res.status(500).json({ error: "Error interno. Intenta de nuevo." });
+  }
+});
+
+export default router;

@@ -1,0 +1,89 @@
+Create a new file: routes/streetTeamBonus.ts
+Mount it in the main app at /api/street-team
+
+Do not modify any existing files including the existing 
+street-team.ts route.
+
+CREATE TWO ENDPOINTS in the new file:
+
+─────────────────────────────────────────
+ENDPOINT 1: POST /api/street-team/signup-with-bonus
+─────────────────────────────────────────
+Accepts: { name, phone, curp, city, colonia, ref_code }
+
+Validations (return 400 with reason if any fail):
+- name, phone, city, colonia, ref_code all required
+- curp required (used for duplicate check)
+- phone must be a valid 10-digit Mexican mobile number
+
+Then in order:
+
+1. Call checkBonusEligibility(phone, curp, ref_code) 
+   from services/signupBonusService.ts
+   - If not eligible: return 400 { eligible: false, reason }
+   - Do not proceed if inactive or duplicate
+
+2. Call generateOTP(phone) from services/otpService.ts
+   - If fails: return 500 { error: 'otp_send_failed' }
+
+3. Store full payload in req.session as pending_bonus_registration:
+   { name, phone, curp, city, colonia, ref_code }
+
+4. Return 200 { status: 'otp_required' }
+
+─────────────────────────────────────────
+ENDPOINT 2: POST /api/street-team/verify-bonus-otp
+─────────────────────────────────────────
+Accepts: { phone, code }
+
+Then in order:
+
+1. Load pending_bonus_registration from req.session
+   - If missing: return 400 { error: 'session_expired' }
+
+2. Call verifyOTP(phone, code) from services/otpService.ts
+   - If not verified: return 400 { verified: false, reason }
+
+3. Call checkRepVelocity(ref_code) from services/signupBonusService.ts
+   - If BLOCK: set bonusBlocked = true (do not abort — continue)
+
+4. Create user record in users table using pending_bonus_registration data
+   - Use the same pattern as existing user creation elsewhere in the project
+   - If user creation fails: return 500 { error: 'user_creation_failed' }
+
+5. Create wallet record linked to new userId
+   - Use the same pattern as existing wallet creation elsewhere in the project
+
+6. Also insert a row into street_team table (same fields as existing 
+   /api/street-team/register) so the lead record still exists
+
+7. If bonusBlocked = false:
+   Call creditSignupBonus(userId, ref_code, amount) 
+   from services/signupBonusService.ts
+   Set bonusCredited = true, bonusAmount = amount
+
+8. Call clearOTP(phone) from services/otpService.ts
+
+9. Clear pending_bonus_registration from req.session
+
+10. Send WhatsApp confirmation via existing Twilio setup:
+    Base message (always):
+    "¡Bienvenido a PagoYa, [name]! 🎉 Tu cuenta está lista. 
+     Paga tu luz, agua, teléfono y más — sin filas, sin efectivo."
+    
+    Append if bonusCredited = true:
+    "Además, hemos acreditado $[bonusAmount] MXN a tu cartera 
+     como bono de bienvenida. Úsalos en tu primer pago."
+
+11. Return 200: 
+    { success: true, userId, bonusCredited, bonusAmount: bonusAmount || 0 }
+
+─────────────────────────────────────────
+IMPORTANT CONSTRAINTS:
+─────────────────────────────────────────
+- Do not modify street-team.ts or any existing route
+- Do not modify otpService.ts or signupBonusService.ts
+- If express-session is not already configured in the main 
+  app, add it — do not assume it exists
+- All errors should be caught with try/catch and return 
+  structured JSON, never throw to the global handler

@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import pinoHttp from "pino-http";
+import session from "express-session";
 import router from "./routes";
 import { handlePagoyaWebhook } from "./routes/pagoya";
 import { handleConektaWebhook, handleConektaCardWebhook } from "./wallet/routes/wallet.js";
@@ -36,6 +37,19 @@ app.use(
   }),
 );
 app.use(cors());
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET ?? "pagoya-session-secret-dev",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000, // 15 minutes — long enough to complete OTP flow
+    },
+  }),
+);
 
 // Webhooks must be mounted with raw body parser BEFORE express.json()
 // so signature verification receives the unmodified payload.
