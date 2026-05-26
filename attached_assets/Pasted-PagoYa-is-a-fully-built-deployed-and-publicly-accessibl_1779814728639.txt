@@ -1,0 +1,23 @@
+PagoYa is a fully built, deployed, and publicly accessible product at pagoyamx.com. It is not a prototype — it is a live fintech web app that Mexican consumers can use today to pay utilities, telecom bills, streaming services, and other recurring expenses in under two minutes, without a bank account.
+
+What is working and shipped today:
+
+Core bill payment engine: Integrates two Mexican providers (SIPREL + Evoluciona) with automatic failover. 20+ billers, $25 MXN flat fee per transaction.
+Digital wallet: Users hold a MXN balance funded via three channels: OXXO cash deposits (barcode vouchers), card top-ups (Conekta tokenization with saved-card support), and SPEI inbound bank transfers (webhook-verified). Wallet is debited atomically with every payment.
+AI bill autofill: Natural-language home screen — Claude parses "CFE 350 pesos" and pre-fills the service, amount, and reference in one shot.
+AI support chat widget: Floating chat on every page backed by a Claude tool-use agent loop. Answers account questions (balance, history, pending cash deposits) in real time and escalates to a human via WhatsApp.
+Loyalty & rewards system: Users earn points on every payment (1 pt / $10 MXN, tier multipliers at Bronze / Silver / Gold). Fully functional redemption: wallet credit or a free-transaction token that waives the $25 MXN fee. Token is enforced atomically inside the payment DB transaction.
+Referral / street-team network: Rep program with unique referral codes, $5 MXN commission per confirmed payment with a 7-day hold, and a rep earnings dashboard.
+WhatsApp receipts + alerts: Post-payment receipts, loyalty point updates, token delivery, and low-balance alerts via Twilio.
+Payment history page: Full ledger with masked references, status badges, and pagination.
+P2P wallet transfers: Users send MXN directly to any Mexican mobile number. Recipients without an account get an auto-created wallet and a WhatsApp invite — turning every transfer into an acquisition event. Daily limits enforced. Atomic debit/credit in a single DB transaction.
+KYC — Nivel 2 identity verification: CURP-based verification against RENAPO. Verified users unlock a $24,000 MXN/month wallet limit (vs. $6,000 unverified).
+Direct debit bank enrollment: Full 5-step enrollment wizard (personal data → bank account → KYC document upload → digital signature + auto-generated contract → confirmation). Backend fully integrated with Belvo Direct Debit API. Awaiting Belvo production credential approval — UI and backend are complete and deployed.
+Regulatory compliance: LFPDPPP-compliant Privacy Notice live at pagoyamx.com/aviso-de-privacidad. Full Terms of Service published. Both required for Belvo production onboarding and any future CNBV-adjacent partnership.
+Live and deployed: Published on pagoyamx.com with custom domain TLS. Works on any mobile browser — no app store download required.
+What is in progress:
+
+Merchant / biller onboarding portal for self-service biller registration
+Scheduled recurring payments (auto-pay for monthly bills)
+iOS and Android PWA push notifications
+In terms of traction: the product has been built and iterated entirely in-house with no external dev team. We have users in Mexico, a functional referral network being seeded, and are preparing a structured go-to-market into underbanked markets in Jalisco and CDMX.
