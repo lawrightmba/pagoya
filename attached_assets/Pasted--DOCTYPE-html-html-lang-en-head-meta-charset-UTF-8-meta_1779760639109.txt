@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PagoYa — WhatsApp Agent Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #7C3AED;
+    --purple-light: #A78BFA;
+    --purple-dark: #4C1D95;
+    --coral: #FF6B6B;
+    --teal: #0D9488;
+    --gold: #F59E0B;
+    --bg: #0A0A0F;
+    --surface: #111118;
+    --surface2: #1A1A24;
+    --border: rgba(124,58,237,0.2);
+    --text: #E8E8F0;
+    --muted: #6B6B8A;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Instrument Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 80% 80%, rgba(13,148,136,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 100px;
+    padding: 4px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--purple-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--purple-light);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--purple-light); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 600px;
+  }
+
+  /* Nav tabs */
+  .nav {
+    display: flex;
+    gap: 4px;
+    margin: 40px 0 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar { display: none; }
+
+  .nav-tab {
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active {
+    color: var(--purple-light);
+    border-bottom-color: var(--purple-light);
+  }
+
+  /* Sections */
+  .section {
+    display: none;
+    padding: 48px 0;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section headings */
+  h2 {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--purple-light);
+    margin: 28px 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: rgba(124,58,237,0.4); }
+
+  .card-title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .icon-purple { background: rgba(124,58,237,0.2); }
+  .icon-teal { background: rgba(13,148,136,0.2); }
+  .icon-coral { background: rgba(255,107,107,0.2); }
+  .icon-gold { background: rgba(245,158,11,0.2); }
+
+  .card p { color: var(--muted); font-size: 14px; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .flow-step {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    position: relative;
+  }
+
+  .flow-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 40px;
+    bottom: -20px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--purple), transparent);
+    opacity: 0.4;
+  }
+
+  .flow-number {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--purple-dark);
+    border: 2px solid var(--purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--purple-light);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .flow-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    flex: 1;
+    margin-bottom: 20px;
+  }
+
+  .flow-content strong {
+    display: block;
+    font-family: var(--display);
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .flow-content p { color: var(--muted); font-size: 13px; }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--surface2);
+    border: 1px solid rgba(124,58,237,0.15);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    color: #C4B5FD;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+
+  .code-block .comment { color: var(--muted); }
+  .code-block .key { color: #A78BFA; }
+  .code-block .val { color: #6EE7B7; }
+  .code-block .str { color: #FCA5A5; }
+
+  /* Grid */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* Conversation sim */
+  .chat-sim {
+    background: #1A1A2E;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(124,58,237,0.2);
+    font-size: 14px;
+  }
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 16px;
+  }
+
+  .wa-icon {
+    width: 36px; height: 36px;
+    background: #25D366;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .chat-name { font-weight: 600; font-size: 15px; }
+  .chat-status { color: #25D366; font-size: 12px; }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+  }
+
+  .msg.user { align-items: flex-end; }
+  .msg.agent { align-items: flex-start; }
+
+  .bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .msg.user .bubble {
+    background: #2D5A3D;
+    border-bottom-right-radius: 4px;
+    color: #E8F5E9;
+  }
+
+  .msg.agent .bubble {
+    background: var(--surface2);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+    border: 1px solid rgba(124,58,237,0.2);
+  }
+
+  .msg-time {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+
+  /* Intent chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .chip {
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-family: var(--mono);
+    font-weight: 500;
+    border: 1px solid;
+  }
+
+  .chip-purple { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.4); color: var(--purple-light); }
+  .chip-teal { background: rgba(13,148,136,0.15); border-color: rgba(13,148,136,0.4); color: #2DD4BF; }
+  .chip-coral { background: rgba(255,107,107,0.15); border-color: rgba(255,107,107,0.4); color: #FCA5A5; }
+  .chip-gold { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #FCD34D; }
+
+  /* Timeline */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tl-item {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 20px;
+    position: relative;
+    padding-bottom: 24px;
+  }
+
+  .tl-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 114px;
+    top: 8px;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .tl-week {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--purple-light);
+    text-align: right;
+    padding-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tl-body {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .tl-body strong { font-family: var(--display); font-weight: 600; display: block; margin-bottom: 6px; }
+  .tl-body ul { list-style: none; }
+  .tl-body ul li { color: var(--muted); font-size: 13px; padding: 2px 0; }
+  .tl-body ul li::before { content: '→ '; color: var(--purple-light); }
+
+  /* Priority table */
+  .ptable { width: 100%; border-collapse: collapse; }
+  .ptable th {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ptable td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 13.5px;
+    vertical-align: top;
+  }
+  .ptable tr:last-child td { border-bottom: none; }
+  .ptable tr:hover td { background: rgba(124,58,237,0.05); }
+
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-green { background: #10B981; }
+  .dot-yellow { background: #F59E0B; }
+  .dot-red { background: #EF4444; }
+
+  /* Risk callout */
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    font-size: 14px;
+  }
+
+  .callout-warn {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+
+  .callout-info {
+    background: rgba(124,58,237,0.08);
+    border: 1px solid rgba(124,58,237,0.25);
+  }
+
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .callout-body strong { display: block; margin-bottom: 4px; font-family: var(--display); }
+  .callout-body p { color: var(--muted); font-size: 13px; }
+
+  /* Stack layers */
+  .arch-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .layer {
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid;
+  }
+
+  .layer-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    width: 80px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .layer-content strong { font-size: 14px; font-family: var(--display); font-weight: 600; display: block; }
+  .layer-content span { font-size: 12px; color: var(--muted); }
+
+  .layer-1 { background: rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.3); }
+  .layer-2 { background: rgba(13,148,136,0.1); border-color: rgba(13,148,136,0.3); }
+  .layer-3 { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
+  .layer-4 { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); }
+  .layer-5 { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
+
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  @media (max-width: 600px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .tl-item { grid-template-columns: 70px 1fr; }
+    footer { flex-direction: column; gap: 8px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">Architecture Spec v1.0 · May 2026</div>
+    <h1>PagoYa <span>WhatsApp</span><br>Agent Layer</h1>
+    <p class="subtitle">Full architecture, conversation flows, rail integrations, and build sequence for the conversational payment agent.</p>
+
+    <nav class="nav">
+      <button class="nav-tab active" onclick="show('overview')">Overview</button>
+      <button class="nav-tab" onclick="show('architecture')">Architecture</button>
+      <button class="nav-tab" onclick="show('flows')">Conversation Flows</button>
+      <button class="nav-tab" onclick="show('rails')">Rail Hooks</button>
+      <button class="nav-tab" onclick="show('build')">Build Plan</button>
+      <button class="nav-tab" onclick="show('risks')">Risks</button>
+    </nav>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section id="overview" class="section active">
+    <h2>What We're Building</h2>
+    <p style="color:var(--muted); margin-bottom:24px;">A WhatsApp-native AI agent that lets any PagoYa user pay bills, top up their wallet, and get account info — entirely through conversation in natural Spanish, with no app download required.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><div class="icon icon-purple">🎯</div>Primary Goal</div>
+        <p>Remove app-download friction. A WhatsApp number IS the product entry point for underbanked users in PV colonias.</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon icon-teal">📈</div>YC Traction Signal</div>
+        <p>WhatsApp conversation volume, bill payments completed via agent, and colonia-level adoption become real metrics for the application.</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon icon-coral">🤝</div>Rep Attribution Preserved</div>
+        <p>Every agent session initiated via a rep referral link (e.g. ENG-01) tags the transaction for commission attribution automatically.</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon icon-gold">🌐</div>Zero Extra Infrastructure</div>
+        <p>Sits on top of existing Twilio, SIPREL, Conekta, and Drizzle ORM. No new database. No new payment rails.</p>
+      </div>
+    </div>
+
+    <h3>Core Intent Categories</h3>
+    <div class="chips">
+      <span class="chip chip-purple">💡 Pagar servicio</span>
+      <span class="chip chip-purple">💡 Consultar saldo</span>
+      <span class="chip chip-teal">💳 Recargar tarjeta</span>
+      <span class="chip chip-teal">💰 Recargar OXXO</span>
+      <span class="chip chip-coral">🏠 Pagar renta (PagoSeguro)</span>
+      <span class="chip chip-coral">❓ Ayuda / soporte</span>
+      <span class="chip chip-gold">📋 Historial de pagos</span>
+      <span class="chip chip-gold">🔗 Registrarme</span>
+    </div>
+
+    <h3>Supported Languages</h3>
+    <p style="color:var(--muted);">Spanish (primary) · Spanglish detection · Regional PV slang handling. English fallback available.</p>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture" class="section">
+    <h2>System Architecture</h2>
+
+    <h3>Stack Layers (Top → Bottom)</h3>
+    <div class="arch-stack">
+      <div class="layer layer-1">
+        <div class="layer-label">User Layer</div>
+        <div class="layer-content">
+          <strong>WhatsApp (via Twilio)</strong>
+          <span>Inbound webhook → POST /api/whatsapp-agent · Twilio Business Account · Phone number: dedicated PagoYa line</span>
+        </div>
+      </div>
+      <div class="layer layer-2">
+        <div class="layer-label">Agent Layer</div>
+        <div class="layer-content">
+          <strong>Claude Sonnet (Anthropic API) — NLU + Orchestration</strong>
+          <span>Intent classification · Entity extraction · Multi-turn session state · Spanish language processing</span>
+        </div>
+      </div>
+      <div class="layer layer-3">
+        <div class="layer-label">Logic Layer</div>
+        <div class="layer-content">
+          <strong>PagoYa Express Backend (Replit VM)</strong>
+          <span>Session manager · User lookup · Commission attribution · Confirmation flows · Receipt generation</span>
+        </div>
+      </div>
+      <div class="layer layer-4">
+        <div class="layer-label">Payment Rails</div>
+        <div class="layer-content">
+          <strong>SIPREL (bills) · Conekta (card top-up) · Digital Femsa/OXXO (cash-in)</strong>
+          <span>Existing integrations — agent calls same endpoints as web app</span>
+        </div>
+      </div>
+      <div class="layer layer-5">
+        <div class="layer-label">Data Layer</div>
+        <div class="layer-content">
+          <strong>Drizzle ORM → PostgreSQL (Replit)</strong>
+          <span>Users · Transactions · Sessions · Rep attribution · Colonia tags</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>New Endpoint Required</h3>
+    <div class="code-block">
+<span class="comment">// New route: POST /api/whatsapp-agent</span>
+<span class="comment">// Receives Twilio webhook, routes to agent orchestrator</span>
+
+{
+  <span class="key">from</span>: <span class="str">"whatsapp:+52XXXXXXXXXX"</span>,
+  <span class="key">body</span>: <span class="str">"Paga mi CFE"</span>,
+  <span class="key">profileName</span>: <span class="str">"Juan"</span>,
+  <span class="key">waId</span>: <span class="str">"52XXXXXXXXXX"</span>  <span class="comment">// used as session + user key</span>
+}
+
+<span class="comment">// Session store: Redis or in-memory Map keyed by waId</span>
+<span class="comment">// TTL: 30 minutes of inactivity resets conversation</span>
+    </div>
+
+    <h3>Agent Orchestrator Logic</h3>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-number">1</div>
+        <div class="flow-content">
+          <strong>Inbound Message Received</strong>
+          <p>Twilio webhook fires → extract waId, body, profileName → lookup user in DB by phone number</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-number">2</div>
+        <div class="flow-content">
+          <strong>Session Hydration</strong>
+          <p>Load existing conversation history from session store. If new user → set onboarding state. If returning → load their services (CFE account #, TELMEX #, etc.)</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-number">3</div>
+        <div class="flow-content">
+          <strong>Claude API Call (Intent + Entity Extraction)</strong>
+          <p>Send full conversation history + system prompt. Claude classifies intent, extracts entities (service name, amount, account number), generates reply in Spanish.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-number">4</div>
+        <div class="flow-content">
+          <strong>Action Execution</strong>
+          <p>If intent = confirmed payment → call SIPREL/Conekta/OXXO endpoint. Await result. Handle failures gracefully with fallback messaging.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-number">5</div>
+        <div class="flow-content">
+          <strong>Reply + Receipt</strong>
+          <p>Send WhatsApp confirmation via Twilio. Log transaction with rep_code attribution. Update session history. Commission auto-applied if rep referral present.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONVERSATION FLOWS -->
+  <section id="flows" class="section">
+    <h2>Conversation Flows</h2>
+
+    <h3>Flow 1: Bill Payment (Happy Path)</h3>
+    <div class="chat-sim">
+      <div class="chat-header">
+        <div class="wa-icon">💬</div>
+        <div>
+          <div class="chat-name">PagoYa</div>
+          <div class="chat-status">● En línea</div>
+        </div>
+      </div>
+
+      <div class="msg user">
+        <div class="bubble">Quiero pagar mi luz</div>
+        <div class="msg-time">10:32</div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">¡Hola! 👋 Con gusto te ayudo a pagar tu CFE.<br><br>¿Cuál es tu número de servicio? Lo encuentras en tu recibo en la parte superior derecha.</div>
+        <div class="msg-time">10:32</div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">541 234 5678 90</div>
+        <div class="msg-time">10:33</div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">Perfecto ✅ Encontré tu cuenta CFE:<br><br>📋 <strong>Número:</strong> 541 234 5678 90<br>💰 <strong>Saldo:</strong> $487.50 MXN<br>📅 <strong>Vence:</strong> 28 mayo 2026<br><br>¿Confirmas el pago de $487.50 + $15 comisión = <strong>$502.50 MXN</strong>?<br><br>Responde <strong>SÍ</strong> para confirmar.</div>
+        <div class="msg-time">10:33</div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">Sí</div>
+        <div class="msg-time">10:34</div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">⚡ Procesando tu pago...<br><br>✅ <strong>¡Pago exitoso!</strong><br><br>📄 Folio: PY-2026-084421<br>💳 CFE: $487.50 MXN<br>🕐 10:34 AM · 25 mayo 2026<br><br>Tu recibo llegará en un momento. ¡Gracias por usar PagoYa! 💜</div>
+        <div class="msg-time">10:34</div>
+      </div>
+    </div>
+
+    <h3>Flow 2: New User Registration via Rep Link</h3>
+    <div class="chat-sim">
+      <div class="chat-header">
+        <div class="wa-icon">💬</div>
+        <div>
+          <div class="chat-name">PagoYa</div>
+          <div class="chat-status">● En línea</div>
+        </div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">¡Bienvenido/a a PagoYa! 🎉<br><br>Te registraste a través de William (ENG-01). Vamos a crear tu cuenta rápido.<br><br>¿Cuál es tu nombre completo?</div>
+        <div class="msg-time">09:10</div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">María Hernández</div>
+        <div class="msg-time">09:11</div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">Hola María 👋<br><br>¿En qué colonia de Puerto Vallarta vives?<br><br>1. Centro<br>2. Versalles<br>3. 5 de Diciembre<br>4. Pitillal<br>5. Otra</div>
+        <div class="msg-time">09:11</div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">2</div>
+        <div class="msg-time">09:12</div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">✅ <strong>¡Cuenta creada!</strong><br><br>Ya puedes pagar CFE, Telmex, agua y más desde aquí.<br><br>¿Qué servicio quieres pagar primero?</div>
+        <div class="msg-time">09:12</div>
+      </div>
+    </div>
+
+    <h3>Flow 3: Failure / Fallback Handling</h3>
+    <div class="chat-sim">
+      <div class="chat-header">
+        <div class="wa-icon">💬</div>
+        <div><div class="chat-name">PagoYa</div><div class="chat-status">● En línea</div></div>
+      </div>
+      <div class="msg agent">
+        <div class="bubble">⚠️ Tuvimos un problema al procesar tu pago de CFE en este momento. Tu dinero <strong>no fue descontado</strong>.<br><br>Estamos intentando de nuevo con otro proveedor...<br><br>✅ ¡Listo! Pago procesado exitosamente. Folio: PY-2026-084422</div>
+        <div class="msg-time">11:05</div>
+      </div>
+    </div>
+    <p style="color:var(--muted); font-size:13px; margin-top:8px;">↑ This is the Evoluciona Móvil fallback kicking in automatically, communicated transparently to the user.</p>
+  </section>
+
+  <!-- RAIL HOOKS -->
+  <section id="rails" class="section">
+    <h2>Rail Integration Map</h2>
+    <p style="color:var(--muted); margin-bottom:24px;">The agent calls the same internal service functions already used by the web app — no duplicate logic.</p>
+
+    <table class="ptable">
+      <thead>
+        <tr>
+          <th>Intent</th>
+          <th>Rail</th>
+          <th>Existing Endpoint</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pagar servicio (CFE, Telmex, agua…)</strong></td>
+          <td>SIPREL primary → Evoluciona Móvil fallback</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/pay-bill</code></td>
+          <td><span class="status-dot"><span class="dot dot-green"></span>Live</span></td>
+        </tr>
+        <tr>
+          <td><strong>Recargar con tarjeta</strong></td>
+          <td>Conekta (sandbox → live pending onboarding)</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/card-topup</code></td>
+          <td><span class="status-dot"><span class="dot dot-yellow"></span>Sandbox</span></td>
+        </tr>
+        <tr>
+          <td><strong>Recargar OXXO</strong></td>
+          <td>Digital Femsa</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/oxxo-cashin</code></td>
+          <td><span class="status-dot"><span class="dot dot-green"></span>Live</span></td>
+        </tr>
+        <tr>
+          <td><strong>Consultar saldo</strong></td>
+          <td>DB read (Drizzle)</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/balance</code></td>
+          <td><span class="status-dot"><span class="dot dot-green"></span>Live</span></td>
+        </tr>
+        <tr>
+          <td><strong>Pagar renta (PagoSeguro)</strong></td>
+          <td>STP / CLABE transfer</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/rent-payment</code></td>
+          <td><span class="status-dot"><span class="dot dot-yellow"></span>Needs agent hook</span></td>
+        </tr>
+        <tr>
+          <td><strong>Historial</strong></td>
+          <td>DB read (Drizzle)</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/transactions</code></td>
+          <td><span class="status-dot"><span class="dot dot-green"></span>Live</span></td>
+        </tr>
+        <tr>
+          <td><strong>Registro nuevo usuario</strong></td>
+          <td>DB write + rep attribution</td>
+          <td><code style="font-family:var(--mono);font-size:12px;color:var(--purple-light)">/api/register</code></td>
+          <td><span class="status-dot"><span class="dot dot-green"></span>Live</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Rep Attribution in Agent Sessions</h3>
+    <div class="code-block">
+<span class="comment">// When user initiates via rep referral link:</span>
+<span class="comment">// wa.me/52XXXXXXXXXX?text=ENG-01</span>
+
+<span class="comment">// Agent extracts rep_code from first message</span>
+<span class="key">session</span>.<span class="key">rep_code</span> = <span class="str">"ENG-01"</span>  <span class="comment">// stored in session</span>
+
+<span class="comment">// On every bill payment via agent:</span>
+await <span class="key">payBill</span>({
+  userId,
+  service,
+  amount,
+  <span class="key">rep_code</span>: session.rep_code,   <span class="comment">// → 5 MXN commission</span>
+  <span class="key">channel</span>: <span class="str">"whatsapp_agent"</span>      <span class="comment">// new channel tag for analytics</span>
+})
+    </div>
+
+    <h3>Session State Schema</h3>
+    <div class="code-block">
+{
+  <span class="key">waId</span>: <span class="str">"52XXXXXXXXXX"</span>,
+  <span class="key">userId</span>: <span class="val">42</span>,                    <span class="comment">// null if unregistered</span>
+  <span class="key">rep_code</span>: <span class="str">"ENG-01"</span>,          <span class="comment">// from referral, persisted</span>
+  <span class="key">colonia</span>: <span class="str">"Versalles"</span>,
+  <span class="key">state</span>: <span class="str">"awaiting_confirmation"</span>, <span class="comment">// FSM state</span>
+  <span class="key">pendingTx</span>: {
+    <span class="key">service</span>: <span class="str">"CFE"</span>,
+    <span class="key">accountNo</span>: <span class="str">"541 234 5678 90"</span>,
+    <span class="key">amount</span>: <span class="val">487.50</span>
+  },
+  <span class="key">history</span>: [...],              <span class="comment">// last 10 messages for Claude</span>
+  <span class="key">lastActivity</span>: <span class="val">1748131234</span>   <span class="comment">// TTL: 30min</span>
+}
+    </div>
+  </section>
+
+  <!-- BUILD PLAN -->
+  <section id="build" class="section">
+    <h2>3-Week Build Plan</h2>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-week">Week 1<br>Days 1–5</div>
+        <div class="tl-body">
+          <strong>Foundation: Webhook + Session + NLU</strong>
+          <ul>
+            <li>Create POST /api/whatsapp-agent Twilio webhook</li>
+            <li>Build session store (in-memory Map → Redis later)</li>
+            <li>Wire Claude API for intent classification in Spanish</li>
+            <li>Handle: saldo, historial, ayuda intents (read-only)</li>
+            <li>Register real Twilio WhatsApp sandbox number</li>
+            <li>Internal testing with 5 test phone numbers</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-week">Week 2<br>Days 6–10</div>
+        <div class="tl-body">
+          <strong>Payment Flows: SIPREL + OXXO</strong>
+          <ul>
+            <li>Add bill payment intent → confirmation FSM</li>
+            <li>Wire to existing /api/pay-bill (SIPREL + fallback)</li>
+            <li>OXXO cash-in inquiry flow</li>
+            <li>New user registration flow via WhatsApp</li>
+            <li>Rep attribution tagging in session</li>
+            <li>Colonia capture during onboarding</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-week">Week 3<br>Days 11–15</div>
+        <div class="tl-body">
+          <strong>Polish + Card Top-Up + Soft Launch</strong>
+          <ul>
+            <li>Card top-up via Conekta (sandbox flow in WhatsApp)</li>
+            <li>PagoSeguro rent payment hook</li>
+            <li>Error handling + graceful fallback messages</li>
+            <li>Command center analytics: agent_session channel tag</li>
+            <li>Soft launch: William Shaw (ENG-01) tests with 10 real users</li>
+            <li>Iterate on Spanish NLU edge cases</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>YC Milestone Unlock</strong>
+        <p>By end of Week 3 you have: WhatsApp agent conversation count, bill payments completed via agent, colonia-level adoption breakdown, and rep-attributed transactions through a new channel — all real traction data for the application.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISKS -->
+  <section id="risks" class="section">
+    <h2>Risks & Mitigations</h2>
+
+    <div class="card">
+      <div class="card-title"><div class="icon icon-coral">⚠️</div>Twilio WhatsApp Approval Delay</div>
+      <p><strong>Risk:</strong> Meta/Twilio business account verification for WhatsApp takes 2–4 weeks.<br>
+      <strong>Mitigation:</strong> Start sandbox approval immediately — Day 1. Sandbox works for testing with registered numbers. Build against sandbox, flip to production number once approved.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="icon icon-coral">⚠️</div>NLU Misclassification in Spanish</div>
+      <p><strong>Risk:</strong> Regional slang, abbreviations ("cfe", "tele", "la luz") may not classify cleanly.<br>
+      <strong>Mitigation:</strong> Build a slang dictionary into the system prompt. Log every unrecognized intent to a review queue. Claude handles ambiguity well with good few-shot examples in the prompt.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="icon icon-gold">⚠️</div>Conekta Not Yet Live</div>
+      <p><strong>Risk:</strong> Card top-up in WhatsApp requires live Conekta keys — onboarding at panel.conekta.com still pending.<br>
+      <strong>Mitigation:</strong> Launch agent without card top-up (Week 1–2). Add it in Week 3 once Conekta is live. SIPREL + OXXO cover 80% of use cases already.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="icon icon-purple">⚠️</div>Session Memory Cost at Scale</div>
+      <p><strong>Risk:</strong> In-memory session store won't survive Replit VM restarts.<br>
+      <strong>Mitigation:</strong> Start with in-memory (fine for MVP). Add Redis or Replit KV before launch when concurrent sessions exceed ~50.</p>
+    </div>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">🔒</div>
+      <div class="callout-body">
+        <strong>Critical: Never execute payments without explicit confirmation</strong>
+        <p>FSM must always route through a confirmation step before calling any payment rail. User must type "SÍ" or "CONFIRMAR" — never auto-execute on intent alone. This is both a UX and compliance requirement.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>PagoYa · Longview Meridian Technologies LLC</span>
+    <span>WhatsApp Agent Spec v1.0 · May 2026</span>
+  </footer>
+
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>
