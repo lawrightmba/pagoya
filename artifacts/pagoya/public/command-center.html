@@ -1637,6 +1637,13 @@ const CHECKLIST = [
   { phase:0, id:'p0-13', title:'pagoyamx.com/deck live — full-screen pitch deck iframe embedded in main app, no DNS changes required' },
   { phase:0, id:'p0-14', title:'pagoyamx.com/video live — full-screen demo video iframe embedded in main app, both routes verified post-deploy' },
   { phase:0, id:'p0-15', title:'Traction Report tab added to Command Center — 8-week tracker, 6 core metrics, 5 narrative fields, 18 milestones, pipeline table, open blockers, localStorage persistence' },
+  { phase:0, id:'p0-16', title:'WhatsApp OTP verification on user signup' },
+  { phase:0, id:'p0-17', title:'Street team rep QR code generation and rep dashboard recruitment section' },
+  { phase:0, id:'p0-18', title:'Rep referral attribution and commission tracking ($5 MXN per payment, 7-day hold)' },
+  { phase:0, id:'p0-19', title:'Fraud velocity detection on rep signups' },
+  { phase:0, id:'p0-20', title:'Signup wallet bonus / user incentive flow ($25–$50 MXN welcome credit on registration)' },
+  { phase:0, id:'p0-21', title:'International phone number support on registration (10 countries, E.164 format, default +52 🇲🇽)' },
+  { phase:0, id:'p0-22', title:'Admin bonus campaign controls' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -1771,16 +1778,18 @@ function switchTab(id, btn) {
 function updateProgress() {
   const done = Object.values(checks).filter(Boolean).length;
   const pct = Math.round((done / TOTAL) * 100);
+  const remaining = TOTAL - done;
   document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-label').textContent = done + ' / ' + TOTAL;
+  document.getElementById('prog-label').textContent = remaining > 0 ? remaining + ' remaining' : '✅ All done';
 
-  // Phase counts
+  // Phase counts — show outstanding items only
   [0,1,2,3].forEach(ph => {
     const el = document.getElementById('ph' + ph + '-count');
     if (!el) return;
     const items = CHECKLIST.filter(i => i.phase === ph);
     const donePh = items.filter(i => checks[i.id]).length;
-    el.textContent = donePh + ' / ' + items.length;
+    const remainPh = items.length - donePh;
+    el.textContent = remainPh === 0 ? '✅ All complete' : remainPh + ' remaining';
   });
 }
 
@@ -1793,10 +1802,11 @@ function renderChecklist() {
     container.innerHTML = '';
     CHECKLIST.filter(i => i.phase === ph).forEach(item => {
       const isDone = !!checks[item.id];
+      if (isDone) return; // hide completed items — focus on outstanding only
       const doneDate = typeof checks[item.id] === 'string' ? checks[item.id] : null;
       const hasReminder = !!reminders[item.id];
       const div = document.createElement('div');
-      div.className = 'item' + (isDone ? ' done' : '');
+      div.className = 'item';
       div.id = 'item-' + item.id;
       div.innerHTML = `
         <div class="item-row" onclick="toggleCheck('${item.id}')">
@@ -2129,12 +2139,13 @@ function fmtDate(iso) {
 
 checks = loadChecks();
 
-// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-18.
+// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-26.
+// v2: covers p0-01 through p0-22 (7 new items added 2026-05-26).
 // Runs once; after that localStorage state wins so user can toggle freely.
-const SHIPPED_KEY = 'ck_defaults_ph0_v1';
+const SHIPPED_KEY = 'ck_defaults_ph0_v2';
 if (!localStorage.getItem(SHIPPED_KEY)) {
   CHECKLIST.filter(i => i.phase === 0).forEach(i => {
-    if (!checks[i.id]) checks[i.id] = '2026-05-18';
+    if (!checks[i.id]) checks[i.id] = '2026-05-26';
   });
   saveChecks();
   try { localStorage.setItem(SHIPPED_KEY, '1'); } catch(e) {}
