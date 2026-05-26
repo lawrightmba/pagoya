@@ -1,0 +1,88 @@
+Add a new tab called "BONOS" to the existing command center at 
+artifacts/pagoya/public/command-center.html
+
+Do not modify any existing tabs or their functionality.
+Do not modify any existing admin routes.
+
+─────────────────────────────────────────
+PART A — THREE NEW ADMIN ENDPOINTS
+─────────────────────────────────────────
+Add to the existing admin router file:
+
+1. POST /api/admin/bonus-config
+   - Accepts: { is_active, bonus_amount, eligible_rep_codes, 
+     warning_threshold, block_threshold }
+   - Updates signup_bonus_config row id=1 with provided fields
+   - Sets updated_at = now()
+   - Returns { success: true }
+   - Protect with existing admin auth middleware
+
+2. GET /api/admin/rep-flags
+   - Returns all rows from rep_velocity_flags
+   - Ordered by flagged_at DESC
+   - Returns { flags: [...] }
+   - Protect with existing admin auth middleware
+
+3. GET /api/admin/bonus-stats
+   - Accepts optional query params: range = 'today' | 'week' | 'custom'
+     and start_date, end_date for custom range
+   - Returns:
+     {
+       total_bonuses_issued: count of SIGNUP_BONUS wallet_transactions,
+       total_bonus_value: sum of amounts,
+       by_rep: [ { ref_code, count, total_value } ],
+       by_date: [ { date, count, total_value } ]
+     }
+   - Filter by created_at based on range param
+   - Default to 'today' if no range provided
+   - Protect with existing admin auth middleware
+
+─────────────────────────────────────────
+PART B — BONOS TAB UI
+─────────────────────────────────────────
+Add "BONOS" as a new tab in the command center tab bar,
+styled consistently with existing tabs.
+
+The tab content has three sections:
+
+SECTION 1 — Campaign Toggle (top)
+  - Toggle switch: Bonus Active / Inactive
+    Shows green "ACTIVO" or grey "INACTIVO"
+  - Dropdown: Bonus Amount — $25 MXN / $50 MXN
+  - Text input: Eligible Rep Codes (comma-separated, e.g. ENG-01,ENG-02)
+  - Number inputs: Warning Threshold (default 10) / Block Threshold (default 20)
+  - "Guardar Configuración" button
+    POSTs to /api/admin/bonus-config
+    Shows success/error toast on response
+  - On tab load, GETs current config and pre-fills all fields
+
+SECTION 2 — Rep Fraud Log (middle)
+  - Header: "Alertas de Velocidad"
+  - Table columns: Rep Code | Phone | Flag | Count | Timestamp
+  - WARNING rows: yellow background
+  - BLOCK rows: red background
+  - Empty state: "Sin alertas registradas"
+  - Refreshes on tab load via GET /api/admin/rep-flags
+
+SECTION 3 — Campaign Stats (bottom)
+  - Header: "Estadísticas de Bonos"
+  - Three stat cards in a row:
+      "Bonos Emitidos" — total count
+      "Valor Total" — total MXN value  
+      "Reps Activos" — count of distinct rep codes
+  - Range selector: Hoy | Esta Semana | Personalizado
+    Custom shows two date inputs (start, end)
+  - Table below cards: Rep Code | Bonos | Valor Total
+  - All data from GET /api/admin/bonus-stats
+  - Refreshes when range selector changes
+
+─────────────────────────────────────────
+CONSTRAINTS:
+─────────────────────────────────────────
+- Match the exact color scheme, font, and tab styling 
+  of the existing command center
+- Do not touch any existing tabs, their JS, or their endpoints
+- All fetch calls use relative URLs (no hardcoded ports)
+- Handle loading states and errors gracefully inline
+- No external UI libraries — use only what the existing 
+  command center already loads

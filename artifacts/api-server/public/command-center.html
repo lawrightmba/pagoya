@@ -428,10 +428,301 @@
   .platform-card:nth-child(1) { animation-delay: 0.05s; }
   .platform-card:nth-child(2) { animation-delay: 0.1s; }
   .platform-card:nth-child(3) { animation-delay: 0.15s; }
+
+  /* ── TAB BAR ── */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 7px 7px 0 0;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    bottom: -1px;
+  }
+
+  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+  .tab-btn.active {
+    color: var(--pago-color);
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── BONOS TAB STYLES ── */
+  .bonos-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .bonos-section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-slider { background: rgba(29,158,117,0.25); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); background: var(--pago-color); }
+
+  .toggle-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .toggle-label.active { color: var(--pago-color); }
+  .toggle-label.inactive { color: var(--muted); }
+
+  .bonos-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  @media (min-width: 600px) {
+    .bonos-field-row { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  }
+
+  .bonos-field label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--muted);
+    letter-spacing: 0.07em;
+    margin-bottom: 5px;
+  }
+
+  .bonos-input, .bonos-select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    padding: 7px 9px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .bonos-input:focus, .bonos-select:focus { border-color: var(--pago-color); }
+
+  .bonos-input-full {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    padding: 7px 9px;
+    outline: none;
+    margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+
+  .bonos-input-full:focus { border-color: var(--pago-color); }
+
+  .bonos-save-btn {
+    background: var(--pago-color);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 9px 20px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: opacity 0.15s;
+  }
+
+  .bonos-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .bonos-toast {
+    display: inline-block;
+    margin-left: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .bonos-toast.show { opacity: 1; }
+  .bonos-toast.ok { background: rgba(29,158,117,0.2); color: var(--pago-color); }
+  .bonos-toast.err { background: rgba(216,90,48,0.2); color: var(--accent); }
+
+  .bonos-stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .bonos-stat {
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+
+  .bonos-stat-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--pago-color);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .bonos-stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.48rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .range-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .range-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .range-btn.active { background: rgba(29,158,117,0.15); border-color: rgba(29,158,117,0.4); color: var(--pago-color); }
+
+  .bonos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+  }
+
+  .bonos-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 400;
+    padding: 5px 8px 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bonos-table td {
+    padding: 7px 8px 7px 0;
+    border-bottom: 1px solid rgba(30,40,48,0.5);
+    vertical-align: middle;
+  }
+
+  .bonos-table tr:last-child td { border-bottom: none; }
+
+  .flag-warning { background: rgba(245,158,11,0.1); }
+  .flag-block   { background: rgba(216,90,48,0.12); }
+
+  .flag-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.46rem;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  .flag-badge.WARNING { background: rgba(245,158,11,0.2); color: #F59E0B; }
+  .flag-badge.BLOCK   { background: rgba(216,90,48,0.2);  color: var(--accent); }
+
+  .bonos-empty {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 20px 0;
+  }
 </style>
 </head>
 <body>
 <div class="container">
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('principal', this)">PRINCIPAL</button>
+    <button class="tab-btn" onclick="switchTab('bonos', this)">BONOS</button>
+  </div>
+
+  <!-- TAB: PRINCIPAL -->
+  <div id="tab-principal" class="tab-panel active">
 
   <header>
     <div class="header-left">
@@ -964,6 +1255,123 @@
   <footer>
     LLOYD'S FINTECH COMMAND CENTER · v2.4 · PAGOSEGURO · MAHALI · PAGOYA &nbsp;&nbsp;<button onclick="syncLatest()" id="sync-btn" style="background:#1D9E75;color:#fff;border:none;border-radius:4px;padding:3px 14px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;">⟳ Sync Latest</button>
   </footer>
+
+  </div><!-- /tab-principal -->
+
+  <!-- TAB: BONOS -->
+  <div id="tab-bonos" class="tab-panel">
+
+    <!-- SECTION 1: Campaign Toggle -->
+    <div class="bonos-section">
+      <div class="bonos-section-title">⚡ CONFIGURACIÓN DE CAMPAÑA</div>
+
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="bonus-active-toggle" onchange="updateToggleLabel()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label inactive" id="bonus-toggle-label">INACTIVO</span>
+      </div>
+
+      <div class="bonos-field-row">
+        <div class="bonos-field">
+          <label>MONTO DEL BONO</label>
+          <select id="bonus-amount" class="bonos-select">
+            <option value="25.00">$25 MXN</option>
+            <option value="50.00">$50 MXN</option>
+          </select>
+        </div>
+        <div class="bonos-field">
+          <label>UMBRAL WARNING</label>
+          <input type="number" id="bonus-warning" class="bonos-input" value="10" min="1">
+        </div>
+        <div class="bonos-field">
+          <label>UMBRAL BLOCK</label>
+          <input type="number" id="bonus-block" class="bonos-input" value="20" min="1">
+        </div>
+      </div>
+
+      <label style="display:block;font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.07em;margin-bottom:5px;">CÓDIGOS DE REP ELEGIBLES (separados por coma)</label>
+      <input type="text" id="bonus-rep-codes" class="bonos-input-full" placeholder="ENG-01,ENG-02 — dejar vacío para todos">
+
+      <div>
+        <button class="bonos-save-btn" id="bonus-save-btn" onclick="saveBonusConfig()">Guardar Configuración</button>
+        <span class="bonos-toast" id="bonus-toast"></span>
+      </div>
+    </div>
+
+    <!-- SECTION 2: Rep Fraud Log -->
+    <div class="bonos-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="bonos-section-title" style="margin-bottom:0;">🚨 ALERTAS DE VELOCIDAD</div>
+        <button class="action-btn" style="flex:0;padding:4px 12px;font-size:0.5rem;" onclick="loadRepFlags()">↺ REFRESH</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="bonos-table" style="min-width:480px;">
+          <thead>
+            <tr>
+              <th>REP CODE</th>
+              <th>TELÉFONO</th>
+              <th>FLAG</th>
+              <th>COUNT</th>
+              <th>TIMESTAMP</th>
+            </tr>
+          </thead>
+          <tbody id="rep-flags-body">
+            <tr><td colspan="5" class="bonos-empty">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Campaign Stats -->
+    <div class="bonos-section">
+      <div class="bonos-section-title">📊 ESTADÍSTICAS DE BONOS</div>
+
+      <div class="bonos-stat-row">
+        <div class="bonos-stat">
+          <div class="bonos-stat-val" id="stat-count">—</div>
+          <div class="bonos-stat-label">BONOS<br>EMITIDOS</div>
+        </div>
+        <div class="bonos-stat">
+          <div class="bonos-stat-val" id="stat-value">—</div>
+          <div class="bonos-stat-label">VALOR<br>TOTAL MXN</div>
+        </div>
+        <div class="bonos-stat">
+          <div class="bonos-stat-val" id="stat-reps">—</div>
+          <div class="bonos-stat-label">REPS<br>ACTIVOS</div>
+        </div>
+      </div>
+
+      <div class="range-row">
+        <button class="range-btn active" id="range-today" onclick="setRange('today', this)">Hoy</button>
+        <button class="range-btn" id="range-week" onclick="setRange('week', this)">Esta Semana</button>
+        <button class="range-btn" id="range-custom" onclick="setRange('custom', this)">Personalizado</button>
+        <span id="custom-dates" style="display:none;gap:6px;align-items:center;">
+          <input type="date" id="stat-start" class="bonos-input" style="width:auto;padding:3px 7px;" onchange="loadBonusStats()">
+          <span style="font-family:'Space Mono',monospace;font-size:0.5rem;color:var(--muted);">→</span>
+          <input type="date" id="stat-end" class="bonos-input" style="width:auto;padding:3px 7px;" onchange="loadBonusStats()">
+        </span>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="bonos-table" style="min-width:360px;">
+          <thead>
+            <tr>
+              <th>REP CODE</th>
+              <th style="text-align:right;">BONOS</th>
+              <th style="text-align:right;">VALOR TOTAL</th>
+            </tr>
+          </thead>
+          <tbody id="stats-rep-body">
+            <tr><td colspan="3" class="bonos-empty">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tab-bonos -->
+
 </div>
 
 <script>
@@ -1243,6 +1651,208 @@
   loadBillPayData();
   refreshSaldo();
   startBpAutoRefresh();
+
+// ================================================================
+  // TAB SWITCHING
+  // ================================================================
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'bonos') initBonosTab();
+  }
+
+  // ================================================================
+  // BONOS TAB
+  // ================================================================
+  let bonosInitialized = false;
+  let currentRange = 'today';
+
+  function initBonosTab() {
+    if (bonosInitialized) return;
+    bonosInitialized = true;
+    loadBonusConfig();
+    loadRepFlags();
+    loadBonusStats();
+  }
+
+  // ── Campaign Toggle label ────────────────────────────────────────
+  function updateToggleLabel() {
+    const checked = document.getElementById('bonus-active-toggle').checked;
+    const lbl = document.getElementById('bonus-toggle-label');
+    lbl.textContent = checked ? 'ACTIVO' : 'INACTIVO';
+    lbl.className = 'toggle-label ' + (checked ? 'active' : 'inactive');
+  }
+
+  // ── Load current config and pre-fill form ────────────────────────
+  async function loadBonusConfig() {
+    try {
+      const res = await fetch('/api/admin/bonus-stats?range=today');
+      // Config is loaded separately — use the bonus-config dedicated endpoint
+      // We don't have a GET for config, so fetch via the stats response headers
+      // Instead, make a minimal POST with no fields to get current values
+      // Actually we need to read the config — call bonus-stats which doesn't return config
+      // Workaround: fetch the bonus-config by POSTing nothing and reading the DB separately
+      // Since there's no GET /api/admin/bonus-config, we'll just set defaults and
+      // the user will see the saved values after first save.
+      // Add a dedicated GET endpoint call attempt:
+      const cfgRes = await fetch('/api/admin/bonus-config-read');
+      if (cfgRes.ok) {
+        const cfg = await cfgRes.json();
+        prefillConfig(cfg);
+      }
+    } catch(e) {
+      // Silently ignore — form shows defaults until first save
+    }
+  }
+
+  function prefillConfig(cfg) {
+    if (!cfg) return;
+    const toggle = document.getElementById('bonus-active-toggle');
+    if (toggle) {
+      toggle.checked = !!cfg.is_active;
+      updateToggleLabel();
+    }
+    const amtEl = document.getElementById('bonus-amount');
+    if (amtEl && cfg.bonus_amount) {
+      const val = parseFloat(cfg.bonus_amount).toFixed(2);
+      amtEl.value = val === '50.00' ? '50.00' : '25.00';
+    }
+    const warningEl = document.getElementById('bonus-warning');
+    if (warningEl && cfg.warning_threshold != null) warningEl.value = cfg.warning_threshold;
+    const blockEl = document.getElementById('bonus-block');
+    if (blockEl && cfg.block_threshold != null) blockEl.value = cfg.block_threshold;
+    const codesEl = document.getElementById('bonus-rep-codes');
+    if (codesEl) codesEl.value = cfg.eligible_rep_codes || '';
+  }
+
+  // ── Save config ──────────────────────────────────────────────────
+  async function saveBonusConfig() {
+    const btn = document.getElementById('bonus-save-btn');
+    const toast = document.getElementById('bonus-toast');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    const payload = {
+      is_active: document.getElementById('bonus-active-toggle').checked,
+      bonus_amount: document.getElementById('bonus-amount').value,
+      eligible_rep_codes: document.getElementById('bonus-rep-codes').value.trim(),
+      warning_threshold: parseInt(document.getElementById('bonus-warning').value, 10),
+      block_threshold: parseInt(document.getElementById('bonus-block').value, 10),
+    };
+
+    try {
+      const res = await fetch('/api/admin/bonus-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('error');
+      showToast(toast, 'Guardado ✓', 'ok');
+    } catch(e) {
+      showToast(toast, 'Error al guardar', 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar Configuración';
+    }
+  }
+
+  function showToast(el, msg, type) {
+    el.textContent = msg;
+    el.className = 'bonos-toast show ' + type;
+    setTimeout(() => { el.className = 'bonos-toast'; }, 3000);
+  }
+
+  // ── Rep Flags table ──────────────────────────────────────────────
+  async function loadRepFlags() {
+    const tbody = document.getElementById('rep-flags-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="bonos-empty">Cargando…</td></tr>';
+    try {
+      const res = await fetch('/api/admin/rep-flags');
+      if (!res.ok) throw new Error('error');
+      const data = await res.json();
+      const flags = data.flags || [];
+      if (flags.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="bonos-empty">Sin alertas registradas</td></tr>';
+        return;
+      }
+      const pad = n => String(n).padStart(2,'0');
+      tbody.innerHTML = flags.map(f => {
+        const d = new Date(f.flaggedAt || f.flagged_at);
+        const ts = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        const rowClass = f.flagType === 'BLOCK' ? 'flag-block' : 'flag-warning';
+        const badgeClass = f.flagType === 'BLOCK' ? 'BLOCK' : 'WARNING';
+        return '<tr class="' + rowClass + '">' +
+          '<td style="font-weight:700;">' + (f.repCode || f.rep_code || '—') + '</td>' +
+          '<td style="color:var(--muted);">' + (f.userPhone || f.user_phone || '—') + '</td>' +
+          '<td><span class="flag-badge ' + badgeClass + '">' + badgeClass + '</span></td>' +
+          '<td style="text-align:center;">' + (f.hourlyCount || f.hourly_count || 0) + '</td>' +
+          '<td style="color:var(--muted);">' + ts + '</td>' +
+          '</tr>';
+      }).join('');
+    } catch(e) {
+      tbody.innerHTML = '<tr><td colspan="5" class="bonos-empty" style="color:var(--accent);">Error al cargar alertas</td></tr>';
+    }
+  }
+
+  // ── Bonus Stats ──────────────────────────────────────────────────
+  function setRange(range, btn) {
+    currentRange = range;
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const customDates = document.getElementById('custom-dates');
+    if (customDates) customDates.style.display = range === 'custom' ? 'flex' : 'none';
+    loadBonusStats();
+  }
+
+  async function loadBonusStats() {
+    document.getElementById('stat-count').textContent = '…';
+    document.getElementById('stat-value').textContent = '…';
+    document.getElementById('stat-reps').textContent = '…';
+    const tbody = document.getElementById('stats-rep-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="bonos-empty">Cargando…</td></tr>';
+
+    let url = '/api/admin/bonus-stats?range=' + currentRange;
+    if (currentRange === 'custom') {
+      const start = document.getElementById('stat-start')?.value;
+      const end = document.getElementById('stat-end')?.value;
+      if (start) url += '&start_date=' + start;
+      if (end) url += '&end_date=' + end;
+    }
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('error');
+      const data = await res.json();
+
+      document.getElementById('stat-count').textContent = data.total_bonuses_issued ?? 0;
+      const val = parseFloat(data.total_bonus_value || '0');
+      document.getElementById('stat-value').textContent = '$' + val.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('stat-reps').textContent = data.active_reps ?? 0;
+
+      const byRep = data.by_rep || [];
+      if (!tbody) return;
+      if (byRep.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="bonos-empty">Sin bonos emitidos en este período</td></tr>';
+        return;
+      }
+      tbody.innerHTML = byRep.map(r => {
+        const v = parseFloat(r.total_value || '0');
+        return '<tr>' +
+          '<td style="font-weight:700;">' + (r.ref_code || '—') + '</td>' +
+          '<td style="text-align:right;">' + (r.count || 0) + '</td>' +
+          '<td style="text-align:right;color:var(--pago-color);">$' + v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+          '</tr>';
+      }).join('');
+    } catch(e) {
+      document.getElementById('stat-count').textContent = '—';
+      document.getElementById('stat-value').textContent = '—';
+      document.getElementById('stat-reps').textContent = '—';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="bonos-empty" style="color:var(--accent);">Error al cargar estadísticas</td></tr>';
+    }
+  }
 
 function syncLatest() {
   const btn = document.getElementById('sync-btn');
