@@ -18,7 +18,7 @@ export default function PaymentReview() {
     }
   }, []);
 
-  const PLATFORM_FEE = 15.00;
+  const PLATFORM_FEE = 25.00;
 
   const formatMonto = (monto: string) => {
     const num = parseFloat(monto);

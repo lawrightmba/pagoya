@@ -1,0 +1,59 @@
+PagoYa is a live, deployed fintech platform at pagoyamx.com. Mexican consumers use it today to pay utilities, telecom, and streaming bills in under two minutes — without a bank account. But the more complete description is this: PagoYa is a WhatsApp-native financial services platform powered by an agentic AI called Paula. For the 54 million underbanked adults in Mexico, WhatsApp is not a messaging app — it is their operating system. Paula meets them there.
+PagoYa is the primary product and the website for YC consideration. It encompasses both a core bill payment and wallet platform and a set of purpose-built verticals — including PagoSeguro, our rent collection vertical, which lives at pagoseguromx.com. PagoSeguro is not a separate company — it is PagoYa deployed specifically for landlords, tenants, and property managers, running on the same underlying infrastructure.
+What Is Working and Shipped Today
+Agentic AI — Paula (the centerpiece of the product)
+Paula is a Claude-powered AI agent deployed across two channels simultaneously: WhatsApp (inbound) and an in-app floating chat widget on every page of the product. She is not a FAQ bot. Paula runs a tool-use loop with access to live user data and takes real actions on the user’s behalf.
+Her tools today:
+•	get_wallet_balance — tells the user their exact MXN balance in real time
+•	get_payment_history — retrieves and narrates recent transactions
+•	get_pending_oxxo — checks whether a cash deposit is still pending confirmation
+•	escalate_to_support — hands off to a human agent via WhatsApp with full context
+On WhatsApp, any inbound message routes through the Paula agent loop. First-contact messages are screened for rep referral codes before entering the agent flow. Paula replies in natural Spanish, handles multi-turn conversations, and escalates gracefully when a question is out of scope. In-app, the chat widget persists across every screen with localStorage session memory, a typing indicator, and an escalation banner. After every successful payment, the app automatically opens Paula’s chat after 4 seconds with a pre-filled context message — turning a transactional receipt moment into a retention touch.
+AI Bill Autofill
+The home screen is a natural-language input. Claude parses 201C;CFE 350 pesos 201D; and pre-fills the service, amount, and reference number in one shot. Users who have never used a fintech app understand it immediately — because it works like texting.
+Core Payment Infrastructure
+Bill payment integrates SIPREL and Evoluciona with automatic failover across 20+ billers. Flat fee of $25 MXN per transaction. Wallet debited atomically per payment.
+Digital Wallet — Three Funding Channels
+OXXO cash deposits (barcode vouchers generated in-app), card top-ups (Conekta tokenization with saved-card support), and SPEI inbound bank transfers (webhook-verified). All three work today.
+Loyalty & Rewards
+Users earn points on every payment (1 pt / $10 MXN, Bronze / Silver / Gold tier multipliers). Points are redeemable for wallet credit or a free-transaction token that waives the $25 MXN fee — enforced atomically inside the payment DB transaction.
+Street-Team Referral Network with WhatsApp OTP Onboarding
+Reps recruit users in the field using unique referral links and QR codes. New users sign up via a three-screen flow: form; WhatsApp OTP; bonus wallet credit ($25;$50 MXN incentive). Rep commissions are $5 MXN per confirmed payment with a 7-day hold. The rep earnings dashboard includes a self-serve recruitment section with a shareable signup link, a downloadable QR code, and live recruitment stats pulling from live DB queries. International phone support is built in for migrant and diaspora referrals.
+P2P Wallet Transfers
+Users send MXN directly to any Mexican mobile number. Recipients without an account get an auto-created wallet and a WhatsApp invite from Paula — turning every transfer into a word-of-mouth acquisition event. Daily limits enforced. Atomic debit/credit in a single DB transaction.
+KYC — Nivel 2
+CURP verified against RENAPO. Verified users unlock a $24,000 MXN/month wallet limit versus $6,000 for unverified users.
+Direct Debit Bank Enrollment
+Full 5-step enrollment wizard integrated with the Belvo Direct Debit API. UI and backend complete and deployed. Awaiting Belvo production credential approval.
+Regulatory
+LFPDPPP-compliant Privacy Notice and full Terms of Service are live at pagoyamx.com — required for Belvo production onboarding and any future CNBV-adjacent partnership.
+PagoSeguro — The Rent Collection Vertical
+PagoSeguro (pagoseguromx.com) is a purpose-built vertical within the PagoYa platform, designed specifically for the rent payment relationship between landlords, tenants, and property managers in Mexico. It has its own domain and branded experience because the landlord and tenant audience requires a distinct acquisition and trust-building surface — a landlord evaluating a rent collection tool needs to land on a product that speaks their language, not a general consumer bill payment app.
+Structurally, PagoSeguro runs on the same OXXO cash-in rails and SPEI backend as PagoYa. The long-term plan is a unified wallet: a tenant paying rent through PagoSeguro will also use PagoYa to pay utilities — creating a sticky, whole-household financial relationship on a single infrastructure.
+What Is Live in PagoSeguro Today
+•	4 user roles, all functional: Landlords manage properties and review payments; tenants pay via SPEI or OXXO and upload receipts; brokers/sales reps get QR codes, flyers, and automated commission tracking; admins see global platform stats.
+•	Payment infrastructure live: SPEI receipt upload with landlord confirmation workflow, OXXO cash-in integration, automatic PDF receipt generation, and WhatsApp payment notifications via Twilio.
+•	Broker referral engine: Custom QR codes and printable flyers per rep, automated commission tiers ($150 MXN signup / $500 MXN first payment / $300 MXN recurring), and a dedicated landing page for broker email campaigns.
+•	SEO-optimized public pages: 8 indexed landing pages targeting Mexico search intent with geo-targeted meta tags, hreflang, and sitemap — specifically optimized for Puerto Vallarta and Jalisco.
+•	Bilingual: Full Spanish and English support across the platform and all marketing pages.
+•	Demo environment: Self-serve demo accounts for landlords, tenants, and admins with seeded data so prospects can experience the product without signing up.
+Why a Separate Site, Not Just a PagoYa Tab
+The rent market in Mexico requires landlord trust at the point of first contact. A landlord searching for  unit 201C;cobro de renta digital Puerto Vallarta 201C; needs to land on a page that is entirely about their problem — not scroll past utility bill payments to find a rent section. PagoSeguro is PagoYa’s B2B face: same rails, same wallet, different acquisition funnel. The cross-sell already exists — PagoSeguro’s landing page actively promotes PagoYa to tenants.
+What We Are Building Next in PagoSeguro
+•	Automated rent collection — recurring charges and late fee logic (currently landlords manually create charges each month)
+•	Conekta/OXXO webhook reconciliation — moving from manual confirmation to automatic cash-in settlement
+•	WhatsApp payment reminders with embedded payment links — reduce late payments without requiring an app
+•	Multi-property management for institutional landlords (5+ units) with consolidated reporting
+•	Paula integration — tenants will be able to ask Paula about their rent status, payment history, and upcoming due dates directly in WhatsApp
+What Is In Progress Across the Platform
+•	Merchant / biller onboarding portal for self-service biller registration
+•	Scheduled recurring payments — auto-pay for monthly bills
+•	iOS and Android PWA push notifications
+•	Expanding Paula's tool set: direct payment initiation from WhatsApp ("paga mi CFE") with two-factor confirmation entirely within the chat thread
+•	Conekta live API key swap — card top-up is sandbox-complete, pending live credential activation
+Traction and Team
+The entire platform — PagoYa and PagoSeguro — has been built and iterated without an external development team. We have live users in Mexico, a functional rep referral network being seeded in Jalisco, and a structured go-to-market into underbanked communities in Puerto Vallarta and Guadalajara underway. pagoyamx.com is live with custom domain TLS and works on any mobile browser — no app store download required. PagoSeguro is currently being used to collect rent for properties in Puerto Vallarta and Riviera Nayarit.
+Why This Is Different From Other LATAM Fintech
+Most fintech apps in Mexico are still trying to get underbanked users to adopt a new interface. We are deploying AI into the interface they already live in. Paula on WhatsApp means a user can check their balance, ask why a payment failed, or get their receipt narrated back to them — without opening an app, without a login screen, in the same place they talk to their family.
+PagoSeguro applies the same logic to housing: landlords in Mexico still collect rent via cash or informal bank transfers with no paper trail. PagoSeguro gives them digital collection, automatic receipts, and WhatsApp confirmation — without asking them to change how they think about rent.
+The product is not the app. The product is Paula, and the app — along with PagoSeguro — is Paula’s backend.
