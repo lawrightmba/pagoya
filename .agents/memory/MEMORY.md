@@ -1,0 +1,2 @@
+- [WhatsApp agent architecture](whatsapp-agent.md) — inbound webhook live, session store in-memory, calls /api/agent/chat internally
+- [Tomorrow growth sprint](tomorrow-growth-sprint.md) — three growth wedges queued for next session
