@@ -20,7 +20,8 @@ export async function sendWhatsAppReceipt(params: {
     `Referencia: ${params.referencia}\n` +
     `Folio: ${params.confirmationCode}\n` +
     `Proveedor: ${params.provider.toUpperCase()}\n` +
-    `Tel cliente: ${params.telefono}`;
+    `Tel cliente: ${params.telefono}\n\n` +
+    `¿Tienes dudas o necesitas algo más? Responde aquí y Paula, nuestra asistente, te ayuda al instante 💬`;
 
   const targets: string[] = [];
 

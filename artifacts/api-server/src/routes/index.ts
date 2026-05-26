@@ -57,6 +57,13 @@ console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
 
 // POST /api/reminders/optout
 // Body: { phone: string }
+// GET /api/config/whatsapp — returns the public WhatsApp number users message
+router.get("/config/whatsapp", (_req: Request, res: Response) => {
+  const raw = process.env.TWILIO_WHATSAPP_FROM ?? "";
+  const number = raw.replace(/^whatsapp:\+?/i, "").replace(/\D/g, "");
+  res.json({ number: number || null });
+});
+
 router.post("/reminders/optout", async (req: Request, res: Response) => {
   const { phone } = req.body as { phone?: string };
   if (!phone) {

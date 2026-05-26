@@ -1,11 +1,25 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle, Share2, Plus, AlertCircle } from "lucide-react";
+import { CheckCircle, Share2, Plus, AlertCircle, MessageCircle } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
 const logoUrl = "/pagoya-logo.png";
 
 export default function PaymentSuccess() {
   const [, navigate] = useLocation();
   const { paymentData, transactionId, transactionDate, resetPayment } = usePayment();
+
+  // ── Auto-open Paula chat 4s after payment success ─────────────────────────
+  useEffect(() => {
+    if (!paymentData.empresa) return;
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("pagoya:chatNudge", {
+        detail: {
+          context: `¡Tu pago de ${paymentData.empresa} fue confirmado! 🎉 ¿Tienes alguna duda sobre tu pago, saldo o próximo servicio? Estoy aquí para ayudarte.`,
+        },
+      }));
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [paymentData.empresa]);
 
   const formatMonto = (monto: string) => {
     const num = parseFloat(monto);
@@ -136,6 +150,59 @@ export default function PaymentSuccess() {
               <Row label="Fecha y hora" value={transactionDate} />
               <Row label="ID de transacción" value={transactionId} mono muted />
             </div>
+          </div>
+
+          {/* Paula nudge card */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #0A2540 0%, #0d3060 100%)",
+              borderRadius: 20,
+              padding: "18px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              boxShadow: "0 4px 20px rgba(10,37,64,0.18)",
+              border: "1px solid rgba(29,158,117,0.25)",
+            }}
+          >
+            <div style={{
+              width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+              background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20,
+            }}>
+              💬
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#FFFFFF" }}>
+                ¿Algo más en lo que pueda ayudarte?
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
+                Paula, tu asistente, está lista para responder
+              </p>
+            </div>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("pagoya:openChat"))}
+              style={{
+                background: "#1D9E75",
+                border: "none",
+                borderRadius: 10,
+                padding: "8px 14px",
+                color: "#FFFFFF",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontFamily: "inherit",
+                minHeight: 36,
+              }}
+            >
+              <MessageCircle size={13} />
+              Chatear
+            </button>
           </div>
 
           {/* Actions */}

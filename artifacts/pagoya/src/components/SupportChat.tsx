@@ -51,6 +51,7 @@ export default function SupportChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasShownBubble = useRef(false);
+  const nudgeRef = useRef<string>("");
 
   const s = STRINGS[lang];
 
@@ -99,6 +100,28 @@ export default function SupportChat() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // ── Global events: pagoya:openChat and pagoya:chatNudge ───────────────────────
+  useEffect(() => {
+    const handleOpen = () => {
+      setOpen(true);
+      setHasUnread(false);
+      setShowBubble(false);
+    };
+    const handleNudge = (e: Event) => {
+      const detail = (e as CustomEvent<{ context?: string }>).detail;
+      if (detail?.context) nudgeRef.current = detail.context;
+      setOpen(true);
+      setHasUnread(false);
+      setShowBubble(false);
+    };
+    window.addEventListener("pagoya:openChat", handleOpen);
+    window.addEventListener("pagoya:chatNudge", handleNudge);
+    return () => {
+      window.removeEventListener("pagoya:openChat", handleOpen);
+      window.removeEventListener("pagoya:chatNudge", handleNudge);
+    };
+  }, []);
+
   // ── Persist messages to localStorage ─────────────────────────────────────────
   useEffect(() => {
     if (initialized && messages.length > 0) {
@@ -111,12 +134,16 @@ export default function SupportChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // ── Show greeting on first open ───────────────────────────────────────────────
+  // ── Show greeting on first open (uses nudge context if provided) ─────────────
   useEffect(() => {
     if (open && initialized && !greetingShown) {
+      const content = nudgeRef.current
+        ? nudgeRef.current
+        : (telefono ? s.greetingWithTel : s.greetingNoTel);
+      nudgeRef.current = "";
       const greeting: ChatMessage = {
         role: "assistant",
-        content: telefono ? s.greetingWithTel : s.greetingNoTel,
+        content,
         timestamp: Date.now(),
       };
       setMessages([greeting]);
