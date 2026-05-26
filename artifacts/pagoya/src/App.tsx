@@ -46,6 +46,7 @@ import BankLink from "@/pages/BankLink";
 import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import Deck from "@/pages/Deck";
 import VideoPage from "@/pages/VideoPage";
+import FounderBio from "@/pages/FounderBio";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -104,6 +105,7 @@ function Router() {
       <Route path="/aviso-de-privacidad" component={AvisoPrivacidad} />
       <Route path="/deck" component={Deck} />
       <Route path="/video" component={VideoPage} />
+      <Route path="/lloyd" component={FounderBio} />
       <Route component={NotFound} />
     </Switch>
   );
