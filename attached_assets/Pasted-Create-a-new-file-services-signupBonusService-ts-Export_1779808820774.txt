@@ -1,0 +1,49 @@
+Create a new file: services/signupBonusService.ts
+
+Export three functions only. Do not modify any existing files or 
+import this service anywhere yet.
+
+1. checkBonusEligibility(phone: string, curp: string)
+   - Query users table: if any row matches phone OR curp, 
+     return { eligible: false, reason: 'duplicate' }
+   - Query signup_bonus_config table (always read row id=1):
+     if is_active = false, return { eligible: false, reason: 'inactive' }
+     if eligible_rep_codes is set, validate the ref code is in the list
+     (pass ref_code as a third optional parameter: checkBonusEligibility(phone, curp, refCode?))
+     if refCode not in eligible list, return { eligible: false, reason: 'rep_not_eligible' }
+   - Otherwise return { eligible: true, amount: bonus_amount from config row }
+
+2. checkRepVelocity(rep_code: string)
+   - Read warning_threshold and block_threshold from signup_bonus_config row id=1
+   - Count rows in rep_velocity_flags where:
+       rep_code matches AND flagged_at > NOW() - INTERVAL '1 hour'
+   - If count >= block_threshold: 
+       return { allowed: false, flag: 'BLOCK', count }
+   - If count >= warning_threshold: 
+       return { allowed: true, flag: 'WARNING', count }
+   - Otherwise: 
+       return { allowed: true, flag: null, count }
+
+3. creditSignupBonus(userId: number, repCode: string, amount: number)
+   - First confirm signup_bonus_claimed = false on user record
+     If already true: return { success: false, reason: 'already_claimed' }
+   - Insert into wallet_transactions:
+       user_id: userId
+       amount: amount
+       type: 'SIGNUP_BONUS'
+       ref_code: repCode
+       description: 'Bono de bienvenida'
+       status: 'COMPLETED'
+   - Set signup_bonus_claimed = true and signup_bonus_eligible = false on user record
+   - Call checkRepVelocity(repCode) — if flag is WARNING or BLOCK, 
+     insert a row into rep_velocity_flags:
+       rep_code: repCode
+       user_phone: (look up phone from userId)
+       flag_type: the flag value
+       hourly_count: the count value
+   - Return { success: true, amount }
+
+All three functions should handle database errors with try/catch and 
+return structured error objects rather than throwing.
+Do not create routes, do not modify existing files, do not import 
+this service anywhere yet.
