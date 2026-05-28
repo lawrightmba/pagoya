@@ -1,0 +1,64 @@
+I need to add a post-registration WhatsApp nudge to PagoYa. After a new user 
+completes registration (email/phone OTP verified), send them a WhatsApp message 
+via Twilio 10 minutes after signup that drives them to make their first transaction.
+
+CONTEXT:
+- Stack: TypeScript/Express backend, PostgreSQL/Drizzle ORM
+- Twilio WhatsApp already integrated (same pattern as PagoSeguro reminders)
+- Twilio credentials already in Replit Secrets: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, 
+  TWILIO_WHATSAPP_FROM
+- Users table has: id, phone, name, signup_source, wallet_balance, created_at
+- Bonus amount lives in admin config (currently $25 MXN)
+
+WHAT TO BUILD:
+
+1. DELAYED JOB (use node-cron or a setTimeout queued at registration time):
+   - Trigger: 10 minutes after a new user completes OTP verification
+   - Check before sending: confirm user has NOT yet made a transaction 
+     (wallet_balance still equals the signup bonus amount only, no payment records)
+   - If they already transacted — skip the message, no nudge needed
+
+2. WHATSAPP MESSAGE CONTENT (Spanish, conversational tone):
+   
+   "Hola [first name] 👋 Tu billetera PagoYa ya está lista.
+   
+   Tienes $25 MXN disponibles ahora mismo 💰
+   
+   Paga tu CFE, Telmex, Izzi o cualquier servicio en segundos — sin banco, 
+   sin filas.
+   
+   👉 pagoyamx.com/pagar
+   
+   ¿Preguntas? Responde aquí y te ayudamos."
+
+3. DATABASE LOGGING:
+   - Add a nudge_sent_at column (TIMESTAMP, nullable) to the users table via 
+     Drizzle migration
+   - Write timestamp when nudge is sent so you never double-send
+   - Add index on nudge_sent_at for future reporting queries
+
+4. ADMIN VISIBILITY:
+   - Add "Nudge enviado" column to the existing admin users table view 
+     (show checkmark if nudge_sent_at is populated, dash if not)
+   - This lets ops see at a glance who has/hasn't been nudged
+
+5. EDGE CASES TO HANDLE:
+   - User deletes account before 10 minutes — skip send
+   - Twilio send fails — log error to console with user id, do NOT retry 
+     automatically (avoid duplicate sends), flag for manual review
+   - Phone number stored without country code — prepend +52 if no + prefix present
+
+STATIC FILES NOTE:
+- All frontend changes go in artifacts/pagoya/public/ only
+- Never edit api-server/public/
+- Backend changes go in the api-server route/service files as appropriate
+
+TESTING:
+- Add a test route POST /api/debug/nudge/:userId (dev only, guard with 
+  NODE_ENV check) that triggers the nudge immediately regardless of the 
+  10-minute delay — so I can verify the Twilio message fires correctly 
+  in sandbox before deploying
+- Confirm nudge_sent_at writes correctly after test send
+
+Run the Drizzle migration, implement the nudge service, wire it into the 
+registration completion handler, and confirm with a summary of files changed.

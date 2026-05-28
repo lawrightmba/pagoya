@@ -73,6 +73,15 @@ export default function Home() {
   const [notifPhone, setNotifPhone] = useState("");
   const [notifSent, setNotifSent]   = useState(false);
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
+  const [bonusBannerDismissed, setBonusBannerDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem("bonus_banner_v1") === "1"; } catch { return false; }
+  });
+
+  function dismissBonusBanner(e: React.MouseEvent) {
+    e.stopPropagation();
+    try { localStorage.setItem("bonus_banner_v1", "1"); } catch { /* ignore */ }
+    setBonusBannerDismissed(true);
+  }
 
   // Handle WhatsApp deep-link pre-fill: ?pagar=CFE&service=cfe&tel=521234567890
   useEffect(() => {
@@ -246,6 +255,45 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ── ANNOUNCEMENT BAR — $25 MXN bonus, always above fold, dismissible ── */}
+      {!bonusBannerDismissed && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/register")}
+          onKeyDown={(e) => e.key === "Enter" && navigate("/register")}
+          style={{
+            background: "linear-gradient(90deg, #C44E20 0%, #D85A30 55%, #C44E20 100%)",
+            color: "white",
+            padding: "0 10px 0 16px",
+            height: "38px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            cursor: "pointer",
+            flexShrink: 0,
+            userSelect: "none",
+          }}
+        >
+          <span style={{ fontSize: "13px", fontWeight: 700, flex: 1, textAlign: "center", lineHeight: 1.2 }}>
+            🎁&nbsp;
+            {es
+              ? "Regístrate gratis · recibe $25 MXN en tu billetera →"
+              : "Sign up free · get $25 MXN in your wallet →"}
+          </span>
+          <button
+            onClick={dismissBonusBanner}
+            style={{
+              background: "none", border: "none", color: "rgba(255,255,255,0.65)",
+              fontSize: "15px", cursor: "pointer", padding: "4px 6px",
+              lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center",
+            }}
+            aria-label="Cerrar"
+          >✕</button>
+        </div>
+      )}
+
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
         {/* ══════════════════════════════════════════════════════
@@ -285,12 +333,37 @@ export default function Home() {
             color: "#94A3B8",
             maxWidth: "340px",
             lineHeight: 1.6,
-            margin: "0 0 28px",
+            margin: "0 0 12px",
           }}>
             {es
               ? "Sin filas. Sin apps. Sin cuenta de banco."
               : "No lines. No apps. No bank account needed."}
           </p>
+
+          {/* ── HERO BONUS BADGE — visible above fold on every device ── */}
+          <button
+            onClick={() => navigate("/register")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "rgba(216,90,48,0.15)",
+              border: "1px solid rgba(216,90,48,0.48)",
+              borderRadius: "999px",
+              padding: "6px 16px",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "#FF7A50",
+              cursor: "pointer",
+              marginBottom: "28px",
+              letterSpacing: "0.01em",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(216,90,48,0.26)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(216,90,48,0.15)"; }}
+          >
+            🎁&nbsp;{es ? "$25 MXN de bienvenida al registrarte gratis" : "$25 MXN welcome bonus — sign up free"}
+          </button>
         </section>
 
         {/* ══════════════════════════════════════════════════════
