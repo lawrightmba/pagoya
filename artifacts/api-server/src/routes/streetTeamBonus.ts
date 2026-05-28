@@ -64,10 +64,10 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Se requiere la colonia.", field: "colonia" });
     return;
   }
-  if (!ref_code?.trim()) {
-    res.status(400).json({ error: "Se requiere el código de referido.", field: "ref_code" });
-    return;
-  }
+  // ref_code is optional — web sign-ups that arrive without a rep referral
+  // are tagged as "WEB" (organic) and still qualify for the signup bonus
+  // when the bonus config has no eligibleRepCodes restriction.
+  const refCodeResolved = ref_code?.trim() || "WEB";
 
   // ── Phone format validation ────────────────────────────────────────────────
   const phoneCleaned = phone.trim().replace(/\D/g, "").slice(-10);
@@ -78,7 +78,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
 
   try {
     // ── 1. Bonus eligibility check ─────────────────────────────────────────
-    const eligibility = await checkBonusEligibility(phoneCleaned, curp.trim().toUpperCase(), ref_code.trim());
+    const eligibility = await checkBonusEligibility(phoneCleaned, curp.trim().toUpperCase(), refCodeResolved);
     if (!eligibility.eligible) {
       logger.info({ phone: phoneCleaned, reason: eligibility.reason }, "streetTeamBonus: not eligible");
       res.status(400).json({ eligible: false, reason: eligibility.reason });
@@ -100,7 +100,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       curp: curp.trim().toUpperCase(),
       city: city.trim(),
       colonia: colonia.trim(),
-      ref_code: ref_code.trim(),
+      ref_code: refCodeResolved,
     };
 
     // ── 4. Return OTP challenge ────────────────────────────────────────────

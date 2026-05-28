@@ -174,6 +174,13 @@ export default function Home() {
           .hero-h1{font-size:40px!important;}
           .hero-steps{flex-direction:row!important;gap:28px!important;}
         }
+        @keyframes bonusPulse {
+          0%,100%{box-shadow:0 0 0 0 rgba(29,158,117,0.0);}
+          50%{box-shadow:0 0 14px 3px rgba(29,158,117,0.28);}
+        }
+        .bonus-strip { animation: bonusPulse 2.8s ease-in-out infinite; }
+        .bonus-strip:hover { filter:brightness(1.06); }
+        .register-ghost:hover { background:rgba(29,158,117,0.12)!important; }
       `}</style>
 
       {/* ══════════════════════════════════════════════════════
@@ -350,6 +357,47 @@ export default function Home() {
               />
             </div>
 
+            {/* ── SIGN-UP BONUS STRIP ── */}
+            <button
+              className="bonus-strip"
+              onClick={() => navigate("/register")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                padding: "12px 16px",
+                marginBottom: "10px",
+                background: "rgba(29,158,117,0.10)",
+                border: "1.5px solid rgba(29,158,117,0.45)",
+                borderRadius: "14px",
+                cursor: "pointer",
+                textAlign: "left",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>
+                    {es ? "Nuevo usuario: $25 MXN de bienvenida" : "New user: $25 MXN welcome bonus"}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.50)", marginTop: "2px" }}>
+                    {es ? "Regístrate gratis · se acredita al instante" : "Sign up free · credited instantly"}
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                flexShrink: 0,
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#1D9E75",
+                whiteSpace: "nowrap",
+              }}>
+                {es ? "Crear cuenta →" : "Sign up →"}
+              </span>
+            </button>
+
             {/* CTA button — teal #1D9E75, unchanged */}
             <button
               className="hero-cta-btn"
@@ -374,7 +422,7 @@ export default function Home() {
               {es ? "Pagar ahora →" : "Pay now →"}
             </button>
 
-            {/* Trust microcopy — tightly coupled sub-label under the button */}
+            {/* Trust microcopy */}
             <p style={{
               marginTop: "5px",
               marginBottom: 0,

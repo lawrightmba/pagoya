@@ -76,6 +76,11 @@ export async function checkRepVelocity(repCode: string): Promise<{
   flag: "WARNING" | "BLOCK" | null;
   count: number;
 }> {
+  // Organic / web sign-ups are not associated with any rep — skip velocity check.
+  if (repCode === "WEB") {
+    return { allowed: true, flag: null, count: 0 };
+  }
+
   try {
     const config = await loadConfig();
     const warningThreshold = config?.warningThreshold ?? 10;
@@ -152,12 +157,15 @@ export async function creditSignupBonus(
     }
 
     // Insert wallet transaction
+    const isWebSignup = repCode === "WEB";
     await db.insert(walletTransactionsTable).values({
       walletId: wallet.id,
       type: "SIGNUP_BONUS",
       amountMxn: String(amount),
       status: "completed",
-      description: `Bono de bienvenida — ref: ${repCode}`,
+      description: isWebSignup
+        ? "Bono de bienvenida — registro web"
+        : `Bono de bienvenida — ref: ${repCode}`,
     });
 
     // Mark bonus as claimed on user record
@@ -166,16 +174,18 @@ export async function creditSignupBonus(
       .set({ signupBonusClaimed: true, signupBonusEligible: false })
       .where(eq(usersTable.id, userId));
 
-    // Velocity check — insert flag row if WARNING or BLOCK
-    const velocity = await checkRepVelocity(repCode);
-    if (velocity.flag === "WARNING" || velocity.flag === "BLOCK") {
-      await db.insert(repVelocityFlagsTable).values({
-        repCode,
-        userPhone: user.telefono,
-        flagType: velocity.flag,
-        hourlyCount: velocity.count,
-      });
-      logger.warn({ repCode, flag: velocity.flag, count: velocity.count }, "signupBonusService: velocity flag inserted");
+    // Velocity check — insert flag row if WARNING or BLOCK (skip for WEB/organic)
+    if (!isWebSignup) {
+      const velocity = await checkRepVelocity(repCode);
+      if (velocity.flag === "WARNING" || velocity.flag === "BLOCK") {
+        await db.insert(repVelocityFlagsTable).values({
+          repCode,
+          userPhone: user.telefono,
+          flagType: velocity.flag,
+          hourlyCount: velocity.count,
+        });
+        logger.warn({ repCode, flag: velocity.flag, count: velocity.count }, "signupBonusService: velocity flag inserted");
+      }
     }
 
     logger.info({ userId, repCode, amount }, "signupBonusService.creditSignupBonus: success");
