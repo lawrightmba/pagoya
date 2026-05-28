@@ -7,3 +7,4 @@
 - [PWA push notifications](pwa-push.md) — VAPID keys in env vars; push_subscriptions table; web-push in api-server; sw.js + manifest.json in pagoya/public; usePushNotifications hook; fires after bill payment confirmed
 - [Belvo Connect scopes](belvo-connect-scopes.md) — widget token only accepts read_institutions,write_links,read_links — read_accounts is invalid and returns 400
 - [belvo_links schema](belvo-links-schema.md) — uses user_id INTEGER not telefono; always SELECT id FROM users WHERE telefono=… before inserting; institution_name TEXT column added May 28
+- [Command center dual-file sync](command-center-dual-file.md) — two copies exist; edit pagoya/public, then cp to api-server/public after every session
