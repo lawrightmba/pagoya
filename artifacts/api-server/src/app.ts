@@ -12,6 +12,7 @@ import { logger } from "./lib/logger";
 import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
 import { startReminderCron } from "./services/reminders.js";
 import { cleanExpiredPayments } from "./services/pendingPaymentService.js";
+import { startLowBalanceNudgeCron, startBillDiscoveryNudgeCron } from "./services/lifecycleNudgeService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,5 +106,8 @@ startReminderCron();
 // Purge expired pending_payments rows every 10 minutes (correctness is enforced by
 // expires_at in SQL, this just keeps the table tidy across restarts)
 setInterval(() => { cleanExpiredPayments().catch(() => {}); }, 10 * 60 * 1000);
+// Lifecycle nudge crons — low balance every 6h, bill discovery daily at 10am MX
+startLowBalanceNudgeCron();
+startBillDiscoveryNudgeCron();
 
 export default app;

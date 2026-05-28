@@ -12,6 +12,7 @@ import {
   walletTransactionsTable,
 } from "@workspace/db";
 import { sendActivationNudge } from "../services/nudgeService.js";
+import { sendLowBalanceNudge, sendBillDiscoveryNudge, sendReferralNudge } from "../services/lifecycleNudgeService.js";
 import healthRouter from "./health";
 import pagoyaRouter from "./pagoya";
 import billPayRouter from "../billpay/routes/billpay.js";
@@ -270,6 +271,76 @@ if (process.env.NODE_ENV !== "production") {
       res.status(500).json({ error: String(err) });
     }
   });
+
+  // POST /api/debug/low-balance-nudge/:userId — DEV ONLY: trigger low balance nudge immediately
+  router.post("/debug/low-balance-nudge/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      const result = await sendLowBalanceNudge(userId);
+      res.json({ result });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/low-balance-nudge: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // POST /api/debug/bill-discovery-nudge/:userId — DEV ONLY: trigger bill discovery nudge immediately
+  router.post("/debug/bill-discovery-nudge/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      const result = await sendBillDiscoveryNudge(userId);
+      res.json({ result });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/bill-discovery-nudge: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // POST /api/debug/referral-nudge/:userId — DEV ONLY: trigger referral nudge immediately (no delay)
+  router.post("/debug/referral-nudge/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      const result = await sendReferralNudge(userId);
+      res.json({ result });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/referral-nudge: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // POST /api/debug/reset-lifecycle-nudges/:userId — DEV ONLY: reset all three lifecycle nudge timestamps
+  router.post("/debug/reset-lifecycle-nudges/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      await db.execute(drizzleSql`
+        UPDATE users SET
+          low_balance_nudge_sent_at = NULL,
+          bill_discovery_nudge_sent_at = NULL,
+          referral_nudge_sent_at = NULL
+        WHERE id = ${userId}
+      `);
+      res.json({ ok: true, userId, reset: ["low_balance_nudge_sent_at", "bill_discovery_nudge_sent_at", "referral_nudge_sent_at"] });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/reset-lifecycle-nudges: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
 }
 
 // ─── User routes ──────────────────────────────────────────────────────────────
@@ -334,14 +405,17 @@ router.patch("/user/welcome-shown", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/users — all users with nudge + welcome_shown status (most recent first, cap 200)
+// GET /api/admin/users — all users with nudge + welcome_shown + lifecycle nudge status (most recent first, cap 200)
 router.get("/admin/users", async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt((req.query.limit as string) ?? "200", 10) || 200, 500);
     const result = await db.execute(
       drizzleSql`SELECT id, telefono AS phone, kyc_full_name AS name,
                         signup_source, signup_ref_code, signup_bonus_claimed,
-                        nudge_sent_at, welcome_shown, created_at
+                        nudge_sent_at, welcome_shown,
+                        low_balance_nudge_sent_at, bill_discovery_nudge_sent_at,
+                        referral_nudge_sent_at, referral_code,
+                        created_at
                  FROM users
                  ORDER BY created_at DESC
                  LIMIT ${limit}`,

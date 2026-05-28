@@ -1688,6 +1688,18 @@
       <div class="uu-stat-val" id="uu-welcomed">—</div>
       <div class="uu-stat-label">Pantalla vista</div>
     </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-low-balance">—</div>
+      <div class="uu-stat-label">Saldo bajo</div>
+    </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-bill-discovery">—</div>
+      <div class="uu-stat-label">Descubrimiento</div>
+    </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-referral">—</div>
+      <div class="uu-stat-label">Referido</div>
+    </div>
   </div>
   <div class="uu-table-wrap">
     <table class="uu-table">
@@ -2104,13 +2116,19 @@ async function uuLoad() {
     const users = data.users || [];
 
     // Stats
-    const nudgedCount    = users.filter(u => u.nudge_sent_at).length;
-    const bonusedCount   = users.filter(u => u.signup_bonus_claimed).length;
-    const welcomedCount  = users.filter(u => u.welcome_shown).length;
-    document.getElementById('uu-total').textContent     = users.length;
-    document.getElementById('uu-nudged').textContent    = nudgedCount;
-    document.getElementById('uu-bonused').textContent   = bonusedCount;
-    document.getElementById('uu-welcomed').textContent  = welcomedCount;
+    const nudgedCount        = users.filter(u => u.nudge_sent_at).length;
+    const bonusedCount       = users.filter(u => u.signup_bonus_claimed).length;
+    const welcomedCount      = users.filter(u => u.welcome_shown).length;
+    const lowBalanceCount    = users.filter(u => u.low_balance_nudge_sent_at).length;
+    const billDiscoveryCount = users.filter(u => u.bill_discovery_nudge_sent_at).length;
+    const referralCount      = users.filter(u => u.referral_nudge_sent_at).length;
+    document.getElementById('uu-total').textContent         = users.length;
+    document.getElementById('uu-nudged').textContent        = nudgedCount;
+    document.getElementById('uu-bonused').textContent       = bonusedCount;
+    document.getElementById('uu-welcomed').textContent      = welcomedCount;
+    document.getElementById('uu-low-balance').textContent   = lowBalanceCount;
+    document.getElementById('uu-bill-discovery').textContent = billDiscoveryCount;
+    document.getElementById('uu-referral').textContent      = referralCount;
 
     if (users.length === 0) {
       tbody.innerHTML = '<tr><td class="uu-empty" colspan="9">Sin usuarios aún</td></tr>';
