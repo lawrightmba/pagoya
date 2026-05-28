@@ -10,17 +10,25 @@ const CATEGORIAS = [
   "Seguro", "Escuela", "Renta", "Otro",
 ];
 
+const SERVICIO_CATEGORIA: Record<string, string> = {
+  CFE: "Luz", Telmex: "Teléfono móvil", Izzi: "Cable", Agua: "Agua",
+  Totalplay: "Cable", "Sky": "Cable", IMSS: "Seguro",
+};
+
 export default function PaymentForm() {
   const [, navigate] = useLocation();
   const { paymentData, setPaymentData } = usePayment();
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  // Read ?servicio= query param to pre-fill empresa + categoria
+  const servicioParam = new URLSearchParams(window.location.search).get("servicio");
+
   const [form, setForm] = useState({
-    empresa: paymentData.empresa,
-    categoria: paymentData.categoria,
+    empresa: servicioParam || paymentData.empresa,
+    categoria: (servicioParam && SERVICIO_CATEGORIA[servicioParam]) || paymentData.categoria,
     monto: paymentData.monto,
     referencia: paymentData.referencia,
-    telefono: paymentData.telefono,
+    telefono: paymentData.telefono || (localStorage.getItem("pagoya_telefono") ?? ""),
     notas: paymentData.notas,
   });
 

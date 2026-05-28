@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import Bienvenida from "@/pages/Bienvenida";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -106,8 +107,21 @@ function Router() {
       <Route path="/deck" component={Deck} />
       <Route path="/video" component={VideoPage} />
       <Route path="/lloyd" component={FounderBio} />
+      <Route path="/bienvenida" component={Bienvenida} />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AppShell() {
+  const [location] = useLocation();
+  const isBienvenida = location === "/bienvenida";
+  return (
+    <>
+      <Router />
+      {!isBienvenida && <BottomNav />}
+      {!isBienvenida && <SupportChat />}
+    </>
   );
 }
 
@@ -118,13 +132,11 @@ function App() {
         <PaymentProvider>
           <Elements stripe={stripePromise}>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-              <BottomNav />
+              <AppShell />
             </WouterRouter>
           </Elements>
         </PaymentProvider>
         <Toaster />
-        <SupportChat />
       </TooltipProvider>
     </QueryClientProvider>
   );

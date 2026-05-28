@@ -252,26 +252,99 @@ if (process.env.NODE_ENV !== "production") {
       res.status(500).json({ error: String(err) });
     }
   });
+
+  // POST /api/debug/reset-welcome/:userId — DEV ONLY: reset welcome_shown to false
+  router.post("/debug/reset-welcome/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      await db.execute(drizzleSql`UPDATE users SET welcome_shown = false WHERE id = ${userId}`);
+      res.json({ ok: true, userId });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/reset-welcome: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
 }
 
-// GET /api/admin/users — all users with nudge status (most recent first, cap 200)
+// ─── User routes ──────────────────────────────────────────────────────────────
+
+// GET /api/user/me?telefono=... — first name, bonus amount from config, welcome_shown flag
+router.get("/user/me", async (req: Request, res: Response) => {
+  const telefono = (req.query.telefono as string | undefined)?.trim();
+  if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
+  try {
+    const userRows = await db.execute(
+      drizzleSql`SELECT kyc_full_name, welcome_shown FROM users WHERE telefono = ${telefono} LIMIT 1`,
+    );
+    const user = userRows.rows[0] as Record<string, unknown> | undefined;
+    if (!user) { res.status(404).json({ error: "usuario no encontrado" }); return; }
+
+    const [config] = await db
+      .select({ bonusAmount: signupBonusConfigTable.bonusAmount })
+      .from(signupBonusConfigTable)
+      .where(eq(signupBonusConfigTable.id, 1))
+      .limit(1);
+
+    const firstName = ((user.kyc_full_name as string) ?? "").split(" ")[0] || "Usuario";
+    res.json({
+      firstName,
+      telefono,
+      welcomeShown: (user.welcome_shown as boolean) ?? false,
+      bonusAmount: config ? parseFloat(config.bonusAmount ?? "25") : 25,
+    });
+  } catch (err) {
+    logger.error({ err }, "user/me: failed");
+    res.status(500).json({ error: "Error al obtener usuario." });
+  }
+});
+
+// GET /api/user/welcome-shown?telefono=...
+router.get("/user/welcome-shown", async (req: Request, res: Response) => {
+  const telefono = (req.query.telefono as string | undefined)?.trim();
+  if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
+  try {
+    const rows = await db.execute(
+      drizzleSql`SELECT welcome_shown FROM users WHERE telefono = ${telefono} LIMIT 1`,
+    );
+    const row = rows.rows[0] as Record<string, unknown> | undefined;
+    if (!row) { res.status(404).json({ error: "usuario no encontrado" }); return; }
+    res.json({ welcomeShown: (row.welcome_shown as boolean) ?? false });
+  } catch (err) {
+    logger.error({ err }, "user/welcome-shown GET: failed");
+    res.status(500).json({ error: "Error." });
+  }
+});
+
+// PATCH /api/user/welcome-shown — set welcome_shown = true for a phone number
+router.patch("/user/welcome-shown", async (req: Request, res: Response) => {
+  const { telefono } = req.body as { telefono?: string };
+  if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
+  try {
+    await db.execute(drizzleSql`UPDATE users SET welcome_shown = true WHERE telefono = ${telefono}`);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "user/welcome-shown PATCH: failed");
+    res.status(500).json({ error: "Error." });
+  }
+});
+
+// GET /api/admin/users — all users with nudge + welcome_shown status (most recent first, cap 200)
 router.get("/admin/users", async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt((req.query.limit as string) ?? "200", 10) || 200, 500);
-    const users = await db
-      .select({
-        id: usersTable.id,
-        phone: usersTable.telefono,
-        name: usersTable.kycFullName,
-        signup_source: usersTable.signupSource,
-        signup_ref_code: usersTable.signupRefCode,
-        signup_bonus_claimed: usersTable.signupBonusClaimed,
-        nudge_sent_at: usersTable.nudgeSentAt,
-        created_at: usersTable.createdAt,
-      })
-      .from(usersTable)
-      .orderBy(desc(usersTable.createdAt))
-      .limit(limit);
+    const result = await db.execute(
+      drizzleSql`SELECT id, telefono AS phone, kyc_full_name AS name,
+                        signup_source, signup_ref_code, signup_bonus_claimed,
+                        nudge_sent_at, welcome_shown, created_at
+                 FROM users
+                 ORDER BY created_at DESC
+                 LIMIT ${limit}`,
+    );
+    const users = result.rows as Record<string, unknown>[];
     res.json({ users, count: users.length });
   } catch (err) {
     logger.error({ err }, "admin/users: failed");

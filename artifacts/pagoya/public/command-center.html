@@ -1666,6 +1666,10 @@
       <div class="uu-stat-val" id="uu-bonused">—</div>
       <div class="uu-stat-label">Bono acreditado</div>
     </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-welcomed">—</div>
+      <div class="uu-stat-label">Pantalla vista</div>
+    </div>
   </div>
   <div class="uu-table-wrap">
     <table class="uu-table">
@@ -1677,12 +1681,13 @@
           <th>Fuente</th>
           <th>Ref</th>
           <th>Bono</th>
+          <th>Bienvenida</th>
           <th>Nudge enviado</th>
           <th>Registrado</th>
         </tr>
       </thead>
       <tbody id="uu-tbody">
-        <tr><td class="uu-empty" colspan="8">Haz clic en Actualizar para cargar usuarios</td></tr>
+        <tr><td class="uu-empty" colspan="9">Haz clic en Actualizar para cargar usuarios</td></tr>
       </tbody>
     </table>
   </div>
@@ -1725,6 +1730,7 @@ const CHECKLIST = [
   { phase:0, id:'p0-27', title:'Post-registration WhatsApp nudge — 10-min delayed message after OTP verification, skips if already transacted, nudge_sent_at DB column, admin/users endpoint, debug route' },
   { phase:0, id:'p0-28', title:'Paula WhatsApp payment initiation — "paga mi CFE" triggers prepare_bill_payment tool, stages amount+reference, 2FA confirm/cancel intercept in whatsapp-agent, 5-min pending TTL, executes via wallet' },
   { phase:0, id:'p0-29', title:'PWA push notifications — VAPID keys, service worker (sw.js), manifest.json, push_subscriptions table, /api/push/subscribe+unsubscribe+vapid-public-key, usePushNotifications hook, Home banner, fires on bill payment confirmed' },
+  { phase:0, id:'p0-30', title:'Post-OTP bienvenida activation screen — welcome_shown DB column, /api/user/me + /api/user/welcome-shown GET/PATCH, /api/debug/reset-welcome/:userId, Bienvenida.tsx (3 zones: coral checkmark + bonus pill, teal pulsing balance, coral CTA + 4 biller chips + Paula WA link), ?servicio= param pre-fills /pagar empresa+categoría, admin/users includes welcome_shown, Pantalla vista stat tile in Command Center' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -2080,14 +2086,16 @@ async function uuLoad() {
     const users = data.users || [];
 
     // Stats
-    const nudgedCount  = users.filter(u => u.nudge_sent_at).length;
-    const bonusedCount = users.filter(u => u.signup_bonus_claimed).length;
-    document.getElementById('uu-total').textContent   = users.length;
-    document.getElementById('uu-nudged').textContent  = nudgedCount;
-    document.getElementById('uu-bonused').textContent = bonusedCount;
+    const nudgedCount    = users.filter(u => u.nudge_sent_at).length;
+    const bonusedCount   = users.filter(u => u.signup_bonus_claimed).length;
+    const welcomedCount  = users.filter(u => u.welcome_shown).length;
+    document.getElementById('uu-total').textContent     = users.length;
+    document.getElementById('uu-nudged').textContent    = nudgedCount;
+    document.getElementById('uu-bonused').textContent   = bonusedCount;
+    document.getElementById('uu-welcomed').textContent  = welcomedCount;
 
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td class="uu-empty" colspan="8">Sin usuarios aún</td></tr>';
+      tbody.innerHTML = '<tr><td class="uu-empty" colspan="9">Sin usuarios aún</td></tr>';
       status.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
       return;
     }
@@ -2113,13 +2121,14 @@ async function uuLoad() {
         <td>${srcBadge(u.signup_source)}</td>
         <td style="font-family:monospace;font-size:11px;color:#9ca3af">${u.signup_ref_code || '—'}</td>
         <td class="${u.signup_bonus_claimed ? 'uu-bonus-yes' : 'uu-bonus-no'}">${u.signup_bonus_claimed ? '✓ $25' : '—'}</td>
+        <td style="color:${u.welcome_shown ? '#1D9E75' : '#374151'};font-weight:${u.welcome_shown ? '700' : '400'}">${u.welcome_shown ? '✓' : '—'}</td>
         <td class="${u.nudge_sent_at ? 'uu-nudge-yes' : 'uu-nudge-no'}">${u.nudge_sent_at ? '✓ ' + fmt(u.nudge_sent_at) : '—'}</td>
         <td style="color:#6b7280;font-size:11px">${fmt(u.created_at)}</td>
       </tr>`).join('');
 
     status.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   } catch(e) {
-    tbody.innerHTML = `<tr><td class="uu-empty" colspan="8">Error: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td class="uu-empty" colspan="9">Error: ${e.message}</td></tr>`;
     status.textContent = 'Error al cargar';
   }
 }

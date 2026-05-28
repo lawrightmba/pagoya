@@ -1,0 +1,93 @@
+Build a post-OTP activation screen for PagoYa. This is a transitional screen 
+that appears immediately after a new user completes phone OTP verification — 
+before they reach the main dashboard. It confirms the $25 MXN welcome bonus 
+landed, shows the live wallet balance, and drives the first transaction.
+
+CONTEXT:
+- Stack: TypeScript/Express backend, React/Vite frontend, PostgreSQL/Drizzle ORM
+- Auth: JWT stored in localStorage after OTP verification
+- Existing routes: /register (registration), /dashboard (main wallet view), /pagar (bill payment)
+- Bonus amount is in admin config — pull it dynamically, never hardcode $25
+- Brand colors: navy #1B2B5E, teal #2AA6A1, coral #D85A30
+- Static files: artifacts/pagoya/public/ ONLY — never edit api-server/public/
+- All new frontend goes in artifacts/pagoya/public/bienvenida.html or as a 
+  React route if the frontend is SPA-routed
+
+ROUTING LOGIC:
+1. After OTP verification succeeds, backend sets a one-time session flag 
+   `show_welcome: true` in the JWT payload (or a short-lived DB flag 
+   welcome_shown BOOLEAN DEFAULT false on the users table — prefer DB flag 
+   for correctness across devices)
+2. Frontend checks for this flag on auth — if true, redirect to /bienvenida 
+   before /dashboard
+3. /bienvenida is only accessible when welcome_shown = false — any direct 
+   navigation attempt when flag is already true redirects to /dashboard
+4. After user taps the primary CTA or "Continuar al inicio" — set 
+   welcome_shown = true via PATCH /api/user/welcome-shown, then redirect 
+   to /pagar or /dashboard respectively
+5. Add GET /api/user/welcome-shown and PATCH /api/user/welcome-shown routes
+
+SCREEN LAYOUT (mobile-first, single scroll, no nav bar):
+
+ZONE 1 — Confirmation header (coral accent):
+- Large coral checkmark icon at top center
+- Heading: "¡Bienvenido/a, [first_name]!"
+- Subheading: "Tu cuenta está lista."
+- Coral pill badge below: "💰 $[bonus_amount] MXN acreditados en tu billetera"
+- Pull first_name and bonus_amount from GET /api/user/me
+
+ZONE 2 — Wallet balance card (navy background, teal accent):
+- Label: "Tu saldo disponible"
+- Large balance figure: "$[live_balance] MXN" — fetched live from 
+  GET /api/wallet/balance, not cached
+- Show a teal pulsing loading state while balance fetches — never show $0 
+  as a default
+- Below balance: small teal text "✓ Listo para usar"
+
+ZONE 3 — Primary CTA + biller chips + Paula intro:
+- Primary button (coral, full width): "Paga tu primera cuenta →"
+  → navigates to /pagar
+- Below button, 4 biller quick-launch chips in a 2x2 grid (teal outlined):
+  [ CFE ]  [ Telmex ]
+  [ Izzi ] [ Agua ]
+  Each chip navigates to /pagar?servicio=[name] — the /pagar page should 
+  already handle a ?servicio= query param to pre-fill the service field; 
+  if it doesn't, add that param handling to /pagar as part of this build
+- Divider line with "o" centered
+- WhatsApp deep link (ghost button, WhatsApp green #25D366 border + text):
+  "💬 Paga con Paula por WhatsApp"
+  → opens https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20Paula%2C%20quiero%20pagar%20mi%20primera%20cuenta
+  Pull WHATSAPP_NUMBER from environment — never hardcode
+- Below everything, small gray ghost link: "Continuar al inicio →"
+  → sets welcome_shown = true, redirects to /dashboard
+
+LOADING + ERROR STATES:
+- If /api/user/me fails: show screen with "¡Bienvenido/a!" (no name) — 
+  do not block rendering
+- If /api/wallet/balance fails: show "— MXN" with a retry icon — 
+  do not show $0
+- All fetch calls use the JWT from localStorage as Authorization: Bearer header
+
+ADMIN VISIBILITY:
+- Add welcome_shown column to the GET /api/admin/users response
+- Add a stat tile to the 👤 Usuarios tab in command-center.html: 
+  "Pantalla vista" — count of users where welcome_shown = true
+  This tells you what % of registered users reached the activation screen
+
+WHAT NOT TO BUILD:
+- No forms on this screen
+- No back button or browser history entry (use history.replaceState so 
+  back button goes to pre-registration page, not back to /bienvenida)
+- No nav bar or tab bar on this screen
+- Do not re-show this screen to returning users under any circumstances
+
+TESTING:
+- Add POST /api/debug/reset-welcome/:userId (NODE_ENV !== "production" only)
+  that sets welcome_shown = false so you can re-trigger the screen for 
+  testing without creating a new user each time
+- Confirm: new registration → OTP → /bienvenida loads with correct name 
+  and live balance → tap "Paga tu primera cuenta →" → lands on /pagar 
+  with no errors → welcome_shown flips to true in DB
+
+Run the Drizzle migration for welcome_shown, implement all routes, build 
+the screen, wire the routing, and confirm with a summary of files changed.

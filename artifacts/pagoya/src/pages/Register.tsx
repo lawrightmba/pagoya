@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import PagoYaLogo from "@/components/PagoYaLogo";
 import PaulaHint from "@/components/PaulaHint";
@@ -149,6 +150,8 @@ const apiErrorBoxStyle: React.CSSProperties = {
 };
 
 export default function Register() {
+  const [, navigate] = useLocation();
+
   // ── Form fields ───────────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [countryCode, setCountryCode] = useState("+52");
@@ -355,9 +358,9 @@ export default function Register() {
       const data = await res.json();
 
       if (data.success) {
-        setBonusCredited(data.bonusCredited ?? false);
-        setBonusAmount(data.bonusAmount ?? 0);
-        setScreen("success");
+        // Store phone for bienvenida screen, then navigate there
+        localStorage.setItem("pagoya_telefono", phoneRef.current);
+        navigate("/bienvenida");
         return;
       }
 
