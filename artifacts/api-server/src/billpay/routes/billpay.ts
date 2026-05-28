@@ -10,6 +10,7 @@ import { getOrCreateWallet, getBalance } from "../../wallet/services/wallet.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { sendPushToUser } from "../../services/pushService.js";
+import { scheduleReferralNudgeIfEligible } from "../../services/lifecycleNudgeService.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -155,14 +156,16 @@ router.post("/pay", async (req: Request, res: Response) => {
 
   // Resolve effective rep_id: body > user referral lookup (no DB writes)
   let effectiveRepId: string | null = rep_id ?? null;
-  if (!effectiveRepId && telefono) {
+  let userNumericId: number | null = null;
+  if (telefono) {
     try {
       const [user] = await db
-        .select({ referredByRepId: usersTable.referredByRepId })
+        .select({ referredByRepId: usersTable.referredByRepId, id: usersTable.id })
         .from(usersTable)
         .where(eq(usersTable.telefono, telefono))
         .limit(1);
       if (user?.referredByRepId) effectiveRepId = user.referredByRepId;
+      if (user?.id) userNumericId = user.id;
     } catch {
       // Non-fatal — proceed without rep attribution
     }
@@ -394,6 +397,11 @@ router.post("/pay", async (req: Request, res: Response) => {
 
   // Loyalty points
   earnPoints(telefono, montoNum, "bill_pay", service.name, String(paymentId)).catch(() => {});
+
+  // Referral nudge — schedule 60-min delayed send if user meets eligibility criteria
+  if (userNumericId !== null) {
+    scheduleReferralNudgeIfEligible(userNumericId);
+  }
 
   // Push notification — payment confirmed
   sendPushToUser(telefono, {

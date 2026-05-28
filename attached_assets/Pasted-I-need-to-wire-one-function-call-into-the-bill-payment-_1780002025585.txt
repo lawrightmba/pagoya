@@ -1,0 +1,111 @@
+I need to wire one function call into the bill payment success handler.
+The function scheduleReferralNudgeIfEligible(userId) already exists and 
+is exported from lifecycleNudgeService.ts — it just needs to be called 
+after a successful bill payment confirmation.
+
+CONTEXT:
+- Stack: TypeScript/Express backend
+- The referral nudge service is already built and exported from 
+  artifacts/api-server/src/services/lifecycleNudgeService.ts
+- The function signature is: scheduleReferralNudgeIfEligible(userId: number)
+- It uses a 60-minute setTimeout internally — fire and forget, never throws
+- It needs to be called ONCE after a bill payment is confirmed successful
+- Do NOT call it on wallet top-ups, bonus credits, or failed payments —
+  only on confirmed bill payment completions
+
+STEP 1 — FIND THE PAYMENT SUCCESS HANDLER:
+Search for the bill payment confirmation logic:
+
+grep -rn "folio\|payment.*success\|bills.*pay\|SIPREL\|Evoluciona\|bill.*confirm" \
+  ~/workspace/artifacts/api-server/src/routes/ \
+  ~/workspace/artifacts/api-server/src/services/
+
+Look for the location where:
+- A successful payment folio is returned to the user
+- Wallet balance is debited
+- The Twilio payment receipt WhatsApp message is sent
+This is the correct insertion point — AFTER the receipt fires,
+BEFORE or AFTER the HTTP response is sent (either is fine since
+scheduleReferralNudgeIfEligible is fire-and-forget).
+
+STEP 2 — ADD THE IMPORT:
+At the top of whichever file contains the payment success handler,
+add the import if not already present:
+
+import { scheduleReferralNudgeIfEligible } 
+  from '../services/lifecycleNudgeService';
+
+Adjust the relative path based on the actual file location.
+If the handler is in a routes file, the path may be:
+  '../../services/lifecycleNudgeService'
+  '../services/lifecycleNudgeService'
+Check the actual directory structure before writing the import.
+
+STEP 3 — ADD THE FUNCTION CALL:
+After the payment success confirmation (folio received, wallet 
+debited, receipt sent), add exactly one line:
+
+scheduleReferralNudgeIfEligible(userId);
+
+Where userId is whatever variable holds the authenticated user's 
+numeric ID at that point in the handler. Check what the user ID 
+variable is called in context — it may be:
+  req.user.id
+  user.id  
+  userId
+  user_id
+Use the correct one — do not guess.
+
+STEP 4 — VERIFY NO DOUBLE-FIRING:
+Confirm scheduleReferralNudgeIfEligible is NOT already being called
+anywhere else in the codebase:
+
+grep -rn "scheduleReferralNudgeIfEligible" \
+  ~/workspace/artifacts/api-server/src/
+
+If it appears in more than one place after your edit, remove the 
+duplicate. It should only fire from the bill payment success handler.
+
+STEP 5 — ALSO WIRE FOR WHATSAPP PAYMENT PATH:
+Paula's WhatsApp payment flow (the "sí" confirmation handler) is a 
+separate code path from the web app payment handler. Check if they 
+share the same underlying payment execution function or are separate:
+
+grep -rn "sí\|confirm.*payment\|whatsapp.*pay\|paula.*pay" \
+  ~/workspace/artifacts/api-server/src/
+
+If the WhatsApp payment path calls the same core payment function 
+as the web app, the wire is already done. If it has its own success 
+handler, add the same scheduleReferralNudgeIfEligible(userId) call 
+there too — users who pay via Paula WhatsApp should also be eligible 
+for the referral nudge.
+
+WHAT NOT TO DO:
+- Do not call scheduleReferralNudgeIfEligible on wallet top-ups
+- Do not call it on OXXO voucher generation (cash not yet received)
+- Do not call it on failed or pending payments
+- Do not modify lifecycleNudgeService.ts — the function is complete
+- Do not add any new DB migrations — none are needed for this wire
+
+TESTING:
+1. Find a test userId with ≥3 real payments and referral_nudge_sent_at 
+   IS NULL (use GET /api/admin/users to find one, or create via test flow)
+2. If no such user exists, use the debug route to bypass the guard:
+   POST /api/debug/referral-nudge/[userId]
+   Confirm {sent:true} and WhatsApp lands on test phone
+3. Reset for a clean test:
+   POST /api/debug/reset-lifecycle-nudges/[userId]
+4. Complete a real bill payment as that test user through the web app
+5. Wait 60 minutes OR temporarily change the setTimeout in 
+   lifecycleNudgeService.ts from 60*60*1000 to 10*1000 (10 seconds)
+   for testing only, then revert after confirming it fires
+6. Confirm WhatsApp referral message arrives
+7. Confirm referral_nudge_sent_at is populated in GET /api/admin/users
+8. Confirm the referral_code (user_XXXX format) is written to the 
+   users table for that user
+9. If WhatsApp payment path exists separately, repeat steps 4-8 
+   via a Paula WhatsApp payment
+
+Confirm with a summary of the exact file and line number where 
+the call was inserted, and whether the WhatsApp payment path 
+required a separate wire or shared the same handler.
