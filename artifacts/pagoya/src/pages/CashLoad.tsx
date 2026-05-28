@@ -226,10 +226,17 @@ export default function CashLoad() {
   const [chargingCardId, setChargingCardId] = useState<string | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'oxxo' | 'card' | 'spei'>('oxxo');
+  const [activeTab, setActiveTab] = useState<'oxxo' | 'card' | 'spei' | 'banco'>('oxxo');
   const [stpData, setStpData] = useState<StpInstructions | null>(null);
   const [stpLoading, setStpLoading] = useState(false);
   const [stpClabeCopiado, setStpClabeCopiado] = useState(false);
+
+  const [bancoStep, setBancoStep] = useState<'loading' | 'no_bank' | 'widget_loading' | 'linked' | 'topup_loading' | 'success'>('loading');
+  const [bancoLinked, setBancoLinked] = useState<{ linkId: string; institutionName: string } | null>(null);
+  const [bancoAmount, setBancoAmount] = useState("");
+  const [bancoError, setBancoError] = useState<string | null>(null);
+  const [bancoNewBalance, setBancoNewBalance] = useState<number | null>(null);
+  const [bancoUnlinking, setBancoUnlinking] = useState(false);
 
   // Keep card phone in sync with stored telefono
   useEffect(() => {
@@ -285,6 +292,133 @@ export default function CashLoad() {
     await navigator.clipboard.writeText(stpData.clabe).catch(() => {});
     setStpClabeCopiado(true);
     setTimeout(() => setStpClabeCopiado(false), 2000);
+  };
+
+  // ── Banco (Belvo Connect) effects & handlers ────────────────────────────
+
+  useEffect(() => {
+    if (activeTab !== 'banco') return;
+    const existing = document.getElementById('belvo-widget-script');
+    if (!existing) {
+      const script = document.createElement('script');
+      script.id = 'belvo-widget-script';
+      script.src = 'https://cdn.belvo.io/belvo-widget-1-stable.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'banco') return;
+    if (!telefono || telefono.length < 10) { setBancoStep('no_bank'); return; }
+    setBancoStep('loading');
+    fetch(`${window.location.origin}/api/belvo-connect/link?telefono=${encodeURIComponent(telefono)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.linked) {
+          setBancoLinked({ linkId: data.linkId, institutionName: data.institutionName || 'Banco' });
+          setBancoStep('linked');
+        } else {
+          setBancoStep('no_bank');
+        }
+      })
+      .catch(() => setBancoStep('no_bank'));
+  }, [activeTab, telefono]);
+
+  const handleBancoConnect = async () => {
+    setBancoError(null);
+    setBancoStep('widget_loading');
+    try {
+      const res = await fetch(`${window.location.origin}/api/belvo-connect/widget-token`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.access) {
+        setBancoError("No se pudo iniciar la conexión. Intenta de nuevo.");
+        setBancoStep('no_bank');
+        return;
+      }
+      const sdk = (window as any).belvoSDK;
+      if (!sdk) {
+        setBancoError("El widget de Belvo no cargó. Recarga la página.");
+        setBancoStep('no_bank');
+        return;
+      }
+      sdk.createWidget(data.access, {
+        callback: async (link: string, institution: any) => {
+          try {
+            await fetch(`${window.location.origin}/api/belvo-connect/link`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                telefono,
+                linkId: link,
+                institution: institution?.name || '',
+                institutionName: institution?.display_name || institution?.name || 'Banco',
+              }),
+            });
+            const instName = institution?.display_name || institution?.name || 'Tu banco';
+            setBancoLinked({ linkId: link, institutionName: instName });
+            setBancoStep('linked');
+            toast({ title: "¡Banco vinculado!", description: `${instName} conectado correctamente.` });
+          } catch {
+            setBancoError("Error al guardar la cuenta. Intenta de nuevo.");
+            setBancoStep('no_bank');
+          }
+        },
+        onExit: () => setBancoStep('no_bank'),
+        onError: () => {
+          setBancoError("Error al conectar tu banco. Intenta de nuevo.");
+          setBancoStep('no_bank');
+        },
+      }).build();
+    } catch {
+      setBancoError("No se pudo conectar. Verifica tu conexión.");
+      setBancoStep('no_bank');
+    }
+  };
+
+  const handleBancoTopup = async () => {
+    const amt = parseInt(bancoAmount, 10);
+    if (!amt || amt < 50) { setBancoError("El monto mínimo es $50 MXN."); return; }
+    if (amt > 50000) { setBancoError("El monto máximo es $50,000 MXN."); return; }
+    setBancoError(null);
+    setBancoStep('topup_loading');
+    try {
+      const res = await fetch(`${window.location.origin}/api/belvo-connect/topup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefono, amountMXN: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBancoError(data.error ?? "Error al procesar la carga.");
+        setBancoStep('linked');
+        return;
+      }
+      setBancoNewBalance(data.newBalance ?? null);
+      setBancoStep('success');
+      window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
+    } catch {
+      setBancoError("No se pudo conectar. Verifica tu conexión.");
+      setBancoStep('linked');
+    }
+  };
+
+  const handleBancoUnlink = async () => {
+    setBancoUnlinking(true);
+    try {
+      await fetch(`${window.location.origin}/api/belvo-connect/link`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefono }),
+      });
+      setBancoLinked(null);
+      setBancoStep('no_bank');
+      toast({ title: "Cuenta desvinculada", description: "Tu banco fue desconectado." });
+    } catch {
+      toast({ title: "Error", description: "No se pudo desvincular. Intenta de nuevo." });
+    } finally {
+      setBancoUnlinking(false);
+    }
   };
 
   const handleCardAmountChip = (val: number) => {
@@ -571,6 +705,18 @@ export default function CashLoad() {
           >
             <Building2 className="w-3.5 h-3.5" />
             SPEI
+          </button>
+          <button
+            onClick={() => setActiveTab('banco')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all"
+            style={{
+              background: activeTab === 'banco' ? 'white' : 'transparent',
+              color: activeTab === 'banco' ? '#1D9E75' : '#6B7280',
+              boxShadow: activeTab === 'banco' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+            }}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            Banco
           </button>
         </div>
 
@@ -1224,6 +1370,175 @@ export default function CashLoad() {
               <p className="text-sm text-gray-400 text-center leading-relaxed">
                 Las transferencias SPEI estarán disponibles muy pronto en PagoYa.
               </p>
+            </div>
+          )}
+        </div>
+        )}
+
+        {/* Section D — Banco (Belvo Connect) */}
+        {activeTab === 'banco' && (
+        <div
+          className="bg-white rounded-3xl p-6"
+          style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
+        >
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(29,158,117,0.1)", border: "1.5px solid #1D9E75" }}
+            >
+              <Building2 className="w-5 h-5" style={{ color: "#1D9E75" }} />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-[#1F1F1F] leading-tight">Cargar desde banco</h2>
+              <p className="text-xs text-gray-400">Débito directo · sin ir al OXXO</p>
+            </div>
+          </div>
+
+          {bancoStep === 'loading' && (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 rounded-full border-2 border-[#1D9E75] border-t-transparent" style={{ animation: "spin 0.7s linear infinite" }} />
+            </div>
+          )}
+
+          {(bancoStep === 'no_bank' || bancoStep === 'widget_loading') && (
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2 flex-wrap">
+                {["BBVA", "Banamex", "Santander", "HSBC", "Banorte", "Scotiabank"].map(b => (
+                  <span key={b} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#F0FAF3", color: "#1D9E75", border: "1px solid #C8EDD9" }}>
+                    {b}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                {["Sin ir al OXXO — carga desde casa", "Transferencia directa desde tu cuenta", "Acreditación inmediata"].map(b => (
+                  <div key={b} className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#1D9E75" }} />
+                    <p className="text-xs text-gray-600">{b}</p>
+                  </div>
+                ))}
+              </div>
+              {bancoError && (
+                <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FFF4F3", color: "#C0392B", border: "1px solid #FCDAD7" }}>
+                  {bancoError}
+                </div>
+              )}
+              <button
+                onClick={handleBancoConnect}
+                disabled={bancoStep === 'widget_loading'}
+                className="w-full py-4 rounded-2xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-70"
+                style={{ background: "linear-gradient(135deg, #1D9E75 0%, #15876A 100%)", boxShadow: "0 4px 16px rgba(29,158,117,0.32)" }}
+              >
+                {bancoStep === 'widget_loading' ? (
+                  <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent" style={{ animation: "spin 0.7s linear infinite" }} /> Iniciando...</>
+                ) : (
+                  <><Building2 className="w-4 h-4" /> Conectar mi banco</>
+                )}
+              </button>
+              <p className="text-xs text-gray-400 text-center leading-relaxed">
+                Conexión cifrada. No almacenamos tus credenciales bancarias.
+              </p>
+            </div>
+          )}
+
+          {(bancoStep === 'linked' || bancoStep === 'topup_loading') && bancoLinked && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: "#F0FAF3", border: "1px solid #C8EDD9" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: "white", border: "1px solid #D4EDDA" }}>
+                  🏦
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-[#046C2C] truncate">{bancoLinked.institutionName}</p>
+                  <p className="text-xs text-gray-400">Cuenta vinculada · débito directo</p>
+                </div>
+                <button
+                  onClick={handleBancoUnlink}
+                  disabled={bancoUnlinking}
+                  className="p-2 rounded-xl transition-all active:scale-[0.92] flex-shrink-0"
+                  style={{ background: "#FFF4F3" }}
+                  title="Desvincular"
+                >
+                  {bancoUnlinking
+                    ? <span className="block w-4 h-4 rounded-full border-2 border-gray-400 border-t-transparent" style={{ animation: "spin 0.7s linear infinite" }} />
+                    : <span className="text-xs font-bold" style={{ color: "#C0392B" }}>✕</span>
+                  }
+                </button>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Monto a cargar</label>
+                <div className="flex items-center rounded-2xl px-4 py-3" style={{ background: "white", border: "1.5px solid #E5E5E5", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                  <span className="text-2xl font-black text-gray-300 mr-2">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={bancoAmount}
+                    onChange={e => { setBancoAmount(e.target.value.replace(/[^\d]/g, "")); setBancoError(null); }}
+                    className="flex-1 text-2xl font-black text-[#1F1F1F] outline-none bg-transparent w-0"
+                  />
+                  <span className="text-sm font-semibold text-gray-400 ml-2">MXN</span>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {QUICK_AMOUNTS.map(val => (
+                  <button
+                    key={val}
+                    onClick={() => { setBancoAmount(String(val)); setBancoError(null); }}
+                    className="px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-[0.95]"
+                    style={{
+                      background: bancoAmount === String(val) ? "#1D9E75" : "#F0FAF3",
+                      color: bancoAmount === String(val) ? "white" : "#1D9E75",
+                      border: `1.5px solid ${bancoAmount === String(val) ? "#1D9E75" : "#C8EDD9"}`,
+                    }}
+                  >
+                    ${val.toLocaleString("es-MX")}
+                  </button>
+                ))}
+              </div>
+              {bancoError && (
+                <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FFF4F3", color: "#C0392B", border: "1px solid #FCDAD7" }}>
+                  {bancoError}
+                </div>
+              )}
+              <button
+                onClick={handleBancoTopup}
+                disabled={bancoStep === 'topup_loading' || !bancoAmount}
+                className="w-full py-4 rounded-2xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #1D9E75 0%, #15876A 100%)", boxShadow: "0 4px 16px rgba(29,158,117,0.32)" }}
+              >
+                {bancoStep === 'topup_loading' ? (
+                  <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent" style={{ animation: "spin 0.7s linear infinite" }} /> Procesando...</>
+                ) : (
+                  <><Building2 className="w-4 h-4" /> Cargar{bancoAmount ? ` $${parseInt(bancoAmount).toLocaleString("es-MX")} MXN` : ""}</>
+                )}
+              </button>
+              <p className="text-xs text-gray-400 text-center">Mín $50 · Máx $50,000 · Acreditación inmediata</p>
+            </div>
+          )}
+
+          {bancoStep === 'success' && (
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "#F0FAF3", border: "2px solid #1D9E75" }}>
+                <CheckCircle className="w-8 h-8" style={{ color: "#1D9E75" }} />
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-black text-[#1F1F1F]">¡Saldo cargado!</p>
+                <p className="text-sm text-gray-400 mt-1">Tu dinero ya está disponible.</p>
+              </div>
+              {bancoNewBalance != null && (
+                <div className="w-full rounded-2xl px-4 py-4 text-center" style={{ background: "#F0FAF3", border: "1px solid #C8EDD9" }}>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Saldo disponible</p>
+                  <p className="text-3xl font-black" style={{ color: "#1D9E75" }}>
+                    ${bancoNewBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} <span className="text-base text-gray-400">MXN</span>
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => { setBancoStep('linked'); setBancoAmount(""); setBancoError(null); }}
+                className="w-full py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.97]"
+                style={{ background: "#F0FAF3", color: "#046C2C", border: "1.5px solid #C8EDD9" }}
+              >
+                Cargar más saldo
+              </button>
             </div>
           )}
         </div>

@@ -116,11 +116,13 @@ function Router() {
 function AppShell() {
   const [location] = useLocation();
   const isBienvenida = location === "/bienvenida";
+  const isVincularBanco = location === "/vincular-banco";
+  const hideShell = isBienvenida || isVincularBanco;
   return (
     <>
       <Router />
-      {!isBienvenida && <BottomNav />}
-      {!isBienvenida && <SupportChat />}
+      {!hideShell && <BottomNav />}
+      {!hideShell && <SupportChat />}
     </>
   );
 }

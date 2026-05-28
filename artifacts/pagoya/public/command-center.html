@@ -672,6 +672,24 @@
     </div>
 
     <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb checked"></div>
+      <div class="rd-body">
+        <div class="rd-title">Belvo Connect widget + banco wallet top-up — BUILT ✓</div>
+        <div class="rd-desc">4th "Banco" tab on /cargar. Belvo Connect widget (sandbox) lets users link their bank (BBVA, Banamex, Santander, etc.) with one click. After linking: amount chips + instant wallet credit (sandbox mock). Production: replace inner topup block with Belvo Pagos seguros en Línea once the pending production upgrade application is approved. Widget token endpoint: POST /api/belvo-connect/widget-token. Scopes: read_institutions, write_links, read_links. belvo_links table stores user_id → link_id with soft-delete.</div>
+      </div>
+      <span class="rd-tag" style="background:#1D9E7520; color:#1D9E75; border:1px solid #1D9E7540;">Done May 28</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+      <div class="rd-cb"></div>
+      <div class="rd-body">
+        <div class="rd-title">Belvo production upgrade — activate live bank linking</div>
+        <div class="rd-desc">Application submitted for "Personal finance" use case, Connect + Move Money products. When approved: set BELVO_ENV=production and replace the sandbox wallet-credit block in /api/belvo-connect/topup with a Belvo Pagos seguros en Línea payment initiation call using the user's link_id. Production keys are BELVO_DD_KEY_ID / BELVO_DD_KEY_SECRET. The full topup route already has a "Production TODO" comment marking the exact replacement point.</div>
+      </div>
+      <span class="rd-tag rd-now">Awaiting Belvo approval</span>
+    </div>
+
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
       <div class="rd-cb"></div>
       <div class="rd-body">
         <div class="rd-title">Add rate limiting to /api/historial</div>
