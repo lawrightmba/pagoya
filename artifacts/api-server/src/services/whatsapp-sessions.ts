@@ -1,18 +1,8 @@
-export interface PendingPayment {
-  serviceId: string;
-  serviceName: string;
-  referencia: string;
-  monto: number;
-  telefono: string;
-  stagedAt: number;
-}
-
 export interface WhatsAppSession {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   repCode: string | null;
   profileName: string | null;
   lastActivity: number;
-  pendingPayment: PendingPayment | null;
 }
 
 const sessions = new Map<string, WhatsAppSession>();
@@ -25,7 +15,6 @@ export function getSession(waId: string): WhatsAppSession {
     repCode: null,
     profileName: null,
     lastActivity: Date.now(),
-    pendingPayment: null,
   };
   sessions.set(waId, fresh);
   return fresh;

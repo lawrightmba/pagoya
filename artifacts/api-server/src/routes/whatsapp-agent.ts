@@ -1,6 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-import { getSession, saveSession, type PendingPayment } from "../services/whatsapp-sessions.js";
+import { getSession, saveSession } from "../services/whatsapp-sessions.js";
+import {
+  createPendingPayment,
+  getPendingPayment,
+  deletePendingPayment,
+  type PendingPaymentRow,
+} from "../services/pendingPaymentService.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -8,9 +14,11 @@ const router = Router();
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
 const CONFIRMATION_PATTERN = /^(s[ií]|yes|confirmar?|confirmo|ok|dale|va|órale|andale|claro|adelante)\s*[!.]*$/i;
 const CANCELLATION_PATTERN = /^(no|cancelar?|cancela|nop|nope|mejor no)\s*[!.]*$/i;
-const PENDING_PAYMENT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-async function executeStagedPayment(pending: PendingPayment, port: string): Promise<{ ok: boolean; confirmationCode?: string; error?: string }> {
+async function executeStagedPayment(
+  pending: PendingPaymentRow,
+  port: string,
+): Promise<{ ok: boolean; confirmationCode?: string; error?: string }> {
   try {
     const resp = await fetch(`http://localhost:${port}/api/bills/pay`, {
       method: "POST",
@@ -78,23 +86,20 @@ router.post("/", async (req: Request, res: Response) => {
       saveSession(phoneKey, { profileName });
     }
 
-    // ── Pending payment 2FA intercept ────────────────────────────────────────
-    if (session.pendingPayment) {
-      const pending = session.pendingPayment;
-      const age = Date.now() - pending.stagedAt;
+    // ── Pending payment 2FA intercept (DB-backed, restart-safe) ──────────────
+    const pending = await getPendingPayment(phoneKey);
+
+    if (pending) {
       const msgNorm = userMessage.trim();
 
-      if (age > PENDING_PAYMENT_TTL_MS) {
-        // Expired — clear and fall through to normal agent flow
-        saveSession(phoneKey, { pendingPayment: null });
-      } else if (CANCELLATION_PATTERN.test(msgNorm)) {
-        saveSession(phoneKey, { pendingPayment: null });
+      if (CANCELLATION_PATTERN.test(msgNorm)) {
+        await deletePendingPayment(phoneKey);
         await sendWhatsApp(phoneKey, "❌ Pago cancelado. ¿En qué más te puedo ayudar?");
         return;
-      } else if (CONFIRMATION_PATTERN.test(msgNorm)) {
-        // Execute the staged payment
-        saveSession(phoneKey, { pendingPayment: null });
+      }
 
+      if (CONFIRMATION_PATTERN.test(msgNorm)) {
+        await deletePendingPayment(phoneKey);
         await sendWhatsApp(phoneKey, `⏳ Procesando tu pago de ${pending.serviceName}...`);
 
         const result = await executeStagedPayment(pending, port);
@@ -113,7 +118,7 @@ router.post("/", async (req: Request, res: Response) => {
         }
         return;
       }
-      // Not a yes/no — fall through to normal agent, keep pendingPayment alive
+      // Not a yes/no — fall through to normal agent, pending row stays in DB
     }
 
     // ── Append user turn to history ──────────────────────────────────────────
@@ -143,14 +148,9 @@ router.post("/", async (req: Request, res: Response) => {
       pendingPayment: { serviceId: string; serviceName: string; referencia: string; monto: number; telefono: string } | null;
     };
 
-    // ── Persist pending payment if agent staged one ───────────────────────────
+    // ── Persist pending payment to DB if agent staged one ────────────────────
     if (pendingPayment) {
-      saveSession(phoneKey, {
-        pendingPayment: {
-          ...pendingPayment,
-          stagedAt: Date.now(),
-        },
-      });
+      await createPendingPayment(phoneKey, pendingPayment);
     }
 
     // ── Persist updated conversation history ─────────────────────────────────

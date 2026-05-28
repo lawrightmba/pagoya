@@ -11,6 +11,7 @@ import { handleStpWebhook } from "./routes/stpWebhook.js";
 import { logger } from "./lib/logger";
 import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
 import { startReminderCron } from "./services/reminders.js";
+import { cleanExpiredPayments } from "./services/pendingPaymentService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -101,5 +102,8 @@ app.use("/api", router);
 startTaecelCrons();
 // Start daily payment reminder cron (9 AM Mexico City = 15:00 UTC)
 startReminderCron();
+// Purge expired pending_payments rows every 10 minutes (correctness is enforced by
+// expires_at in SQL, this just keeps the table tidy across restarts)
+setInterval(() => { cleanExpiredPayments().catch(() => {}); }, 10 * 60 * 1000);
 
 export default app;
