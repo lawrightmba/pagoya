@@ -22,6 +22,8 @@ export const usersTable = pgTable("users", {
   signupBonusEligible: boolean("signup_bonus_eligible").default(false),
   signupBonusClaimed: boolean("signup_bonus_claimed").default(false),
   signupRefCode: varchar("signup_ref_code", { length: 50 }),
+  // "web_organic" | "rep_referral" | null for legacy rows
+  signupSource: varchar("signup_source", { length: 30 }),
   // ── OTP verification ─────────────────────────────────────────────────────────
   otpCode: varchar("otp_code", { length: 6 }),
   otpExpiresAt: timestamp("otp_expires_at"),

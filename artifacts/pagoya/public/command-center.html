@@ -1644,6 +1644,10 @@ const CHECKLIST = [
   { phase:0, id:'p0-20', title:'Signup wallet bonus / user incentive flow ($25–$50 MXN welcome credit on registration)' },
   { phase:0, id:'p0-21', title:'International phone number support on registration (10 countries, E.164 format, default +52 🇲🇽)' },
   { phase:0, id:'p0-22', title:'Admin bonus campaign controls' },
+  { phase:0, id:'p0-23', title:'Founder bio page live at /lloyd — animated hero, 4 stat tiles, PagoYa + PagoSeguro venture cards, experience, education, social links' },
+  { phase:0, id:'p0-24', title:'Web sign-up bonus — ref_code optional, organic web registrations tagged "WEB", rep velocity check bypassed for web source' },
+  { phase:0, id:'p0-25', title:'signup_source DB field — tracks "web_organic" vs "rep_referral" on all new user records' },
+  { phase:0, id:'p0-26', title:'Home page coral bonus strip — "Abre tu billetera gratis · recibe $25 MXN", social proof line, sharper copy, pulsing coral glow CTA' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -2139,13 +2143,14 @@ function fmtDate(iso) {
 
 checks = loadChecks();
 
-// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-26.
-// v2: covers p0-01 through p0-22 (7 new items added 2026-05-26).
+// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-28.
+// v3: covers p0-01 through p0-26 (4 new items added 2026-05-28:
+//     founder bio /lloyd, web signup bonus, signup_source field, coral CTA strip).
 // Runs once; after that localStorage state wins so user can toggle freely.
-const SHIPPED_KEY = 'ck_defaults_ph0_v2';
+const SHIPPED_KEY = 'ck_defaults_ph0_v3';
 if (!localStorage.getItem(SHIPPED_KEY)) {
   CHECKLIST.filter(i => i.phase === 0).forEach(i => {
-    if (!checks[i.id]) checks[i.id] = '2026-05-26';
+    if (!checks[i.id]) checks[i.id] = '2026-05-28';
   });
   saveChecks();
   try { localStorage.setItem(SHIPPED_KEY, '1'); } catch(e) {}

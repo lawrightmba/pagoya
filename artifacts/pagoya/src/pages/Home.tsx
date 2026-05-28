@@ -175,12 +175,11 @@ export default function Home() {
           .hero-steps{flex-direction:row!important;gap:28px!important;}
         }
         @keyframes bonusPulse {
-          0%,100%{box-shadow:0 0 0 0 rgba(29,158,117,0.0);}
-          50%{box-shadow:0 0 14px 3px rgba(29,158,117,0.28);}
+          0%,100%{box-shadow:0 0 0 0 rgba(216,90,48,0.0);}
+          50%{box-shadow:0 0 16px 4px rgba(216,90,48,0.30);}
         }
-        .bonus-strip { animation: bonusPulse 2.8s ease-in-out infinite; }
-        .bonus-strip:hover { filter:brightness(1.06); }
-        .register-ghost:hover { background:rgba(29,158,117,0.12)!important; }
+        .bonus-strip { animation: bonusPulse 2.8s ease-in-out infinite; transition: filter 0.15s; }
+        .bonus-strip:hover { filter:brightness(1.08); }
       `}</style>
 
       {/* ══════════════════════════════════════════════════════
@@ -357,7 +356,7 @@ export default function Home() {
               />
             </div>
 
-            {/* ── SIGN-UP BONUS STRIP ── */}
+            {/* ── SIGN-UP BONUS STRIP — coral, high urgency ── */}
             <button
               className="bonus-strip"
               onClick={() => navigate("/register")}
@@ -368,8 +367,8 @@ export default function Home() {
                 width: "100%",
                 padding: "12px 16px",
                 marginBottom: "10px",
-                background: "rgba(29,158,117,0.10)",
-                border: "1.5px solid rgba(29,158,117,0.45)",
+                background: "rgba(216,90,48,0.11)",
+                border: "1.5px solid rgba(216,90,48,0.48)",
                 borderRadius: "14px",
                 cursor: "pointer",
                 textAlign: "left",
@@ -380,10 +379,14 @@ export default function Home() {
                 <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>
-                    {es ? "Nuevo usuario: $25 MXN de bienvenida" : "New user: $25 MXN welcome bonus"}
+                    {es
+                      ? "Abre tu billetera gratis · recibe $25 MXN"
+                      : "Open your wallet free · get $25 MXN"}
                   </div>
-                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.50)", marginTop: "2px" }}>
-                    {es ? "Regístrate gratis · se acredita al instante" : "Sign up free · credited instantly"}
+                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.52)", marginTop: "2px" }}>
+                    {es
+                      ? "Sin banco, sin trámites · se acredita al instante"
+                      : "No bank needed · credited instantly"}
                   </div>
                 </div>
               </div>
@@ -391,10 +394,10 @@ export default function Home() {
                 flexShrink: 0,
                 fontSize: "12px",
                 fontWeight: 700,
-                color: "#1D9E75",
+                color: "#D85A30",
                 whiteSpace: "nowrap",
               }}>
-                {es ? "Crear cuenta →" : "Sign up →"}
+                {es ? "Abre tu cuenta →" : "Sign up →"}
               </span>
             </button>
 
@@ -435,6 +438,24 @@ export default function Home() {
                 ? "🔒 Pago seguro · Sin registro para tu primer pago · $25 MXN por transacción"
                 : "🔒 Secure payment · No signup for first payment · $25 MXN per transaction"}
             </p>
+
+            {/* ── SOCIAL PROOF ── */}
+            <div style={{
+              marginTop: "14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              fontSize: "12px",
+              color: "rgba(255,255,255,0.38)",
+            }}>
+              <span style={{ color: "#1D9E75", fontWeight: 700 }}>✓</span>
+              <span>
+                {es
+                  ? "Más de 200 usuarios en Puerto Vallarta y Guadalajara"
+                  : "200+ users in Puerto Vallarta & Guadalajara"}
+              </span>
+            </div>
 
             {/* ── TRUST BAR ── */}
             <div style={{

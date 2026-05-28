@@ -1,2 +1,5 @@
 - [WhatsApp agent architecture](whatsapp-agent.md) — inbound webhook live, session store in-memory, calls /api/agent/chat internally
 - [Tomorrow growth sprint](tomorrow-growth-sprint.md) — three growth wedges queued for next session
+- [Web signup bonus architecture](web-signup-bonus.md) — ref_code optional, defaults "WEB"; velocity check bypassed for WEB; signup_source field tracks web_organic vs rep_referral
+- [DB migrations](db-migrations.md) — drizzle-kit push broken; always use direct SQL via executeSql; schema file is lib/db/src/schema/users.ts
+- [Command center seed keys](command-center-seeds.md) — current key is ck_defaults_ph0_v3 (p0-01–p0-26); bump key + date each session when adding new Phase 0 items

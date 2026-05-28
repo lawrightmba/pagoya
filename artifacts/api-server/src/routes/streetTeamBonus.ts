@@ -150,6 +150,7 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
           kycCurp: pending.curp,
           signupBonusEligible: !bonusBlocked,
           signupRefCode: pending.ref_code,
+          signupSource: pending.ref_code === "WEB" ? "web_organic" : "rep_referral",
         })
         .onConflictDoNothing()
         .returning({ id: usersTable.id });
