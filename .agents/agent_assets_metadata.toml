@@ -113,3 +113,9 @@ id = "wxLG0jXLBjTawptalSQBJ"
 uri = "file://attached_assets/Pasted-PagoYa-is-a-live-deployed-fintech-platform-at-pagoyamx-_1779985179062.txt"
 type = "text"
 title = "YC Application — How Far Along (updated)"
+
+[[outputs]]
+id = "tCyaq_nUhNFA9I8SMcY5a"
+uri = "file://attached_assets/PagoYa-YC-How-Far-Along.docx"
+type = "word_document"
+title = "PagoYa — YC Application (How Far Along).docx"
