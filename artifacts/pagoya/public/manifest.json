@@ -1,17 +1,26 @@
 {
-  "name": "Lloyd's Command Center",
-  "short_name": "CMD CENTER",
-  "description": "PagoSeguro · Mahali · PagoYa — Daily Operating Dashboard",
-  "start_url": "/command-center.html",
+  "name": "PagoYa",
+  "short_name": "PagoYa",
+  "description": "Paga tus servicios desde tu celular sin ir al banco",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#080c10",
+  "background_color": "#0A2540",
   "theme_color": "#1D9E75",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23080c10'/><text y='130' x='20' font-size='120' font-family='monospace' fill='%231D9E75'>⚡</text></svg>",
+      "src": "/favicon.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
-  ]
+  ],
+  "categories": ["finance", "utilities"],
+  "lang": "es-MX",
+  "dir": "ltr"
 }

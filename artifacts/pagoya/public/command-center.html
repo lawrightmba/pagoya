@@ -1723,6 +1723,8 @@ const CHECKLIST = [
   { phase:0, id:'p0-25', title:'signup_source DB field — tracks "web_organic" vs "rep_referral" on all new user records' },
   { phase:0, id:'p0-26', title:'Home page coral bonus strip — "Abre tu billetera gratis · recibe $25 MXN", social proof line, sharper copy, pulsing coral glow CTA' },
   { phase:0, id:'p0-27', title:'Post-registration WhatsApp nudge — 10-min delayed message after OTP verification, skips if already transacted, nudge_sent_at DB column, admin/users endpoint, debug route' },
+  { phase:0, id:'p0-28', title:'Paula WhatsApp payment initiation — "paga mi CFE" triggers prepare_bill_payment tool, stages amount+reference, 2FA confirm/cancel intercept in whatsapp-agent, 5-min pending TTL, executes via wallet' },
+  { phase:0, id:'p0-29', title:'PWA push notifications — VAPID keys, service worker (sw.js), manifest.json, push_subscriptions table, /api/push/subscribe+unsubscribe+vapid-public-key, usePushNotifications hook, Home banner, fires on bill payment confirmed' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -2244,7 +2246,7 @@ function fmtDate(iso) {
       { title: 'Write 2 new guide pages targeting GDL keywords',  dueMonth: 4, dueDay: 30 },
       { title: 'Monitor first keyword rankings',                  dueMonth: 4, dueDay: 30 },
       { title: 'Get 10 users to complete a real bill payment',    dueMonth: 5, dueDay:  1 },
-      { title: 'PWA push notifications',                          dueMonth: 5, dueDay: 15 },
+      { title: 'PWA push notifications — DONE (p0-29)',            dueMonth: 5, dueDay: 15 },
       { title: 'Recurring payments (auto-pay) MVP',               dueMonth: 5, dueDay: 15 },
       { title: 'Map the Guadalajara expansion path',              dueMonth: 5, dueDay:  8 },
       { title: 'Build one backlink from a PV local publication',  dueMonth: 5, dueDay:  8 },

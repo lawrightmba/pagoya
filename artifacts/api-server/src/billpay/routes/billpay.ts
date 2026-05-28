@@ -9,6 +9,7 @@ import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../
 import { getOrCreateWallet, getBalance } from "../../wallet/services/wallet.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
+import { sendPushToUser } from "../../services/pushService.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -393,6 +394,13 @@ router.post("/pay", async (req: Request, res: Response) => {
 
   // Loyalty points
   earnPoints(telefono, montoNum, "bill_pay", service.name, String(paymentId)).catch(() => {});
+
+  // Push notification — payment confirmed
+  sendPushToUser(telefono, {
+    title: `✅ Pago confirmado — ${service.name}`,
+    body: `$${montoNum.toFixed(2)} MXN pagados exitosamente.`,
+    url: "/",
+  }).catch(() => {});
 
   // SIPREL saldo low-balance alert
   if (siprelProvider.getSaldoBalance) {

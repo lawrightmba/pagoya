@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@types/express-session": "^1.19.0",
+    "@types/web-push": "^3.6.4",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-anthropic-ai": "workspace:*",
@@ -31,6 +32,7 @@
     "pino-http": "^10",
     "stripe": "^22.0.1",
     "twilio": "^6.0.2",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

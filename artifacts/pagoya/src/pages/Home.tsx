@@ -6,6 +6,7 @@ import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 import AutofillInput from "@/components/AutofillInput";
 import BillerTicker from "@/components/BillerTicker";
 import PaulaHint from "@/components/PaulaHint";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // ─── Language helpers ──────────────────────────────────────────────────────────
 
@@ -118,6 +119,20 @@ export default function Home() {
   }, []);
 
   const es = lang === "es";
+
+  // ── Push notifications ────────────────────────────────────────────────────
+  const storedPhone = (() => { try { return localStorage.getItem("pagoya_telefono") ?? ""; } catch { return ""; } })();
+  const push = usePushNotifications(storedPhone || null);
+  const [pushDismissed, setPushDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem("push_banner_v1") === "1"; } catch { return false; }
+  });
+
+  function dismissPushBanner() {
+    try { localStorage.setItem("push_banner_v1", "1"); } catch { /* ignore */ }
+    setPushDismissed(true);
+  }
+
+  const showPushBanner = push.supported && !push.subscribed && !pushDismissed && !!storedPhone && push.permission !== "denied";
 
   useEffect(() => { setLangPref(lang); }, [lang]);
 
@@ -676,6 +691,73 @@ export default function Home() {
         <section style={{ background: "#0F2F50", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
             <WalletBalanceWidget />
+
+            {/* ── Push notification opt-in banner ─────────────────── */}
+            {showPushBanner && (
+              <div style={{
+                marginTop: "14px",
+                background: "rgba(29,158,117,0.12)",
+                border: "1px solid rgba(29,158,117,0.35)",
+                borderRadius: "12px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}>
+                <span style={{ fontSize: "22px" }}>🔔</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#fff", fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
+                    {es ? "Recibe avisos de pago" : "Get payment alerts"}
+                  </div>
+                  <div style={{ color: "#94A3B8", fontSize: "12px" }}>
+                    {es ? "Activa notificaciones para saber cuando tu pago fue procesado." : "Know instantly when your payment goes through."}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+                  <button
+                    onClick={() => push.subscribe()}
+                    disabled={push.loading}
+                    style={{
+                      background: "#1D9E75", color: "#fff",
+                      border: "none", borderRadius: "8px",
+                      padding: "6px 12px", fontSize: "12px", fontWeight: 600,
+                      cursor: push.loading ? "default" : "pointer",
+                      opacity: push.loading ? 0.7 : 1,
+                    }}
+                  >
+                    {push.loading ? "..." : (es ? "Activar" : "Enable")}
+                  </button>
+                  <button
+                    onClick={dismissPushBanner}
+                    style={{
+                      background: "transparent", color: "#64748B",
+                      border: "none", fontSize: "11px",
+                      cursor: "pointer", padding: "2px 4px",
+                    }}
+                  >
+                    {es ? "Ahora no" : "Not now"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Subscribed confirmation — shown once */}
+            {push.subscribed && !pushDismissed && (
+              <div style={{
+                marginTop: "10px",
+                background: "rgba(29,158,117,0.10)",
+                borderRadius: "10px",
+                padding: "8px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}>
+                <span style={{ fontSize: "16px" }}>✅</span>
+                <span style={{ color: "#1D9E75", fontSize: "12px" }}>
+                  {es ? "Notificaciones activadas" : "Notifications enabled"}
+                </span>
+              </div>
+            )}
           </div>
         </section>
 
