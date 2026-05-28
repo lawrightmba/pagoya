@@ -1,0 +1,196 @@
+Add three new recurring WhatsApp nudge types to PagoYa's lifecycle 
+messaging system. These are distinct from the existing T+10 activation 
+nudge and T+48h retention nudge — they fire on behavioral triggers 
+throughout a user's lifetime, not just at registration.
+
+CONTEXT:
+- Stack: TypeScript/Express, PostgreSQL/Drizzle ORM, Twilio WhatsApp
+- Twilio already integrated: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, 
+  TWILIO_WHATSAPP_FROM in Replit Secrets
+- Existing nudge pattern: nudgeService.ts + retentionNudgeService.ts
+- Users table: id, phone, name, wallet_balance, signup_ref_code, 
+  nudge_sent_at, retention_nudge_sent_at, created_at
+- Transactions table: user_id, amount, type, service_name, created_at
+- Street team reps table: rep_code, referral_link
+- All cron registrations in app.ts alongside existing crons
+- Phone normalisation already in nudgeService.ts — reuse pattern
+- Bonus amount in admin config — always pull dynamically, never hardcode
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUDGE TYPE 1 — LOW BALANCE REMINDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRIGGER CONDITIONS (all must be true):
+- wallet_balance > 0 AND wallet_balance < 50 MXN
+- User has made at least 1 real payment (not bonus credit)
+- Last low_balance_nudge_sent_at was more than 14 days ago 
+  (prevent weekly harassment)
+- User has not made a payment in the last 7 days
+  (don't nudge active users — they don't need it)
+
+MESSAGE (pull most_recent_service from transactions for personalization):
+"Hola [first_name] 👋 Tu saldo en PagoYa está bajo 
+($[wallet_balance] MXN disponibles).
+
+Recarga antes de que llegue tu próximo [most_recent_service] 
+y págalo en segundos desde aquí.
+
+💳 pagoyamx.com/cargar
+
+O escríbele a Paula y te ayuda ahora mismo 💬"
+
+If most_recent_service is unavailable, use "recibo" as fallback.
+
+DATABASE:
+- Add low_balance_nudge_sent_at TIMESTAMP (nullable) to users table
+- Add index idx_users_low_balance_nudge_sent_at
+- Write timestamp on send, respect dedup guard
+
+CRON: Run every 6 hours (balance can change frequently)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUDGE TYPE 2 — BILL DISCOVERY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRIGGER CONDITIONS (all must be true):
+- User has made at least 2 real payments
+- User has only paid 1 or 2 UNIQUE services (low biller diversity)
+- wallet_balance >= 25 MXN (enough to actually pay a bill)
+- bill_discovery_nudge_sent_at is NULL or more than 30 days ago
+- User account is at least 14 days old (not brand new)
+
+LOGIC:
+- Query the 3 most common services paid by ALL users in the same 
+  colonia (from users.colonia + transactions.service_name)
+- Remove any services the user has already paid
+- Suggest the top 2 remaining as "popular in your area"
+- If colonia data unavailable, use platform-wide top services
+
+MESSAGE:
+"Hola [first_name] 💡 ¿Sabías que también puedes pagar estos 
+servicios con tu billetera PagoYa?
+
+[Service 1] · [Service 2]
+
+Más de 20 servicios disponibles — luz, agua, teléfono, internet, 
+streaming y más.
+
+👉 pagoyamx.com/pagar
+
+Paula te ayuda a encontrar el tuyo 💬"
+
+DATABASE:
+- Add bill_discovery_nudge_sent_at TIMESTAMP (nullable) to users table
+- Add index idx_users_bill_discovery_nudge_sent_at
+
+CRON: Run daily at 10am Mexico City time (same window as reminder cron)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUDGE TYPE 3 — REFERRAL ASK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRIGGER CONDITIONS (all must be true):
+- User has made at least 3 real payments (proven active user)
+- User has NEVER referred anyone (no other user has their 
+  phone number as signup_ref_code, and no rep row exists for them)
+- referral_nudge_sent_at IS NULL (send once only — never repeat)
+- Last payment was within the last 7 days (send while engagement 
+  is warm, not to dormant users)
+- Fire within 1 hour of a successful payment confirmation 
+  (attach to positive moment — user just had a good experience)
+
+IMPLEMENTATION NOTE: 
+The referral nudge should be queued at payment completion time 
+(inside the bill payment success handler), NOT via cron sweep.
+Use a 60-minute setTimeout after payment success — same pattern 
+as the T+10 activation nudge. This ensures it fires right after 
+a positive experience, not at an arbitrary cron time.
+
+Referral link: pagoyamx.com/register?ref=[user_phone_last_4_digits] 
+OR if user is already a rep, use their existing rep referral link.
+Create a simple referral_code on users table if not present 
+(user_[last4_of_phone]) — do not require full rep onboarding 
+for casual referrals.
+
+MESSAGE:
+"Hola [first_name] ¡Gracias por tu pago! 🎉
+
+¿Conoces a alguien que pague sus recibos en OXXO o en efectivo?
+
+Comparte PagoYa con ellos — cuando se registren con tu enlace, 
+ambos reciben $[bonus_amount] MXN en su billetera.
+
+🔗 [referral_link]
+
+Es gratis y en menos de 2 minutos están listos 💬"
+
+DATABASE:
+- Add referral_nudge_sent_at TIMESTAMP (nullable) to users table
+- Add referral_code VARCHAR(20) (nullable) to users table
+- Add index on both columns
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SHARED REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRANSACTION CHECK — for all three nudges, "real payment" means:
+SELECT COUNT(*) FROM transactions 
+WHERE user_id = $1 
+AND type NOT IN ('bonus_credit', 'welcome_bonus', 'signup_bonus')
+AND amount < 0
+Check your actual transaction type values in schema before writing 
+this query — use real values, not assumed ones.
+
+ERROR HANDLING (same pattern as existing nudges):
+- Guard: skip if user not found
+- Guard: check all trigger conditions before send
+- On Twilio error: log userId + nudge type + error, 
+  return {sent:false, reason:'send_error'} — no retry, no throw
+- Never throw from a nudge function — caller must not crash
+
+CRON REGISTRATION (app.ts):
+- startLowBalanceNudgeCron() — every 6 hours
+- startBillDiscoveryNudgeCron() — daily 10am MX time
+- Referral nudge: no cron — fires via setTimeout at payment success
+- Add all three alongside existing crons at lines 101–107
+- Named function pattern consistent with existing crons
+
+DEBUG ROUTES (NODE_ENV !== 'production' only):
+- POST /api/debug/low-balance-nudge/:userId
+- POST /api/debug/bill-discovery-nudge/:userId  
+- POST /api/debug/referral-nudge/:userId
+- POST /api/debug/reset-lifecycle-nudges/:userId 
+  (resets all three new timestamps to NULL for retesting)
+
+ADMIN VISIBILITY:
+- Add all three new timestamp columns to GET /api/admin/users response
+- Add three new stat tiles to command center Usuarios tab:
+  "Saldo bajo" (low balance nudge count)
+  "Descubrimiento" (bill discovery nudge count)
+  "Referido" (referral nudge count)
+- These sit below the existing 5 tiles as a second row
+
+STATIC FILES:
+- All frontend changes to artifacts/pagoya/public/ only
+- Never edit api-server/public/
+- Backend changes in api-server route/service files
+
+TESTING SEQUENCE:
+1. Run Drizzle migration — confirm 5 new columns on users table
+   (low_balance_nudge_sent_at, bill_discovery_nudge_sent_at, 
+   referral_nudge_sent_at, referral_code, plus any new columns)
+2. POST /api/debug/low-balance-nudge/[userId] — confirm send + 
+   timestamp written
+3. POST /api/debug/bill-discovery-nudge/[userId] — confirm 
+   colonia-based service suggestions populate correctly
+4. Complete a payment as test user → confirm referral nudge 
+   fires after 60 minutes (use debug route to test immediately)
+5. POST /api/debug/reset-lifecycle-nudges/[userId] — confirm 
+   all three timestamps reset to NULL
+6. Check GET /api/admin/users — confirm all new columns present
+7. Check command center — confirm 3 new stat tiles visible
+
+Run Drizzle migration, implement all three nudge services, 
+register crons in app.ts, wire referral nudge into payment 
+success handler, add debug routes, update admin visibility, 
+and confirm with a summary of files changed.
