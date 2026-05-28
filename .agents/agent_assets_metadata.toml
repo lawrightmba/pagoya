@@ -107,3 +107,9 @@ id = "M4ym9BUkB3Sv8KIkBn_7B"
 uri = "file://.local/outputs/Brand-New-App.pdf"
 type = "pdf"
 title = "Brand New App.pdf"
+
+[[outputs]]
+id = "wxLG0jXLBjTawptalSQBJ"
+uri = "file://attached_assets/Pasted-PagoYa-is-a-live-deployed-fintech-platform-at-pagoyamx-_1779985179062.txt"
+type = "text"
+title = "YC Application — How Far Along (updated)"

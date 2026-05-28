@@ -4,7 +4,7 @@ PagoYa is the primary product and the website for YC consideration. It encompass
 
 What Is Working and Shipped Today?
 Agentic AI — Paula (the centerpiece of the product)
-Paula is a Claude-powered AI agent deployed across two channels simultaneously: WhatsApp (inbound) and an in-app floating chat widget on every page of the product. She is not a FAQ bot. Paula runs a tool-use loop with access to live user data and takes real actions on the user’s behalf.
+Paula is a Claude-powered AI agent deployed across two channels simultaneously: WhatsApp (inbound) and an in-app floating chat widget on every page of the product. She is not a FAQ bot. Paula runs a tool-use loop with access to live user data and takes real actions on the user's behalf.
 
 Her tools today:
 •	get_wallet_balance — tells the user their exact MXN balance in real time
@@ -12,10 +12,10 @@ Her tools today:
 •	get_pending_oxxo — checks whether a cash deposit is still pending confirmation
 •	escalate_to_support — hands off to a human agent via WhatsApp with full context
 
-On WhatsApp, any inbound message routes through the Paula agent loop. First-contact messages are screened for rep referral codes before entering the agent flow. Paula replies in natural Spanish, handles multi-turn conversations, and escalates gracefully when a question is out of scope. In-app, the chat widget persists across every screen with localStorage session memory, a typing indicator, and an escalation banner. After every successful payment, the app automatically opens Paula’s chat after 4 seconds with a pre-filled context message — turning a transactional receipt moment into a retention touch.
+On WhatsApp, any inbound message routes through the Paula agent loop. First-contact messages are screened for rep referral codes before entering the agent flow. Paula replies in natural Spanish, handles multi-turn conversations, and escalates gracefully when a question is out of scope. In-app, the chat widget persists across every screen with localStorage session memory, a typing indicator, and an escalation banner. After every successful payment, the app automatically opens Paula's chat after 4 seconds with a pre-filled context message — turning a transactional receipt moment into a retention touch.
 
 AI Bill Autofill
-The home screen is a natural-language input. Claude parses;CFE 350 pesos; and pre-fills the service, amount, and reference number in one shot. Users who have never used a fintech app understand it immediately — because it works like texting.
+The home screen is a natural-language input. Claude parses "CFE 350 pesos" and pre-fills the service, amount, and reference number in one shot. Users who have never used a fintech app understand it immediately — because it works like texting.
 
 Core Payment Infrastructure
 Bill payment integrates SIPREL and Evoluciona with automatic failover across 20+ billers. Flat fee of $25 MXN per transaction. Wallet debited atomically per payment.
@@ -25,16 +25,22 @@ OXXO cash deposits (barcode vouchers generated in-app), card top-ups (Conekta to
 
 Loyalty & Rewards
 Users earn points on every payment (1 pt / $10 MXN, Bronze / Silver / Gold tier multipliers). Points are redeemable for wallet credit or a free-transaction token that waives the $25 MXN fee — enforced atomically inside the payment DB transaction.
+
 Street-Team Referral Network with WhatsApp OTP Onboarding
-Reps recruit users in the field using unique referral links and QR codes. New users sign up via a three-screen flow: form; WhatsApp OTP; bonus wallet credit ($25;$50 MXN incentive). Rep commissions are $5 MXN per confirmed payment with a 7-day hold. The rep earnings dashboard includes a self-serve recruitment section with a shareable signup link, a downloadable QR code, and live recruitment stats pulling from live DB queries. International phone support is built in for migrant and diaspora referrals.
+Reps recruit users in the field using unique referral links and QR codes. New users sign up via a three-screen flow: form; WhatsApp OTP; bonus wallet credit ($25–$50 MXN incentive). Rep commissions are $5 MXN per confirmed payment with a 7-day hold. The rep earnings dashboard includes a self-serve recruitment section with a shareable signup link, a downloadable QR code, and live recruitment stats pulling from live DB queries. International phone support is built in for migrant and diaspora referrals.
+
+Automated Activation — Post-Registration WhatsApp Nudge
+Ten minutes after a new user completes OTP verification, the platform automatically sends a personalized WhatsApp message driving them to make their first payment. The nudge fires only if the user has not yet transacted — if they already paid, it is suppressed. This closes the most common drop-off point in underbanked fintech onboarding: the gap between "signed up" and "made first payment." WhatsApp was the deliberate choice over email or push notification — open rates in our target demographic exceed 95%. The send is logged with a timestamp, de-duplicated at the DB level, and visible in the operator dashboard so the team can track activation rates per cohort.
 
 P2P Wallet Transfers
 Users send MXN directly to any Mexican mobile number. Recipients without an account get an auto-created wallet and a WhatsApp invite from Paula — turning every transfer into a word-of-mouth acquisition event. Daily limits enforced. Atomic debit/credit in a single DB transaction.
+
 KYC — Nivel 2
 CURP verified against RENAPO. Verified users unlock a $24,000 MXN/month wallet limit versus $6,000 for unverified users.
 
 Direct Debit Bank Enrollment
 Full 5-step enrollment wizard integrated with the Belvo Direct Debit API. UI and backend complete and deployed. Awaiting Belvo production credential approval.
+
 Regulatory
 LFPDPPP-compliant Privacy Notice and full Terms of Service are live at pagoyamx.com — required for Belvo production onboarding and any future CNBV-adjacent partnership.
 
@@ -53,7 +59,7 @@ What Is Live in PagoSeguro Today?
 
 Why a Separate Site, Not Just a PagoYa Tab?
 
-The rent market in Mexico requires landlord trust at the point of first contact. A landlord searching for  unit 201C;cobro de renta digital Puerto Vallarta 201C; needs to land on a page that is entirely about their problem — not scroll past utility bill payments to find a rent section. PagoSeguro is PagoYa’s B2B face: same rails, same wallet, different acquisition funnel. The cross-sell already exists — PagoSeguro’s landing page actively promotes PagoYa to tenants.
+The rent market in Mexico requires landlord trust at the point of first contact. A landlord searching for "cobro de renta digital Puerto Vallarta" needs to land on a page that is entirely about their problem — not scroll past utility bill payments to find a rent section. PagoSeguro is PagoYa's B2B face: same rails, same wallet, different acquisition funnel. The cross-sell already exists — PagoSeguro's landing page actively promotes PagoYa to tenants.
 
 What We Are Building Next in PagoSeguro
 •	Automated rent collection — recurring charges and late fee logic (currently landlords manually create charges each month)
@@ -61,6 +67,7 @@ What We Are Building Next in PagoSeguro
 •	WhatsApp payment reminders with embedded payment links — reduce late payments without requiring an app
 •	Multi-property management for institutional landlords (5+ units) with consolidated reporting
 •	Paula integration — tenants will be able to ask Paula about their rent status, payment history, and upcoming due dates directly in WhatsApp
+
 What Is In Progress Across the Platform
 •	Merchant / biller onboarding portal for self-service biller registration
 •	Scheduled recurring payments — auto-pay for monthly bills
@@ -76,4 +83,4 @@ Most fintech apps in Mexico are still trying to get underbanked users to adopt a
 
 PagoSeguro applies the same logic to housing: landlords in Mexico still collect rent via cash or informal bank transfers with no paper trail. PagoSeguro gives them digital collection, automatic receipts, and WhatsApp confirmation — without asking them to change how they think about rent.
 
-The product is not the app. The product is Paula, and the app — along with PagoSeguro — is Paula’s backend.
+The product is not the app. The product is Paula, and the app — along with PagoSeguro — is Paula's backend.
