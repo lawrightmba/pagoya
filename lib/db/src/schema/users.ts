@@ -24,6 +24,10 @@ export const usersTable = pgTable("users", {
   signupRefCode: varchar("signup_ref_code", { length: 50 }),
   // "web_organic" | "rep_referral" | null for legacy rows
   signupSource: varchar("signup_source", { length: 30 }),
+  // ── Activation nudge ─────────────────────────────────────────────────────────
+  // Timestamp when the 10-min post-registration WhatsApp nudge was sent.
+  // Null = not yet sent. Used to de-duplicate: never send twice.
+  nudgeSentAt: timestamp("nudge_sent_at"),
   // ── OTP verification ─────────────────────────────────────────────────────────
   otpCode: varchar("otp_code", { length: 6 }),
   otpExpiresAt: timestamp("otp_expires_at"),

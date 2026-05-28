@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { eq, and, count, sum } from "drizzle-orm";
 import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
+import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
 import { generateOTP, verifyOTP, clearOTP } from "../services/otpService.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
@@ -250,7 +251,11 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
       logger.warn({ err, phone: pending.phone }, "streetTeamBonus: WhatsApp confirmation failed (non-fatal)");
     }
 
-    // ── 11. Respond ───────────────────────────────────────────────────────
+    // ── 11. Schedule 10-min activation nudge ──────────────────────────────
+    // Fire-and-forget setTimeout; check at send time if they've already transacted.
+    scheduleNudge(userId);
+
+    // ── 12. Respond ───────────────────────────────────────────────────────
     logger.info({ userId, bonusCredited, bonusAmount }, "streetTeamBonus: verify-bonus-otp complete");
     res.status(200).json({ success: true, userId, bonusCredited, bonusAmount: bonusAmount ?? 0 });
   } catch (err) {

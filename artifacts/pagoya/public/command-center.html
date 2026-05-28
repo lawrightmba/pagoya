@@ -484,6 +484,7 @@
   <button class="tab" onclick="switchTab('sprint', this)">30-DAY SPRINT</button>
   <button class="tab" onclick="switchTab('completed', this)">✓ Completed</button>
   <button class="tab" onclick="switchTab('traction', this)">📈 Traction</button>
+  <button class="tab" onclick="switchTab('usuarios', this)">👤 Usuarios</button>
 </div>
 
 <!-- PROGRESS (shown on checklist tab) -->
@@ -1615,6 +1616,79 @@
 
 </div><!-- /panel-traction -->
 
+<!-- ══════════════════════════════════════════════════════
+     PANEL — USUARIOS (admin users list with nudge status)
+══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-usuarios">
+  <style>
+    .uu-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .uu-title { font-size:15px; font-weight:700; color:#fff; }
+    .uu-refresh { background:#252830; border:1px solid #2e3440; color:#9ca3af; font-size:12px;
+      padding:6px 14px; border-radius:20px; cursor:pointer; }
+    .uu-refresh:hover { background:#2e3440; color:#fff; }
+    .uu-stats { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .uu-stat { background:#161921; border:1px solid #252830; border-radius:8px;
+      padding:10px 16px; min-width:120px; }
+    .uu-stat-val { font-size:22px; font-weight:800; color:#1D9E75; }
+    .uu-stat-label { font-size:11px; color:#555; margin-top:2px; }
+    .uu-table-wrap { overflow-x:auto; border-radius:10px; border:1px solid #252830; }
+    .uu-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .uu-table th { background:#161921; color:#555; font-weight:600; padding:10px 12px;
+      text-align:left; border-bottom:1px solid #252830; white-space:nowrap; }
+    .uu-table td { padding:9px 12px; border-bottom:1px solid #1a1e27; color:#d1d5db; vertical-align:middle; }
+    .uu-table tr:last-child td { border-bottom:none; }
+    .uu-table tr:hover td { background:#1a1e27; }
+    .uu-nudge-yes { color:#1D9E75; font-weight:700; font-size:14px; }
+    .uu-nudge-no  { color:#374151; font-weight:600; }
+    .uu-src-web  { background:#1D9E7520; color:#1D9E75; border:1px solid #1D9E7440;
+      border-radius:20px; padding:2px 8px; font-size:10px; font-weight:700; }
+    .uu-src-rep  { background:#D85A3020; color:#D85A30; border:1px solid #D85A3040;
+      border-radius:20px; padding:2px 8px; font-size:10px; font-weight:700; }
+    .uu-bonus-yes { color:#f59e0b; font-weight:700; }
+    .uu-bonus-no  { color:#374151; }
+    .uu-empty { text-align:center; color:#4b5563; padding:40px; font-size:13px; }
+    #uu-status { font-size:11px; color:#4b5563; margin-top:8px; }
+  </style>
+  <div class="uu-header">
+    <div class="uu-title">Usuarios Registrados</div>
+    <button class="uu-refresh" onclick="uuLoad()">↻ Actualizar</button>
+  </div>
+  <div class="uu-stats">
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-total">—</div>
+      <div class="uu-stat-label">Total usuarios</div>
+    </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-nudged">—</div>
+      <div class="uu-stat-label">Nudge enviado</div>
+    </div>
+    <div class="uu-stat">
+      <div class="uu-stat-val" id="uu-bonused">—</div>
+      <div class="uu-stat-label">Bono acreditado</div>
+    </div>
+  </div>
+  <div class="uu-table-wrap">
+    <table class="uu-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Teléfono</th>
+          <th>Nombre</th>
+          <th>Fuente</th>
+          <th>Ref</th>
+          <th>Bono</th>
+          <th>Nudge enviado</th>
+          <th>Registrado</th>
+        </tr>
+      </thead>
+      <tbody id="uu-tbody">
+        <tr><td class="uu-empty" colspan="8">Haz clic en Actualizar para cargar usuarios</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="uu-status"></div>
+</div><!-- /panel-usuarios -->
+
 <div class="tr-toast" id="tr-toast">Saved ✓</div>
 
 <script>
@@ -1648,6 +1722,7 @@ const CHECKLIST = [
   { phase:0, id:'p0-24', title:'Web sign-up bonus — ref_code optional, organic web registrations tagged "WEB", rep velocity check bypassed for web source' },
   { phase:0, id:'p0-25', title:'signup_source DB field — tracks "web_organic" vs "rep_referral" on all new user records' },
   { phase:0, id:'p0-26', title:'Home page coral bonus strip — "Abre tu billetera gratis · recibe $25 MXN", social proof line, sharper copy, pulsing coral glow CTA' },
+  { phase:0, id:'p0-27', title:'Post-registration WhatsApp nudge — 10-min delayed message after OTP verification, skips if already transacted, nudge_sent_at DB column, admin/users endpoint, debug route' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -1775,6 +1850,7 @@ function switchTab(id, btn) {
   document.getElementById('progress-wrap').style.display = id === 'checklist' ? 'flex' : 'none';
   if (id === 'reminders') renderRemindersPanel();
   if (id === 'completed' && window.csRenderCompleted) window.csRenderCompleted();
+  if (id === 'usuarios') uuLoad();
 }
 
 // ── PROGRESS ─────────────────────────────────────────────────────────────────
@@ -1985,6 +2061,65 @@ function setReminderBoth() {
   const msg = encodeURIComponent('PagoYa Reminder: ' + modalItemName + ' — Due: ' + date);
   window.open('mailto:' + EMAIL + '?subject=' + subj + '&body=' + body);
   setTimeout(() => window.open('https://wa.me/' + WA_NUM + '?text=' + msg), 400);
+}
+
+// ── USUARIOS ─────────────────────────────────────────────────────────────────
+
+async function uuLoad() {
+  const tbody = document.getElementById('uu-tbody');
+  const status = document.getElementById('uu-status');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td class="uu-empty" colspan="8">Cargando…</td></tr>';
+  status.textContent = '';
+  try {
+    const res = await fetch('/api/admin/users?limit=200', { credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const users = data.users || [];
+
+    // Stats
+    const nudgedCount  = users.filter(u => u.nudge_sent_at).length;
+    const bonusedCount = users.filter(u => u.signup_bonus_claimed).length;
+    document.getElementById('uu-total').textContent   = users.length;
+    document.getElementById('uu-nudged').textContent  = nudgedCount;
+    document.getElementById('uu-bonused').textContent = bonusedCount;
+
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td class="uu-empty" colspan="8">Sin usuarios aún</td></tr>';
+      status.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      return;
+    }
+
+    const fmt = (iso) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' }) + ' ' +
+             d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+    };
+    const srcBadge = (src) => {
+      if (!src) return '<span style="color:#374151">—</span>';
+      if (src === 'web_organic') return '<span class="uu-src-web">WEB</span>';
+      if (src === 'rep_referral') return '<span class="uu-src-rep">REP</span>';
+      return `<span style="color:#9ca3af;font-size:10px">${src}</span>`;
+    };
+
+    tbody.innerHTML = users.map((u, i) => `
+      <tr>
+        <td style="color:#555">${i + 1}</td>
+        <td style="font-family:monospace">${u.phone || '—'}</td>
+        <td>${u.name || '<span style="color:#374151">—</span>'}</td>
+        <td>${srcBadge(u.signup_source)}</td>
+        <td style="font-family:monospace;font-size:11px;color:#9ca3af">${u.signup_ref_code || '—'}</td>
+        <td class="${u.signup_bonus_claimed ? 'uu-bonus-yes' : 'uu-bonus-no'}">${u.signup_bonus_claimed ? '✓ $25' : '—'}</td>
+        <td class="${u.nudge_sent_at ? 'uu-nudge-yes' : 'uu-nudge-no'}">${u.nudge_sent_at ? '✓ ' + fmt(u.nudge_sent_at) : '—'}</td>
+        <td style="color:#6b7280;font-size:11px">${fmt(u.created_at)}</td>
+      </tr>`).join('');
+
+    status.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  } catch(e) {
+    tbody.innerHTML = `<tr><td class="uu-empty" colspan="8">Error: ${e.message}</td></tr>`;
+    status.textContent = 'Error al cargar';
+  }
 }
 
 // ── SYNC ─────────────────────────────────────────────────────────────────────

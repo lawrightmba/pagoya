@@ -4,12 +4,14 @@ import path from "path";
 import { eq, desc, gte, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
+  usersTable,
   userProfilesTable,
   userBillersTable,
   signupBonusConfigTable,
   repVelocityFlagsTable,
   walletTransactionsTable,
 } from "@workspace/db";
+import { sendActivationNudge } from "../services/nudgeService.js";
 import healthRouter from "./health";
 import pagoyaRouter from "./pagoya";
 import billPayRouter from "../billpay/routes/billpay.js";
@@ -228,6 +230,50 @@ router.post("/admin/bonus-config", async (req: Request, res: Response) => {
   } catch (err) {
     logger.error({ err }, "admin/bonus-config: failed");
     res.status(500).json({ error: "Error al guardar configuración." });
+  }
+});
+
+// POST /api/debug/nudge/:userId — DEV ONLY: trigger nudge immediately (no 10-min wait)
+// Use this to verify Twilio fires correctly in the Sandbox before deploying.
+if (process.env.NODE_ENV !== "production") {
+  router.post("/debug/nudge/:userId", async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId) || userId <= 0) {
+      res.status(400).json({ error: "userId must be a positive integer" });
+      return;
+    }
+    try {
+      const result = await sendActivationNudge(userId);
+      res.json({ result });
+    } catch (err) {
+      logger.error({ err, userId }, "debug/nudge: error");
+      res.status(500).json({ error: String(err) });
+    }
+  });
+}
+
+// GET /api/admin/users — all users with nudge status (most recent first, cap 200)
+router.get("/admin/users", async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) ?? "200", 10) || 200, 500);
+    const users = await db
+      .select({
+        id: usersTable.id,
+        phone: usersTable.telefono,
+        name: usersTable.kycFullName,
+        signup_source: usersTable.signupSource,
+        signup_ref_code: usersTable.signupRefCode,
+        signup_bonus_claimed: usersTable.signupBonusClaimed,
+        nudge_sent_at: usersTable.nudgeSentAt,
+        created_at: usersTable.createdAt,
+      })
+      .from(usersTable)
+      .orderBy(desc(usersTable.createdAt))
+      .limit(limit);
+    res.json({ users, count: users.length });
+  } catch (err) {
+    logger.error({ err }, "admin/users: failed");
+    res.status(500).json({ error: "Error al obtener usuarios." });
   }
 });
 
