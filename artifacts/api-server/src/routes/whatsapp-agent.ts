@@ -12,8 +12,8 @@ import { logger } from "../lib/logger.js";
 const router = Router();
 
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
-const CONFIRMATION_PATTERN = /^(s[ií]|yes|confirmar?|confirmo|ok|dale|va|órale|andale|claro|adelante)\s*[!.]*$/i;
-const CANCELLATION_PATTERN = /^(no|cancelar?|cancela|nop|nope|mejor no)\s*[!.]*$/i;
+const CONFIRMATION_PATTERN = /^(s[ií]|yes|confirm(ar)?|confirmo|ok|dale|va|órale|o?rale|andale|ándale|claro|adelante|listo|perfecto|sim[oó]n|sip|proceed|go ahead|estuvo|va que va|le doy|por favor|s[ií] por favor)\s*[!.🙏👍✅]*$/i;
+const CANCELLATION_PATTERN = /^(no|cancelar?|cancela|nop|nope|mejor no|nel|nope|para|stop)\s*[!.❌]*$/i;
 
 async function executeStagedPayment(
   pending: PendingPaymentRow,
