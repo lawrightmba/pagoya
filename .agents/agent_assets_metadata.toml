@@ -131,3 +131,9 @@ id = "z1zrsIuShNxd70Xnxlvpv"
 uri = "file://docs/yc/PagoYa-How-Far-Along-YC.docx"
 type = "word_document"
 title = "PagoYa — How Far Along (YC)"
+
+[[outputs]]
+id = "5bWSFoCGBZYXGxjB3pem1"
+uri = "file://docs/yc/PagoYa-Claude-Session-Export.md"
+type = "text"
+title = "PagoYa — YC Coding Agent Session Export"
