@@ -137,3 +137,9 @@ id = "5bWSFoCGBZYXGxjB3pem1"
 uri = "file://docs/yc/PagoYa-Claude-Session-Export.md"
 type = "text"
 title = "PagoYa — YC Coding Agent Session Export"
+
+[[outputs]]
+id = "A8r_9DzT4fb6dZxHzcWqD"
+uri = "file://docs/yc/PagoYa-Claude-Session-Export.txt"
+type = "text"
+title = "PagoYa — YC Coding Agent Session Export (.txt)"
