@@ -119,3 +119,15 @@ id = "tCyaq_nUhNFA9I8SMcY5a"
 uri = "file://attached_assets/PagoYa-YC-How-Far-Along.docx"
 type = "word_document"
 title = "PagoYa — YC How Far Along (Updated May 28 — Paula Investor Framing)"
+
+[[outputs]]
+id = "owSDX_aiP6-unVPLXSHZw"
+uri = "file://docs/yc/PagoYa-Technical-Summary-YC.docx"
+type = "word_document"
+title = "PagoYa — Technical Summary (YC)"
+
+[[outputs]]
+id = "z1zrsIuShNxd70Xnxlvpv"
+uri = "file://docs/yc/PagoYa-How-Far-Along-YC.docx"
+type = "word_document"
+title = "PagoYa — How Far Along (YC)"
