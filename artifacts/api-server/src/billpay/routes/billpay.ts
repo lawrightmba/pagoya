@@ -171,6 +171,32 @@ router.post("/pay", async (req: Request, res: Response) => {
     }
   }
 
+  // ── Daily per-user bill payment cap (AML floor) ───────────────────────────────
+  const DAILY_BILL_CAP_MXN = 50_000;
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const [dailyRow] = await db
+      .select({ total: sql<string>`COALESCE(SUM(monto::numeric), 0)` })
+      .from(billPaymentsTable)
+      .where(
+        and(
+          eq(billPaymentsTable.telefono, telefono),
+          eq(billPaymentsTable.status, "confirmed"),
+          gte(billPaymentsTable.createdAt, startOfDay),
+        ),
+      );
+    const todayTotal = parseFloat(dailyRow?.total ?? "0");
+    if (todayTotal + montoNum > DAILY_BILL_CAP_MXN) {
+      res.status(429).json({
+        error: `Límite diario alcanzado. El máximo de pagos por día es $${DAILY_BILL_CAP_MXN.toLocaleString("es-MX")} MXN.`,
+      });
+      return;
+    }
+  } catch {
+    // Non-fatal — don't block payment if daily-cap query fails
+  }
+
   // ── Step 2: Call the provider (no DB writes yet) ─────────────────────────────
   let result: Awaited<ReturnType<typeof routePayment>>;
   try {
@@ -255,14 +281,25 @@ router.post("/pay", async (req: Request, res: Response) => {
 
       // 3c. Wallet debit — inlined here so it shares this transaction
       if (walletId) {
-        // Re-read balance inside the transaction to guard against concurrent payments
-        const [wallet] = await tx
-          .select({ balanceMxn: walletsTable.balanceMxn })
-          .from(walletsTable)
-          .where(eq(walletsTable.id, walletId))
-          .limit(1);
-        const currentBalance = parseFloat(wallet?.balanceMxn ?? "0");
-        if (currentBalance < montoNum) {
+        // Atomic conditional debit: the UPDATE only executes if balance_mxn is still
+        // sufficient at the moment the statement runs. This eliminates the race window
+        // that exists between a separate SELECT (balance read) and a subsequent UPDATE
+        // under PostgreSQL's READ COMMITTED isolation.
+        const updated = await tx
+          .update(walletsTable)
+          .set({
+            balanceMxn: sql`balance_mxn - ${montoNum.toFixed(2)}`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(walletsTable.id, walletId),
+              sql`balance_mxn >= ${montoNum.toFixed(2)}::numeric`,
+            ),
+          )
+          .returning({ id: walletsTable.id });
+
+        if (updated.length === 0) {
           throw new Error("INSUFFICIENT_BALANCE");
         }
 
@@ -274,14 +311,6 @@ router.post("/pay", async (req: Request, res: Response) => {
           description: `Pago ${service.name} — ref ${maskedRef}`,
           confirmedAt: new Date(),
         });
-
-        await tx
-          .update(walletsTable)
-          .set({
-            balanceMxn: sql`balance_mxn - ${montoNum.toFixed(2)}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(walletsTable.id, walletId));
       }
 
       // 3d. Free-tx token consumption — atomic with the payment insert above
@@ -725,6 +754,64 @@ router.get("/admin/products", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "Error al obtener productos.";
     logger.error({ err }, "billpay: admin/products failed");
     res.status(502).json({ error: message });
+  }
+});
+
+// POST /api/bills/request
+// Manual capture fallback for services not in the catalog.
+// Logs the request and sends a WhatsApp acknowledgement to the user.
+// Body: { telefono, serviceName, referencia, monto?, notas? }
+router.post("/request", async (req: Request, res: Response) => {
+  const { telefono, serviceName, referencia, monto, notas } = req.body as {
+    telefono?: string;
+    serviceName?: string;
+    referencia?: string;
+    monto?: number;
+    notas?: string;
+  };
+
+  if (!telefono || !serviceName) {
+    res.status(400).json({ error: "Se requieren telefono y serviceName." });
+    return;
+  }
+
+  try {
+    // Persist as a manual-capture bill payment for ops visibility
+    await db.insert(billPaymentsTable).values({
+      serviceId: "manual_capture",
+      serviceName: serviceName.trim(),
+      categoria: "manual",
+      referencia: referencia ?? "",
+      monto: monto ? String(Number(monto).toFixed(2)) : "0.00",
+      telefono,
+      notas: notas ?? "",
+      provider: "manual",
+      providerUsed: "manual",
+      failoverUsed: false,
+      confirmationCode: "pendiente",
+      status: "solicitud_manual",
+      paymentMethod: "wallet",
+      platformFeeMxn: "0.00",
+    });
+
+    // WhatsApp acknowledgement — non-blocking
+    const { sendWhatsApp } = await import("../../lib/whatsapp.js");
+    sendWhatsApp(
+      telefono,
+      `✅ Recibimos tu solicitud de pago\n\n` +
+      `*Servicio:* ${serviceName}\n` +
+      `${referencia ? `*Referencia:* ${referencia}\n` : ""}` +
+      `${monto ? `*Monto:* $${Number(monto).toFixed(2)} MXN\n` : ""}` +
+      `\nUn asesor te contactará en breve para completar tu pago.\n` +
+      `_PagoYa — pagoseguromx.com_`,
+    ).catch(() => {});
+
+    logger.info({ telefono, serviceName, referencia }, "billpay: manual capture request logged");
+    res.status(201).json({ success: true, message: "Solicitud registrada. Te contactaremos pronto." });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al registrar solicitud.";
+    logger.error({ err, telefono, serviceName }, "billpay: manual capture request failed");
+    res.status(500).json({ error: message });
   }
 });
 

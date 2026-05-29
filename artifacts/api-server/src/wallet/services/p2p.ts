@@ -77,22 +77,14 @@ export async function p2pTransfer(
   let newSenderBalance: number;
 
   await db.transaction(async (tx) => {
+    // Verify sender wallet exists (balance check is done atomically in the UPDATE below)
     const [lockedSender] = await tx
-      .select()
+      .select({ id: walletsTable.id })
       .from(walletsTable)
       .where(eq(walletsTable.id, senderWallet.id))
       .limit(1);
 
     if (!lockedSender) throw new Error("Sender wallet not found");
-
-    const currentBalance = parseFloat(lockedSender.balanceMxn ?? "0");
-    if (currentBalance < amountMXN) {
-      const err = Object.assign(new Error("INSUFFICIENT_BALANCE"), {
-        code: "INSUFFICIENT_BALANCE",
-        currentBalance,
-      });
-      throw err;
-    }
 
     const [senderTx] = await tx
       .insert(walletTransactionsTable)
@@ -124,13 +116,28 @@ export async function p2pTransfer(
       .set({ peerTransferId: receiverTx.id })
       .where(eq(walletTransactionsTable.id, senderTx.id));
 
-    await tx
+    // Atomic conditional debit for sender — only succeeds if balance is still sufficient.
+    // Eliminates race condition between the earlier balance read and this UPDATE.
+    const [debitResult] = await tx
       .update(walletsTable)
       .set({
         balanceMxn: sql`balance_mxn - ${amountMXN.toFixed(2)}`,
         updatedAt: new Date(),
       })
-      .where(eq(walletsTable.id, senderWallet.id));
+      .where(
+        and(
+          eq(walletsTable.id, senderWallet.id),
+          sql`balance_mxn >= ${amountMXN.toFixed(2)}::numeric`,
+        ),
+      )
+      .returning({ id: walletsTable.id, balanceMxn: walletsTable.balanceMxn });
+
+    if (!debitResult) {
+      throw Object.assign(new Error("INSUFFICIENT_BALANCE"), {
+        code: "INSUFFICIENT_BALANCE",
+        currentBalance: 0,
+      });
+    }
 
     await tx
       .update(walletsTable)
@@ -142,7 +149,7 @@ export async function p2pTransfer(
 
     senderTxId = senderTx.id;
     receiverTxId = receiverTx.id;
-    newSenderBalance = currentBalance - amountMXN;
+    newSenderBalance = parseFloat(debitResult.balanceMxn ?? "0");
   });
 
   logger.info(

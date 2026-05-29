@@ -1,9 +1,10 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import rateLimit from "express-rate-limit";
 import router from "./routes";
 import { handlePagoyaWebhook } from "./routes/pagoya";
 import { handleConektaWebhook, handleConektaCardWebhook } from "./wallet/routes/wallet.js";
@@ -89,13 +90,63 @@ app.get("/manifest.json", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/manifest.json"));
 });
 
-app.get("/command-center", (req, res) => {
+// ── Admin token middleware ────────────────────────────────────────────────────
+// Protects the command center and sensitive admin routes.
+// Pass X-Admin-Token header or ?token= query param with the ADMIN_TOKEN secret.
+function requireAdminToken(req: Request, res: Response, next: NextFunction): void {
+  const expected = process.env.ADMIN_TOKEN;
+  if (!expected) { next(); return; } // Skip if not configured (dev convenience)
+  const provided =
+    (req.headers["x-admin-token"] as string | undefined) ??
+    (req.query.token as string | undefined);
+  if (provided !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
+
+app.get("/command-center", requireAdminToken, (req, res) => {
   res.sendFile(path.join(__dirname, "../public/command-center.html"));
 });
 
-app.get("/command-center.html", (req, res) => {
+app.get("/command-center.html", requireAdminToken, (req, res) => {
   res.sendFile(path.join(__dirname, "../public/command-center.html"));
 });
+
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Demasiados intentos. Intenta de nuevo en 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const walletLoadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Demasiados intentos. Intenta de nuevo en 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Demasiados intentos de OTP. Intenta de nuevo en 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters to sensitive endpoints before the main router
+app.post("/api/bills/pay", paymentLimiter);
+app.post("/api/wallet/load/oxxo", walletLoadLimiter);
+app.post("/api/wallet/load/card", walletLoadLimiter);
+app.post("/api/cards/charge-and-save", walletLoadLimiter);
+app.post("/api/wallet/transfer", paymentLimiter);
+app.post("/api/otp/send", otpLimiter);
+app.post("/api/auth/start", otpLimiter);
 
 app.use("/api", router);
 

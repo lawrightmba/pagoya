@@ -1,4 +1,4 @@
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and } from "drizzle-orm";
 import { db, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
 import type { Wallet, WalletTransaction } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
@@ -92,21 +92,12 @@ export async function debitWallet(
 
   await db.transaction(async (tx) => {
     const [wallet] = await tx
-      .select()
+      .select({ id: walletsTable.id })
       .from(walletsTable)
       .where(eq(walletsTable.id, walletId))
       .limit(1);
 
     if (!wallet) throw new Error(`Wallet not found: ${walletId}`);
-
-    const currentBalance = parseFloat(wallet.balanceMxn ?? "0");
-    if (currentBalance < amountMXN) {
-      const err = new Error("INSUFFICIENT_BALANCE") as Error & {
-        currentBalance: number;
-      };
-      err.currentBalance = currentBalance;
-      throw err;
-    }
 
     const [newTx] = await tx
       .insert(walletTransactionsTable)
@@ -122,13 +113,27 @@ export async function debitWallet(
 
     newTxId = newTx.id;
 
-    await tx
+    // Atomic conditional debit — only succeeds if balance is still sufficient.
+    // Eliminates race condition between concurrent debit requests under READ COMMITTED.
+    const updated = await tx
       .update(walletsTable)
       .set({
         balanceMxn: sql`balance_mxn - ${amountMXN.toFixed(2)}`,
         updatedAt: new Date(),
       })
-      .where(eq(walletsTable.id, walletId));
+      .where(
+        and(
+          eq(walletsTable.id, walletId),
+          sql`balance_mxn >= ${amountMXN.toFixed(2)}::numeric`,
+        ),
+      )
+      .returning({ id: walletsTable.id });
+
+    if (updated.length === 0) {
+      const err = new Error("INSUFFICIENT_BALANCE") as Error & { currentBalance: number };
+      err.currentBalance = 0;
+      throw err;
+    }
   });
 
   logger.info({ walletId, amountMXN, description }, "wallet: debited");

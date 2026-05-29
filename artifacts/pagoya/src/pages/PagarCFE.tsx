@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 
 export default function PagarCFE() {
   const [, navigate] = useLocation();
+  const [leadPhone, setLeadPhone] = useState("");
 
   return (
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
@@ -436,21 +438,48 @@ export default function PagarCFE() {
             <p style={{ color: "#CBD5E1", lineHeight: 1.7, marginBottom: "8px" }}>
               No esperes a que te corten la luz. Con PagoYa, pagar tu CFE toma menos tiempo que leer este artículo.
             </p>
-            <p style={{ color: "#94A3B8", marginBottom: "28px" }}>
+            <p style={{ color: "#94A3B8", marginBottom: "24px" }}>
               Don't wait until they cut your power. With PagoYa, paying your CFE takes less time than reading this article.
             </p>
-            <button
-              onClick={() => navigate("/register")}
-              style={{
-                background: "#1D9E75", color: "white", border: "none",
-                borderRadius: "12px", padding: "16px 36px",
-                fontSize: "16px", fontWeight: 700, cursor: "pointer",
-                display: "inline-block",
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const phone = leadPhone.replace(/\D/g, "");
+                navigate(phone.length >= 10 ? `/register?telefono=${phone}` : "/register");
               }}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", maxWidth: "340px", margin: "0 auto 8px" }}
             >
-              Descargar PagoYa y pagar mi CFE →
-            </button>
-            <p style={{ color: "#475569", fontSize: "12px", marginTop: "20px", lineHeight: 1.5 }}>
+              <input
+                type="tel"
+                value={leadPhone}
+                onChange={(e) => setLeadPhone(e.target.value)}
+                placeholder="Tu número de celular"
+                maxLength={10}
+                style={{
+                  width: "100%",
+                  padding: "14px 18px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "rgba(255,255,255,0.07)",
+                  color: "#FFFFFF",
+                  fontSize: "16px",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  width: "100%",
+                  background: "#1D9E75", color: "white", border: "none",
+                  borderRadius: "12px", padding: "16px 36px",
+                  fontSize: "16px", fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                Empezar ahora →
+              </button>
+            </form>
+            <p style={{ color: "#475569", fontSize: "12px", marginTop: "16px", lineHeight: 1.5 }}>
               PagoYa es operado por Longview Meridian Technologies. Pagos procesados vía SIPREL y Evoluciona con failover automático. Comisión fija de $25 MXN por transacción. Los tiempos de acreditación dependen de CFE.
             </p>
           </div>
