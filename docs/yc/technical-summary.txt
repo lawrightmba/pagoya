@@ -1,0 +1,141 @@
+PagoYa — Technical Summary for Y Combinator
+pagoyamx.com  |  pagoseguromx.com
+Longview Meridian Technologies LLC  |  Built entirely without an external dev team using AI-assisted development (Claude + Replit)
+
+1. Core Technology Stack
+Layer           Technology                                      Notes
+Runtime         Node.js / Express 5                             TypeScript throughout
+ORM / DB        Drizzle ORM + PostgreSQL (Neon)                 Atomic transactions, schema migrations
+Frontend        React + Vite                                    Mobile-first, PWA-ready
+AI Layer        Anthropic Claude (claude-sonnet-4-5)            Tool-use agent loop, 7-tool set
+Messaging       Twilio WhatsApp Business API                    Inbound + outbound, receipts, OTP, agent webhook
+Bill Pay Rails  SIPREL (primary) + Evoluciona Movil (fallback)  Auto-failover, 20+ billers
+Card Processing Conekta                                         Tokenization, saved cards, webhooks
+Cash-In         Digital Femsa / OXXO                           Barcode voucher generation
+Bank Transfers  SPEI inbound                                    Webhook-verified, wallet credit
+KYC             RENAPO CURP verification + Belvo                Nivel 2 wallet limits
+Auth            JWT + bcrypt                                    Per-user session, rep auth separate
+Deployment      Replit Reserved VM                              Custom domain TLS, always-on
+Analytics       GA4 + PostHog                                   Conversion funnels, event tracking
+Email CRM       HubSpot + Brevo                                 Broker outreach sequences
+
+2. Agentic AI — Paula
+Paula is a Claude-powered AI agent (claude-sonnet-4-5) running a tool-use loop across two simultaneous channels: WhatsApp (inbound) and an in-app floating widget on every product page. She is not a chatbot — she takes real actions against live user data and personalizes every response using the user's WhatsApp display name.
+
+Tool Set (live today)
+Tool                    What It Does
+get_wallet_balance      Returns exact MXN balance in real time from the wallets table
+get_payment_history     Retrieves and narrates recent transactions in natural Spanish
+get_pending_oxxo        Checks if a cash deposit voucher is still pending confirmation
+get_loyalty_points      Returns current points balance, lifetime total, tier (Bronce/Plata/Oro), and points to next tier
+get_deposit_instructions  Returns step-by-step funding instructions for OXXO, SPEI, or card — whichever the user asks about
+prepare_bill_payment    Validates service + reference + balance, stages payment with fee-inclusive summary for 2FA confirmation
+escalate_to_support     Hands off to human agent via WhatsApp with full conversation context
+
+Deployment Architecture
+•  WhatsApp inbound: any message to the PagoYa number routes through the Paula agent loop. Paula greets users by their WhatsApp display name on first contact. First-contact messages screened for rep referral codes before entering the agent flow.
+•  In-app widget: persists across every screen with localStorage session memory, typing indicator, escalation banner.
+•  Post-payment hook: after every successful payment the app auto-opens Paula's chat after 4 seconds with pre-filled payment context — turns a receipt into a retention event.
+•  AI bill autofill: home screen natural-language input parses 'CFE 350 pesos' and pre-fills service, amount, and reference in one shot via Claude.
+
+Contextual Paula Hints (live as of May 2026)
+Paula surfaces inline at 6 high-friction points across the product — not as a chat prompt, but as a contextual nudge that pre-loads her with the exact question the user is most likely stuck on. One tap opens the full agent conversation.
+●  Registration — CURP field: "¿No sabes tu CURP? Paula puede ayudarte a encontrarla."
+●  OTP screen: Troubleshooting prompt triggered after a failed or expired code — Paula walks the user through resend and WhatsApp delivery issues.
+●  Payment form — reference number field: "¿Dónde encuentro mi número de referencia?" — pre-loaded with biller context so Paula can give a biller-specific answer.
+●  Payment review screen — fee line: "¿Por qué hay una comisión de $25 MXN?" — Paula explains the fee and positions it against the cost of a trip to OXXO.
+●  Cash load screen — OXXO deposit: Step-by-step OXXO deposit guidance — how to show the barcode, how long confirmation takes, what to do if the deposit doesn't reflect.
+
+Each hint is a single tap that pre-loads Paula's context — users never have to describe their situation from scratch. This pattern reduces support escalations at the exact moments users are most likely to abandon.
+
+3. Payment Infrastructure
+Wallet Architecture
+Every user has a wallets row linked by phone. All debits and credits are atomic DB transactions — a bill payment deducts the wallet and records the transaction in a single operation using a conditional UPDATE ... WHERE balance_mxn >= amount RETURNING id pattern. If zero rows are returned, the transaction is rejected with INSUFFICIENT_BALANCE before any external API call is made. No partial states, no race conditions.
+
+Transaction Type        Source                  Badge Color   Status
+load_oxxo               Digital Femsa barcode   Coral         pending → completed via webhook
+load_card               Conekta tokenized card  Purple        completed on charge.paid webhook
+load_spei               SPEI inbound transfer   Blue          completed on bank webhook
+bill_pay                SIPREL / Evoluciona     Red debit     atomic with wallet debit
+SIGNUP_BONUS            Street team referral    Green         credited post OTP verification
+p2p_send / p2p_receive  User-to-user transfer   Orange        atomic debit + credit
+
+Bill Pay Rail
+•  Primary: SIPREL — 20+ billers including CFE, Telmex, Telcel, IZZI, Sky, and streaming services
+•  Fallback: Evoluciona Movil — auto-failover if SIPREL returns an error
+•  Fee: $25 MXN flat per transaction, deducted atomically from wallet
+•  Daily AML cap: $50,000 MXN per user per day enforced at the route layer before any provider call
+•  Loyalty: 1 pt per $10 MXN paid; Bronze/Silver/Gold multipliers; redeemable for wallet credit or fee waiver token
+
+4. Street Team Referral & OTP Onboarding
+Reps recruit users in the field with unique QR codes. The signup flow is fully gated by WhatsApp OTP before any wallet or user record is created.
+
+Signup Flow (3 screens)
+Step          What Happens                                                          Fraud Guard
+Form          Name, phone (international E.164), CURP, colonia, ref_code captured  Phone + CURP duplicate check before OTP fires
+OTP           6-digit code sent via Twilio WhatsApp, 5-min TTL, 3-attempt limit    generateOTP resets on resend; max_attempts blocks without expiring session
+Bonus Credit  Wallet credited $25-50 MXN via SIGNUP_BONUS transaction              Idempotency lock on signup_bonus_claimed; rep velocity check (warn @10/hr, block @20/hr)
+
+Rep Dashboard
+•  Self-serve QR code generation via api.qrserver.com — downloadable, printable
+•  Shareable signup link with one-tap clipboard copy
+•  Live recruitment stats: referidos count, bonos acreditados, valor total MXN
+•  Commission tracker: $5 MXN per confirmed payment, 7-day hold, bulk payout management
+•  Admin BONOS tab: toggle bonus on/off, set amount ($25/$50), eligible rep codes, velocity thresholds, fraud log
+
+5. PagoSeguro — Rent Collection Vertical
+PagoSeguro (pagoseguromx.com) is a purpose-built vertical on the same infrastructure, serving the landlord-tenant-broker relationship in Mexico. Separate domain for distinct B2B acquisition — same OXXO/SPEI rails, same wallet architecture.
+
+Feature                                                           Status
+4 user roles: landlord, tenant, broker, admin                     Live
+SPEI receipt upload + landlord confirmation workflow              Live
+OXXO cash-in integration                                          Live
+Automatic PDF receipt generation                                  Live
+WhatsApp payment notifications                                    Live
+Broker QR codes + printable flyers                                Live
+Commission tiers: $150 signup / $500 first payment / $300 recurring  Live
+8 SEO-optimized landing pages (PV / Jalisco geo-targeted)         Live
+Bilingual Spanish + English                                       Live
+Self-serve landlord/tenant demo environment                       Live
+56 brokers in 28-day HubSpot + Brevo email sequence               Active
+Automated recurring charges + late fee logic                      In progress
+
+6. KYC, Security & Compliance
+•  CURP verification against RENAPO — Nivel 2 unlocks $24,000 MXN/month wallet limit (vs. $6,000 unverified)
+•  Belvo API integration: aggregation/KYC layer (7 endpoints) + Direct Debit layer (11 endpoints) — UI and backend deployed, awaiting Belvo production credential approval
+•  JWT authentication + bcrypt password hashing throughout
+•  Per-landlord CLABE configuration with lease ownership validation (PagoSeguro)
+•  LFPDPPP-compliant Privacy Notice and Terms of Service live at pagoyamx.com
+•  HTTP→HTTPS redirect middleware, httpOnly session cookies, secure flag in production
+•  Immutable audit log via Postgres-level triggers (PagoSeguro payment events)
+•  UptimeRobot monitoring on both domains
+•  Rate limiting: payments and transfers capped at 20 requests/15 min per IP; OTP at 5/15 min; wallet loads at 10/15 min — enforced at the Express middleware layer
+•  AML daily cap: $50,000 MXN per user per day on bill payments, enforced via DB aggregate before any provider call
+•  Atomic wallet debit: all three debit paths (bill pay, P2P transfer, wallet load) use a single conditional SQL UPDATE with a balance check — eliminates race condition between read and write
+•  Admin route protection: command center and admin APIs require a secret token (ADMIN_TOKEN env var) passed as X-Admin-Token header or query param
+
+7. Test Coverage
+Platform      Test Suite                           Coverage
+PagoYa        Bill pay + wallet integration        75/75 passing (Conekta sandbox)
+PagoSeguro    Payment flows + auth                 21/21 passing
+OTP Service   generate / verify / clear functions  Isolated service, manually verified
+Bonus Service Eligibility + velocity + credit      Isolated service, manually verified
+
+8. Pending Activations (24-48 hrs)
+Both items below are configuration changes only — all code is complete and tested in sandbox.
+
+Item                   What Changes                                                            What It Unlocks
+SIPREL/Taecel live keys  Swap env var TAECEL_API_KEY to production                             Real bill payments generating $25 MXN per transaction
+Conekta live keys      Swap CONEKTA_API_KEY + register production webhook at pagoyamx.com     Live card top-ups, saved card support
+
+9. What Is Being Built Next
+•  Merchant / biller self-service onboarding portal
+•  Scheduled recurring payments (auto-pay for monthly bills)
+•  iOS and Android PWA push notifications
+•  STP / DiMo integration for SPEI outbound and P2P transfers (outreach initiated to Jaime Marquez Poo)
+•  Paula for PagoSeguro tenants — ask about rent status, payment history, and upcoming due dates directly in WhatsApp
+•  PagoSeguro: automated rent collection with late fee logic
+•  PagoSeguro: WhatsApp payment reminders with embedded payment links
+•  Multi-property management for institutional landlords (5+ units)
+
+All code built by Lloyd Wright (founder) using AI-assisted development via Claude (Anthropic) and Replit. No external development team. Both platforms are live in production with real users in Mexico.
