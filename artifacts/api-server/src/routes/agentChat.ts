@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db, billPaymentsTable, walletsTable, walletTransactionsTable } from "@workspace/db";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, sql } from "drizzle-orm";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 import { getServiceById } from "../billpay/services/catalog.js";
@@ -24,17 +24,29 @@ export interface PendingPaymentStage {
 }
 
 // ─── System prompt ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Eres Paula, la asistente de PagoYa — una app mexicana de pago de servicios y recargas. Ayudas a usuarios con dudas sobre sus pagos, saldo, servicios disponibles, y también puedes iniciar pagos de servicios directamente desde WhatsApp.
+function buildSystemPrompt(profileName?: string | null): string {
+  const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
+  return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario.${greeting} Eres conversacional, empática y directa. Hablas en español mexicano natural.
 
-Servicios disponibles: CFE (luz), SACMEX/SIAPA (agua), Gas Natural, Zeta Gas, Izzi, TotalPlay, Megacable, Telmex, Starlink, Sky, Dish, Telcel, AT&T, Movistar, y más. Costo por transacción: $25 MXN. Formas de cargar saldo: efectivo en OXXO, tarjeta de débito/crédito, transferencia SPEI. Puntos de lealtad: 1 punto por cada $10 MXN pagados, con niveles Bronze, Silver, Gold.
+MISIÓN DE PAGOYA: Permitir que cualquier persona con WhatsApp pague sus servicios (luz, agua, gas, internet, celular) sin necesitar una cuenta bancaria ni descargar una app. Solo WhatsApp + saldo en la billetera digital.
 
-PAGOS DIRECTOS: Si el usuario dice "paga mi CFE", "quiero pagar mi luz", "pagar Telmex", etc., usa prepare_bill_payment para iniciar el pago. Necesitas: serviceId (usa los IDs del catálogo: cfe, sacmex, agua_jalisco, gas_natural, zeta_gas, izzi, totalplay, megacable, telmex_internet, starlink, sky, dish, telcel, att, movistar, etc.), referencia (número de cuenta o contrato), monto en MXN, y telefono del usuario. Si el usuario no proporciona referencia o monto, pregúntale antes de llamar la herramienta. Después de llamar prepare_bill_payment, muestra el resumen de pago exactamente como lo indica el campo confirmText y espera confirmación.
+Servicios disponibles: CFE (luz), SACMEX/SIAPA (agua), Gas Natural, Zeta Gas, Izzi, TotalPlay, Megacable, Telmex, Starlink, Sky, Dish, Telcel, AT&T, Movistar, y más.
+Costo por transacción: $25 MXN.
+Formas de cargar saldo: efectivo en OXXO (barcode que llega a tu WhatsApp), tarjeta de débito/crédito, transferencia SPEI.
+Puntos de lealtad: 1 punto por cada $10 MXN pagados — niveles Bronce, Plata (500 pts), Oro (2,000 pts). Los niveles más altos dan multiplicadores y cashback.
 
-Cuando el usuario pregunta sobre SU cuenta específica (su saldo, sus pagos, su depósito), usa las herramientas disponibles para consultar su información real antes de responder. No inventes datos.
+PAGOS DIRECTOS: Si el usuario dice "paga mi CFE", "quiero pagar mi luz", "pagar Telmex", etc., usa prepare_bill_payment para iniciar el pago. Necesitas: serviceId (IDs del catálogo: cfe, sacmex, agua_jalisco, gas_natural, zeta_gas, izzi, totalplay, megacable, telmex_internet, starlink, sky, dish, telcel, att, movistar), referencia (número de cuenta o contrato), monto en MXN, y telefono del usuario. Si el usuario no da referencia o monto, pregúntale antes de llamar la herramienta. Después de llamar prepare_bill_payment, muestra el confirmText exactamente y espera respuesta.
 
-Cuando el usuario reporta un problema que no puedes resolver (pago fallido sin reembolso, cuenta bloqueada, disputa), usa escalate_to_support y confirma al usuario que un agente humano los contactará pronto.
+SALDO: Cuando el usuario pregunta cómo cargar saldo o depositar, usa get_deposit_instructions para darle las opciones paso a paso.
 
-Responde siempre en el mismo idioma que el usuario. Si escribe en español, responde en español. Si escribe en inglés, responde en inglés. Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.`;
+PUNTOS: Cuando el usuario pregunta por sus puntos, nivel, o recompensas, usa get_loyalty_points.
+
+Cuando el usuario pregunta sobre SU cuenta específica (su saldo, sus pagos anteriores, su depósito pendiente), usa las herramientas correspondientes. No inventes datos.
+
+Cuando el usuario reporta un problema que no puedes resolver (pago fallido sin reembolso, cuenta bloqueada, disputa), usa escalate_to_support.
+
+Responde siempre en el mismo idioma que el usuario. Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.`;
+}
 
 // ─── Tool definitions ──────────────────────────────────────────────────────────
 const TOOLS = [
@@ -67,6 +79,33 @@ const TOOLS = [
       type: "object",
       properties: {
         telefono: { type: "string", description: "User phone number with country code" },
+      },
+      required: ["telefono"],
+    },
+  },
+  {
+    name: "get_loyalty_points",
+    description: "Returns the user's current loyalty points balance, lifetime points, and tier (Bronce/Plata/Oro). Use when user asks about their points, rewards, level, or how many points they have.",
+    input_schema: {
+      type: "object",
+      properties: {
+        telefono: { type: "string", description: "User phone number with country code" },
+      },
+      required: ["telefono"],
+    },
+  },
+  {
+    name: "get_deposit_instructions",
+    description: "Returns step-by-step instructions for how the user can add saldo (money) to their PagoYa wallet. Covers OXXO cash deposit, SPEI bank transfer, and debit/credit card. Use when user asks how to load money, deposit, or add saldo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        telefono: { type: "string", description: "User phone number with country code" },
+        method: {
+          type: "string",
+          enum: ["oxxo", "spei", "card", "all"],
+          description: "Which deposit method to explain. Default 'all' shows all options.",
+        },
       },
       required: ["telefono"],
     },
@@ -160,6 +199,62 @@ async function executeToolCall(
       return { result: rows };
     }
 
+    case "get_loyalty_points": {
+      if (!tel) return { result: { error: "telefono no disponible" } };
+      try {
+        const cleanTel = tel.startsWith("+") ? tel : `+${tel}`;
+        const result = await db.execute(
+          sql`SELECT la.points_balance, la.points_lifetime, la.tier
+              FROM loyalty_accounts la
+              WHERE la.phone = ${cleanTel}
+              LIMIT 1`,
+        );
+        const rows = result.rows as Array<{
+          points_balance: string;
+          points_lifetime: string;
+          tier: string;
+        }>;
+        if (!rows.length) {
+          return { result: { points_balance: 0, points_lifetime: 0, tier: "bronce", message: "Cuenta nueva — gana puntos pagando servicios." } };
+        }
+        const row = rows[0];
+        const balance = parseInt(row.points_balance ?? "0");
+        const lifetime = parseInt(row.points_lifetime ?? "0");
+        const tier = row.tier ?? "bronce";
+        const ptsToPlata = Math.max(0, 500 - lifetime);
+        const ptsToOro = Math.max(0, 2000 - lifetime);
+        return {
+          result: {
+            points_balance: balance,
+            points_lifetime: lifetime,
+            tier,
+            next_tier: tier === "bronce" ? `Plata (faltan ${ptsToPlata} pts)` : tier === "plata" ? `Oro (faltan ${ptsToOro} pts)` : "¡Ya estás en el nivel máximo Oro! 🥇",
+          },
+        };
+      } catch (err) {
+        logger.error({ err }, "agentChat: get_loyalty_points failed");
+        return { result: { error: "No se pudo consultar los puntos en este momento." } };
+      }
+    }
+
+    case "get_deposit_instructions": {
+      const method = (input.method as string | undefined) ?? "all";
+      const appUrl = "https://pagoya.mx";
+      const instructions: Record<string, string> = {
+        oxxo: `💵 *Depositar en OXXO*\n1. Abre la app PagoYa en ${appUrl}\n2. Ve a "Cargar Saldo" → "Efectivo OXXO"\n3. Te llegará un código de barras por WhatsApp\n4. Muéstralo en cualquier OXXO y paga en efectivo\n5. Tu saldo se acredita en minutos ✅`,
+        spei: `🏦 *Transferencia SPEI*\n1. Abre la app PagoYa en ${appUrl}\n2. Ve a "Cargar Saldo" → "Transferencia SPEI"\n3. Copia el número CLABE que aparece\n4. Haz la transferencia desde tu banco\n5. Tu saldo se acredita en minutos ✅`,
+        card: `💳 *Tarjeta de débito o crédito*\n1. Abre la app PagoYa en ${appUrl}\n2. Ve a "Cargar Saldo" → "Tarjeta"\n3. Ingresa los datos de tu tarjeta (Visa/Mastercard)\n4. Tu saldo se acredita al instante ✅`,
+      };
+      if (method === "oxxo") return { result: { instructions: instructions.oxxo } };
+      if (method === "spei") return { result: { instructions: instructions.spei } };
+      if (method === "card") return { result: { instructions: instructions.card } };
+      return {
+        result: {
+          instructions: `Puedes cargar saldo de 3 formas:\n\n${instructions.oxxo}\n\n${instructions.spei}\n\n${instructions.card}`,
+        },
+      };
+    }
+
     case "escalate_to_support": {
       const summary = (input.issue_summary as string | undefined) ?? "Sin detalle";
       const userTel = tel ?? "desconocido";
@@ -181,7 +276,6 @@ async function executeToolCall(
       const monto = Number(input.monto);
       const telefono = (input.telefono as string | undefined) ?? resolvedTelefono ?? "";
 
-      // Validate service
       const service = getServiceById(serviceId);
       if (!service) {
         return { result: { error: `Servicio no encontrado: ${serviceId}. Verifica el ID del catálogo.` } };
@@ -195,7 +289,6 @@ async function executeToolCall(
         return { result: { error: "El monto debe ser un número positivo." } };
       }
 
-      // Check wallet balance
       const cleanTel = telefono.startsWith("+") ? telefono : `+${telefono}`;
       const [wallet] = await db
         .select({ balance_mxn: walletsTable.balanceMxn })
@@ -204,12 +297,12 @@ async function executeToolCall(
         .limit(1);
 
       const balance = wallet ? Number(wallet.balance_mxn) : 0;
-      const totalCost = monto + 25; // platform fee
+      const totalCost = monto + 25;
 
       if (balance < totalCost) {
         return {
           result: {
-            error: `Saldo insuficiente. Tienes $${balance.toFixed(2)} MXN pero necesitas $${totalCost.toFixed(2)} MXN (pago $${monto} + comisión $25).`,
+            error: `Saldo insuficiente. Tienes $${balance.toFixed(2)} MXN pero necesitas $${totalCost.toFixed(2)} MXN (pago $${monto} + comisión $25). ¿Quieres que te explique cómo cargar saldo?`,
           },
         };
       }
@@ -239,10 +332,12 @@ router.post("/", async (req: Request, res: Response) => {
     message,
     telefono,
     history = [],
+    profileName,
   } = req.body as {
     message?: string;
     telefono?: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
+    profileName?: string | null;
   };
 
   if (!message || message.trim().length === 0) {
@@ -251,7 +346,6 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    // Build initial messages: history + new user message
     const messages: MessageParam[] = [
       ...history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: message.trim() },
@@ -261,15 +355,14 @@ router.post("/", async (req: Request, res: Response) => {
     let finalReply = "";
     let stagedPayment: PendingPaymentStage | undefined;
 
-    // Tool-use loop — max 5 iterations to guard against runaway loops
     for (let i = 0; i < 5; i++) {
       const response = await (anthropic.messages.create as (p: unknown) => Promise<{
         stop_reason: string;
         content: ContentBlock[];
       }>)({
-        model: "claude-haiku-4-5",
+        model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: buildSystemPrompt(profileName),
         tools: TOOLS,
         messages,
       });
@@ -279,10 +372,8 @@ router.post("/", async (req: Request, res: Response) => {
           (b): b is ToolUseBlock => b.type === "tool_use",
         );
 
-        // Append the assistant message (contains tool_use blocks)
         messages.push({ role: "assistant", content: response.content });
 
-        // Execute all tools in this turn in parallel
         const results = await Promise.all(
           toolBlocks.map(async (tb) => {
             const { result, pendingPayment } = await executeToolCall(tb.name, tb.input, telefono ?? null);
@@ -292,7 +383,6 @@ router.post("/", async (req: Request, res: Response) => {
           }),
         );
 
-        // Append tool_result message
         messages.push({
           role: "user",
           content: results.map((r) => ({
@@ -302,7 +392,6 @@ router.post("/", async (req: Request, res: Response) => {
           })),
         });
       } else {
-        // stop_reason === "end_turn" — extract text reply
         const textBlock = response.content.find((b): b is TextBlock => b.type === "text");
         finalReply = textBlock?.text ?? "";
         break;

@@ -135,6 +135,7 @@ router.post("/", async (req: Request, res: Response) => {
         message: userMessage,
         telefono: `+${phoneKey}`,
         history: session.conversationHistory,
+        profileName: session.profileName ?? profileName ?? null,
       }),
     });
 
