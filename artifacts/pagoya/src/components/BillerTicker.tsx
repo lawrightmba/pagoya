@@ -55,10 +55,10 @@ function Pill({ icon, name, small, dark }: PillProps) {
   );
 }
 
-export default function BillerTicker({ small, dark }: { small?: boolean; dark?: boolean }) {
+export default function BillerTicker({ small, dark, fadeColor: propFadeColor }: { small?: boolean; dark?: boolean; fadeColor?: string }) {
   // Fade mask color must match the page background behind the ticker
-  // LIGHT bg → fade to #ffffff   DARK bg → fade to #0A2540
-  const fadeColor = dark ? "#0A2540" : "#ffffff";
+  // Caller can pass an explicit fadeColor; falls back to dark/light inference
+  const fadeColor = propFadeColor ?? (dark ? "#0A2540" : "#ffffff");
 
   return (
     <div

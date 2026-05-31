@@ -152,7 +152,7 @@ export default function AutofillInput({ phone, onAutofill, language = "es", dark
           onClick={handleSubmit}
           disabled={loading || text.trim().length < 3}
           style={{
-            background: loading || text.trim().length < 3 ? "#e5e7eb" : "#10b981",
+            background: loading || text.trim().length < 3 ? "#e5e7eb" : "#007A4A",
             color: loading || text.trim().length < 3 ? "#9ca3af" : "#fff",
             border: "none",
             borderRadius: "0 10px 10px 0",

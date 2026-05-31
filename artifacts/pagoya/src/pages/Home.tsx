@@ -25,30 +25,75 @@ function setLangPref(lang: "es" | "en") {
 // ─── Quick access grid data ────────────────────────────────────────────────────
 
 const QUICK_ACCESS = [
-  { id: "cfe",      icon: "⚡", name: "CFE",       color: "#1D9E75" },
-  { id: "telcel",   icon: "📱", name: "Telcel",    color: "#D85A30" },
-  { id: "telmex",   icon: "🌐", name: "Telmex",    color: "#7F77DD" },
-  { id: "izzi",     icon: "📺", name: "Izzi",      color: "#1D9E75" },
-  { id: "sky",      icon: "📡", name: "Sky",       color: "#D85A30" },
-  { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#7F77DD" },
+  { id: "cfe",      icon: "⚡", name: "CFE",       color: "#007A4A" },
+  { id: "telcel",   icon: "📱", name: "Telcel",    color: "#FF5C1A" },
+  { id: "telmex",   icon: "🌐", name: "Telmex",    color: "#5B48D9" },
+  { id: "izzi",     icon: "📺", name: "Izzi",      color: "#007A4A" },
+  { id: "sky",      icon: "📡", name: "Sky",       color: "#FF5C1A" },
+  { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#D4145A" },
+];
+
+// ─── Gift card catalog ────────────────────────────────────────────────────────
+
+const GIFT_CARD_BRANDS = [
+  { id: "netflix",   emoji: "🎬", name: "Netflix",     denominations: [
+    { serviceId: "netflix_300",  amount: 300 },
+    { serviceId: "netflix_400",  amount: 400 },
+    { serviceId: "netflix_500",  amount: 500 },
+    { serviceId: "netflix_700",  amount: 700 },
+  ]},
+  { id: "amazon",    emoji: "📦", name: "Amazon",      denominations: [
+    { serviceId: "amazon_100",   amount: 100 },
+    { serviceId: "amazon_200",   amount: 200 },
+    { serviceId: "amazon_300",   amount: 300 },
+    { serviceId: "amazon_500",   amount: 500 },
+    { serviceId: "amazon_1000",  amount: 1000 },
+  ]},
+  { id: "gplay",     emoji: "🎮", name: "Google Play", denominations: [
+    { serviceId: "google_play_50",  amount: 50 },
+    { serviceId: "google_play_100", amount: 100 },
+    { serviceId: "google_play_200", amount: 200 },
+    { serviceId: "google_play_300", amount: 300 },
+    { serviceId: "google_play_500", amount: 500 },
+  ]},
+  { id: "uber",      emoji: "🚗", name: "Uber",        denominations: [
+    { serviceId: "uber_150",      amount: 150 },
+  ]},
+  { id: "uber_eats", emoji: "🍔", name: "Uber Eats",   denominations: [
+    { serviceId: "uber_eats_300", amount: 300 },
+  ]},
+  { id: "cinepolis", emoji: "🎬", name: "Cinépolis",   denominations: [
+    { serviceId: "cinepolis_60",  amount: 60 },
+    { serviceId: "cinepolis_100", amount: 100 },
+    { serviceId: "cinepolis_140", amount: 140 },
+    { serviceId: "cinepolis_210", amount: 210 },
+  ]},
+  { id: "starbucks", emoji: "☕", name: "Starbucks",   denominations: [
+    { serviceId: "starbucks_200", amount: 200 },
+    { serviceId: "starbucks_300", amount: 300 },
+  ]},
+  { id: "liverpool", emoji: "🛍️", name: "Liverpool",   denominations: [
+    { serviceId: "liverpool_500",  amount: 500 },
+    { serviceId: "liverpool_1000", amount: 1000 },
+    { serviceId: "liverpool_2000", amount: 2000 },
+  ]},
+  { id: "soriana",   emoji: "🛒", name: "Soriana",     denominations: [
+    { serviceId: "soriana_500", amount: 500 },
+  ]},
 ];
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-// BEFORE: background: "rgba(29,158,117,0.18)"
-// AFTER:  background: "rgba(255,255,255,0.08)"
 function Divider() {
-  return <div style={{ height: "1px", background: "rgba(255,255,255,0.08)", margin: "0 20px" }} />;
+  return <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 20px" }} />;
 }
 
-// BEFORE: step text color: "#374151"
-// AFTER:  step text color: "#FFFFFF"
 function StepRow({ number, icon, es, en, lang }: { number: number; icon: string; es: string; en: string; lang: "es" | "en" }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
       <div style={{
         width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
-        background: "#1D9E75", color: "white",
+        background: "#007A4A", color: "white",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: "13px", fontWeight: 800,
       }}>
@@ -56,7 +101,7 @@ function StepRow({ number, icon, es, en, lang }: { number: number; icon: string;
       </div>
       <div>
         <span style={{ fontSize: "18px", marginRight: "6px" }}>{icon}</span>
-        <span style={{ fontSize: "14px", color: "#FFFFFF", fontWeight: 500 }}>
+        <span style={{ fontSize: "14px", color: "#0D2618", fontWeight: 500 }}>
           {lang === "es" ? es : en}
         </span>
       </div>
@@ -155,6 +200,11 @@ export default function Home() {
     navigate("/pagar");
   }
 
+  function handleGiftCard(serviceId: string, brandName: string, amount: number) {
+    setPaymentData({ ...paymentData, empresa: brandName, categoria: serviceId, monto: String(amount), referencia: "" });
+    navigate("/pagar");
+  }
+
   async function handleNotifSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!notifPhone.trim()) return;
@@ -171,7 +221,7 @@ export default function Home() {
   return (
     // BEFORE: background: "#FFFFFF"
     // AFTER:  background: "#0A2540"
-    <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+    <div style={{ background: "#FFFFFF", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
         <meta name="robots" content="index, follow" />
@@ -188,7 +238,7 @@ export default function Home() {
       <style>{`
         @keyframes pgStatReveal { 0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)} }
         .pg-qa-card { transition:transform 0.18s,box-shadow 0.18s,border-color 0.18s; }
-        .pg-qa-card:hover { transform:scale(1.04); box-shadow:0 6px 22px rgba(0,0,0,0.30)!important; border-color:#1D9E75!important; }
+        .pg-qa-card:hover { transform:scale(1.04); box-shadow:0 6px 22px rgba(0,0,0,0.12)!important; border-color:#007A4A!important; }
         @media(max-width:600px){
           .hero-h1{font-size:28px!important;}
           .hero-steps{flex-direction:column!important;gap:14px!important;}
@@ -210,7 +260,7 @@ export default function Home() {
           A. NAV BAR — navy (unchanged)
       ══════════════════════════════════════════════════════ */}
       <header style={{
-        background: "#0A2540",
+        background: "linear-gradient(90deg, #005432 0%, #006B3C 100%)",
         padding: "10px 20px",
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
@@ -249,9 +299,9 @@ export default function Home() {
           <button
             onClick={() => navigate("/puntos")}
             style={{
-              fontSize: "12px", fontWeight: 700, color: "#1D9E75",
-              border: "1.5px solid rgba(29,158,117,0.50)", borderRadius: "999px",
-              padding: "4px 10px", background: "rgba(29,158,117,0.12)", cursor: "pointer",
+              fontSize: "12px", fontWeight: 700, color: "#6EF5B0",
+              border: "1.5px solid rgba(110,245,176,0.50)", borderRadius: "999px",
+              padding: "4px 10px", background: "rgba(110,245,176,0.14)", cursor: "pointer",
               whiteSpace: "nowrap",
             }}
           >
@@ -317,7 +367,7 @@ export default function Home() {
             AFTER:  background: "#0A2540", h1 color: "#FFFFFF",  sub: "#94A3B8"
         ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "#0A2540",
+          background: "linear-gradient(180deg, #005432 0%, #007A4A 70%, #008A52 100%)",
           padding: "48px 24px 0",
           display: "flex",
           flexDirection: "column",
@@ -336,16 +386,14 @@ export default function Home() {
           >
             {es ? "Paga cualquier servicio" : "Pay any bill"}
             <br />
-            {/* teal accent — same color, now reads on dark bg */}
-            <span style={{ color: "#1D9E75" }}>
+            <span style={{ color: "#6EF5B0" }}>
               {es ? "en menos de 2 minutos" : "in under 2 minutes"}
             </span>
           </h1>
 
-          {/* BEFORE: color: "#6B7280"  AFTER: color: "#94A3B8" */}
           <p style={{
             fontSize: "16px",
-            color: "#94A3B8",
+            color: "rgba(255,255,255,0.78)",
             maxWidth: "340px",
             lineHeight: 1.6,
             margin: "0 0 12px",
@@ -362,20 +410,20 @@ export default function Home() {
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              background: "rgba(216,90,48,0.15)",
-              border: "1px solid rgba(216,90,48,0.48)",
+              background: "rgba(255,92,26,0.18)",
+              border: "1px solid rgba(255,92,26,0.55)",
               borderRadius: "999px",
               padding: "6px 16px",
               fontSize: "13px",
               fontWeight: 700,
-              color: "#FF7A50",
+              color: "#FFCFB8",
               cursor: "pointer",
               marginBottom: "28px",
               letterSpacing: "0.01em",
               transition: "background 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(216,90,48,0.26)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(216,90,48,0.15)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.30)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.18)"; }}
           >
             🎁&nbsp;{es ? "$25 MXN de bienvenida al registrarte gratis" : "$25 MXN welcome bonus — sign up free"}
           </button>
@@ -386,15 +434,14 @@ export default function Home() {
             Pass dark=true so pills use semi-transparent white bg
             Fade mask updated inside BillerTicker via dark prop
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 0 28px", marginTop: "4px", background: "#0A2540" }}>
-          <BillerTicker small dark />
+        <section style={{ padding: "0 0 28px", marginTop: "0", background: "#008A52" }}>
+          <BillerTicker small dark fadeColor="#008A52" />
         </section>
 
         {/* ══════════════════════════════════════════════════════
             D. 3-STEP HOW TO USE
-            Background stays navy; text updated in StepRow (#374151 → #FFFFFF)
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 24px 28px", background: "#0A2540" }}>
+        <section style={{ padding: "28px 24px 28px", background: "#F4FBF7" }}>
           <div
             className="hero-steps"
             style={{
@@ -423,28 +470,106 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
-            E. AUTOFILL INPUT (hero element)
-            dark=true → input bg #0F2F50, white text, teal focus
-            BEFORE trust color: "#9CA3AF"  AFTER: "#64748B"
+            GIFT CARDS — Celebration section
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 24px 28px", background: "#0A2540" }}>
+        <section style={{
+          background: "linear-gradient(135deg, #7C3AED 0%, #2563EB 38%, #0EA5E9 68%, #10B981 100%)",
+          padding: "28px 20px",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -40, left: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+
+          <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "26px" }}>🎁</span>
+              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em" }}>
+                {es ? "Gift Cards Digitales" : "Digital Gift Cards"}
+              </h2>
+            </div>
+            <p style={{ margin: "0 0 18px", fontSize: "13px", color: "rgba(255,255,255,0.82)", lineHeight: 1.4 }}>
+              {es ? "Compra al instante · PIN llega por WhatsApp 📲" : "Buy instantly · PIN sent on WhatsApp 📲"}
+            </p>
+
+            <style>{`.gc-scroll::-webkit-scrollbar{display:none}`}</style>
+            <div className="gc-scroll" style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "6px" }}>
+              {GIFT_CARD_BRANDS.map((brand) => (
+                <div key={brand.id} style={{
+                  flexShrink: 0,
+                  background: "rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255,255,255,0.28)",
+                  borderRadius: "16px",
+                  padding: "14px 14px 12px",
+                  minWidth: "140px",
+                }}>
+                  <div style={{ fontSize: "24px", marginBottom: "5px", lineHeight: 1 }}>{brand.emoji}</div>
+                  <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "13px", marginBottom: "10px", lineHeight: 1.2 }}>{brand.name}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                    {brand.denominations.map((d) => (
+                      <button
+                        key={d.serviceId}
+                        onClick={() => handleGiftCard(d.serviceId, brand.name, d.amount)}
+                        style={{
+                          background: "rgba(255,255,255,0.22)",
+                          border: "1px solid rgba(255,255,255,0.40)",
+                          borderRadius: "999px",
+                          padding: "4px 9px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.36)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
+                      >
+                        ${d.amount >= 1000 ? `${d.amount / 1000}K` : d.amount}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => navigate("/servicios?categoria=Gift+Cards")}
+              style={{
+                marginTop: "16px", width: "100%", padding: "12px",
+                borderRadius: "12px", border: "1.5px solid rgba(255,255,255,0.42)",
+                background: "rgba(255,255,255,0.14)", color: "#FFFFFF",
+                fontSize: "14px", fontWeight: 700, cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.14)"; }}
+            >
+              {es ? "Ver todas las gift cards →" : "See all gift cards →"}
+            </button>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
+            E. AUTOFILL INPUT
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "28px 24px 28px", background: "#FFFFFF" }}>
           <div style={{ maxWidth: "560px", margin: "0 auto" }}>
             <AutofillInput
               phone={phone}
               language={lang}
               onAutofill={handleAutofill}
-              dark
             />
 
             <div style={{ textAlign: "center", margin: "10px 0 4px" }}>
               <PaulaHint
                 message="Hola Paula, ¿cómo funciona PagoYa? ¿Puedo usarlo sin tener cuenta bancaria?"
                 label="¿Tienes dudas? Pregúntale a Paula"
-                variant="dark"
               />
             </div>
 
-            {/* ── SIGN-UP BONUS STRIP — coral, high urgency ── */}
+            {/* ── SIGN-UP BONUS STRIP ── */}
             <button
               className="bonus-strip"
               onClick={() => navigate("/register")}
@@ -455,8 +580,8 @@ export default function Home() {
                 width: "100%",
                 padding: "12px 16px",
                 marginBottom: "10px",
-                background: "rgba(216,90,48,0.11)",
-                border: "1.5px solid rgba(216,90,48,0.48)",
+                background: "rgba(255,92,26,0.07)",
+                border: "1.5px solid rgba(255,92,26,0.30)",
                 borderRadius: "14px",
                 cursor: "pointer",
                 textAlign: "left",
@@ -466,12 +591,12 @@ export default function Home() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
                 <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
                 <div>
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
                     {es
                       ? "Abre tu billetera gratis · recibe $25 MXN"
                       : "Open your wallet free · get $25 MXN"}
                   </div>
-                  <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.52)", marginTop: "2px" }}>
+                  <div style={{ fontSize: "11px", color: "#6B9980", marginTop: "2px" }}>
                     {es
                       ? "Sin banco, sin trámites · se acredita al instante"
                       : "No bank needed · credited instantly"}
@@ -482,7 +607,7 @@ export default function Home() {
                 flexShrink: 0,
                 fontSize: "12px",
                 fontWeight: 700,
-                color: "#D85A30",
+                color: "#FF5C1A",
                 whiteSpace: "nowrap",
               }}>
                 {es ? "Abre tu cuenta →" : "Sign up →"}
@@ -498,13 +623,13 @@ export default function Home() {
                 height: "52px",
                 borderRadius: "14px",
                 border: "none",
-                background: "#1D9E75",
+                background: "#007A4A",
                 color: "white",
                 fontSize: "17px",
                 fontWeight: 700,
                 cursor: "pointer",
                 letterSpacing: "0.01em",
-                boxShadow: "0 4px 18px rgba(29,158,117,0.32)",
+                boxShadow: "0 4px 18px rgba(0,122,74,0.32)",
                 transition: "filter 0.15s",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.08)"; }}
@@ -518,7 +643,7 @@ export default function Home() {
               marginTop: "5px",
               marginBottom: 0,
               fontSize: "11px",
-              color: "#64748B",
+              color: "#6B9980",
               textAlign: "center",
               lineHeight: 1.4,
             }}>
@@ -535,9 +660,9 @@ export default function Home() {
               justifyContent: "center",
               gap: "6px",
               fontSize: "12px",
-              color: "rgba(255,255,255,0.38)",
+              color: "rgba(13,38,24,0.55)",
             }}>
-              <span style={{ color: "#1D9E75", fontWeight: 700 }}>✓</span>
+              <span style={{ color: "#007A4A", fontWeight: 700 }}>✓</span>
               <span>
                 {es
                   ? "Más de 200 usuarios en Puerto Vallarta y Guadalajara"
@@ -550,8 +675,8 @@ export default function Home() {
               marginTop: "20px",
               padding: "12px 16px",
               borderRadius: "14px",
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.09)",
+              background: "#F4FBF7",
+              border: "1px solid #CBE9D9",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -566,12 +691,12 @@ export default function Home() {
                 <div key={item.label} style={{ display: "contents" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}>
                     <span style={{ fontSize: "16px", lineHeight: 1 }}>{item.icon}</span>
-                    <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.04em", textAlign: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(13,38,24,0.55)", letterSpacing: "0.04em", textAlign: "center" }}>
                       {item.label}
                     </span>
                   </div>
                   {i < arr.length - 1 && (
-                    <div style={{ width: "1px", height: "28px", background: "rgba(255,255,255,0.10)", flexShrink: 0 }} />
+                    <div style={{ width: "1px", height: "28px", background: "rgba(0,0,0,0.10)", flexShrink: 0 }} />
                   )}
                 </div>
               ))}
@@ -582,9 +707,9 @@ export default function Home() {
               marginTop: "24px",
               paddingTop: "20px",
               borderTop: "1px solid rgba(255,255,255,0.07)",
-              background: "#0F2F50",
-              border: "1.5px solid rgba(216,90,48,0.35)",
-              borderLeft: "4px solid #D85A30",
+              background: "#FFF5F0",
+              border: "1.5px solid rgba(255,92,26,0.30)",
+              borderLeft: "4px solid #FF5C1A",
               borderRadius: "14px",
               padding: "14px 16px",
               display: "flex",
@@ -597,16 +722,16 @@ export default function Home() {
               <div style={{
                 position: "absolute", top: -30, right: -30,
                 width: 90, height: 90, borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(216,90,48,0.15) 0%, transparent 70%)",
+                background: "radial-gradient(circle, rgba(255,92,26,0.12) 0%, transparent 70%)",
                 pointerEvents: "none",
               }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{
                   fontSize: "9px", fontWeight: 800,
-                  color: "#D85A30", letterSpacing: "0.12em",
+                  color: "#FF5C1A", letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  background: "rgba(216,90,48,0.15)",
-                  border: "1px solid rgba(216,90,48,0.28)",
+                  background: "rgba(255,92,26,0.12)",
+                  border: "1px solid rgba(255,92,26,0.25)",
                   borderRadius: "999px",
                   padding: "2px 8px",
                   display: "inline-block",
@@ -614,9 +739,9 @@ export default function Home() {
                 }}>
                   {es ? "También pagamos" : "Vertical"}
                 </span>
-                <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>
+                <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
                   {es ? "¿Pagas renta?" : "Pay Rent"}{" "}
-                  <span style={{ color: "#D85A30" }}>🏠</span>
+                  <span style={{ color: "#FF5C1A" }}>🏠</span>
                 </p>
               </div>
               <a
@@ -625,7 +750,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 style={{
                   flexShrink: 0,
-                  background: "#D85A30",
+                  background: "#FF5C1A",
                   color: "white",
                   fontSize: "13px",
                   fontWeight: 700,
@@ -633,7 +758,7 @@ export default function Home() {
                   borderRadius: "10px",
                   textDecoration: "none",
                   whiteSpace: "nowrap",
-                  boxShadow: "0 3px 10px rgba(216,90,48,0.35)",
+                  boxShadow: "0 3px 10px rgba(255,92,26,0.35)",
                   transition: "filter 0.15s",
                 }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = "brightness(1.1)"; }}
@@ -653,9 +778,9 @@ export default function Home() {
             AFTER  bg: "#0F2F50",  border: "rgba(255,255,255,0.08)", label color: "white"
         ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "#0F2F50", padding: "20px 16px",
+          background: "#EBF7F0", padding: "20px 16px",
           display: "flex", alignItems: "stretch", justifyContent: "center",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}>
           {[
             { num: "35+",      label: es ? "Servicios disponibles"   : "Services available"   },
@@ -663,18 +788,16 @@ export default function Home() {
             { num: "WhatsApp", label: es ? "Comprobante instantáneo" : "Instant receipt"      },
           ].map((stat, i) => (
             <div key={stat.num} style={{ display: "contents" }}>
-              {i > 0 && <div style={{ width: "1px", background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />}
+              {i > 0 && <div style={{ width: "1px", background: "rgba(0,0,0,0.08)", margin: "4px 0" }} />}
               <div style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
                 padding: "8px 6px", textAlign: "center",
                 animation: `pgStatReveal 0.6s ease-out ${i * 0.15}s both`,
               }}>
-                {/* teal numbers — unchanged */}
-                <span style={{ fontSize: "20px", fontWeight: 900, color: "#1D9E75", lineHeight: 1.1, marginBottom: "3px" }}>
+                <span style={{ fontSize: "20px", fontWeight: 900, color: "#007A4A", lineHeight: 1.1, marginBottom: "3px" }}>
                   {stat.num}
                 </span>
-                {/* BEFORE: "#0A2540"  AFTER: "white" */}
-                <span style={{ fontSize: "10px", color: "white", fontWeight: 600, lineHeight: 1.3 }}>
+                <span style={{ fontSize: "10px", color: "#0D2618", fontWeight: 600, lineHeight: 1.3 }}>
                   {stat.label}
                 </span>
               </div>
@@ -688,7 +811,7 @@ export default function Home() {
             WALLET
             BEFORE bg: "#FFFFFF"  AFTER bg: "#0F2F50"
         ══════════════════════════════════════════════════════ */}
-        <section style={{ background: "#0F2F50", padding: "24px 20px 8px" }}>
+        <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
             <WalletBalanceWidget />
 
@@ -696,8 +819,8 @@ export default function Home() {
             {showPushBanner && (
               <div style={{
                 marginTop: "14px",
-                background: "rgba(29,158,117,0.12)",
-                border: "1px solid rgba(29,158,117,0.35)",
+                background: "rgba(0,122,74,0.07)",
+                border: "1px solid rgba(0,122,74,0.25)",
                 borderRadius: "12px",
                 padding: "12px 14px",
                 display: "flex",
@@ -718,7 +841,7 @@ export default function Home() {
                     onClick={() => push.subscribe()}
                     disabled={push.loading}
                     style={{
-                      background: "#1D9E75", color: "#fff",
+                      background: "#007A4A", color: "#fff",
                       border: "none", borderRadius: "8px",
                       padding: "6px 12px", fontSize: "12px", fontWeight: 600,
                       cursor: push.loading ? "default" : "pointer",
@@ -745,7 +868,7 @@ export default function Home() {
             {push.subscribed && !pushDismissed && (
               <div style={{
                 marginTop: "10px",
-                background: "rgba(29,158,117,0.10)",
+                background: "rgba(0,122,74,0.07)",
                 borderRadius: "10px",
                 padding: "8px 12px",
                 display: "flex",
@@ -753,7 +876,7 @@ export default function Home() {
                 gap: "8px",
               }}>
                 <span style={{ fontSize: "16px" }}>✅</span>
-                <span style={{ color: "#1D9E75", fontSize: "12px" }}>
+                <span style={{ color: "#007A4A", fontSize: "12px" }}>
                   {es ? "Notificaciones activadas" : "Notifications enabled"}
                 </span>
               </div>
@@ -772,16 +895,16 @@ export default function Home() {
             BEFORE divider lines: "#D1D5DB" AFTER: "rgba(255,255,255,0.08)"
             BEFORE divider label: "#9CA3AF" AFTER: "#64748B"
         ══════════════════════════════════════════════════════ */}
-        <section style={{ background: "#0A2540", padding: "24px 20px" }}>
+        <section style={{ background: "#F4FBF7", padding: "24px 20px" }}>
           <div style={{ maxWidth: "400px", margin: "0 auto" }}>
             {/* Divider label */}
             <div style={{
               display: "flex", alignItems: "center", gap: "10px",
-              marginBottom: "20px", color: "#64748B", fontSize: "13px",
+              marginBottom: "20px", color: "#5B8070", fontSize: "13px",
             }}>
-              <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />
+              <div style={{ flex: 1, height: "1px", background: "rgba(0,0,0,0.08)" }} />
               <span>{es ? "O elige una categoría" : "Or choose a category"}</span>
-              <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />
+              <div style={{ flex: 1, height: "1px", background: "rgba(0,0,0,0.08)" }} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
@@ -791,16 +914,16 @@ export default function Home() {
                   className="pg-qa-card"
                   onClick={() => handleQuickAccess(svc.id, svc.name)}
                   style={{
-                    background: "#0F2F50",
-                    border: "1.5px solid rgba(255,255,255,0.08)",
+                    background: "#FFFFFF",
+                    border: "1.5px solid #D4EDE1",
                     borderRadius: "16px",
                     padding: "16px 8px", cursor: "pointer", display: "flex",
                     flexDirection: "column", alignItems: "center", gap: "8px",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.20)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                   }}
                 >
                   <span style={{ fontSize: "22px" }}>{svc.icon}</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "white", textAlign: "center", lineHeight: 1.2 }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#0D2618", textAlign: "center", lineHeight: 1.2 }}>
                     {svc.name}
                   </span>
                 </button>
@@ -811,8 +934,8 @@ export default function Home() {
               onClick={() => navigate("/servicios")}
               style={{
                 width: "100%", marginTop: "14px", padding: "12px",
-                borderRadius: "12px", border: "1.5px solid #1D9E75",
-                background: "transparent", color: "#1D9E75", fontSize: "14px",
+                borderRadius: "12px", border: "1.5px solid #007A4A",
+                background: "transparent", color: "#007A4A", fontSize: "14px",
                 fontWeight: 700, cursor: "pointer",
               }}
             >
@@ -826,23 +949,23 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════
             SOFT REGISTRATION CTA — navy (already correct)
         ══════════════════════════════════════════════════════ */}
-        <section style={{ background: "#0A2540", padding: "40px 24px" }}>
+        <section style={{ background: "#F4FBF7", padding: "40px 24px" }}>
           <div style={{ maxWidth: "480px", margin: "0 auto", textAlign: "center" }}>
-            <p style={{ fontSize: "12px", fontWeight: 700, color: "#1D9E75", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 700, color: "#007A4A", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>
               {es ? "¿Todavía no estás listo?" : "Not ready yet?"}
             </p>
-            <h2 style={{ fontSize: "22px", fontWeight: 900, color: "white", lineHeight: 1.25, marginBottom: "10px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#0D2618", lineHeight: 1.25, marginBottom: "10px" }}>
               {es ? "Regístrate gratis y te avisamos" : "Register free and we'll notify you"}
             </h2>
-            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.70)", lineHeight: 1.6, maxWidth: "340px", margin: "0 auto 24px" }}>
+            <p style={{ fontSize: "14px", color: "#5B8070", lineHeight: 1.6, maxWidth: "340px", margin: "0 auto 24px" }}>
               {es
                 ? "Te notificamos por WhatsApp cuando quieras pagar tu próximo servicio."
                 : "We'll notify you on WhatsApp when you're ready to pay."}
             </p>
             {notifSent ? (
               <div style={{
-                background: "rgba(29,158,117,0.15)", border: "1px solid rgba(29,158,117,0.40)",
-                borderRadius: "16px", padding: "18px 20px", color: "white", fontSize: "15px", fontWeight: 600,
+                background: "rgba(0,122,74,0.10)", border: "1px solid rgba(0,122,74,0.28)",
+                borderRadius: "16px", padding: "18px 20px", color: "#0D2618", fontSize: "15px", fontWeight: 600,
               }}>
                 ✅ {es ? "¡Listo! Te contactaremos por WhatsApp." : "Done! We'll reach out on WhatsApp."}
               </div>
@@ -855,15 +978,15 @@ export default function Home() {
                   placeholder={es ? "Tu número WhatsApp" : "Your WhatsApp number"}
                   style={{
                     flex: 1, padding: "14px 16px", borderRadius: "12px",
-                    border: "none", fontSize: "15px", outline: "none",
-                    background: "rgba(255,255,255,0.10)", color: "white",
+                    border: "1px solid #CBE9D9", fontSize: "15px", outline: "none",
+                    background: "#FFFFFF", color: "#0D2618",
                   }}
                 />
                 <button
                   type="submit"
                   style={{
                     padding: "14px 20px", borderRadius: "12px", border: "none",
-                    background: "#1D9E75", color: "white", fontSize: "15px",
+                    background: "#007A4A", color: "white", fontSize: "15px",
                     fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
                   }}
                 >
@@ -877,13 +1000,13 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer style={{ background: "#060F1E", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", textAlign: "center" }}>
-        <p style={{ color: "#334155", fontSize: "12px" }}>
-          <span style={{ color: "#475569" }}>© 2026 PagoYa · Longview Meridian Technologies LLC</span>
+      <footer style={{ background: "#031A0D", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "20px 24px", textAlign: "center" }}>
+        <p style={{ color: "#4B7A62", fontSize: "12px" }}>
+          <span style={{ color: "#6A9F82" }}>© 2026 PagoYa · Longview Meridian Technologies LLC</span>
           {" · "}
-          <a href="/terminos-y-condiciones" style={{ color: "#1D9E75", textDecoration: "none" }}>Términos y Condiciones</a>
+          <a href="/terminos-y-condiciones" style={{ color: "#00C875", textDecoration: "none" }}>Términos y Condiciones</a>
           {" · "}
-          <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
+          <a href="mailto:soporte@pagoyamx.com" style={{ color: "#6A9F82", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>
       </footer>
     </div>
