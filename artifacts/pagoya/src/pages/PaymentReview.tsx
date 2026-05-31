@@ -91,7 +91,7 @@ export default function PaymentReview() {
           empresa: paymentData.empresa,
           categoria: paymentData.categoria,
           monto: parseFloat(paymentData.monto),
-          referencia: paymentData.referencia,
+          referencia: isGiftCard ? paymentData.telefono : paymentData.referencia,
           telefono: paymentData.telefono,
           notas: paymentData.notas,
           ...(freeTxToken ? { free_tx_token: freeTxToken } : {}),
