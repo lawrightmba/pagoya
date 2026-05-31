@@ -6,6 +6,7 @@ export type BillCategory =
   | "Cable"
   | "Teléfono móvil"
   | "Streaming"
+  | "Gift Cards"
   | "Préstamos"
   | "Seguro"
   | "Escuela"
@@ -26,6 +27,8 @@ export interface BillService {
   maxReferencia?: number;
   minAmount?: number;
   isTopup?: boolean;
+  isGiftCard?: boolean;   // Fixed-denomination digital voucher — no referencia required from user
+  fixedAmount?: number;   // Enforced server-side; overrides any client-supplied monto
 }
 
 export interface BillPayRequest {

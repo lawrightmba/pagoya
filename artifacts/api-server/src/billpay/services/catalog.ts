@@ -8,6 +8,7 @@ export const CATEGORY_LABELS: Record<BillCategory, { labelEs: string; labelEn: s
   "Cable":         { labelEs: "Cable / Satélite", labelEn: "Cable / Satellite" },
   "Teléfono móvil":{ labelEs: "Teléfono Móvil",  labelEn: "Mobile Phone" },
   "Streaming":     { labelEs: "Streaming",        labelEn: "Streaming" },
+  "Gift Cards":    { labelEs: "Gift Cards",        labelEn: "Gift Cards" },
   "Préstamos":     { labelEs: "Préstamos",        labelEn: "Loans" },
   "Seguro":        { labelEs: "Seguros",          labelEn: "Insurance" },
   "Escuela":       { labelEs: "Educación",        labelEn: "Education" },
@@ -86,6 +87,42 @@ export const BILL_CATALOG: BillService[] = [
 
   // ── MÓVIL — Other carriers ────────────────────────────────────────────────
   { id: "movistar", name: "Movistar", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOVISTAR", evolucionaServiceId: "MOVISTAR" },
+
+  // ── GIFT CARDS ────────────────────────────────────────────────────────────
+  // Netflix
+  { id: "netflix_300", name: "Netflix $300",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "NET300", isGiftCard: true, fixedAmount: 300 },
+  { id: "netflix_400", name: "Netflix $400",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "NET150", isGiftCard: true, fixedAmount: 400 },
+  { id: "netflix_500", name: "Netflix $500",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "NET500", isGiftCard: true, fixedAmount: 500 },
+  { id: "netflix_700", name: "Netflix $700",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "NET700", isGiftCard: true, fixedAmount: 700 },
+  // Amazon
+  { id: "amazon_100",  name: "Amazon $100",   category: "Gift Cards", providers: ["siprel"], logoEmoji: "📦", siprelServiceId: "AGC100",  isGiftCard: true, fixedAmount: 100 },
+  { id: "amazon_200",  name: "Amazon $200",   category: "Gift Cards", providers: ["siprel"], logoEmoji: "📦", siprelServiceId: "AGC200",  isGiftCard: true, fixedAmount: 200 },
+  { id: "amazon_300",  name: "Amazon $300",   category: "Gift Cards", providers: ["siprel"], logoEmoji: "📦", siprelServiceId: "AGC300",  isGiftCard: true, fixedAmount: 300 },
+  { id: "amazon_500",  name: "Amazon $500",   category: "Gift Cards", providers: ["siprel"], logoEmoji: "📦", siprelServiceId: "AGC500",  isGiftCard: true, fixedAmount: 500 },
+  { id: "amazon_1000", name: "Amazon $1,000", category: "Gift Cards", providers: ["siprel"], logoEmoji: "📦", siprelServiceId: "AGC1000", isGiftCard: true, fixedAmount: 1000 },
+  // Google Play
+  { id: "google_play_50",  name: "Google Play $50",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎮", siprelServiceId: "GPLAY50", isGiftCard: true, fixedAmount: 50 },
+  { id: "google_play_100", name: "Google Play $100", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎮", siprelServiceId: "GOO01",   isGiftCard: true, fixedAmount: 100 },
+  { id: "google_play_200", name: "Google Play $200", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎮", siprelServiceId: "GOO03",   isGiftCard: true, fixedAmount: 200 },
+  { id: "google_play_300", name: "Google Play $300", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎮", siprelServiceId: "GOO02",   isGiftCard: true, fixedAmount: 300 },
+  { id: "google_play_500", name: "Google Play $500", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎮", siprelServiceId: "GOO500",  isGiftCard: true, fixedAmount: 500 },
+  // Uber
+  { id: "uber_150",    name: "Uber $150",      category: "Gift Cards", providers: ["siprel"], logoEmoji: "🚗", siprelServiceId: "UBR150",  isGiftCard: true, fixedAmount: 150 },
+  { id: "uber_eats_300", name: "Uber Eats $300", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🍔", siprelServiceId: "EATS02", isGiftCard: true, fixedAmount: 300 },
+  // Cinepolis
+  { id: "cinepolis_60",  name: "Cinépolis $60",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "CINBS52",  isGiftCard: true, fixedAmount: 60 },
+  { id: "cinepolis_100", name: "Cinépolis $100", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "CCM075",   isGiftCard: true, fixedAmount: 100 },
+  { id: "cinepolis_140", name: "Cinépolis $140", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "CINVIP1B", isGiftCard: true, fixedAmount: 140 },
+  { id: "cinepolis_210", name: "Cinépolis $210", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🎬", siprelServiceId: "CIN3DIMAX2", isGiftCard: true, fixedAmount: 210 },
+  // Starbucks
+  { id: "starbucks_200", name: "Starbucks $200", category: "Gift Cards", providers: ["siprel"], logoEmoji: "☕", siprelServiceId: "STRBKS0200", isGiftCard: true, fixedAmount: 200 },
+  { id: "starbucks_300", name: "Starbucks $300", category: "Gift Cards", providers: ["siprel"], logoEmoji: "☕", siprelServiceId: "STRBKS0300", isGiftCard: true, fixedAmount: 300 },
+  // Liverpool
+  { id: "liverpool_500",  name: "Liverpool $500",  category: "Gift Cards", providers: ["siprel"], logoEmoji: "🛍️", siprelServiceId: "LIVEMEX500",  isGiftCard: true, fixedAmount: 500 },
+  { id: "liverpool_1000", name: "Liverpool $1,000", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🛍️", siprelServiceId: "LIVEMEX1000", isGiftCard: true, fixedAmount: 1000 },
+  { id: "liverpool_2000", name: "Liverpool $2,000", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🛍️", siprelServiceId: "LIVEMEX2000", isGiftCard: true, fixedAmount: 2000 },
+  // Soriana
+  { id: "soriana_500", name: "Soriana $500", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🛒", siprelServiceId: "SORIANA500", isGiftCard: true, fixedAmount: 500 },
 
   // ── PRÉSTAMOS ─────────────────────────────────────────────────────────────
   { id: "kueski", name: "Kueski", category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KUESKI" },

@@ -74,45 +74,58 @@ router.post("/pay", async (req: Request, res: Response) => {
     free_tx_token?: string;
   };
 
-  if (!serviceId || !referencia || !monto || !telefono) {
-    res.status(400).json({
-      error: "Faltan campos requeridos: serviceId, referencia, monto, telefono",
-    });
-    return;
-  }
-
-  const montoNum = parseFloat(String(monto));
-  if (isNaN(montoNum) || montoNum <= 0) {
-    res.status(400).json({ error: "El monto debe ser un número positivo." });
-    return;
-  }
-
   const service = getServiceById(serviceId);
   if (!service) {
     res.status(404).json({ error: `Servicio no encontrado: ${serviceId}` });
     return;
   }
 
-  // Service-specific validation
-  if (service.minReferencia && referencia.replace(/\D/g, "").length < service.minReferencia) {
-    res.status(400).json({
-      error: `La referencia para ${service.name} debe tener al menos ${service.minReferencia} dígitos.`,
-    });
+  // Gift cards: referencia is not user-supplied — use the buyer's phone number internally.
+  // monto is fixed to the denomination baked into the catalog entry.
+  const effectiveReferencia = service.isGiftCard ? telefono : referencia;
+  const effectiveMonto = service.isGiftCard && service.fixedAmount != null
+    ? service.fixedAmount
+    : parseFloat(String(monto));
+
+  if (!serviceId || !telefono) {
+    res.status(400).json({ error: "Faltan campos requeridos: serviceId, telefono" });
+    return;
+  }
+  if (!service.isGiftCard && !referencia) {
+    res.status(400).json({ error: "Falta el campo requerido: referencia" });
+    return;
+  }
+  if (!service.isGiftCard && !monto) {
+    res.status(400).json({ error: "Falta el campo requerido: monto" });
     return;
   }
 
-  if (service.maxReferencia && referencia.replace(/\D/g, "").length > service.maxReferencia) {
-    res.status(400).json({
-      error: `La referencia para ${service.name} debe tener máximo ${service.maxReferencia} dígitos.`,
-    });
+  const montoNum = effectiveMonto;
+  if (isNaN(montoNum) || montoNum <= 0) {
+    res.status(400).json({ error: "El monto debe ser un número positivo." });
     return;
   }
 
-  if (service.minAmount !== undefined && montoNum < service.minAmount) {
-    res.status(400).json({
-      error: `El monto mínimo para ${service.name} es $${service.minAmount} MXN.`,
-    });
-    return;
+  // Service-specific validation — skip referencia checks for gift cards
+  if (!service.isGiftCard) {
+    if (service.minReferencia && referencia.replace(/\D/g, "").length < service.minReferencia) {
+      res.status(400).json({
+        error: `La referencia para ${service.name} debe tener al menos ${service.minReferencia} dígitos.`,
+      });
+      return;
+    }
+    if (service.maxReferencia && referencia.replace(/\D/g, "").length > service.maxReferencia) {
+      res.status(400).json({
+        error: `La referencia para ${service.name} debe tener máximo ${service.maxReferencia} dígitos.`,
+      });
+      return;
+    }
+    if (service.minAmount !== undefined && montoNum < service.minAmount) {
+      res.status(400).json({
+        error: `El monto mínimo para ${service.name} es $${service.minAmount} MXN.`,
+      });
+      return;
+    }
   }
 
   // ── Token pre-validation (fail fast, no DB writes) ───────────────────────────
@@ -200,7 +213,7 @@ router.post("/pay", async (req: Request, res: Response) => {
   // ── Step 2: Call the provider (no DB writes yet) ─────────────────────────────
   let result: Awaited<ReturnType<typeof routePayment>>;
   try {
-    result = await routePayment({ serviceId, referencia, monto: montoNum, telefono, notas });
+    result = await routePayment({ serviceId, referencia: effectiveReferencia, monto: montoNum, telefono, notas });
   } catch (providerErr: unknown) {
     // Provider failed — wallet is untouched. Record the failure and return a clear message.
     const message = providerErr instanceof Error ? providerErr.message : "Error al procesar el pago.";
