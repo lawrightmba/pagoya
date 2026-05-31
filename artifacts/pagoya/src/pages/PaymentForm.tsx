@@ -34,7 +34,7 @@ export default function PaymentForm() {
 
   const [form, setForm] = useState({
     empresa: servicioParam || paymentData.empresa,
-    categoria: isGiftCard ? "Gift Cards" : ((servicioParam && SERVICIO_CATEGORIA[servicioParam]) || paymentData.categoria),
+    categoria: (servicioParam && SERVICIO_CATEGORIA[servicioParam]) || paymentData.categoria,
     monto: paymentData.monto,
     referencia: paymentData.referencia,
     telefono: paymentData.telefono || (localStorage.getItem("pagoya_telefono") ?? ""),
@@ -139,29 +139,38 @@ export default function PaymentForm() {
               />
             </Field>
 
-            <Field label="Categoría" error={errors.categoria}>
-              <div className="relative">
-                <select
-                  value={form.categoria}
-                  disabled={isGiftCard}
-                  onChange={(e) => handleChange("categoria", e.target.value)}
-                  onFocus={() => setFocusedField("categoria")}
-                  onBlur={() => setFocusedField(null)}
-                  className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm appearance-none pr-10"
-                  style={{
-                    ...inputStyle("categoria", !!errors.categoria),
-                    color: form.categoria ? "#1F1F1F" : "#9CA3AF",
-                    ...(isGiftCard ? { background: "#F4FBF7" } : {}),
-                  }}
+            {isGiftCard ? (
+              <Field label="Categoría">
+                <div
+                  className="w-full px-4 py-4 rounded-2xl border text-sm font-bold"
+                  style={{ background: "#F4FBF7", borderColor: "#CBE9D9", color: "#007A4A" }}
                 >
-                  <option value="" disabled>Selecciona una categoría</option>
-                  {CATEGORIAS.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </Field>
+                  🎁 Gift Cards
+                </div>
+              </Field>
+            ) : (
+              <Field label="Categoría" error={errors.categoria}>
+                <div className="relative">
+                  <select
+                    value={form.categoria}
+                    onChange={(e) => handleChange("categoria", e.target.value)}
+                    onFocus={() => setFocusedField("categoria")}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm appearance-none pr-10"
+                    style={{
+                      ...inputStyle("categoria", !!errors.categoria),
+                      color: form.categoria ? "#1F1F1F" : "#9CA3AF",
+                    }}
+                  >
+                    <option value="" disabled>Selecciona una categoría</option>
+                    {CATEGORIAS.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </Field>
+            )}
 
             <Field label="Monto" error={errors.monto}>
               <div className="relative">

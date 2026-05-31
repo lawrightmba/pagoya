@@ -1,22 +1,38 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Edit2, CreditCard, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Edit2, CreditCard, ShieldCheck, Wallet } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
 import { useEffect, useState } from "react";
 import PaulaHint from "@/components/PaulaHint";
 
 export default function PaymentReview() {
   const [, navigate] = useLocation();
-  const { paymentData, setClientSecret, setPendingPaymentIntentId } = usePayment();
+  const { paymentData, setClientSecret, setPendingPaymentIntentId, setTransactionId, setTransactionDate } = usePayment();
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
   const [hasFreeToken] = useState(() => !!localStorage.getItem("pagoya_free_tx_token"));
   const es = localStorage.getItem("pagoya_lang") !== "en";
+
+  // Gift card detection (serviceId contains "_", e.g. "netflix_300")
+  const isGiftCard = (paymentData.categoria ?? "").includes("_");
+
+  // Wallet balance for gift card payments
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "wallet">("card");
 
   useEffect(() => {
     if (!paymentData.empresa) {
       navigate("/pagar");
     }
   }, []);
+
+  useEffect(() => {
+    if (isGiftCard && paymentData.telefono) {
+      fetch(`${window.location.origin}/api/wallet/balance?telefono=${encodeURIComponent(paymentData.telefono)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.balanceMXN != null) setWalletBalance(data.balanceMXN); })
+        .catch(() => {});
+    }
+  }, [paymentData.telefono, isGiftCard]);
 
   const PLATFORM_FEE = 25.00;
 
@@ -26,14 +42,47 @@ export default function PaymentReview() {
   };
 
   const montoNum = parseFloat(paymentData.monto) || 0;
-  const total = montoNum + (hasFreeToken ? 0 : PLATFORM_FEE);
+  // Wallet payments for gift cards have no platform fee (direct SIPREL call)
+  const total = paymentMethod === "wallet"
+    ? montoNum
+    : montoNum + (hasFreeToken ? 0 : PLATFORM_FEE);
 
-  const handlePagar = async () => {
+  // Wallet payment: call /api/bills/pay directly — SIPREL handles redemption + wallet debit
+  const handleWalletPago = async () => {
     setLoading(true);
     setApiError("");
+    try {
+      const res = await fetch(`${window.location.origin}/api/bills/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId: paymentData.categoria,
+          telefono: paymentData.telefono,
+          monto: montoNum,
+          paymentSource: "wallet",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Error al procesar el pago con cartera.");
+      }
+      setTransactionId(String(data.paymentId ?? "wallet"));
+      setTransactionDate(new Date().toLocaleString("es-MX", {
+        day: "2-digit", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      }));
+      navigate("/exito");
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Error al procesar el pago.");
+      setLoading(false);
+    }
+  };
 
+  // Card payment: create Stripe PaymentIntent → navigate to card entry
+  const handleCardPago = async () => {
+    setLoading(true);
+    setApiError("");
     const freeTxToken = localStorage.getItem("pagoya_free_tx_token");
-
     try {
       const res = await fetch(`${window.location.origin}/api/pagoya/payments`, {
         method: "POST",
@@ -48,15 +97,9 @@ export default function PaymentReview() {
           ...(freeTxToken ? { free_tx_token: freeTxToken } : {}),
         }),
       });
-
-      if (!res.ok) {
-        throw new Error("respuesta no exitosa");
-      }
-
+      if (!res.ok) throw new Error("respuesta no exitosa");
       const data = await res.json();
-      if (freeTxToken) {
-        localStorage.removeItem("pagoya_free_tx_token");
-      }
+      if (freeTxToken) localStorage.removeItem("pagoya_free_tx_token");
       setClientSecret(data.clientSecret);
       setPendingPaymentIntentId(data.paymentIntentId);
       navigate("/tarjeta");
@@ -65,6 +108,8 @@ export default function PaymentReview() {
       setLoading(false);
     }
   };
+
+  const handlePagar = () => paymentMethod === "wallet" ? handleWalletPago() : handleCardPago();
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
@@ -104,7 +149,7 @@ export default function PaymentReview() {
 
             <div className="flex flex-col gap-4">
               <Row label="Empresa" value={paymentData.empresa} />
-              <Row label="Categoría" value={paymentData.categoria} highlight />
+              <Row label="Categoría" value={isGiftCard ? "🎁 Gift Card Digital" : paymentData.categoria} highlight />
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Monto del servicio</span>
@@ -112,7 +157,11 @@ export default function PaymentReview() {
               </div>
               <div className="flex items-center justify-between">
                 <span style={{ fontSize: "13px", color: "#888888" }}>Tarifa de plataforma</span>
-                {hasFreeToken ? (
+                {paymentMethod === "wallet" ? (
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#046C2C", background: "#F0FAF3", padding: "3px 10px", borderRadius: "999px", border: "1px solid #D4EDDA" }}>
+                    👛 Sin comisión — cartera
+                  </span>
+                ) : hasFreeToken ? (
                   <span style={{ fontSize: "11px", fontWeight: 700, color: "#046C2C", background: "#F0FAF3", padding: "3px 10px", borderRadius: "999px", border: "1px solid #D4EDDA" }}>
                     🎁 {es ? "Comisión gratis — token aplicado" : "Free payment — token applied"}
                   </span>
@@ -120,7 +169,7 @@ export default function PaymentReview() {
                   <span style={{ fontSize: "13px", color: "#888888" }}>$25.00 MXN</span>
                 )}
               </div>
-              {!hasFreeToken && (
+              {paymentMethod !== "wallet" && !hasFreeToken && (
                 <div style={{ marginTop: "-4px" }}>
                   <PaulaHint
                     message="¿Por qué se cobra la tarifa de plataforma? ¿Hay alguna forma de pagarla gratis?"
@@ -136,11 +185,75 @@ export default function PaymentReview() {
                 </span>
               </div>
               <div style={{ height: 1, background: "linear-gradient(90deg, #F0F0F0, #E8E8E8, #F0F0F0)" }} />
-              <Row label="Referencia" value={paymentData.referencia} mono />
+              {!isGiftCard && <Row label="Referencia" value={paymentData.referencia} mono />}
               <Row label="Teléfono" value={paymentData.telefono} />
               {paymentData.notas && <Row label="Notas" value={paymentData.notas} />}
             </div>
           </div>
+
+          {/* Payment method selector — only shown for gift cards when wallet has balance */}
+          {isGiftCard && walletBalance !== null && walletBalance > 0 && (
+            <div
+              className="bg-white rounded-3xl p-5 flex flex-col gap-3"
+              style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
+            >
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">¿Cómo deseas pagar?</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setPaymentMethod("wallet")}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all"
+                  style={{
+                    border: `2px solid ${paymentMethod === "wallet" ? "#007A4A" : "#E5E7EB"}`,
+                    background: paymentMethod === "wallet" ? "#F4FBF7" : "white",
+                  }}
+                >
+                  <Wallet className="w-5 h-5 flex-shrink-0" style={{ color: paymentMethod === "wallet" ? "#007A4A" : "#9CA3AF" }} />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold" style={{ color: paymentMethod === "wallet" ? "#007A4A" : "#1F1F1F" }}>
+                      Cartera PagoYa
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Saldo: ${walletBalance.toFixed(2)} MXN · Sin comisión
+                    </p>
+                  </div>
+                  {paymentMethod === "wallet" && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#007A4A" }}>
+                      <span style={{ color: "white", fontSize: "11px", fontWeight: 900 }}>✓</span>
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod("card")}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all"
+                  style={{
+                    border: `2px solid ${paymentMethod === "card" ? "#007A4A" : "#E5E7EB"}`,
+                    background: paymentMethod === "card" ? "#F4FBF7" : "white",
+                  }}
+                >
+                  <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: paymentMethod === "card" ? "#007A4A" : "#9CA3AF" }} />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold" style={{ color: paymentMethod === "card" ? "#007A4A" : "#1F1F1F" }}>
+                      Tarjeta de débito / crédito
+                    </p>
+                    <p className="text-xs text-gray-400">Stripe · Incluye comisión $25 MXN</p>
+                  </div>
+                  {paymentMethod === "card" && (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#007A4A" }}>
+                      <span style={{ color: "white", fontSize: "11px", fontWeight: 900 }}>✓</span>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Insufficient balance warning */}
+              {paymentMethod === "wallet" && walletBalance < montoNum && (
+                <p className="text-xs font-semibold" style={{ color: "#E21A0A" }}>
+                  ⚠ Saldo insuficiente. Tu cartera tiene ${walletBalance.toFixed(2)} MXN, necesitas ${montoNum.toFixed(2)} MXN.
+                </p>
+              )}
+            </div>
+          )}
 
           <div
             className="rounded-2xl px-5 py-4 flex gap-3 items-start"
@@ -155,7 +268,7 @@ export default function PaymentReview() {
           <div className="flex flex-col gap-3 pt-1">
             <button
               onClick={handlePagar}
-              disabled={loading}
+              disabled={loading || (paymentMethod === "wallet" && walletBalance !== null && walletBalance < montoNum)}
               className="w-full py-5 px-8 rounded-full text-white text-base font-bold transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
               style={{
                 background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
