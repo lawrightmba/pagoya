@@ -473,7 +473,7 @@ export default function Home() {
             GIFT CARDS — Celebration section
         ══════════════════════════════════════════════════════ */}
         <section style={{
-          background: "linear-gradient(135deg, #7C3AED 0%, #2563EB 38%, #0EA5E9 68%, #10B981 100%)",
+          background: "linear-gradient(135deg, #FF5C1A 0%, #FF9A3C 32%, #00C875 68%, #007A4A 100%)",
           padding: "28px 20px",
           position: "relative",
           overflow: "hidden",
@@ -1000,7 +1000,7 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer style={{ background: "#031A0D", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "20px 24px", textAlign: "center" }}>
+      <footer style={{ background: "#005432", borderTop: "1px solid rgba(255,255,255,0.12)", padding: "20px 24px", textAlign: "center" }}>
         <p style={{ color: "#4B7A62", fontSize: "12px" }}>
           <span style={{ color: "#6A9F82" }}>© 2026 PagoYa · Longview Meridian Technologies LLC</span>
           {" · "}

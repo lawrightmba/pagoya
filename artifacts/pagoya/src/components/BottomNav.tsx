@@ -31,13 +31,13 @@ export default function BottomNav() {
           left: 0,
           right: 0,
           zIndex: 100,
-          background: "#0A2540",
-          borderTop: "1px solid rgba(255,255,255,0.10)",
+          background: "#005432",
+          borderTop: "1px solid rgba(255,255,255,0.12)",
           display: "flex",
           alignItems: "stretch",
           height: "60px",
           paddingBottom: "env(safe-area-inset-bottom)",
-          boxShadow: "0 -4px 24px rgba(0,0,0,0.35)",
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.25)",
         }}
       >
         {TABS.map(({ path, icon: Icon, label }) => {
@@ -72,7 +72,7 @@ export default function BottomNav() {
                     width: "28px",
                     height: "3px",
                     borderRadius: "0 0 4px 4px",
-                    background: "#1D9E75",
+                    background: "#00C875",
                   }}
                 />
               )}
@@ -80,7 +80,7 @@ export default function BottomNav() {
                 style={{
                   width: "20px",
                   height: "20px",
-                  color: active ? "#1D9E75" : "rgba(255,255,255,0.45)",
+                  color: active ? "#00C875" : "rgba(255,255,255,0.55)",
                   strokeWidth: active ? 2.5 : 1.8,
                 }}
               />
@@ -88,7 +88,7 @@ export default function BottomNav() {
                 style={{
                   fontSize: "10px",
                   fontWeight: active ? 800 : 500,
-                  color: active ? "#1D9E75" : "rgba(255,255,255,0.45)",
+                  color: active ? "#00C875" : "rgba(255,255,255,0.55)",
                   lineHeight: 1,
                   letterSpacing: "0.01em",
                 }}
