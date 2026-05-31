@@ -7,8 +7,14 @@ import PaulaHint from "@/components/PaulaHint";
 const CATEGORIAS = [
   "Luz", "Agua", "Gas", "Internet", "Cable",
   "Teléfono móvil", "Streaming", "Préstamos",
-  "Seguro", "Escuela", "Renta", "Otro",
+  "Seguro", "Escuela", "Renta", "Gift Cards", "Otro",
 ];
+
+// Gift card service IDs use underscore-denomination format (e.g. netflix_300)
+// The server uses telefono as referencia and overrides monto for these.
+function detectGiftCard(categoriaOrId: string): boolean {
+  return categoriaOrId.includes("_") || categoriaOrId === "Gift Cards";
+}
 
 const SERVICIO_CATEGORIA: Record<string, string> = {
   CFE: "Luz", Telmex: "Teléfono móvil", Izzi: "Cable", Agua: "Agua",
@@ -23,9 +29,12 @@ export default function PaymentForm() {
   // Read ?servicio= query param to pre-fill empresa + categoria
   const servicioParam = new URLSearchParams(window.location.search).get("servicio");
 
+  // Detect gift card flow from context (categoria is a service ID like "netflix_300")
+  const isGiftCard = detectGiftCard(paymentData.categoria ?? "");
+
   const [form, setForm] = useState({
     empresa: servicioParam || paymentData.empresa,
-    categoria: (servicioParam && SERVICIO_CATEGORIA[servicioParam]) || paymentData.categoria,
+    categoria: isGiftCard ? "Gift Cards" : ((servicioParam && SERVICIO_CATEGORIA[servicioParam]) || paymentData.categoria),
     monto: paymentData.monto,
     referencia: paymentData.referencia,
     telefono: paymentData.telefono || (localStorage.getItem("pagoya_telefono") ?? ""),
@@ -40,7 +49,8 @@ export default function PaymentForm() {
     if (!form.categoria) newErrors.categoria = "Selecciona una categoría";
     if (!form.monto || isNaN(Number(form.monto)) || Number(form.monto) <= 0)
       newErrors.monto = "Ingresa un monto válido";
-    if (!form.referencia.trim()) newErrors.referencia = "Requerido";
+    // Gift cards: server uses telefono as referencia — no user input needed
+    if (!isGiftCard && !form.referencia.trim()) newErrors.referencia = "Requerido";
     if (!form.telefono.trim()) newErrors.telefono = "Requerido";
     return newErrors;
   };
@@ -88,6 +98,26 @@ export default function PaymentForm() {
       <main className="flex-1 px-5 py-7">
         <form onSubmit={handleSubmit} className="max-w-sm mx-auto flex flex-col gap-5">
 
+          {/* Gift card banner */}
+          {isGiftCard && (
+            <div style={{
+              background: "linear-gradient(135deg, #FF5C1A 0%, #FF9A3C 40%, #00C875 80%, #007A4A 100%)",
+              borderRadius: "20px",
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}>
+              <span style={{ fontSize: "28px", lineHeight: 1 }}>🎁</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 900, color: "#fff", fontSize: "15px" }}>Gift Card Digital</p>
+                <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "12px" }}>
+                  Tu código PIN llegará por WhatsApp al instante
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Service info card */}
           <div
             className="bg-white rounded-3xl p-6 flex flex-col gap-5"
@@ -100,11 +130,12 @@ export default function PaymentForm() {
                 type="text"
                 placeholder="Ej. CFE, Telmex, Netflix..."
                 value={form.empresa}
+                readOnly={isGiftCard}
                 onChange={(e) => handleChange("empresa", e.target.value)}
                 onFocus={() => setFocusedField("empresa")}
                 onBlur={() => setFocusedField(null)}
                 className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm text-[#1F1F1F] placeholder-gray-400"
-                style={inputStyle("empresa", !!errors.empresa)}
+                style={{ ...inputStyle("empresa", !!errors.empresa), ...(isGiftCard ? { background: "#F4FBF7", color: "#007A4A", fontWeight: 700 } : {}) }}
               />
             </Field>
 
@@ -112,6 +143,7 @@ export default function PaymentForm() {
               <div className="relative">
                 <select
                   value={form.categoria}
+                  disabled={isGiftCard}
                   onChange={(e) => handleChange("categoria", e.target.value)}
                   onFocus={() => setFocusedField("categoria")}
                   onBlur={() => setFocusedField(null)}
@@ -119,6 +151,7 @@ export default function PaymentForm() {
                   style={{
                     ...inputStyle("categoria", !!errors.categoria),
                     color: form.categoria ? "#1F1F1F" : "#9CA3AF",
+                    ...(isGiftCard ? { background: "#F4FBF7" } : {}),
                   }}
                 >
                   <option value="" disabled>Selecciona una categoría</option>
@@ -138,12 +171,13 @@ export default function PaymentForm() {
                   placeholder="0.00"
                   min="0"
                   step="0.01"
+                  readOnly={isGiftCard}
                   value={form.monto}
                   onChange={(e) => handleChange("monto", e.target.value)}
                   onFocus={() => setFocusedField("monto")}
                   onBlur={() => setFocusedField(null)}
                   className="w-full pl-9 pr-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm text-[#1F1F1F] placeholder-gray-400"
-                  style={inputStyle("monto", !!errors.monto)}
+                  style={{ ...inputStyle("monto", !!errors.monto), ...(isGiftCard ? { background: "#F4FBF7", fontWeight: 700 } : {}) }}
                 />
               </div>
             </Field>
@@ -156,22 +190,40 @@ export default function PaymentForm() {
           >
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Información de contacto</p>
 
-            <Field label="Número de referencia" error={errors.referencia}>
-              <input
-                type="text"
-                placeholder="Ej. 1234567890"
-                value={form.referencia}
-                onChange={(e) => handleChange("referencia", e.target.value)}
-                onFocus={() => setFocusedField("referencia")}
-                onBlur={() => setFocusedField(null)}
-                className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm text-[#1F1F1F] placeholder-gray-400"
-                style={inputStyle("referencia", !!errors.referencia)}
-              />
-            </Field>
-            <PaulaHint
-              message={`¿Dónde encuentro el número de referencia de ${form.empresa || "mi servicio"}?`}
-              label="¿Dónde encuentro mi número de referencia?"
-            />
+            {/* Referencia — hidden for gift cards (server auto-fills from telefono) */}
+            {!isGiftCard && (
+              <>
+                <Field label="Número de referencia" error={errors.referencia}>
+                  <input
+                    type="text"
+                    placeholder="Ej. 1234567890"
+                    value={form.referencia}
+                    onChange={(e) => handleChange("referencia", e.target.value)}
+                    onFocus={() => setFocusedField("referencia")}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm text-[#1F1F1F] placeholder-gray-400"
+                    style={inputStyle("referencia", !!errors.referencia)}
+                  />
+                </Field>
+                <PaulaHint
+                  message={`¿Dónde encuentro el número de referencia de ${form.empresa || "mi servicio"}?`}
+                  label="¿Dónde encuentro mi número de referencia?"
+                />
+              </>
+            )}
+            {isGiftCard && (
+              <div style={{
+                background: "#F4FBF7", border: "1px solid #CBE9D9",
+                borderRadius: "14px", padding: "12px 16px",
+                display: "flex", alignItems: "flex-start", gap: "10px",
+              }}>
+                <span style={{ fontSize: "18px", lineHeight: 1, flexShrink: 0 }}>📲</span>
+                <p style={{ margin: 0, fontSize: "12px", color: "#2D6E4E", lineHeight: 1.5 }}>
+                  Tu código PIN se enviará automáticamente por WhatsApp al número que ingreses abajo.
+                  No necesitas número de referencia.
+                </p>
+              </div>
+            )}
 
             <Field label="Número de teléfono" error={errors.telefono}>
               <input
