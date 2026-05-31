@@ -37,6 +37,12 @@ Puntos de lealtad: 1 punto por cada $10 MXN pagados — niveles Bronce, Plata (5
 
 PAGOS DIRECTOS: Si el usuario dice "paga mi CFE", "quiero pagar mi luz", "pagar Telmex", etc., usa prepare_bill_payment para iniciar el pago. Necesitas: serviceId (IDs del catálogo: cfe, sacmex, agua_jalisco, gas_natural, zeta_gas, izzi, totalplay, megacable, telmex_internet, starlink, sky, dish, telcel, att, movistar), referencia (número de cuenta o contrato), monto en MXN, y telefono del usuario. Si el usuario no da referencia o monto, pregúntale antes de llamar la herramienta. Después de llamar prepare_bill_payment, muestra el confirmText exactamente y espera respuesta.
 
+GIFT CARDS: PagoYa vende gift cards digitales — el PIN llega por WhatsApp en segundos después del pago.
+Marcas y denominaciones disponibles: Netflix $300/$400/$500/$700 | Amazon $100/$200/$500/$1,000 | Google Play $50/$100/$200/$500 | Uber $150 | Uber Eats $300 | Cinépolis $60/$120/$210 | Starbucks $200/$300 | Liverpool $500/$1,000/$2,000 | Soriana $500.
+Cómo comprar: el usuario abre pagoya.mx, selecciona la gift card, elige la denominación, paga con tarjeta débito/crédito (costo: denominación + $25 MXN comisión) o con saldo de su Cartera PagoYa (sin comisión). El PIN digital llega por WhatsApp en segundos.
+Si el usuario tiene saldo en su cartera y quiere pagar una gift card desde WhatsApp, usa prepare_bill_payment con el serviceId correcto (ej: "netflix_300") y sin referencia — para gift cards la referencia no aplica.
+Preguntas frecuentes: "¿Cuándo llega el PIN?" → en segundos por WhatsApp. "¿Cómo uso el código?" → en Netflix.com/redeem, Amazon.com.mx/redimir, etc. "¿Se puede devolver?" → no, las gift cards son finales una vez entregado el PIN. "¿Funciona fuera de México?" → depende de la plataforma; Netflix MX funciona en cuentas mexicanas.
+
 SALDO: Cuando el usuario pregunta cómo cargar saldo o depositar, usa get_deposit_instructions para darle las opciones paso a paso.
 
 PUNTOS: Cuando el usuario pregunta por sus puntos, nivel, o recompensas, usa get_loyalty_points.
@@ -272,8 +278,8 @@ async function executeToolCall(
 
     case "prepare_bill_payment": {
       const serviceId = input.serviceId as string;
-      const referencia = input.referencia as string;
-      const monto = Number(input.monto);
+      const inputReferencia = (input.referencia as string | undefined) ?? "";
+      const inputMonto = Number(input.monto);
       const telefono = (input.telefono as string | undefined) ?? resolvedTelefono ?? "";
 
       const service = getServiceById(serviceId);
@@ -281,7 +287,13 @@ async function executeToolCall(
         return { result: { error: `Servicio no encontrado: ${serviceId}. Verifica el ID del catálogo.` } };
       }
 
-      if (!referencia || referencia.trim().length === 0) {
+      // Gift cards: referencia = phone, monto = fixedAmount from catalog
+      const isGiftCard = service.isGiftCard === true;
+      const cleanTel = telefono.startsWith("+") ? telefono : `+${telefono}`;
+      const referencia = isGiftCard ? cleanTel : inputReferencia;
+      const monto = isGiftCard && service.fixedAmount != null ? service.fixedAmount : inputMonto;
+
+      if (!isGiftCard && (!referencia || referencia.trim().length === 0)) {
         return { result: { error: "Referencia/número de cuenta requerida." } };
       }
 
@@ -289,7 +301,6 @@ async function executeToolCall(
         return { result: { error: "El monto debe ser un número positivo." } };
       }
 
-      const cleanTel = telefono.startsWith("+") ? telefono : `+${telefono}`;
       const [wallet] = await db
         .select({ balance_mxn: walletsTable.balanceMxn })
         .from(walletsTable)
@@ -297,17 +308,20 @@ async function executeToolCall(
         .limit(1);
 
       const balance = wallet ? Number(wallet.balance_mxn) : 0;
-      const totalCost = monto + 25;
+      // Gift cards via wallet: no platform fee (same as web app wallet path)
+      const fee = isGiftCard ? 0 : 25;
+      const totalCost = monto + fee;
 
       if (balance < totalCost) {
         return {
           result: {
-            error: `Saldo insuficiente. Tienes $${balance.toFixed(2)} MXN pero necesitas $${totalCost.toFixed(2)} MXN (pago $${monto} + comisión $25). ¿Quieres que te explique cómo cargar saldo?`,
+            error: `Saldo insuficiente. Tienes $${balance.toFixed(2)} MXN pero necesitas $${totalCost.toFixed(2)} MXN${fee > 0 ? ` (gift card $${monto} + comisión $${fee})` : ""}. ¿Quieres que te explique cómo cargar saldo?`,
           },
         };
       }
 
-      const confirmText = `💳 *Resumen de pago*\n\n${service.logoEmoji} *${service.name}*\nReferencia: ${referencia}\nMonto: $${monto.toFixed(2)} MXN\nComisión: $25.00 MXN\n*Total: $${totalCost.toFixed(2)} MXN*\n\nSaldo actual: $${balance.toFixed(2)} MXN\n\nResponde *SÍ* para confirmar o *NO* para cancelar.`;
+      const feeLine = fee > 0 ? `\nComisión: $${fee.toFixed(2)} MXN` : "\nComisión: Sin comisión 🎁";
+      const confirmText = `💳 *Resumen de pago*\n\n${service.logoEmoji} *${service.name}*${isGiftCard ? "" : `\nReferencia: ${referencia}`}\nMonto: $${monto.toFixed(2)} MXN${feeLine}\n*Total: $${totalCost.toFixed(2)} MXN*\n\nSaldo actual: $${balance.toFixed(2)} MXN\n\nResponde *SÍ* para confirmar o *NO* para cancelar.`;
 
       return {
         result: { ready: true, confirmText, serviceName: service.name },
