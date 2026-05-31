@@ -87,12 +87,6 @@ export const BILL_CATALOG: BillService[] = [
   // ── MÓVIL — Other carriers ────────────────────────────────────────────────
   { id: "movistar", name: "Movistar", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOVISTAR", evolucionaServiceId: "MOVISTAR" },
 
-  // ── STREAMING ─────────────────────────────────────────────────────────────
-  { id: "netflix",    name: "Netflix",    category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎬", evolucionaServiceId: "NETFLIX" },
-  { id: "spotify",    name: "Spotify",    category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎵", evolucionaServiceId: "SPOTIFY" },
-  { id: "disney_plus",name: "Disney+",   category: "Streaming", providers: ["evoluciona"], logoEmoji: "🏰", evolucionaServiceId: "DISNEY_PLUS" },
-  { id: "hbo_max",    name: "Max (HBO)", category: "Streaming", providers: ["evoluciona"], logoEmoji: "🎭", evolucionaServiceId: "HBO_MAX" },
-
   // ── PRÉSTAMOS ─────────────────────────────────────────────────────────────
   { id: "kueski", name: "Kueski", category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KUESKI" },
   { id: "konfio",  name: "Konfío",  category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KONFIO" },
