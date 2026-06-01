@@ -349,6 +349,23 @@
 
   /* ── TRACTION REPORT ── */
   #panel-traction { padding-bottom: 80px; }
+  .tr-live-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: #0a1e2e; border: 1px solid #1D9E75; border-radius: 8px;
+    padding: 10px 16px; margin-bottom: 16px; font-size: 13px; color: #ccc;
+  }
+  .tr-live-ts { flex: 1; }
+  .tr-refresh-btn {
+    background: none; border: 1px solid #1D9E75; color: #1D9E75;
+    border-radius: 6px; padding: 4px 14px; cursor: pointer; font-size: 12px;
+    transition: background .15s, color .15s;
+  }
+  .tr-refresh-btn:hover { background: #1D9E75; color: #fff; }
+  .tr-card.tr-autofilled { border-color: #1D9E75 !important; }
+  .tr-card.tr-autofilled .tr-card-label::after {
+    content: ' · LIVE'; font-size: 10px; color: #1D9E75;
+    font-weight: 700; letter-spacing: .04em;
+  }
   .tr-week-nav {
     display: flex; gap: 6px; padding: 12px 12px 0; flex-wrap: wrap;
   }
@@ -1532,6 +1549,10 @@
     <button class="tr-w-btn" onclick="trSelectWeek(8,this)">W8</button>
   </div>
 
+  <div class="tr-live-banner">
+    <span class="tr-live-ts" id="tr-live-ts">Cargando datos en vivo…</span>
+    <button class="tr-refresh-btn" onclick="loadTractionLiveStats()">↻ Actualizar</button>
+  </div>
   <div class="tr-section-title">Core Metrics — <span id="tr-week-label">Week 1</span></div>
   <div class="tr-card-grid">
     <div class="tr-card" id="tr-card-users">
@@ -1894,6 +1915,7 @@ function switchTab(id, btn) {
   if (id === 'reminders') renderRemindersPanel();
   if (id === 'completed' && window.csRenderCompleted) window.csRenderCompleted();
   if (id === 'usuarios') uuLoad();
+  if (id === 'traction') loadTractionLiveStats();
 }
 
 // ── PROGRESS ─────────────────────────────────────────────────────────────────
@@ -2397,6 +2419,36 @@ if (!localStorage.getItem(TR_MS_SHIPPED_KEY)) {
   ['ms-03','ms-08','ms-09'].forEach(id => { state[id] = true; });
   localStorage.setItem(TR_MS_KEY, JSON.stringify(state));
   localStorage.setItem(TR_MS_SHIPPED_KEY, '1');
+}
+
+async function loadTractionLiveStats() {
+  const tsEl = document.getElementById('tr-live-ts');
+  if (tsEl) tsEl.textContent = 'Actualizando…';
+  try {
+    const res = await fetch('/api/traction/metrics', { credentials: 'include' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    const fmt    = n => Number(n || 0).toLocaleString('es-MX');
+    const fmtMxn = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fill = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = val;
+      el.closest('.tr-card')?.classList.add('tr-autofilled', 'filled');
+    };
+    fill('tr-users', fmt(d.total_users));
+    fill('tr-txwk',  fmt(d.payments_7d));
+    fill('tr-txttl', fmt(d.total_payments));
+    fill('tr-vol',   fmtMxn(d.total_volume_mxn));
+    fill('tr-reps',  fmt(d.total_reps));
+    fill('tr-rev',   fmtMxn(d.fee_revenue_7d));
+    const ts = new Date(d.as_of);
+    const hhmm = ts.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    if (tsEl) tsEl.textContent = '● Datos en vivo · actualizado ' + hhmm;
+  } catch (err) {
+    if (tsEl) tsEl.textContent = '⚠ No se pudieron cargar los datos — reintenta';
+    console.warn('traction/metrics fetch failed', err);
+  }
 }
 
 let trCurrentWeek = 1;

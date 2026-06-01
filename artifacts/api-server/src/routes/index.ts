@@ -407,6 +407,39 @@ router.patch("/user/welcome-shown", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/traction/metrics — live KPI snapshot for the command center traction tab
+router.get("/traction/metrics", async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(drizzleSql`
+      SELECT
+        (SELECT COUNT(*)::int FROM users)                                                              AS total_users,
+        (SELECT COUNT(*)::int FROM users WHERE created_at > NOW() - INTERVAL '7 days')                AS new_users_7d,
+        (SELECT COUNT(*)::int FROM users WHERE created_at > NOW() - INTERVAL '30 days')               AS new_users_30d,
+        (SELECT COUNT(*)::int FROM bill_payments WHERE status = 'completed')                          AS total_payments,
+        (SELECT COUNT(*)::int FROM bill_payments WHERE status = 'completed'
+             AND created_at > NOW() - INTERVAL '7 days')                                              AS payments_7d,
+        (SELECT COALESCE(SUM(monto),0)::numeric FROM bill_payments WHERE status = 'completed')        AS total_volume_mxn,
+        (SELECT COALESCE(SUM(monto),0)::numeric FROM bill_payments
+             WHERE status = 'completed' AND created_at > NOW() - INTERVAL '7 days')                   AS volume_7d_mxn,
+        (SELECT COALESCE(SUM(platform_fee_mxn),0)::numeric FROM bill_payments
+             WHERE status = 'completed')                                                               AS fee_revenue_total,
+        (SELECT COALESCE(SUM(platform_fee_mxn),0)::numeric FROM bill_payments
+             WHERE status = 'completed' AND created_at > NOW() - INTERVAL '7 days')                   AS fee_revenue_7d,
+        (SELECT COUNT(*)::int FROM reps WHERE status = 'active')                                      AS active_reps,
+        (SELECT COUNT(*)::int FROM reps)                                                               AS total_reps,
+        (SELECT COUNT(*)::int FROM wallet_transactions WHERE status = 'confirmed'
+             AND type IN ('load_card','load_oxxo','spei_in'))                                         AS total_loads,
+        (SELECT COALESCE(SUM(amount_mxn),0)::numeric FROM wallet_transactions
+             WHERE status = 'confirmed' AND type IN ('load_card','load_oxxo','spei_in'))              AS total_loaded_mxn
+    `);
+    const row = result.rows[0] as Record<string, unknown>;
+    res.json({ ...row, as_of: new Date().toISOString() });
+  } catch (err) {
+    logger.error({ err }, "traction/metrics: query failed");
+    res.status(500).json({ error: "Error al obtener métricas." });
+  }
+});
+
 // GET /api/admin/users — all users with nudge + welcome_shown + lifecycle nudge status (most recent first, cap 200)
 router.get("/admin/users", async (req: Request, res: Response) => {
   try {
