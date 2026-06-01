@@ -17,10 +17,10 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
 
   let toFormatted: string;
   if (to.startsWith("whatsapp:")) {
-    toFormatted = to;
+    // Still strip spaces from the number portion
+    toFormatted = "whatsapp:+" + to.replace(/^whatsapp:\+?/, "").replace(/\D/g, "");
   } else {
-    const digits = to.startsWith("+") ? to : `+${to}`;
-    toFormatted = `whatsapp:${digits}`;
+    toFormatted = "whatsapp:+" + to.replace(/\D/g, "");
   }
 
   try {

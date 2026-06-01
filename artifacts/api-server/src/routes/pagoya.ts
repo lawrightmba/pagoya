@@ -201,7 +201,7 @@ router.get("/payments/:paymentIntentId", async (req: Request, res: Response) => 
         monto: payment.monto,
         telefono: payment.telefono,
         referencia: payment.referencia,
-      }).catch(() => {}); // fire-and-forget from server — non-blocking for the response
+      }).catch(() => {});
     }
 
     res.json(payment);
