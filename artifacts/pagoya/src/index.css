@@ -165,6 +165,30 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+  button,
+  a,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="switch"],
+  select,
+  label[for],
+  summary,
+  [onclick],
+  [tabindex]:not([tabindex="-1"]) {
+    cursor: pointer;
+  }
+  input,
+  textarea {
+    cursor: text;
+  }
+  [disabled],
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
