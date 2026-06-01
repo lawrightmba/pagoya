@@ -9,3 +9,4 @@
 - [belvo_links schema](belvo-links-schema.md) — uses user_id INTEGER not telefono; always SELECT id FROM users WHERE telefono=… before inserting; institution_name TEXT column added May 28
 - [Command center dual-file sync](command-center-dual-file.md) — two copies exist; edit pagoya/public, then cp to api-server/public after every session
 - [YC docs generation](yc-docs.md) — use python-docx not JS docx lib; .md files don't download from Replit presenter, use .txt copy as workaround
+- [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)

@@ -34,7 +34,8 @@ async function deliverGiftCard(payment: {
   if (!service?.isGiftCard) return;
 
   const effectiveMonto = service.fixedAmount ?? parseFloat(payment.monto);
-  const effectiveRef = payment.telefono; // gift cards use phone as reference
+  // SIPREL referencia max 10 chars — use last 10 numeric digits of phone
+  const effectiveRef = payment.telefono.replace(/\D/g, "").slice(-10);
 
   logger.info({ paymentIntentId: payment.paymentIntentId, serviceId: payment.categoria }, "pagoya: triggering gift card SIPREL delivery");
 

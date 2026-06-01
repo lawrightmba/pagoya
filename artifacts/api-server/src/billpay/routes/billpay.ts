@@ -80,9 +80,9 @@ router.post("/pay", async (req: Request, res: Response) => {
     return;
   }
 
-  // Gift cards: referencia is not user-supplied — use the buyer's phone number internally.
+  // Gift cards: referencia is not user-supplied — use last 10 digits of phone (SIPREL max 10 chars).
   // monto is fixed to the denomination baked into the catalog entry.
-  const effectiveReferencia = service.isGiftCard ? telefono : referencia;
+  const effectiveReferencia = service.isGiftCard ? telefono.replace(/\D/g, "").slice(-10) : referencia;
   const effectiveMonto = service.isGiftCard && service.fixedAmount != null
     ? service.fixedAmount
     : parseFloat(String(monto));
