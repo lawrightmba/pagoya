@@ -744,7 +744,7 @@ export default function Register() {
                 type="tel"
                 autoComplete="tel-national"
                 placeholder={
-                  countryCode === "+52" ? "Ej. 322 183 9799" :
+                  countryCode === "+52" ? "Ej. 55 1234 5678" :
                   countryCode === "+1"  ? "Ej. 555 123 4567" :
                   "10 dígitos locales"
                 }
