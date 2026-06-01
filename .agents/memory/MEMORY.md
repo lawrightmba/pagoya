@@ -5,8 +5,7 @@
 - [Command center seed keys](command-center-seeds.md) — current key is ck_defaults_ph0_v4 (p0-01–p0-35); bump key + date each session when adding new Phase 0 items
 - [Paula payment initiation](paula-payment-initiation.md) — 2FA flow via pendingPayment in session; agentChat returns pendingPayment in response body; whatsapp-agent intercepts sí/no before forwarding to agent
 - [PWA push notifications](pwa-push.md) — VAPID keys in env vars; push_subscriptions table; web-push in api-server; sw.js + manifest.json in pagoya/public; usePushNotifications hook; fires after bill payment confirmed
-- [Belvo Connect scopes](belvo-connect-scopes.md) — widget token only accepts read_institutions,write_links,read_links — read_accounts is invalid and returns 400
-- [belvo_links schema](belvo-links-schema.md) — uses user_id INTEGER not telefono; always SELECT id FROM users WHERE telefono=… before inserting; institution_name TEXT column added May 28
+- [Belvo deprioritized](belvo-deprioritized.md) — Belvo dropped June 2026; code stays but STP/SPEI is the wallet top-up path; alternatives: Finerio Connect, Prometeo
 - [Command center dual-file sync](command-center-dual-file.md) — two copies exist; edit pagoya/public, then cp to api-server/public after every session
 - [YC docs generation](yc-docs.md) — use python-docx not JS docx lib; .md files don't download from Replit presenter, use .txt copy as workaround
 - [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)

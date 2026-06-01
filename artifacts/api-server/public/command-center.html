@@ -680,13 +680,13 @@
       <span class="rd-tag" style="background:#1D9E7520; color:#1D9E75; border:1px solid #1D9E7540;">Done May 28</span>
     </div>
 
-    <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
+    <div class="rd-item" data-card="tech" onclick="rdToggle(this)" style="opacity:0.5;">
       <div class="rd-cb"></div>
       <div class="rd-body">
-        <div class="rd-title">Belvo production upgrade — activate live bank linking</div>
-        <div class="rd-desc">Application submitted for "Personal finance" use case, Connect + Move Money products. When approved: set BELVO_ENV=production and replace the sandbox wallet-credit block in /api/belvo-connect/topup with a Belvo Pagos seguros en Línea payment initiation call using the user's link_id. Production keys are BELVO_DD_KEY_ID / BELVO_DD_KEY_SECRET. The full topup route already has a "Production TODO" comment marking the exact replacement point.</div>
+        <div class="rd-title">Belvo bank linking — DEPRIORITIZED</div>
+        <div class="rd-desc">Belvo non-responsive on production upgrade application. Deprioritized June 1 2026. STP/SPEI manual top-up covers the same use case — once STP credentials are live, users send a SPEI to their personal CLABE and wallet credits automatically. No third-party widget needed. Code remains in place (routes/belvo-connect.ts, belvo_links table) if we revisit with Finerio Connect or Prometeo as alternatives later.</div>
       </div>
-      <span class="rd-tag rd-now">Awaiting Belvo approval</span>
+      <span class="rd-tag" style="background:#99999920; color:#999; border:1px solid #99999940;">Deprioritized</span>
     </div>
 
     <div class="rd-item" data-card="tech" onclick="rdToggle(this)">
