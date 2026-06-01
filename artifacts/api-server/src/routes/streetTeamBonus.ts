@@ -4,6 +4,7 @@ import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, stree
 import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
 import { generateOTP, verifyOTP, clearOTP } from "../services/otpService.js";
+import { issueWelcomeTokens } from "../services/loyalty.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
@@ -189,6 +190,12 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
       // Non-fatal — wallet may already exist; continue
     }
 
+    // ── 5.5. Issue 3 free transaction tokens (fire-and-forget) ───────────
+    // A token issuance failure must NEVER block or roll back registration.
+    issueWelcomeTokens(pending.phone).catch((err) => {
+      logger.error({ err, phone: pending.phone }, "streetTeamBonus: free token issuance failed (non-fatal)");
+    });
+
     // ── 6. Insert street_team lead row ────────────────────────────────────
     try {
       await db
@@ -236,14 +243,16 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
 
     // ── 10. WhatsApp confirmation ──────────────────────────────────────────
     try {
+      const firstName = pending.name.trim().split(" ")[0] || pending.name.trim();
       let message =
-        `¡Bienvenido a PagoYa, ${pending.name}! 🎉 Tu cuenta está lista. ` +
-        `Paga tu luz, agua, teléfono y más — sin filas, sin efectivo.`;
+        `🎉 Bienvenido/a a PagoYa, ${firstName}! Tu cuenta está activa. ` +
+        `Tienes 3 pagos gratuitos esperándote — sin comisión. ` +
+        `Paga tu primera cuenta ahora: pagoyamx.com`;
 
       if (bonusCredited) {
         message +=
-          ` Además, hemos acreditado $${bonusAmount.toFixed(2)} MXN a tu cartera` +
-          ` como bono de bienvenida. Úsalos en tu primer pago.`;
+          `\n\nAdemás, hemos acreditado $${bonusAmount.toFixed(2)} MXN a tu cartera` +
+          ` como bono de bienvenida. Úsalos en cualquier pago.`;
       }
 
       await sendWhatsApp(pending.phone, message);

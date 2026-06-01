@@ -541,3 +541,49 @@ export async function getLoyaltyAdminStats(): Promise<{
     top_reward: topRows[0]?.code ?? null,
   };
 }
+
+// ─── issueWelcomeTokens ───────────────────────────────────────────────────────
+// Called once at registration. Grants 3 FREE_TRANSACTION tokens to every new
+// user. Tokens are stored in loyalty_accounts.redemption_tokens (TEXT[]) and
+// consumed one-at-a-time by the bill-pay route to waive the $25 MXN fee.
+// Never throws — errors are logged and swallowed so registration is never blocked.
+export async function issueWelcomeTokens(phone: string): Promise<void> {
+  // 1. Ensure user_profiles row exists (loyalty_accounts has a profile_id FK)
+  await db.execute(
+    sql`INSERT INTO user_profiles (phone)
+        VALUES (${phone})
+        ON CONFLICT (phone) DO NOTHING`,
+  );
+
+  // 2. Fetch the profile id
+  const profileResult = await db.execute(
+    sql`SELECT id FROM user_profiles WHERE phone = ${phone} LIMIT 1`,
+  );
+  const profileRows = profileResult.rows as Array<{ id: string }>;
+  if (!profileRows.length) {
+    throw new Error(`issueWelcomeTokens: could not resolve profile for ${phone}`);
+  }
+  const profileId = profileRows[0].id;
+
+  // 3. Generate 3 unique FREE_TRANSACTION token strings
+  const tokens = Array.from({ length: 3 }, (_, i) =>
+    `FREE-${Date.now() + i}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+  );
+
+  // 4. Upsert loyalty_accounts: create the row with the tokens, or append to
+  //    the existing redemption_tokens array if the account already exists.
+  await db.execute(
+    sql`INSERT INTO loyalty_accounts
+          (profile_id, phone, points_balance, points_lifetime, tier, redemption_tokens)
+        VALUES
+          (${profileId}, ${phone}, 0, 0, 'bronce',
+           ARRAY[${tokens[0]}, ${tokens[1]}, ${tokens[2]}]::text[])
+        ON CONFLICT (phone) DO UPDATE
+          SET redemption_tokens = array_cat(
+            COALESCE(loyalty_accounts.redemption_tokens, ARRAY[]::text[]),
+            ARRAY[${tokens[0]}, ${tokens[1]}, ${tokens[2]}]::text[]
+          )`,
+  );
+
+  console.log(`[TokenIssue] Issued 3 free tokens to new user ${phone}`);
+}
