@@ -2367,13 +2367,13 @@ loadTaecelBalance();
 const TR_MILESTONES = [
   { id:'ms-01', text:'OXXO cash-in fully live and tested with 10 real users', week:'W1–2' },
   { id:'ms-02', text:'Street team at 3+ active reps (William + 2 new)', week:'W1–2' },
-  { id:'ms-03', text:'Conekta live keys activated and card top-up live', week:'W2–3' },
+  { id:'ms-03', text:'Stripe live keys activated — first real card payment processed ✅ June 1 (Netflix $400)', week:'W2–3' },
   { id:'ms-04', text:'SIPREL levantamiento tecnológico submitted + acknowledged', week:'W1' },
   { id:'ms-05', text:'First 25 transactions processed (any rail)', week:'W2–3' },
   { id:'ms-06', text:'3 anchor landlords using PagoSeguro cross-selling to PagoYa', week:'W2–4' },
   { id:'ms-07', text:'First 50 registered users with wallet balance', week:'W3–4' },
-  { id:'ms-08', text:'SIPREL bill pay rail live in production', week:'W3–5' },
-  { id:'ms-09', text:'First bill payment processed end-to-end via SIPREL', week:'W4–5' },
+  { id:'ms-08', text:'SIPREL/Taecel bill pay rail live in production ✅ June 1', week:'W3–5' },
+  { id:'ms-09', text:'First transaction processed end-to-end via SIPREL/Taecel ✅ June 1 (Netflix $400 · folio 1076290539)', week:'W4–5' },
   { id:'ms-10', text:'100 total transactions milestone hit', week:'W4–6' },
   { id:'ms-11', text:'2+ video testimonials from real users captured', week:'W3–5' },
   { id:'ms-12', text:'YC interview or decision received', week:'W4–6' },
@@ -2388,6 +2388,16 @@ const TR_MILESTONES = [
 const TR_METRIC_FIELDS = ['users','txwk','txttl','vol','reps','rev'];
 const TR_NARR_FIELDS   = ['shipped','working','obstacle','next','insight'];
 const TR_MS_KEY        = 'pagoya_tr_milestones';
+
+// Pre-mark milestones that are confirmed done as of June 1, 2026.
+// Runs once; user can toggle freely after that.
+const TR_MS_SHIPPED_KEY = 'pagoya_tr_ms_shipped_v1';
+if (!localStorage.getItem(TR_MS_SHIPPED_KEY)) {
+  const state = JSON.parse(localStorage.getItem(TR_MS_KEY) || '{}');
+  ['ms-03','ms-08','ms-09'].forEach(id => { state[id] = true; });
+  localStorage.setItem(TR_MS_KEY, JSON.stringify(state));
+  localStorage.setItem(TR_MS_SHIPPED_KEY, '1');
+}
 
 let trCurrentWeek = 1;
 
