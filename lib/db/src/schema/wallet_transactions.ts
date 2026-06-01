@@ -22,6 +22,12 @@ export const walletTransactionsTable = pgTable(
     peerTransferId: uuid("peer_transfer_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    // ── STP / SPEI fields ─────────────────────────────────────────────────────
+    // STP claveRastreo — unique tracking key for every SPEI transfer (18 chars).
+    stpClaveRastreo: text("stp_clave_rastreo"),
+    // Official Banxico CEP (Comprobante Electrónico de Pago) URL for this transfer.
+    // Lets users retrieve the official receipt from banxico.org.mx.
+    cepUrl: text("cep_url"),
   },
   (t) => [
     index("wallet_tx_wallet_id_idx").on(t.walletId),

@@ -3,10 +3,13 @@
 // Two responsibilities:
 //   1. handleStpWebhook — raw-body POST handler mounted in app.ts BEFORE
 //      express.json() so HMAC-SHA256 signature validation has the untouched body.
-//   2. GET /api/stp/instructions/:telefono — returns CLABE / empresa for the UI.
+//   2. GET /api/stp/instructions/:telefono — returns user-specific CLABE + empresa.
+//   3. GET /api/stp/clabe/:telefono — returns user's assigned CLABE (or null).
+//   4. GET /api/stp/account/check/:clabe — checks CLABE status with STP.
 //
 // Required env vars (see .env.example):
 //   STP_EMPRESA, STP_CLABE_RECEPTOR, STP_WEBHOOK_SECRET, STP_ENABLED
+//   STP_BANK_CODE, STP_CITY_CODE, STP_SOAP_URL
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Router, type Request, type Response, type RequestHandler } from "express";
@@ -21,6 +24,7 @@ import {
 import { getOrCreateWallet, creditWallet } from "../wallet/services/wallet.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
+import { generateCepUrl, checkStpAccount } from "../services/stpService.js";
 
 // ── Signature verification ─────────────────────────────────────────────────
 function verifyStpSignature(rawBody: Buffer, signatureHeader: string | undefined): boolean {
@@ -58,6 +62,38 @@ function normalizeTelefono(raw: string): string | null {
   return null;
 }
 
+// ── Resolve user by CLABE (primary) or phone in conceptoPago (fallback) ───
+async function resolveUserTelefono(
+  cuentaBeneficiario: string | undefined,
+  conceptoPago: string | undefined,
+): Promise<{ telefono: string; matchedBy: "clabe" | "conceptoPago" } | null> {
+  // 1. Try CLABE match — preferred once users have per-user CLABEs assigned
+  if (cuentaBeneficiario && cuentaBeneficiario.length === 18) {
+    const [byClabe] = await db
+      .select({ telefono: usersTable.telefono })
+      .from(usersTable)
+      .where(eq(usersTable.stpClabe, cuentaBeneficiario))
+      .limit(1);
+
+    if (byClabe) {
+      return { telefono: byClabe.telefono, matchedBy: "clabe" };
+    }
+  }
+
+  // 2. Fallback: extract phone number from conceptoPago
+  const telefono = normalizeTelefono(conceptoPago ?? "");
+  if (!telefono) return null;
+
+  const [byPhone] = await db
+    .select({ telefono: usersTable.telefono })
+    .from(usersTable)
+    .where(eq(usersTable.telefono, telefono))
+    .limit(1);
+
+  if (!byPhone) return null;
+  return { telefono: byPhone.telefono, matchedBy: "conceptoPago" };
+}
+
 // ── handleStpWebhook — mounted in app.ts with raw body parser ─────────────
 export const handleStpWebhook: RequestHandler = async (req, res) => {
   const rawBody = req.body as Buffer;
@@ -87,12 +123,15 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
     monto,
     conceptoPago,
     ordenante,
+    cuentaBeneficiario,
+    fechaOperacion,
     estado,
   } = payload as {
     claveRastreo?: string;
     monto?: number | string;
     conceptoPago?: string;
     ordenante?: string;
+    cuentaBeneficiario?: string;
     fechaOperacion?: string;
     estado?: string;
   };
@@ -117,40 +156,45 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
   const rawMonto = typeof monto === "number" ? monto : parseFloat(String(monto ?? "0"));
   const amountMXN = rawMonto / 100;
 
-  const telefono = normalizeTelefono(conceptoPago ?? "");
+  // Resolve user by CLABE first, then conceptoPago fallback
+  const userMatch = await resolveUserTelefono(
+    cuentaBeneficiario as string | undefined,
+    conceptoPago as string | undefined,
+  );
 
-  if (!telefono || amountMXN < 1) {
+  if (!userMatch || amountMXN < 1) {
     await db
       .insert(stpWebhookLogTable)
       .values({
         rawPayload: payload,
         status: "unmatched",
-        error: `Cannot resolve telefono from conceptoPago="${conceptoPago}" or invalid monto=${monto}`,
+        error: userMatch
+          ? `Invalid monto=${monto}`
+          : `Cannot resolve user — cuentaBeneficiario="${cuentaBeneficiario}" conceptoPago="${conceptoPago}"`,
       })
       .catch((err) => logger.error({ err }, "stp: log insert failed"));
-    logger.warn({ conceptoPago, monto, claveRastreo }, "stp: unmatched SPEI — no telefono or zero amount");
+    logger.warn(
+      { cuentaBeneficiario, conceptoPago, monto, claveRastreo },
+      "stp: unmatched SPEI — no user found or zero amount",
+    );
     res.json({ ok: true });
     return;
   }
 
-  const [user] = await db
-    .select({ telefono: usersTable.telefono })
-    .from(usersTable)
-    .where(eq(usersTable.telefono, telefono))
-    .limit(1);
+  const { telefono, matchedBy } = userMatch;
 
-  if (!user) {
-    await db
-      .insert(stpWebhookLogTable)
-      .values({
-        rawPayload: payload,
-        status: "unmatched",
-        error: `User not found for telefono=${telefono}`,
-      })
-      .catch((err) => logger.error({ err }, "stp: log insert failed"));
-    logger.warn({ telefono, claveRastreo }, "stp: no user found for SPEI transfer — logged for manual reconciliation");
-    res.json({ ok: true });
-    return;
+  // Generate CEP URL for the official Banxico receipt
+  let cepUrl: string | null = null;
+  if (claveRastreo && fechaOperacion) {
+    try {
+      cepUrl = generateCepUrl({
+        claveRastreo,
+        fechaOperacion: String(fechaOperacion),
+        amountMxn: amountMXN,
+      });
+    } catch (err) {
+      logger.warn({ err, claveRastreo }, "stp: CEP URL generation failed (non-fatal)");
+    }
   }
 
   try {
@@ -164,19 +208,31 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
         amountMxn: amountMXN.toFixed(2),
         status: "pending",
         description: `SPEI de ${ordenante ?? "remitente"} — clave ${claveRastreo ?? "N/A"}`,
+        stpClaveRastreo: claveRastreo ?? null,
+        cepUrl: cepUrl ?? null,
       })
       .returning();
 
     await creditWallet(wallet.id, amountMXN, tx.id);
 
-    // WhatsApp confirmation — non-blocking
+    // WhatsApp confirmation — include CEP link for official receipt
+    const cepLine = cepUrl
+      ? `\n📄 Comprobante oficial (Banxico):\n${cepUrl}`
+      : "";
+
+    const matchNote = matchedBy === "clabe"
+      ? ""
+      : "\n_(transferencia identificada por concepto de pago)_";
+
     sendWhatsApp(
       telefono,
       `✅ *PagoYa — Transferencia SPEI Recibida*\n` +
         `Monto: $${amountMXN.toFixed(2)} MXN\n` +
         `De: ${ordenante ?? "remitente"}\n` +
         `Clave rastreo: ${claveRastreo ?? "N/A"}\n` +
-        `Tu saldo ha sido actualizado automáticamente.`,
+        `Tu saldo ha sido actualizado automáticamente.` +
+        cepLine +
+        matchNote,
     ).catch(() => {});
 
     await db
@@ -184,7 +240,10 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
       .values({ rawPayload: payload, status: "credited", error: null })
       .catch((err) => logger.error({ err }, "stp: log insert failed"));
 
-    logger.info({ telefono, amountMXN, claveRastreo }, "stp: SPEI transfer credited to wallet");
+    logger.info(
+      { telefono, amountMXN, claveRastreo, matchedBy, cepUrl },
+      "stp: SPEI transfer credited to wallet",
+    );
 
     // Always respond 200 so STP does not retry
     res.json({ ok: true });
@@ -205,17 +264,77 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
   }
 };
 
-// ── Router — GET /api/stp/instructions/:telefono ───────────────────────────
+// ── Router ──────────────────────────────────────────────────────────────────
 const router = Router();
 
-router.get("/instructions/:telefono", (_req: Request, res: Response) => {
-  const telefono = _req.params.telefono;
-  res.json({
-    clabe: process.env.STP_CLABE_RECEPTOR ?? null,
-    empresa: process.env.STP_EMPRESA ?? null,
-    concept_instructions: `Escribe tu número de teléfono: ${telefono}`,
-    enabled: process.env.STP_ENABLED === "true",
-  });
+// GET /api/stp/instructions/:telefono
+// Returns the SPEI deposit instructions for a user.
+// If the user has a personal CLABE assigned, returns that.
+// Falls back to the shared CLABE receptor with conceptoPago instructions.
+router.get("/instructions/:telefono", async (req: Request, res: Response) => {
+  const { telefono } = req.params;
+
+  const [user] = await db
+    .select({ stpClabe: usersTable.stpClabe })
+    .from(usersTable)
+    .where(eq(usersTable.telefono, telefono))
+    .limit(1)
+    .catch(() => []);
+
+  const personalClabe = user?.stpClabe ?? null;
+  const sharedClabe = process.env.STP_CLABE_RECEPTOR ?? null;
+  const empresa = process.env.STP_EMPRESA ?? null;
+  const enabled = process.env.STP_ENABLED === "true";
+
+  if (personalClabe) {
+    res.json({
+      clabe: personalClabe,
+      empresa,
+      enabled,
+      type: "personal",
+      concept_instructions: null,
+      note: "Usa esta CLABE única para tus depósitos SPEI. No necesitas escribir nada en el concepto.",
+    });
+  } else {
+    res.json({
+      clabe: sharedClabe,
+      empresa,
+      enabled,
+      type: "shared",
+      concept_instructions: `Escribe tu número de teléfono en el concepto: ${telefono}`,
+      note: "Escribe tu número celular completo (con +52) en el campo concepto de pago.",
+    });
+  }
+});
+
+// GET /api/stp/clabe/:telefono
+// Returns just the user's assigned CLABE (for admin / KYC dashboards).
+router.get("/clabe/:telefono", async (req: Request, res: Response) => {
+  const { telefono } = req.params;
+  const [user] = await db
+    .select({ stpClabe: usersTable.stpClabe, telefono: usersTable.telefono })
+    .from(usersTable)
+    .where(eq(usersTable.telefono, telefono))
+    .limit(1)
+    .catch(() => []);
+
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ telefono: user.telefono, clabe: user.stpClabe ?? null });
+});
+
+// GET /api/stp/account/check/:clabe
+// Checks whether a CLABE is active in STP (delegates to consultaCuentaFisica).
+router.get("/account/check/:clabe", async (req: Request, res: Response) => {
+  const { clabe } = req.params;
+  if (!/^\d{18}$/.test(clabe)) {
+    res.status(400).json({ error: "CLABE must be 18 numeric digits" });
+    return;
+  }
+  const result = await checkStpAccount(clabe);
+  res.json(result);
 });
 
 export default router;

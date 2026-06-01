@@ -480,8 +480,11 @@ router.get("/transactions", async (req: Request, res: Response) => {
         source:
           t.type === "load_card" ? "card"
           : t.type === "load_oxxo" ? "oxxo"
+          : t.type === "spei_in" ? "spei"
           : null,
         description: t.description,
+        stpClaveRastreo: t.stpClaveRastreo ?? null,
+        cepUrl: t.cepUrl ?? null,
         createdAt: t.createdAt,
         confirmedAt: t.confirmedAt,
       })),

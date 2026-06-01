@@ -190,6 +190,22 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
       // Non-fatal — wallet may already exist; continue
     }
 
+    // ── 5.5b. Assign STP CLABE (fire-and-forget) ─────────────────────────
+    // Generates a unique 18-digit CLABE for this user and registers it with
+    // STP via RegistraCuentaFisica (SOAP) when STP_ENABLED=true.
+    // A failure here must NEVER block or roll back registration.
+    import("../services/stpService.js")
+      .then(({ assignClabeToUser }) =>
+        assignClabeToUser(pending.phone, userId, {
+          fullName: pending.name,
+          curp: pending.curp,
+          dob: undefined,
+        }),
+      )
+      .catch((err) => {
+        logger.error({ err, phone: pending.phone, userId }, "streetTeamBonus: CLABE assignment failed (non-fatal)");
+      });
+
     // ── 5.5. Issue 3 free transaction tokens (fire-and-forget) ───────────
     // A token issuance failure must NEVER block or roll back registration.
     issueWelcomeTokens(pending.phone).catch((err) => {

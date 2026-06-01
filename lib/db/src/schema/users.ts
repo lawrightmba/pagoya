@@ -33,6 +33,10 @@ export const usersTable = pgTable("users", {
   otpExpiresAt: timestamp("otp_expires_at"),
   otpVerified: boolean("otp_verified").default(false),
   otpAttempts: integer("otp_attempts").default(0),
+  // ── STP / SPEI ───────────────────────────────────────────────────────────────
+  // Unique 18-digit CLABE assigned to this user by STP (via RegistraCuentaFisica).
+  // Null = not yet assigned (pre-STP-integration users or assignment in progress).
+  stpClabe: text("stp_clabe").unique(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({
