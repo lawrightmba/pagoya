@@ -1,0 +1,85 @@
+Context: /routes/savedCards.ts is already registered and functional. The backend supports storing and retrieving tokenized card references per user. There is currently no UI surface that uses this — returning card users must re-enter their card details every time. This prompt wires the existing backend to the card top-up and gift card checkout flows.
+Do all of the following automatically in one go. Do not stop and ask me anything.
+
+Step 1 — Audit the existing savedCards backend
+Read /routes/savedCards.ts and identify:
+
+The exact GET endpoint for retrieving saved cards for a user (likely GET /api/saved-cards?telefono=... or similar)
+The exact POST endpoint for saving a new card token after successful charge
+The shape of the card object returned (last4, brand, token/id, expiry if available)
+
+Do not modify any existing savedCards logic. Read only.
+
+Step 2 — Card top-up flow (Cargar page, card funding tab)
+In the card top-up UI (the page or component where users enter card details to fund their wallet):
+
+On page load, call GET /api/saved-cards?telefono={userPhone} where userPhone is the logged-in user's phone from localStorage or session.
+If saved cards are returned, render a "Tarjetas guardadas" section above the card entry form. Each saved card displays as a selectable pill or row showing:
+
+Card brand icon (Visa / Mastercard — use text label if no icon available)
+Last 4 digits: "•••• 4242"
+A "Usar esta tarjeta" button (Teal #2AA6A1, small)
+
+
+When the user selects a saved card, the manual card entry fields collapse or are hidden and a selected card confirmation row appears instead: "Cobrar a •••• 4242 ✓". Include a small "Cambiar tarjeta" link that re-expands the manual entry form.
+The charge submission uses the saved card token — pass the saved card ID/token in the request body instead of new card details.
+If no saved cards are returned, the UI renders exactly as before — no saved cards section, no visual change.
+The GET call must be wrapped in try/catch. Any failure returns silently — never block the top-up flow if saved card retrieval fails.
+
+
+Step 3 — Gift card checkout flow
+In the gift card purchase flow (wherever card details are collected for gift card payment):
+Apply the same pattern as Step 2:
+
+On checkout screen load, fetch saved cards for the user
+If present, show "Tarjetas guardadas" section with selectable saved card pills above the card entry form
+Selected card collapses manual entry, shows confirmation row
+Saved card token passed in charge request
+Fail-open on fetch error — silent fallback to manual entry
+
+
+Step 4 — Save card after successful charge
+After any successful card charge (both top-up and gift card flows), if the card used was a manually entered card (not a saved card):
+
+Call the existing POST endpoint to save the card token for future use
+This must be fire-and-forget with .catch() — a save failure never affects the completed charge
+Log: console.log('[SavedCards] Card saved for user ${userPhone}: ${last4}')
+Do NOT save cards that were used as saved cards (no duplicate storage)
+Do NOT display any "card saved" confirmation to the user — this happens silently
+
+
+Step 5 — Delete saved card (optional self-service)
+In the "Tarjetas guardadas" section (both locations), add a small trash/remove icon next to each saved card. On click:
+
+Show a brief inline confirmation: "¿Eliminar esta tarjeta?" with Sí / No
+On Sí: call the DELETE endpoint, remove the card from the UI optimistically
+On No: dismiss without action
+
+
+Style rules
+
+Use PagoYa brand colors: Coral #D85A30, Navy #1B2B5E, Teal #2AA6A1
+Saved card pills: white background, 0.5px Navy border, border-radius 8px, padding 10px 14px
+Selected state: Teal #2AA6A1 border 1.5px, light teal background tint
+"Usar esta tarjeta" button: Teal, small (12px font, compact padding)
+"Cambiar tarjeta" link: plain text, coral, 12px, no border
+Match existing mobile-first layout conventions — no horizontal scroll, touch-friendly tap targets
+
+
+Do NOT touch
+
+Any existing charge logic, Stripe PaymentIntent creation, or HMAC verification
+The savedCards.ts route logic itself
+The wallet balance display or OXXO deposit flow
+Any loyalty or token consumption logic
+
+
+Verification
+After implementing, confirm:
+
+(a) A user with no saved cards sees the top-up and gift card flows exactly as before
+(b) A user with a saved card sees the "Tarjetas guardadas" section with correct last4 and brand
+(c) Selecting a saved card collapses manual entry and shows confirmation row
+(d) A successful manual charge silently saves the card token with no UI change
+(e) The trash/delete flow removes the card from the section after confirmation
+(f) Any savedCards API failure leaves the charge flow fully functional

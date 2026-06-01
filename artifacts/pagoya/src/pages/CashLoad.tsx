@@ -220,11 +220,12 @@ export default function CashLoad() {
   const [cardName, setCardName] = useState("");
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
-  const [saveCard, setSaveCard] = useState(false);
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [savedCardsLoaded, setSavedCardsLoaded] = useState(false);
   const [chargingCardId, setChargingCardId] = useState<string | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<SavedCard | null>(null);
+  const [confirmDeleteCardId, setConfirmDeleteCardId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'oxxo' | 'card' | 'spei' | 'banco'>('oxxo');
   const [stpData, setStpData] = useState<StpInstructions | null>(null);
@@ -447,6 +448,12 @@ export default function CashLoad() {
   };
 
   const handleCardSubmit = async () => {
+    // ── Delegate to saved card if one is selected ───────────────────────
+    if (selectedCard) {
+      handleSavedCardCharge(selectedCard.id);
+      return;
+    }
+
     // ── Client-side validation ──────────────────────────────────────────
     const tel = cardTelInput.trim();
     if (!tel || tel.length < 10) {
@@ -506,73 +513,30 @@ export default function CashLoad() {
         cvc: cardCvc,
       });
 
-      // ── Get walletId by phone ────────────────────────────────────────
-      const balRes = await fetch(
-        `${window.location.origin}/api/wallet/balance?telefono=${encodeURIComponent("+52" + tel)}`,
-      );
-      const balData = await balRes.json();
-      if (!balRes.ok || !balData.walletId) {
-        setCardError(balData.error ?? "No se pudo obtener la cartera. Intenta de nuevo.");
-        return;
-      }
-
-      // ── Charge card (save path: create customer + persist source) ────
-      if (saveCard) {
-        const saveRes = await fetch(`${window.location.origin}/api/cards/charge-and-save`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ telefono: "+52" + tel, amount_mxn: amtNum, save_card: true, tokenId }),
-        });
-        const saveData = await saveRes.json();
-        if (!saveRes.ok) {
-          setCardError(saveData.error ?? "Error al procesar el pago. Intenta de nuevo.");
-          return;
-        }
-        setTelefono("+52" + tel);
-        toast({
-          title: "¡Tarjeta guardada y saldo agregado!",
-          description: saveData.newBalance != null
-            ? `Tu nuevo saldo es $${saveData.newBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
-            : "Tu saldo ha sido actualizado.",
-        });
-        window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
-        await fetchSavedCards(tel);
-        setSaveCard(false);
-        setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardCvc(""); setCardName("");
-        return;
-      }
-
-      // ── Charge card (one-time path) ───────────────────────────────────
-      const chargeRes = await fetch(`${window.location.origin}/api/wallet/load/card`, {
+      // ── Charge card and silently save token for future use ────────────
+      const rawLast4 = rawCardNum.slice(-4);
+      const saveRes = await fetch(`${window.location.origin}/api/cards/charge-and-save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletId: balData.walletId, amount: amtNum, tokenId, ...(repCode ? { rep_code: repCode } : {}) }),
+        body: JSON.stringify({ telefono: "+52" + tel, amount_mxn: amtNum, save_card: true, tokenId }),
       });
-      const chargeData = await chargeRes.json();
-      if (!chargeRes.ok) {
-        setCardError(chargeData.error ?? "Error al procesar el pago. Intenta de nuevo.");
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) {
+        setCardError(saveData.error ?? "Error al procesar el pago. Intenta de nuevo.");
         return;
       }
 
-      // ── Success ──────────────────────────────────────────────────────
+      console.log(`[SavedCards] Card saved for user +52${tel}: ${rawLast4}`);
       setTelefono("+52" + tel);
-
       toast({
         title: "¡Saldo agregado!",
-        description: chargeData.newBalance != null
-          ? `Tu nuevo saldo es $${chargeData.newBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
+        description: saveData.newBalance != null
+          ? `Tu nuevo saldo es $${saveData.newBalance.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`
           : "Tu saldo ha sido actualizado.",
       });
-
-      // Signal any mounted WalletBalanceWidget to re-fetch
       window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
-
-      // Reset card form
-      setCardAmount("");
-      setCardNumber("");
-      setCardExpiry("");
-      setCardCvc("");
-      setCardName("");
+      await fetchSavedCards(tel);
+      setCardAmount(""); setCardNumber(""); setCardExpiry(""); setCardCvc(""); setCardName("");
     } catch (err: unknown) {
       setCardError(
         err instanceof Error
@@ -612,7 +576,9 @@ export default function CashLoad() {
             : "Tu saldo ha sido actualizado.",
       });
       window.dispatchEvent(new CustomEvent("pagoya:wallet-refresh"));
+      setSelectedCard(null);
       setCardAmount("");
+      await fetchSavedCards(cardTelInput);
     } catch {
       setCardError("No se pudo conectar. Intenta de nuevo.");
     } finally {
@@ -621,6 +587,7 @@ export default function CashLoad() {
   };
 
   const handleDeleteCard = async (cardId: string) => {
+    setConfirmDeleteCardId(null);
     setDeletingCardId(cardId);
     try {
       const res = await fetch(`${window.location.origin}/api/cards/${cardId}`, {
@@ -628,6 +595,7 @@ export default function CashLoad() {
       });
       if (res.ok) {
         setSavedCards((prev) => prev.filter((c) => c.id !== cardId));
+        if (selectedCard?.id === cardId) setSelectedCard(null);
       } else {
         const data = await res.json();
         setCardError(data.error ?? "Error al eliminar la tarjeta.");
@@ -1056,156 +1024,198 @@ export default function CashLoad() {
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                   Tarjetas guardadas
                 </p>
-                {savedCards.map((card) => (
-                  <div
-                    key={card.id}
-                    className="flex items-center gap-2 rounded-2xl px-4 py-3"
-                    style={{ background: "#F5F3FF", border: "1.5px solid #DDD8FB" }}
-                  >
-                    <CreditCard className="w-4 h-4 flex-shrink-0" style={{ color: "#7F77DD" }} />
-                    <span className="text-sm font-bold text-[#1F1F1F] flex-1">
-                      {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} ···{card.lastFour}
+                {savedCards.map((card) => {
+                  const isSelected = selectedCard?.id === card.id;
+                  const isConfirmDelete = confirmDeleteCardId === card.id;
+                  return (
+                    <div
+                      key={card.id}
+                      className="flex items-center gap-2 rounded-2xl px-4 py-3 transition-all"
+                      style={{
+                        background: isSelected ? "rgba(42,166,161,0.08)" : "white",
+                        border: `1.5px solid ${isSelected ? "#2AA6A1" : "#E5E5E5"}`,
+                      }}
+                    >
+                      <CreditCard className="w-4 h-4 flex-shrink-0" style={{ color: isSelected ? "#2AA6A1" : "#1B2B5E" }} />
+                      <span className="text-sm font-bold text-[#1F1F1F] flex-1 truncate">
+                        {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} ···{card.lastFour}
+                      </span>
+                      {isConfirmDelete ? (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-xs text-gray-500">¿Eliminar?</span>
+                          <button
+                            onClick={() => handleDeleteCard(card.id)}
+                            disabled={!!deletingCardId}
+                            className="px-2.5 py-1 rounded-lg text-xs font-black transition-all active:scale-[0.95] disabled:opacity-60"
+                            style={{ background: "#C0392B", color: "white" }}
+                          >
+                            {deletingCardId === card.id ? "..." : "Sí"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteCardId(null)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.95]"
+                            style={{ background: "#F0F0F0", color: "#555" }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => setSelectedCard(isSelected ? null : card)}
+                            disabled={!!chargingCardId || !!deletingCardId || cardLoading}
+                            className="px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-[0.95] disabled:opacity-50"
+                            style={{
+                              background: isSelected ? "#2AA6A1" : "#1B2B5E",
+                              color: "white",
+                            }}
+                          >
+                            {chargingCardId === card.id ? "..." : isSelected ? "✓ Usar esta" : "Usar"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteCardId(card.id)}
+                            disabled={!!chargingCardId || !!deletingCardId || cardLoading}
+                            className="p-1.5 rounded-xl transition-all active:scale-[0.95] disabled:opacity-50"
+                            title="Eliminar tarjeta"
+                          >
+                            <Trash2 className="w-4 h-4" style={{ color: "#E57373" }} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {selectedCard ? (
+                  <p className="text-xs text-center py-0.5">
+                    <span className="font-bold" style={{ color: "#2AA6A1" }}>
+                      ✓ Se cobrará a {selectedCard.brand} ···{selectedCard.lastFour}
                     </span>
                     <button
-                      onClick={() => handleSavedCardCharge(card.id)}
-                      disabled={!!chargingCardId || !!deletingCardId || cardLoading}
-                      className="px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-[0.95] disabled:opacity-50"
-                      style={{ background: "#7F77DD", color: "white" }}
+                      onClick={() => setSelectedCard(null)}
+                      className="ml-2 font-bold underline"
+                      style={{ color: "#D85A30" }}
                     >
-                      {chargingCardId === card.id ? "..." : "Cobrar"}
+                      Cambiar
                     </button>
-                    <button
-                      onClick={() => handleDeleteCard(card.id)}
-                      disabled={!!chargingCardId || !!deletingCardId || cardLoading}
-                      className="p-1.5 rounded-xl transition-all active:scale-[0.95] disabled:opacity-50"
-                      title="Eliminar tarjeta"
-                    >
-                      <Trash2 className="w-4 h-4" style={{ color: deletingCardId === card.id ? "#ccc" : "#E57373" }} />
-                    </button>
-                  </div>
-                ))}
-                <p className="text-xs text-gray-400 text-center mt-1">— o ingresa una tarjeta nueva —</p>
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center mt-0.5">— o ingresa una tarjeta nueva —</p>
+                )}
               </div>
             )}
 
-            {/* Card number */}
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
-                Número de tarjeta
-              </label>
-              <div
-                className="flex items-center rounded-2xl px-4 py-3"
-                style={{
-                  background: "white",
-                  border: "1.5px solid #E5E5E5",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                }}
-              >
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="1234 5678 9012 3456"
-                  value={cardNumber}
-                  onChange={(e) => handleCardNumberChange(e.target.value)}
-                  className="flex-1 text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
-                  autoComplete="cc-number"
-                />
-                <CreditCard className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: "#CCCCCC" }} />
-              </div>
-            </div>
-
-            {/* Expiry + CVC row */}
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
-                  Vencimiento
-                </label>
-                <div
-                  className="flex items-center rounded-2xl px-4 py-3"
-                  style={{
-                    background: "white",
-                    border: "1.5px solid #E5E5E5",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="MM/AA"
-                    value={cardExpiry}
-                    onChange={(e) => handleCardExpiryChange(e.target.value)}
-                    className="w-full text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
-                    autoComplete="cc-exp"
-                    maxLength={5}
-                  />
-                </div>
-              </div>
-              <div className="flex-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
-                  CVC
-                </label>
-                <div
-                  className="flex items-center rounded-2xl px-4 py-3"
-                  style={{
-                    background: "white",
-                    border: "1.5px solid #E5E5E5",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="123"
-                    value={cardCvc}
-                    onChange={(e) => {
-                      setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4));
-                      setCardError(null);
+            {/* Card fields — hidden when a saved card is selected */}
+            {!selectedCard && (
+              <>
+                {/* Card number */}
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                    Número de tarjeta
+                  </label>
+                  <div
+                    className="flex items-center rounded-2xl px-4 py-3"
+                    style={{
+                      background: "white",
+                      border: "1.5px solid #E5E5E5",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                     }}
-                    className="w-full text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
-                    autoComplete="cc-csc"
-                    maxLength={4}
-                  />
+                  >
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardNumber}
+                      onChange={(e) => handleCardNumberChange(e.target.value)}
+                      className="flex-1 text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
+                      autoComplete="cc-number"
+                    />
+                    <CreditCard className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: "#CCCCCC" }} />
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Cardholder name */}
-            <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
-                Nombre del titular
-              </label>
-              <div
-                className="flex items-center rounded-2xl px-4 py-3"
-                style={{
-                  background: "white",
-                  border: "1.5px solid #E5E5E5",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                }}
-              >
-                <input
-                  type="text"
-                  placeholder="Como aparece en la tarjeta"
-                  value={cardName}
-                  onChange={(e) => {
-                    setCardName(e.target.value);
-                    setCardError(null);
-                  }}
-                  className="flex-1 text-sm text-[#1F1F1F] outline-none bg-transparent"
-                  autoComplete="cc-name"
-                />
-              </div>
-            </div>
+                {/* Expiry + CVC row */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                      Vencimiento
+                    </label>
+                    <div
+                      className="flex items-center rounded-2xl px-4 py-3"
+                      style={{
+                        background: "white",
+                        border: "1.5px solid #E5E5E5",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="MM/AA"
+                        value={cardExpiry}
+                        onChange={(e) => handleCardExpiryChange(e.target.value)}
+                        className="w-full text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
+                        autoComplete="cc-exp"
+                        maxLength={5}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                      CVC
+                    </label>
+                    <div
+                      className="flex items-center rounded-2xl px-4 py-3"
+                      style={{
+                        background: "white",
+                        border: "1.5px solid #E5E5E5",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="123"
+                        value={cardCvc}
+                        onChange={(e) => {
+                          setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4));
+                          setCardError(null);
+                        }}
+                        className="w-full text-sm font-bold text-[#1F1F1F] outline-none bg-transparent tracking-wider"
+                        autoComplete="cc-csc"
+                        maxLength={4}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            {/* Save card checkbox */}
-            <label className="flex items-center gap-2.5 cursor-pointer select-none py-1">
-              <input
-                type="checkbox"
-                checked={saveCard}
-                onChange={(e) => setSaveCard(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#7F77DD]"
-              />
-              <span className="text-sm text-gray-600 font-medium">Guardar esta tarjeta</span>
-            </label>
+                {/* Cardholder name */}
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                    Nombre del titular
+                  </label>
+                  <div
+                    className="flex items-center rounded-2xl px-4 py-3"
+                    style={{
+                      background: "white",
+                      border: "1.5px solid #E5E5E5",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Como aparece en la tarjeta"
+                      value={cardName}
+                      onChange={(e) => {
+                        setCardName(e.target.value);
+                        setCardError(null);
+                      }}
+                      className="flex-1 text-sm text-[#1F1F1F] outline-none bg-transparent"
+                      autoComplete="cc-name"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Helper text */}
             <p className="text-xs text-gray-400 text-center leading-relaxed">
@@ -1225,22 +1235,27 @@ export default function CashLoad() {
             {/* Submit */}
             <button
               onClick={handleCardSubmit}
-              disabled={cardLoading}
+              disabled={cardLoading || !!chargingCardId}
               className="w-full py-4 rounded-2xl text-white text-sm font-black flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60"
               style={{
-                background: cardLoading
+                background: (cardLoading || !!chargingCardId)
                   ? "#1D9E75"
                   : "linear-gradient(135deg, #1D9E75 0%, #25C090 100%)",
                 boxShadow: "0 4px 16px rgba(29,158,117,0.32)",
               }}
             >
-              {cardLoading ? (
+              {(cardLoading || !!chargingCardId) ? (
                 <>
                   <span
                     className="w-4 h-4 rounded-full border-2 border-white border-t-transparent"
                     style={{ animation: "spin 0.7s linear infinite" }}
                   />
                   Procesando pago...
+                </>
+              ) : selectedCard ? (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  Cargar con {selectedCard.brand} ···{selectedCard.lastFour}
                 </>
               ) : (
                 <>
