@@ -33,6 +33,7 @@ import agentChatRouter from "./agentChat.js";
 import whatsappAgentRouter from "./whatsapp-agent.js";
 import kycRouter from "./kyc.js";
 import pushRouter from "./push.js";
+import pendingPaymentsRouter from "./pendingPayments.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -57,6 +58,7 @@ router.use("/agent/chat", agentChatRouter);
 router.use("/whatsapp-agent", whatsappAgentRouter);
 router.use("/kyc", kycRouter);
 router.use("/push", pushRouter);
+router.use("/bills/pending", pendingPaymentsRouter);
 
 console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
 

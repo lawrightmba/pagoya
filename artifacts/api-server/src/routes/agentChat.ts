@@ -21,6 +21,9 @@ export interface PendingPaymentStage {
   referencia: string;
   monto: number;
   telefono: string;
+  fee: number;
+  walletBalance: number;
+  paymentMethod: string;
 }
 
 // ─── System prompt ─────────────────────────────────────────────────────────────
@@ -331,6 +334,9 @@ async function executeToolCall(
           referencia,
           monto,
           telefono: cleanTel,
+          fee,
+          walletBalance: balance,
+          paymentMethod: "Cartera PagoYa",
         },
       };
     }

@@ -7,6 +7,22 @@ const STORAGE_KEY = "pagoya_chat_history";
 const LANG_KEY = "pagoya_lang";
 const TEL_KEY = "pagoya_telefono";
 
+// PagoYa brand colors
+const CORAL  = "#D85A30";
+const NAVY   = "#1B2B5E";
+const TEAL   = "#2AA6A1";
+
+interface PendingPaymentStage {
+  serviceId: string;
+  serviceName: string;
+  referencia: string;
+  monto: number;
+  telefono: string;
+  fee: number;
+  walletBalance: number;
+  paymentMethod: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -35,6 +51,16 @@ const STRINGS = {
   },
 };
 
+function Row({ emoji, label, value, highlight = false }: { emoji: string; label: string; value: string; highlight?: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 12 }}>
+      <span style={{ flexShrink: 0, width: 18, textAlign: "center" }}>{emoji}</span>
+      <span style={{ color: "#64748B", flexShrink: 0, minWidth: 72 }}>{label}:</span>
+      <span style={{ color: highlight ? NAVY : "#1A202C", fontWeight: highlight ? 700 : 500, wordBreak: "break-all" }}>{value}</span>
+    </div>
+  );
+}
+
 export default function SupportChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -47,6 +73,8 @@ export default function SupportChat() {
   const [initialized, setInitialized] = useState(false);
   const [greetingShown, setGreetingShown] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<PendingPaymentStage | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -196,7 +224,16 @@ export default function SupportChat() {
         }),
       });
 
-      const data = (await res.json()) as { reply: string; escalated: boolean };
+      const data = (await res.json()) as {
+        reply: string;
+        escalated: boolean;
+        pendingPayment: PendingPaymentStage | null;
+      };
+
+      // Show confirmation card before OTP input when Paula stages a payment
+      if (data.pendingPayment) {
+        setPendingPayment(data.pendingPayment);
+      }
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -226,6 +263,69 @@ export default function SupportChat() {
       void sendMessage();
     }
   };
+
+  const handleConfirmPayment = useCallback(async () => {
+    if (!pendingPayment || confirmLoading) return;
+    setConfirmLoading(true);
+    const tel = pendingPayment.telefono || telefono;
+    try {
+      const res = await fetch(`${BASE_URL}/api/bills/pending/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefono: tel }),
+      });
+      const data = (await res.json()) as { success?: boolean; confirmationCode?: string; error?: string };
+
+      const billerName  = pendingPayment.serviceName;
+      const amount      = pendingPayment.monto;
+      const userId      = tel;
+
+      console.log(`[Paula] Payment confirmation: confirmed | biller: ${billerName} | amount: ${amount} | userId: ${userId}`);
+
+      setPendingPayment(null);
+
+      const resultMsg: ChatMessage = {
+        role: "assistant",
+        content: data.success
+          ? `✅ *Pago exitoso*\n\n⚡ ${billerName}\nMonto: $${amount.toFixed(2)} MXN${data.confirmationCode ? `\nFolio: ${data.confirmationCode}` : ""}\n\n¡Listo! Guarda este folio como comprobante.`
+          : `❌ ${data.error ?? "Error al procesar el pago. Intenta de nuevo."}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, resultMsg]);
+    } catch {
+      setPendingPayment(null);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: s.errorMsg, timestamp: Date.now() },
+      ]);
+    } finally {
+      setConfirmLoading(false);
+    }
+  }, [pendingPayment, confirmLoading, telefono, s, BASE_URL]);
+
+  const handleCancelPayment = useCallback(async () => {
+    if (!pendingPayment || confirmLoading) return;
+    setConfirmLoading(true);
+    const tel = pendingPayment.telefono || telefono;
+    const billerName = pendingPayment.serviceName;
+    const amount     = pendingPayment.monto;
+
+    try {
+      await fetch(`${BASE_URL}/api/bills/pending/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefono: tel }),
+      });
+      console.log(`[Paula] Payment confirmation: cancelled | biller: ${billerName} | amount: ${amount} | userId: ${tel}`);
+    } catch { /* best-effort */ }
+
+    setPendingPayment(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "❌ Pago cancelado. ¿En qué más te puedo ayudar?", timestamp: Date.now() },
+    ]);
+    setConfirmLoading(false);
+  }, [pendingPayment, confirmLoading, telefono, BASE_URL]);
 
   const formatTime = (ts: number) =>
     new Date(ts).toLocaleTimeString(lang === "es" ? "es-MX" : "en-US", {
@@ -440,7 +540,103 @@ export default function SupportChat() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input area */}
+          {/* ── Payment confirmation card — shown instead of OTP input ──────── */}
+          {pendingPayment && (
+            <div
+              style={{
+                margin: "0 10px 10px",
+                borderRadius: 12,
+                border: `1.5px solid ${TEAL}`,
+                background: `linear-gradient(135deg, ${NAVY}08 0%, ${TEAL}10 100%)`,
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              {/* Card header */}
+              <div
+                style={{
+                  background: NAVY,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>✅</span>
+                <span style={{ color: "white", fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                  Resumen de pago
+                </span>
+              </div>
+
+              {/* Card body */}
+              <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row emoji="🏢" label="Servicio" value={pendingPayment.serviceName} />
+                {pendingPayment.referencia && pendingPayment.referencia !== pendingPayment.telefono && (
+                  <Row emoji="📋" label="Referencia" value={pendingPayment.referencia} />
+                )}
+                <Row emoji="💰" label="Monto" value={`$${pendingPayment.monto.toFixed(2)} MXN`} />
+                <Row
+                  emoji="💳"
+                  label="Cargo total"
+                  value={
+                    pendingPayment.fee > 0
+                      ? `$${(pendingPayment.monto + pendingPayment.fee).toFixed(2)} MXN (comisión $${pendingPayment.fee.toFixed(0)})`
+                      : `$${pendingPayment.monto.toFixed(2)} MXN (sin comisión 🎁)`
+                  }
+                  highlight
+                />
+                <Row
+                  emoji="👛"
+                  label="Método"
+                  value={`${pendingPayment.paymentMethod ?? "Cartera PagoYa"} · Saldo: $${pendingPayment.walletBalance.toFixed(2)} MXN`}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ padding: "0 14px 14px", display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => void handleConfirmPayment()}
+                  disabled={confirmLoading}
+                  style={{
+                    flex: 1,
+                    padding: "9px 0",
+                    borderRadius: 8,
+                    border: "none",
+                    background: confirmLoading ? "#ccc" : CORAL,
+                    color: "white",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: confirmLoading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  {confirmLoading ? "Procesando…" : "Confirmar pago"}
+                </button>
+                <button
+                  onClick={() => void handleCancelPayment()}
+                  disabled={confirmLoading}
+                  style={{
+                    flex: 1,
+                    padding: "9px 0",
+                    borderRadius: 8,
+                    border: `1.5px solid ${CORAL}`,
+                    background: "transparent",
+                    color: CORAL,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: confirmLoading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Input area — disabled while confirmation card is visible */}
           <div
             style={{
               borderTop: "1px solid #E2E8F0",
@@ -450,6 +646,8 @@ export default function SupportChat() {
               alignItems: "center",
               flexShrink: 0,
               height: 56,
+              opacity: pendingPayment ? 0.4 : 1,
+              pointerEvents: pendingPayment ? "none" : "auto",
             }}
           >
             <input
@@ -458,8 +656,8 @@ export default function SupportChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={s.placeholder}
-              disabled={loading}
+              placeholder={pendingPayment ? "Usa los botones de arriba para confirmar" : s.placeholder}
+              disabled={loading || !!pendingPayment}
               style={{
                 flex: 1,
                 border: "1.5px solid #E2E8F0",
@@ -467,7 +665,7 @@ export default function SupportChat() {
                 padding: "8px 12px",
                 fontSize: 14,
                 outline: "none",
-                background: loading ? "#F9FAFB" : "white",
+                background: loading || pendingPayment ? "#F9FAFB" : "white",
                 color: "#1A202C",
                 fontFamily: "inherit",
                 transition: "border-color 0.15s",
@@ -475,16 +673,16 @@ export default function SupportChat() {
             />
             <button
               onClick={() => void sendMessage()}
-              disabled={loading || !input.trim()}
+              disabled={loading || !input.trim() || !!pendingPayment}
               aria-label="Enviar"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
                 border: "none",
-                background: loading || !input.trim() ? "#E2E8F0" : "#046C2C",
-                color: loading || !input.trim() ? "#94A3B8" : "white",
-                cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                background: loading || !input.trim() || pendingPayment ? "#E2E8F0" : "#046C2C",
+                color: loading || !input.trim() || pendingPayment ? "#94A3B8" : "white",
+                cursor: loading || !input.trim() || pendingPayment ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

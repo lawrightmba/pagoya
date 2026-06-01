@@ -1,0 +1,28 @@
+Context: Paula (Claude Sonnet 4.5, WhatsApp + web overlay) handles natural language bill payment initiation. After Paula parses a user's intent (e.g. "paga mi CFE"), she stages a payment and initiates 2FA confirmation. Risk: the user confirms a 2FA code without clearly seeing the biller name, reference number, and exact amount — especially on WhatsApp where message context scrolls away.
+Task: Insert an explicit, unambiguous confirmation step between Paula's payment staging and 2FA initiation.
+For the WhatsApp flow:
+
+After Paula successfully resolves biller + amount + reference from the conversation, before sending the 2FA code, Paula must send a structured confirmation message in this exact format:
+
+✅ Resumen de pago:
+
+🏢 Servicio: {{billerName}}
+📋 Referencia: {{referenceNumber}}
+💰 Monto: ${{amount}} MXN
+💳 Cargo total: ${{amount + 25}} MXN (incluye comisión $25)
+👛 Método: {{paymentMethod}} (Saldo disponible: ${{walletBalance}} MXN)
+
+¿Confirmar este pago?
+Responde *SÍ* para continuar o *CANCELAR* para cancelar.
+
+Paula must wait for explicit "SÍ" or "CANCELAR" (case-insensitive, also accept "SI", "si", "sí", "yes", "cancel", "no") before proceeding. Any other response should prompt: "Por favor responde SÍ para confirmar o CANCELAR para cancelar el pago."
+Only after receiving explicit confirmation does Paula send the 2FA OTP code and proceed with payment execution.
+The existing 5-minute pending payment TTL still applies from the moment the user sends "SÍ" — not from when Paula first staged the payment.
+
+For the web overlay (Paula widget):
+
+After Paula resolves payment intent and before rendering the OTP input, display a confirmation card UI element showing: biller name, reference number, amount, total charge (amount + $25 MXN fee), payment method, and wallet balance. Style using PagoYa brand colors (Coral #D85A30, Navy #1B2B5E, Teal #2AA6A1).
+The card must have two buttons: "Confirmar pago" (coral, primary) and "Cancelar" (ghost). OTP input only renders after "Confirmar pago" is clicked.
+Do NOT modify the existing 2FA OTP generation logic, HMAC verification, or payment execution logic. Only insert the confirmation step between staging and OTP delivery.
+Log all confirmation outcomes: console.log(\[Paula] Payment confirmation: ${outcome} | biller: ${billerName} | amount: ${amount} | userId: ${userId}`)` where outcome is 'confirmed' or 'cancelled'.
+After implementing, test: (a) WhatsApp flow requires explicit SÍ before OTP fires, (b) CANCELAR kills the pending payment and sets TTL to expired, (c) web overlay shows confirmation card before OTP input, (d) wrong/ambiguous response loops back to confirmation prompt.

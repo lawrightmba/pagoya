@@ -4,6 +4,7 @@ import { getSession, saveSession } from "../services/whatsapp-sessions.js";
 import {
   createPendingPayment,
   getPendingPayment,
+  confirmPendingPayment,
   deletePendingPayment,
   type PendingPaymentRow,
 } from "../services/pendingPaymentService.js";
@@ -12,8 +13,12 @@ import { logger } from "../lib/logger.js";
 const router = Router();
 
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
-const CONFIRMATION_PATTERN = /^(s[ií]|yes|confirm(ar)?|confirmo|ok|dale|va|órale|o?rale|andale|ándale|claro|adelante|listo|perfecto|sim[oó]n|sip|proceed|go ahead|estuvo|va que va|le doy|por favor|s[ií] por favor)\s*[!.🙏👍✅]*$/i;
-const CANCELLATION_PATTERN = /^(no|cancelar?|cancela|nop|nope|mejor no|nel|nope|para|stop)\s*[!.❌]*$/i;
+
+// Strict confirmation: only SÍ / SI / si / sí / yes (+ optional punctuation/emoji)
+const STRICT_CONFIRM_PATTERN = /^(s[ií]|yes)\s*[!.🙏👍✅]*$/i;
+
+// Strict cancellation: CANCELAR / cancel / no / nop / nope (+ optional punctuation/emoji)
+const STRICT_CANCEL_PATTERN = /^(cancelar?|cancel|no|nop|nope)\s*[!.❌]*$/i;
 
 async function executeStagedPayment(
   pending: PendingPaymentRow,
@@ -43,6 +48,29 @@ async function executeStagedPayment(
     logger.error({ err }, "whatsapp-agent: executeStagedPayment failed");
     return { ok: false, error: "Error de conexión al procesar el pago." };
   }
+}
+
+/** Build the structured confirmation message per spec. */
+function buildConfirmationMessage(pending: PendingPaymentRow): string {
+  const total = pending.monto + pending.fee;
+  const feeNote = pending.fee > 0
+    ? `$${total.toFixed(2)} MXN (incluye comisión $${pending.fee.toFixed(0)})`
+    : `$${total.toFixed(2)} MXN (sin comisión 🎁)`;
+
+  const referenciaLine = pending.referencia && pending.referencia !== pending.telefono
+    ? `\n📋 Referencia: ${pending.referencia}`
+    : "";
+
+  return (
+    `✅ Resumen de pago:\n\n` +
+    `🏢 Servicio: ${pending.serviceName}` +
+    referenciaLine +
+    `\n💰 Monto: $${pending.monto.toFixed(2)} MXN` +
+    `\n💳 Cargo total: ${feeNote}` +
+    `\n👛 Método: ${pending.paymentMethod ?? "Cartera PagoYa"} (Saldo disponible: $${pending.walletBalance.toFixed(2)} MXN)\n\n` +
+    `¿Confirmar este pago?\n` +
+    `Responde *SÍ* para continuar o *CANCELAR* para cancelar.`
+  );
 }
 
 router.post("/", async (req: Request, res: Response) => {
@@ -86,23 +114,31 @@ router.post("/", async (req: Request, res: Response) => {
       saveSession(phoneKey, { profileName });
     }
 
-    // ── Pending payment 2FA intercept (DB-backed, restart-safe) ──────────────
+    // ── Pending payment confirmation intercept (DB-backed, restart-safe) ─────
     const pending = await getPendingPayment(phoneKey);
 
-    if (pending) {
+    if (pending && pending.status === "awaiting_confirmation") {
       const msgNorm = userMessage.trim();
 
-      if (CANCELLATION_PATTERN.test(msgNorm)) {
+      if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
+        console.log(`[Paula] Payment confirmation: cancelled | biller: ${pending.serviceName} | amount: ${pending.monto} | userId: ${pending.telefono}`);
         await deletePendingPayment(phoneKey);
         await sendWhatsApp(phoneKey, "❌ Pago cancelado. ¿En qué más te puedo ayudar?");
         return;
       }
 
-      if (CONFIRMATION_PATTERN.test(msgNorm)) {
-        await deletePendingPayment(phoneKey);
+      if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
+        console.log(`[Paula] Payment confirmation: confirmed | biller: ${pending.serviceName} | amount: ${pending.monto} | userId: ${pending.telefono}`);
+
+        // Reset TTL to 5 minutes from now (spec: TTL starts from SÍ)
+        await confirmPendingPayment(phoneKey);
+
         await sendWhatsApp(phoneKey, `⏳ Procesando tu pago de ${pending.serviceName}...`);
 
         const result = await executeStagedPayment(pending, port);
+
+        // Delete regardless of outcome — prevents double-execution
+        await deletePendingPayment(phoneKey);
 
         if (result.ok) {
           const folio = result.confirmationCode ? `\nFolio: ${result.confirmationCode}` : "";
@@ -118,7 +154,13 @@ router.post("/", async (req: Request, res: Response) => {
         }
         return;
       }
-      // Not a yes/no — fall through to normal agent, pending row stays in DB
+
+      // Ambiguous response — loop back to confirmation prompt
+      await sendWhatsApp(
+        phoneKey,
+        "Por favor responde *SÍ* para confirmar o *CANCELAR* para cancelar el pago.",
+      );
+      return;
     }
 
     // ── Append user turn to history ──────────────────────────────────────────
@@ -146,26 +188,53 @@ router.post("/", async (req: Request, res: Response) => {
     const { reply, pendingPayment } = (await agentRes.json()) as {
       reply: string;
       escalated: boolean;
-      pendingPayment: { serviceId: string; serviceName: string; referencia: string; monto: number; telefono: string } | null;
+      pendingPayment: {
+        serviceId: string;
+        serviceName: string;
+        referencia: string;
+        monto: number;
+        telefono: string;
+        fee: number;
+        walletBalance: number;
+        paymentMethod: string;
+      } | null;
     };
-
-    // ── Persist pending payment to DB if agent staged one ────────────────────
-    if (pendingPayment) {
-      await createPendingPayment(phoneKey, pendingPayment);
-    }
 
     // ── Persist updated conversation history ─────────────────────────────────
     const newHistory = [
       ...updatedHistory,
       { role: "assistant" as const, content: reply },
     ];
-    // Keep last 20 turns to avoid unbounded growth
     saveSession(phoneKey, {
       conversationHistory: newHistory.slice(-20),
     });
 
-    // ── Send reply via WhatsApp ───────────────────────────────────────────────
-    await sendWhatsApp(phoneKey, reply);
+    if (pendingPayment) {
+      // Persist pending payment to DB (awaiting_confirmation, 30-min TTL)
+      await createPendingPayment(phoneKey, {
+        serviceId:     pendingPayment.serviceId,
+        serviceName:   pendingPayment.serviceName,
+        referencia:    pendingPayment.referencia,
+        monto:         pendingPayment.monto,
+        telefono:      pendingPayment.telefono,
+        fee:           pendingPayment.fee ?? 25,
+        walletBalance: pendingPayment.walletBalance ?? 0,
+        paymentMethod: pendingPayment.paymentMethod ?? "Cartera PagoYa",
+      });
+
+      // Fetch the staged row to build the structured message
+      const staged = await getPendingPayment(phoneKey);
+      if (staged) {
+        // Send the structured confirmation message (replaces Paula's confirmText)
+        await sendWhatsApp(phoneKey, buildConfirmationMessage(staged));
+      } else {
+        // Fallback: send Paula's reply
+        await sendWhatsApp(phoneKey, reply);
+      }
+    } else {
+      // No pending payment — send Paula's reply normally
+      await sendWhatsApp(phoneKey, reply);
+    }
 
     logger.info({ phoneKey, hasPendingPayment: !!pendingPayment }, "whatsapp-agent: reply sent");
   } catch (err) {

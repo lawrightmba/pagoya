@@ -2,7 +2,8 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
-const TTL_MINUTES = 5;
+const STAGING_TTL_MINUTES = 30;
+const CONFIRMED_TTL_MINUTES = 5;
 
 export interface PendingPaymentRow {
   serviceId: string;
@@ -10,20 +11,24 @@ export interface PendingPaymentRow {
   referencia: string;
   monto: number;
   telefono: string;
+  fee: number;
+  walletBalance: number;
+  status: "awaiting_confirmation" | "confirmed";
 }
 
 /**
  * Upsert a pending payment for a phone key.
  * Any existing pending payment for this phone_key is replaced.
- * expires_at is set to NOW() + 5 minutes by the DB.
+ * Initial TTL = 30 minutes (generous window for user to read and confirm).
+ * status = 'awaiting_confirmation' — must be explicitly confirmed before execution.
  */
 export async function createPendingPayment(
   phoneKey: string,
-  payment: PendingPaymentRow,
+  payment: Omit<PendingPaymentRow, "status">,
 ): Promise<void> {
   await db.execute(
     sql`INSERT INTO pending_payments
-          (phone_key, service_id, service_name, referencia, monto, telefono, expires_at)
+          (phone_key, service_id, service_name, referencia, monto, telefono, fee, wallet_balance, status, expires_at)
         VALUES (
           ${phoneKey},
           ${payment.serviceId},
@@ -31,17 +36,36 @@ export async function createPendingPayment(
           ${payment.referencia},
           ${payment.monto},
           ${payment.telefono},
-          NOW() + INTERVAL '${sql.raw(String(TTL_MINUTES))} minutes'
+          ${payment.fee},
+          ${payment.walletBalance},
+          'awaiting_confirmation',
+          NOW() + INTERVAL '${sql.raw(String(STAGING_TTL_MINUTES))} minutes'
         )
         ON CONFLICT (phone_key) DO UPDATE SET
-          service_id   = EXCLUDED.service_id,
-          service_name = EXCLUDED.service_name,
-          referencia   = EXCLUDED.referencia,
-          monto        = EXCLUDED.monto,
-          telefono     = EXCLUDED.telefono,
-          staged_at    = NOW(),
-          expires_at   = NOW() + INTERVAL '${sql.raw(String(TTL_MINUTES))} minutes',
-          created_at   = NOW()`,
+          service_id     = EXCLUDED.service_id,
+          service_name   = EXCLUDED.service_name,
+          referencia     = EXCLUDED.referencia,
+          monto          = EXCLUDED.monto,
+          telefono       = EXCLUDED.telefono,
+          fee            = EXCLUDED.fee,
+          wallet_balance = EXCLUDED.wallet_balance,
+          status         = 'awaiting_confirmation',
+          staged_at      = NOW(),
+          expires_at     = NOW() + INTERVAL '${sql.raw(String(STAGING_TTL_MINUTES))} minutes',
+          created_at     = NOW()`,
+  );
+}
+
+/**
+ * Transition a pending payment from awaiting_confirmation → confirmed.
+ * Resets TTL to 5 minutes from now (spec: TTL starts from moment user says SÍ).
+ */
+export async function confirmPendingPayment(phoneKey: string): Promise<void> {
+  await db.execute(
+    sql`UPDATE pending_payments
+        SET status = 'confirmed',
+            expires_at = NOW() + INTERVAL '${sql.raw(String(CONFIRMED_TTL_MINUTES))} minutes'
+        WHERE phone_key = ${phoneKey}`,
   );
 }
 
@@ -51,7 +75,8 @@ export async function createPendingPayment(
  */
 export async function getPendingPayment(phoneKey: string): Promise<PendingPaymentRow | null> {
   const rows = await db.execute(
-    sql`SELECT service_id, service_name, referencia, monto::float, telefono
+    sql`SELECT service_id, service_name, referencia, monto::float, telefono,
+               fee::float, wallet_balance::float, status
         FROM pending_payments
         WHERE phone_key = ${phoneKey}
           AND expires_at > NOW()
@@ -62,11 +87,14 @@ export async function getPendingPayment(phoneKey: string): Promise<PendingPaymen
   if (!row) return null;
 
   return {
-    serviceId:   row.service_id as string,
-    serviceName: row.service_name as string,
-    referencia:  row.referencia as string,
-    monto:       row.monto as number,
-    telefono:    row.telefono as string,
+    serviceId:     row.service_id as string,
+    serviceName:   row.service_name as string,
+    referencia:    row.referencia as string,
+    monto:         row.monto as number,
+    telefono:      row.telefono as string,
+    fee:           row.fee as number,
+    walletBalance: row.wallet_balance as number,
+    status:        (row.status as "awaiting_confirmation" | "confirmed"),
   };
 }
 
