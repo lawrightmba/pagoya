@@ -143,3 +143,9 @@ id = "A8r_9DzT4fb6dZxHzcWqD"
 uri = "file://docs/yc/PagoYa-Claude-Session-Export.txt"
 type = "text"
 title = "PagoYa — YC Coding Agent Session Export (.txt)"
+
+[[outputs]]
+id = "AYYzCGDK1m1HQsqbneXVe"
+uri = "file://attached_assets/PagoYa_Investor_Narrative_v2.txt"
+type = "text"
+title = "PagoYa Investor Narrative v2"

@@ -1,0 +1,134 @@
+PagoYa is a live, deployed fintech platform at pagoyamx.com. Mexican consumers use it today to pay utilities, telecom, and streaming bills in under two minutes — without a bank account. But the more complete description is this: PagoYa is a WhatsApp-native financial services platform powered by an agentic AI called Paula. For the 54 million underbanked adults in Mexico, WhatsApp is not a messaging app — it is their operating system. Paula meets them there.
+
+PagoYa is the primary product and the website for YC consideration. It encompasses both a core bill payment and wallet platform and a set of purpose-built verticals — including PagoSeguro, our rent collection vertical, which lives at pagoseguromx.com. PagoSeguro is not a separate company — it is PagoYa deployed specifically for landlords, tenants, and property managers, running on the same underlying infrastructure.
+
+What Is Working and Shipped Today?
+Agentic AI — Paula (the centerpiece of the product)
+Paula is a Claude-powered AI agent (claude-sonnet-4-5) deployed across two channels simultaneously: WhatsApp (inbound) and an in-app floating chat widget on every page of the product. She is not a FAQ bot. Paula runs a tool-use loop with access to live user data, takes real actions on the user's behalf, and personalizes every conversation using the user's WhatsApp display name — she knows who she is talking to from the first message.
+
+Her tools today:
+
+Tool
+
+What It Does
+
+get_wallet_balance
+
+Tells the user their exact MXN balance in real time
+
+get_payment_history
+
+Retrieves and narrates recent transactions in natural Spanish
+
+get_pending_oxxo
+
+Checks whether a cash deposit is still pending confirmation
+
+get_loyalty_points
+
+Returns the user's current points balance, tier (Bronce/Plata/Oro), and how many points to the next level
+
+get_deposit_instructions
+
+Walks the user through how to add saldo via OXXO, SPEI, or card, step by step, in the same WhatsApp thread
+
+prepare_bill_payment
+
+Validates a payment intent (service, reference, amount), checks wallet balance, stages a payment for 2FA confirmation, returns a fee-inclusive summary for the user to confirm or cancel
+
+escalate_to_support
+
+Hands off to a human agent via WhatsApp with full conversation context
+
+On WhatsApp, any inbound message routes through the Paula agent loop. Paula greets users by name on first contact, replies in natural Spanish, handles multi-turn conversations, and escalates gracefully when a question is out of scope. In-app, the chat widget persists across every screen with local storage session memory, a typing indicator, and an escalation banner. After every successful payment, the app automatically opens Paula with a contextual celebration message — turning a transactional receipt moment into a retention touch.
+
+Paula Payment Initiation from WhatsApp — The Key Differentiator
+Users initiate and confirm bill payments entirely within WhatsApp — no app download, no browser, no bank account required. Paula handles service lookup, balance validation, fee disclosure, and payment execution in a single conversation thread.
+
+MercadoPago, Spin, and Cashi all require an app open for payment confirmation. Paula doesn't. The entire transaction — from intent to folio — happens inside a WhatsApp thread. This is not a UX preference; for the 54 million underbanked Mexicans whose primary device has limited storage and intermittent data, avoiding an app download is the difference between a sale and a lost user.
+
+The flow:
+
+User texts "paga mi CFE" (or Telmex, Izzi, Totalplay, any of 20+ billers)
+Paula performs service lookup, validates the reference, and checks wallet balance
+Paula replies: "💳 CFE · Ref: XXXXXXXXXXXX · $350 MXN + $25 comisión = $375 total. Responde SÍ para confirmar o NO para cancelar."
+User replies "sí" — Paula executes the payment from wallet and returns the folio
+User replies "no" — payment cancelled, session cleared
+Pending payments expire automatically after 5 minutes with no response
+The 2FA confirmation is handled deterministically at the session layer — not by the language model — so "sí" to a pending payment is always a payment execution, regardless of conversation context. Paula cannot be confused or tricked into executing a payment by an ambiguous message. Pending payment state is fully DB-persisted with SQL-enforced expiry — no payment can execute against a stale or in-memory pending state.
+
+AI Bill Autofill
+The home screen is a natural-language input. Claude parses "CFE 350 pesos" and pre-fills the service, amount, and reference number in one shot. Users who have never used a fintech app understand it immediately — because it works like texting.
+
+Core Payment Infrastructure
+Bill payment integrates SIPREL and Evoluciona with automatic failover across 20+ billers. Flat fee of $25 MXN per transaction. Wallet debited atomically per payment. A $50,000 MXN daily per-user cap is enforced at the route layer as an AML control before any provider call is made.
+
+Digital Wallet — Four Funding Channels
+PagoYa supports four distinct wallet funding mechanisms — more than any direct competitor at our stage:
+
+OXXO cash deposits (barcode vouchers generated in-app)
+Card top-ups (Conekta tokenization with saved-card support)
+SPEI inbound bank transfers (webhook-verified)
+Bank direct debit via Belvo Connect — sandbox-verified, production activation pending Belvo approval (single env var swap)
+All four channels are live or sandbox-complete pending credential activation.
+
+Loyalty & Rewards
+Users earn points on every payment (1 pt / $10 MXN, Bronze / Silver / Gold tier multipliers). Points are redeemable for wallet credit or a free-transaction token that waives the $25 MXN fee — enforced atomically inside the payment DB transaction. Paula can check a user's points balance and tier progress in real time from WhatsApp — no app open required.
+
+Street-Team Referral Network with WhatsApp OTP Onboarding
+Reps recruit users in the field using unique referral links and QR codes. New users sign up via a three-screen flow: form → WhatsApp OTP verification → bonus wallet credit ($25–$50 MXN incentive). Rep commissions are $5 MXN per confirmed payment with a 7-day hold. The rep earnings dashboard includes a self-serve recruitment section with a shareable signup link, a downloadable QR code, and live recruitment stats. International phone support is built in for migrant communities.
+
+Security & Fraud Hardening (shipped May 2026)
+The platform has undergone a full pre-launch security audit with all critical findings resolved:
+
+Atomic wallet debits — single conditional SQL UPDATE WHERE balance_mxn >= amount RETURNING id across all three debit paths. Zero race-condition window.
+Rate limiting — 20 requests/15 min on payments and transfers, 10/15 min on wallet loads, 5/15 min on OTP. Enforced at the Express middleware layer.
+AML daily cap — $50,000 MXN per user per day, checked via DB aggregate before any provider call.
+Admin route protection — command center and all admin APIs require a cryptographic ADMIN_TOKEN passed as header or query param.
+Conversion Funnel — Engineered for the Underbanked Mobile User
+Every landing page visitor encounters a structured three-touch acquisition funnel engineered specifically for the devices our users actually carry. A dismissible announcement bar sits immediately below the nav. A hero badge reinforces the offer at the emotional peak of the headline. A bonus strip closes deliberate evaluators. The funnel is not a design choice — it is a conversion architecture built around the viewport reality of a $150 Android phone.
+
+SEO landing pages for high-intent bill-pay search queries (/pagar-cfe, /pagar-telmex, /recargas, and geo-targeted variants for Guadalajara and Puerto Vallarta) each include a phone capture form that pre-fills the registration flow — so a visitor who bounces before completing signup has still entered the acquisition funnel.
+
+Post-OTP Activation Screen (Bienvenida)
+After completing phone OTP verification, new users land on a dedicated activation screen before reaching the dashboard. Zone 1 confirms the welcome bonus landed — live bonus amount pulled from config, never hardcoded. Zone 2 shows the live wallet balance with a pulsing teal animation that never flashes $0. Zone 3 presents a single primary CTA ("Paga tu primera cuenta →"), four biller quick-launch chips (CFE, Telmex, Izzi, Agua), and a WhatsApp shortcut to Paula. The screen is gated — users who have already seen it are redirected to home automatically. This is not onboarding decoration — it is the moment we convert a registered user into a paying one.
+
+Automated Lifecycle Nudges — Two-Touch Post-Registration Sequence
+T+10 minutes — Activation nudge: Every new user who completes registration receives a personalized WhatsApp message from Paula exactly 10 minutes after sign-up, skipped only if they have already transacted. It references their first name, confirms the bonus amount, and includes a direct deep-link back into the payment flow.
+T+48 hours — Retention nudge: Users who register but do not transact within 48 hours receive a second WhatsApp message reminding them of their available balance and surfacing Paula as an immediate payment assistant. The nudge fires within a 48–72 hour window via an hourly cron, respects a deduplication guard, and skips users who have already made a real payment.
+Both nudges are DB-backed with timestamp tracking and full admin visibility — a fully automated two-touch lifecycle sequence that runs without any manual outreach.
+
+Admin Command Center and Analytics Infrastructure
+Live at pagoyamx.com/command-center.html (token-protected). Real-time operations dashboard with five stat tiles: Total usuarios, Nudge enviado (T+10 activation reach), Bono acreditado (funded wallet rate), Pantalla vista (activation screen reach), and Retención (T+48h nudge reach). Every registered user is visible with nudge status, bonus status, welcome screen status, signup source, and rep attribution. Auto-refreshes every 60 seconds. PostHog integrated for funnel analytics. signup_source on every registration enables clean channel-level attribution from day one.
+
+PWA — Native App Experience, Zero App Store Friction
+PagoYa is a fully installable Progressive Web App on iOS and Android. Service worker, Web App Manifest, VAPID push, and a push_subscriptions table in PostgreSQL are all live. Every successful bill payment triggers a push notification to the user's device even when the browser is closed. For a user with 2GB of storage and a prepaid data plan, this is not a convenience — it is the only viable distribution model.
+
+PagoSeguro — Rent Collection Vertical
+Four user roles, all functional: landlords manage properties and review payments; tenants pay via SPEI or OXXO and upload receipts; brokers and sales reps get QR codes, flyers, and automated commission tracking; admins see global platform stats. SPEI receipt upload with landlord confirmation workflow, OXXO cash-in, automatic PDF receipt generation, and WhatsApp payment notifications via Twilio are all live. 8 SEO-optimized landing pages targeting Puerto Vallarta and Jalisco. Bilingual. PagoSeguro is currently being used to collect rent for properties in Puerto Vallarta and Riviera Nayarit.
+
+Why a Separate Site, Not Just a PagoYa Tab?
+The rent market in Mexico requires landlord trust at the point of first contact. A landlord searching for "cobro de renta digital Puerto Vallarta" needs to land on a page that is entirely about their problem. PagoSeguro is PagoYa's B2B face: same rails, same wallet, different acquisition funnel. The cross-sell already exists — PagoSeguro's landing page actively promotes PagoYa to tenants.
+
+What Is In Progress?
+Bank direct debit production activation — Belvo Connect widget and topup API are sandbox-complete; awaiting Belvo production credential approval. One environment variable swap (BELVO_ENV=production) activates the live rail.
+Conekta live API key swap — card top-up is sandbox-complete, pending live credential activation.
+Merchant / biller onboarding portal for self-service biller registration.
+Scheduled recurring payments — auto-pay for monthly bills.
+Paula for PagoSeguro tenants — ask about rent status, payment history, and upcoming due dates directly in WhatsApp.
+PagoSeguro: automated rent collection with recurring charges and late fee logic; WhatsApp payment reminders with embedded payment links; multi-property management for institutional landlords.
+DiMo-based P2P transfers (Phase 2) — Venmo, Zelle, and CashApp have no Mexico presence; PagoYa is positioned to own peer-to-peer transfers for the underbanked segment the moment DiMo rails are live.
+
+Traction and Team
+The entire platform — PagoYa and PagoSeguro — has been built and iterated by a founding team without an external development team. We have live users in Mexico, a functional rep referral network actively seeding Jalisco, and a structured go-to-market into underbanked communities in Puerto Vallarta and Guadalajara underway. pagoyamx.com is live with custom domain TLS and works on any mobile browser — no app store download required. PagoSeguro is live and collecting rent for properties in Puerto Vallarta and Riviera Nayarit today.
+
+The velocity matters: the infrastructure described in this document — four funding channels, agentic AI across two deployment surfaces, a seven-tool agent loop, a two-touch lifecycle nudge sequence, PWA push, DB-persisted payment state, AML controls, rate limiting, and a full admin analytics layer — was built and shipped without outside engineering resources. We are not describing a roadmap. We are describing what is running in production.
+
+Why This Is Different From Other LATAM Fintech?
+MercadoPago, Spin, and Cashi are app-first products. Every payment confirmation requires an app open. For the underbanked user with a $150 Android phone and 2GB of storage, that is a real barrier. Paula eliminates it entirely. A user with zero apps installed, zero bank account, and zero fintech experience can pay their electricity bill, check their loyalty points, and load saldo — in four WhatsApp messages.
+
+Most fintech in Mexico is still trying to convince underbanked users to adopt a new interface. We deployed AI into the interface they already use twelve hours a day. Paula on WhatsApp means a user can check their balance, ask why a payment failed, get their receipt narrated back to them, find out how many points they need to reach Gold tier, or pay their CFE bill — without opening anything, without a login screen, in the same thread they use to talk to their family.
+
+PagoSeguro applies the same logic to housing: landlords in Mexico still collect rent via cash or informal bank transfers with no paper trail. PagoSeguro gives them digital collection, automatic receipts, and WhatsApp confirmation — without asking them to change how they think about rent.
+
+The product is not the app. The product is Paula. The app, PagoSeguro, and every channel we deploy her through are Paula's backend. The moat is not the wallet infrastructure — competitors can replicate rails. The moat is an AI agent that already speaks the language, lives in the right channel, gets smarter with every conversation, and knows your name before you finish saying hello. That is not a feature. That is the company.
