@@ -74,22 +74,6 @@ export default function CardEntry() {
       // Non-fatal — best-effort.
     }
 
-    // For gift cards (categoria contains "_", e.g. "netflix_300"): trigger the
-    // SIPREL redemption now that the card charge is confirmed. Fire-and-forget —
-    // navigation proceeds regardless so the user isn't blocked on provider latency.
-    if (paymentData.categoria?.includes("_")) {
-      fetch(`${import.meta.env.BASE_URL}api/bills/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          serviceId: paymentData.categoria,
-          telefono: paymentData.telefono,
-          monto: parseFloat(paymentData.monto) || 0,
-          paymentSource: "card",
-        }),
-      }).catch(() => {});
-    }
-
     setTransactionId(intentId);
     setTransactionDate(
       new Date().toLocaleString("es-MX", {

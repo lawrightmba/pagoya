@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { db, pagoyaPaymentsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { routePayment } from "../billpay/services/router.js";
+import { getServiceById } from "../billpay/services/catalog.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -16,6 +19,56 @@ const TAECEL_COST_PER_TXN_MXN = 5.00;
 const NET_MARGIN_PER_TXN_MXN = 3.00;
 
 const router: IRouter = Router();
+
+// ── Gift card delivery ────────────────────────────────────────────────────────
+// Called server-side after Stripe confirms payment. Idempotent: status
+// "gift_card_delivered" means SIPREL already ran — skip if already set.
+async function deliverGiftCard(payment: {
+  paymentIntentId: string;
+  categoria: string;
+  monto: string;
+  telefono: string;
+  referencia: string;
+}): Promise<void> {
+  const service = getServiceById(payment.categoria);
+  if (!service?.isGiftCard) return;
+
+  const effectiveMonto = service.fixedAmount ?? parseFloat(payment.monto);
+  const effectiveRef = payment.telefono; // gift cards use phone as reference
+
+  logger.info({ paymentIntentId: payment.paymentIntentId, serviceId: payment.categoria }, "pagoya: triggering gift card SIPREL delivery");
+
+  try {
+    const result = await routePayment({
+      serviceId: payment.categoria,
+      referencia: effectiveRef,
+      monto: effectiveMonto,
+      telefono: payment.telefono,
+      notas: `stripe:${payment.paymentIntentId}`,
+    });
+
+    // Mark as delivered so we never call SIPREL twice for the same payment
+    await db
+      .update(pagoyaPaymentsTable)
+      .set({ status: "gift_card_delivered" })
+      .where(eq(pagoyaPaymentsTable.paymentIntentId, payment.paymentIntentId));
+
+    // Send PIN via WhatsApp
+    const pin = result.confirmationCode;
+    const raw = result.rawResponse as Record<string, unknown> | undefined;
+    const pinLine = raw?.pin ? `\n🔑 PIN: *${raw.pin}*` : (pin ? `\n🔑 PIN: *${pin}*` : "");
+    await sendWhatsApp(
+      payment.telefono,
+      `✅ *¡Tu ${service.name} está lista!*${pinLine}\n\nCanjea en la app o sitio web de ${service.name}.\n\nFolio: ${pin}\n\n_PagoYa — pagoyamx.com_`,
+    ).catch(() => {});
+
+    logger.info({ paymentIntentId: payment.paymentIntentId, pin }, "pagoya: gift card delivered via SIPREL");
+  } catch (err) {
+    logger.error({ paymentIntentId: payment.paymentIntentId, err }, "pagoya: gift card SIPREL delivery failed");
+    // Do NOT update status — leave as "succeeded" so the next GET poll retries
+    throw err;
+  }
+}
 
 // GET /api/pagoya/categories
 // Returns the list of supported service categories
@@ -138,6 +191,18 @@ router.get("/payments/:paymentIntentId", async (req: Request, res: Response) => 
       }
     }
 
+    // If Stripe confirmed a gift card payment and SIPREL hasn't run yet, deliver now.
+    // "gift_card_delivered" status means already done — skip to avoid double delivery.
+    if (payment.status === "succeeded" && payment.categoria?.includes("_")) {
+      deliverGiftCard({
+        paymentIntentId: payment.paymentIntentId,
+        categoria: payment.categoria,
+        monto: payment.monto,
+        telefono: payment.telefono,
+        referencia: payment.referencia,
+      }).catch(() => {}); // fire-and-forget from server — non-blocking for the response
+    }
+
     res.json(payment);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error al consultar el pago.";
@@ -210,10 +275,29 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
 
   try {
     if (event.type === "payment_intent.succeeded") {
-      await db
-        .update(pagoyaPaymentsTable)
-        .set({ status: "succeeded" })
-        .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
+      const [payment] = await db
+        .select()
+        .from(pagoyaPaymentsTable)
+        .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId))
+        .limit(1);
+
+      if (payment && payment.status !== "gift_card_delivered") {
+        await db
+          .update(pagoyaPaymentsTable)
+          .set({ status: "succeeded" })
+          .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
+
+        // Trigger gift card delivery from webhook if this is a gift card
+        if (payment.categoria?.includes("_")) {
+          deliverGiftCard({
+            paymentIntentId: payment.paymentIntentId,
+            categoria: payment.categoria,
+            monto: payment.monto,
+            telefono: payment.telefono,
+            referencia: payment.referencia,
+          }).catch((err) => logger.error({ paymentIntentId: intentId, err }, "pagoya: webhook gift card delivery failed"));
+        }
+      }
       logger.info({ paymentIntentId: intentId, event: event.type }, "pagoya: payment succeeded — status updated to succeeded");
     } else if (
       event.type === "payment_intent.payment_failed" ||
