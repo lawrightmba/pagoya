@@ -2,7 +2,7 @@
 - [Tomorrow growth sprint](tomorrow-growth-sprint.md) — three growth wedges queued for next session
 - [Web signup bonus architecture](web-signup-bonus.md) — ref_code optional, defaults "WEB"; velocity check bypassed for WEB; signup_source field tracks web_organic vs rep_referral
 - [DB migrations](db-migrations.md) — drizzle-kit push broken; always use direct SQL via executeSql; schema file is lib/db/src/schema/users.ts
-- [Command center seed keys](command-center-seeds.md) — current key is ck_defaults_ph0_v3 (p0-01–p0-26); bump key + date each session when adding new Phase 0 items
+- [Command center seed keys](command-center-seeds.md) — current key is ck_defaults_ph0_v4 (p0-01–p0-35); bump key + date each session when adding new Phase 0 items
 - [Paula payment initiation](paula-payment-initiation.md) — 2FA flow via pendingPayment in session; agentChat returns pendingPayment in response body; whatsapp-agent intercepts sí/no before forwarding to agent
 - [PWA push notifications](pwa-push.md) — VAPID keys in env vars; push_subscriptions table; web-push in api-server; sw.js + manifest.json in pagoya/public; usePushNotifications hook; fires after bill payment confirmed
 - [Belvo Connect scopes](belvo-connect-scopes.md) — widget token only accepts read_institutions,write_links,read_links — read_accounts is invalid and returns 400

@@ -639,7 +639,7 @@
     <div style="background:#1D9E7520; border:1px solid #1D9E7540; border-radius:10px; padding:8px 14px; text-align:center; flex-shrink:0;">
       <div style="font-size:10px; font-weight:600; color:#1D9E75; margin-bottom:2px; text-transform:uppercase; letter-spacing:.5px;">YC Decision</div>
       <div style="font-size:26px; font-weight:700; color:#1D9E75; line-height:1;" id="yc-days-count">16</div>
-      <div style="font-size:10px; color:#1D9E75; opacity:.8; margin-top:2px;">days away · June 1</div>
+      <div style="font-size:10px; color:#1D9E75; opacity:.8; margin-top:2px;" id="yc-days-label">days away · June 5 🎯</div>
     </div>
   </div>
 
@@ -1761,6 +1761,11 @@ const CHECKLIST = [
   { phase:0, id:'p0-28', title:'Paula WhatsApp payment initiation — "paga mi CFE" triggers prepare_bill_payment tool, stages amount+reference, 2FA confirm/cancel intercept in whatsapp-agent, 5-min pending TTL, executes via wallet' },
   { phase:0, id:'p0-29', title:'PWA push notifications — VAPID keys, service worker (sw.js), manifest.json, push_subscriptions table, /api/push/subscribe+unsubscribe+vapid-public-key, usePushNotifications hook, Home banner, fires on bill payment confirmed' },
   { phase:0, id:'p0-30', title:'Post-OTP bienvenida activation screen — welcome_shown DB column, /api/user/me + /api/user/welcome-shown GET/PATCH, /api/debug/reset-welcome/:userId, Bienvenida.tsx (3 zones: coral checkmark + bonus pill, teal pulsing balance, coral CTA + 4 biller chips + Paula WA link), ?servicio= param pre-fills /pagar empresa+categoría, admin/users includes welcome_shown, Pantalla vista stat tile in Command Center' },
+  { phase:0, id:'p0-31', title:'Stripe live keys activated — app processing real card payments in production (STRIPE_SECRET_KEY + VITE_STRIPE_PUBLIC_KEY live), replaces test keys' },
+  { phase:0, id:'p0-32', title:'Gift card catalog launched — Netflix, Amazon, Google Play, Uber, Cinépolis, Starbucks, Liverpool, Soriana (8 brands, multiple denominations); Stripe card or wallet payment; Paula knows full catalog; no referencia required from user' },
+  { phase:0, id:'p0-33', title:'Server-side gift card PIN delivery — SIPREL called from GET /api/pagoya/payments/:id and Stripe webhook; idempotent via gift_card_delivered status; PIN sent via WhatsApp; removed unreliable browser fire-and-forget' },
+  { phase:0, id:'p0-34', title:'SIPREL gift card referencia fix — phone number stripped to last 10 digits before SIPREL call (SIPREL max 10 chars); applied in both card and wallet payment paths' },
+  { phase:0, id:'p0-35', title:'WhatsApp phone formatting fix — non-digit chars (spaces) stripped before Twilio call; registration + payment form phone inputs get country-specific placeholders and hint text' },
 
   // Phase 1 — 11 items
   { phase:1, id:'p1-01', title:'Sitemaps submitted to Google Search Console — pagoyamx.com' },
@@ -2261,7 +2266,7 @@ function fmtDate(iso) {
       }
     });
     ['tech','founder','seo'].forEach(rdUpdateProgress);
-    const dec = new Date('2026-06-01');
+    const dec = new Date('2026-06-05');
     const days = Math.max(0, Math.ceil((dec - new Date()) / 86400000));
     const el = document.getElementById('yc-days-count');
     if (el) el.textContent = days;
@@ -2325,14 +2330,15 @@ function fmtDate(iso) {
 
 checks = loadChecks();
 
-// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-05-28.
-// v3: covers p0-01 through p0-26 (4 new items added 2026-05-28:
-//     founder bio /lloyd, web signup bonus, signup_source field, coral CTA strip).
+// Pre-mark Phase 0 (shipped product engineering) with completion date 2026-06-01.
+// v4: covers p0-01 through p0-35 (5 new items added 2026-06-01:
+//     Stripe live keys, gift card catalog, server-side PIN delivery,
+//     SIPREL referencia fix, WhatsApp phone formatting + UX hints).
 // Runs once; after that localStorage state wins so user can toggle freely.
-const SHIPPED_KEY = 'ck_defaults_ph0_v3';
+const SHIPPED_KEY = 'ck_defaults_ph0_v4';
 if (!localStorage.getItem(SHIPPED_KEY)) {
   CHECKLIST.filter(i => i.phase === 0).forEach(i => {
-    if (!checks[i.id]) checks[i.id] = '2026-05-28';
+    if (!checks[i.id]) checks[i.id] = '2026-06-01';
   });
   saveChecks();
   try { localStorage.setItem(SHIPPED_KEY, '1'); } catch(e) {}
