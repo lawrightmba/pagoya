@@ -1,0 +1,51 @@
+Explicit payment confirmation step — WhatsApp + Web
+
+What changed
+DB — two new columns on pending_payments:
+
+status TEXT DEFAULT 'awaiting_confirmation' — two-stage state machine
+fee NUMERIC DEFAULT 25 — platform fee stored at staging time
+wallet_balance NUMERIC DEFAULT 0 — balance snapshot for the confirmation message
+pendingPaymentService.ts — three behavioural changes:
+
+Initial TTL is now 30 minutes (was 5) — gives the user time to read and respond
+New confirmPendingPayment(phoneKey) — transitions status → confirmed and resets TTL to 5 minutes from that moment (spec-exact)
+PendingPaymentRow now carries fee, walletBalance, status
+agentChat.ts — prepare_bill_payment now returns fee, walletBalance, paymentMethod in the staged payment object alongside the existing fields
+
+whatsapp-agent.ts — complete rework of the pending-payment intercept:
+
+Strict accept patterns: only SÍ / SI / si / sí / yes (+ optional punctuation)
+Strict cancel patterns: only CANCELAR / cancel / no / nop / nope
+Everything else → "Por favor responde *SÍ* para confirmar o *CANCELAR* para cancelar el pago." (loops, doesn't fall through to agent)
+On SÍ: calls confirmPendingPayment (TTL reset), executes, deletes row, logs [Paula] Payment confirmation: confirmed | biller: ... | amount: ... | userId: ...
+When agent stages a new payment: sends the exact spec-format structured message instead of Paula's confirmText reply:
+✅ Resumen de pago:
+🏢 Servicio: CFE Luz
+📋 Referencia: 1234567890
+💰 Monto: $450.00 MXN
+💳 Cargo total: $475.00 MXN (incluye comisión $25)
+👛 Método: Cartera PagoYa (Saldo disponible: $750.00 MXN)
+¿Confirmar este pago?
+Responde *SÍ* para continuar o *CANCELAR* para cancelar.
+pendingPayments.ts (new route) — web-side execution:
+
+POST /api/bills/pending/confirm — transitions, executes, always deletes (success or failure)
+POST /api/bills/pending/cancel — deletes and logs
+GET /api/bills/pending?telefono=... — returns active pending payment for state restore
+SupportChat.tsx — confirmation card UI inserted between message list and text input:
+
+Card with Navy header, Teal border, PagoYa brand gradient background
+Rows: Servicio, Referencia (hidden for gift cards), Monto, Cargo total (bold Navy, highlighted), Método + saldo disponible
+"Confirmar pago" button (Coral #D85A30, primary)
+"Cancelar" button (ghost with Coral border)
+Text input is dimmed + pointer-events: none while card is visible — OTP input only renders after Confirmar is clicked
+Outcome logged to console in spec format
+Test results
+Test	Result
+(a) WhatsApp SÍ/SI/si/sí/yes all trigger confirm	✅ All 8 variants match
+(a) CANCELAR/cancel/no/nop/nope all trigger cancel	✅ All 8 variants match
+(b) CANCELAR deletes pending row	✅ pending: null confirmed
+(c) Web cancel endpoint clears row	✅
+(d) Ambiguous words (dale/ok/sip/claro/órale)	✅ Neither pattern matches → loops to prompt
+TTL reset	✅ confirmPendingPayment transitions status + resets to 5 min
