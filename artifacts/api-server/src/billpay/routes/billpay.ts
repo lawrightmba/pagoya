@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, billPaymentsTable, billPaymentAuditTable, repCommissionsTable, usersTable, repsTable, walletsTable, walletTransactionsTable } from "@workspace/db";
 import { desc, eq, sql, and, gte } from "drizzle-orm";
 import { routePayment, getAvailableProviders, siprelProvider } from "../services/router.js";
-import { taecelGetProducts } from "../providers/siprel.js";
+import { taecelGetProducts, taecelCheckSkuAvailability, taecelCheckStockAndAlert } from "../providers/siprel.js";
 import { taecelProductCacheTable } from "@workspace/db";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
@@ -125,6 +125,27 @@ router.post("/pay", async (req: Request, res: Response) => {
         error: `El monto mínimo para ${service.name} es $${service.minAmount} MXN.`,
       });
       return;
+    }
+  }
+
+  // ── Gift card SKU availability pre-check (fail open) ────────────────────────
+  // Runs before any charge is initiated. A 5-second timeout is enforced via the
+  // taecelPost helper. On any error the purchase proceeds (fail-open policy).
+  if (service.isGiftCard && service.siprelServiceId) {
+    try {
+      const { available } = await taecelCheckSkuAvailability(service.siprelServiceId);
+      if (!available) {
+        console.warn(`[GiftCard] SKU unavailable: ${service.siprelServiceId} ${effectiveMonto} MXN`);
+        res.status(409).json({
+          error: "Lo sentimos, esta tarjeta de regalo no está disponible en este momento. Por favor elige otra opción o intenta más tarde.",
+          unavailable: true,
+        });
+        return;
+      }
+    } catch (preCheckErr) {
+      const msg = preCheckErr instanceof Error ? preCheckErr.message : String(preCheckErr);
+      console.error(`[GiftCard] Pre-check failed for SKU ${service.siprelServiceId}: ${msg}`);
+      // fail open — proceed with the purchase
     }
   }
 
@@ -459,6 +480,11 @@ router.post("/pay", async (req: Request, res: Response) => {
         await sendLowSaldoAlert(pagoServicios);
       }
     }).catch(() => {});
+  }
+
+  // Gift card post-fulfillment low-stock check (fire-and-forget)
+  if (service.isGiftCard && service.siprelServiceId) {
+    taecelCheckStockAndAlert(service.siprelServiceId, service.name, montoNum).catch(() => {});
   }
 
   logger.info(

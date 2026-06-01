@@ -1,0 +1,15 @@
+Context: PagoYa has 32 live gift card SKUs processed via Taecel/SIPREL. Currently there is no inventory check before a user confirms a gift card order. If a SKU is unavailable, the order fails after payment confirmation — a bad user experience.
+Task: Add a pre-order SKU availability check and a low-stock admin alert system.
+
+In the gift card purchase flow, before the user reaches the final confirmation screen (before any charge is initiated), make an API call to Taecel to verify the requested SKU and denomination are available. Use the existing Taecel API client at api-v1-fixedip.taecel.com/api/. The check should use the product query/status endpoint — check Taecel API docs or existing integration code for the correct endpoint.
+If the SKU is unavailable:
+
+Do NOT initiate any charge.
+Return a user-facing error in Spanish: "Lo sentimos, esta tarjeta de regalo no está disponible en este momento. Por favor elige otra opción o intenta más tarde."
+Log: console.warn(\[GiftCard] SKU unavailable: ${sku} ${denomination} MXN`)`.
+
+
+Add a low-stock threshold alert: after any successful gift card fulfillment, check remaining inventory for that SKU. If inventory drops below 5 units, send a WhatsApp alert to the admin number (stored in process.env.ADMIN_WHATSAPP_NUMBER): "⚠️ PagoYa Admin: Inventario bajo para {{skuName}} {{denomination}} MXN. Quedan {{count}} unidades. Recargar saldo Taecel si es necesario."
+The availability pre-check must be wrapped in try/catch. If the Taecel API call fails or times out (set 5-second timeout), fail open — allow the purchase to proceed rather than blocking users on a network hiccup. Log any pre-check failures: console.error(\[GiftCard] Pre-check failed for SKU ${sku}: ${error.message}`)`.
+Do NOT modify the existing gift card idempotency logic (gift_card_delivered status flag). Do NOT modify HMAC webhook verification. Only add: (a) pre-check call before confirmation, (b) low-stock post-fulfillment check, (c) admin WhatsApp alert.
+After implementing, test: (a) available SKU flows through normally, (b) unavailable SKU returns Spanish error without charging, (c) admin alert fires when inventory is below threshold.

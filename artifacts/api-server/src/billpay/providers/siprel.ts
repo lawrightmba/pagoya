@@ -497,3 +497,99 @@ export async function taecelGetSales(fecha: string): Promise<unknown> {
 export async function taecelStatusTXN(transID: string): Promise<TaecelStatusTXNResponse> {
   return taecelPost<TaecelStatusTXNResponse>("statusTXN", getConfig(), { transID });
 }
+
+// ─── GIFT CARD SKU AVAILABILITY PRE-CHECK ────────────────────────────────────
+// Uses the 24h-cached getProducts response to verify a SKU appears in the active
+// product catalog before any charge is initiated. Fails OPEN — returns
+// { available: true } on any error so a network hiccup never blocks users.
+export async function taecelCheckSkuAvailability(
+  sku: string,
+): Promise<{ available: boolean; stock?: number }> {
+  try {
+    const config = getConfig();
+    const products = await getProducts(config);
+
+    if (!Array.isArray(products)) {
+      return { available: true }; // unexpected format — fail open
+    }
+
+    const list = products as Record<string, unknown>[];
+    const product = list.find(
+      (p) =>
+        String(p.IdProducto ?? p.idProducto ?? p.Sku ?? p.sku ?? "")
+          .trim()
+          .toUpperCase() === sku.trim().toUpperCase(),
+    );
+
+    if (!product) {
+      // SKU absent from active catalog — treat as unavailable
+      return { available: false, stock: 0 };
+    }
+
+    // Taecel responses may include Cantidad (unit count) or Disponible (0/1 flag)
+    const cantidadRaw = product.Cantidad ?? product.cantidad ?? product.Stock ?? product.stock;
+    const disponibleRaw = product.Disponible ?? product.disponible ?? product.Available ?? product.available;
+
+    if (cantidadRaw !== undefined) {
+      const count = parseInt(String(cantidadRaw), 10);
+      if (!isNaN(count)) return { available: count > 0, stock: count };
+    }
+    if (disponibleRaw !== undefined) {
+      const avail = parseInt(String(disponibleRaw), 10);
+      return { available: avail !== 0 };
+    }
+
+    return { available: true }; // field absent — fail open
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[GiftCard] Pre-check failed for SKU ${sku}: ${msg}`);
+    return { available: true }; // fail open
+  }
+}
+
+// ─── POST-FULFILLMENT LOW-STOCK ALERT ────────────────────────────────────────
+// Call after every successful gift card fulfillment. Fetches a LIVE (non-cached)
+// product list, checks remaining stock for the fulfilled SKU, and fires a
+// WhatsApp admin alert if stock < 5 units. Fully non-blocking — never throws.
+export async function taecelCheckStockAndAlert(
+  sku: string,
+  skuName: string,
+  denomination: number,
+): Promise<void> {
+  try {
+    const config = getConfig();
+    // Bypass the 24h cache to get current inventory figures
+    const res = await taecelPost<TaecelProductsResponse>("getProducts", config, {}, 10_000);
+    const products = res.data;
+
+    if (!Array.isArray(products)) return;
+
+    const list = products as Record<string, unknown>[];
+    const product = list.find(
+      (p) =>
+        String(p.IdProducto ?? p.idProducto ?? p.Sku ?? p.sku ?? "")
+          .trim()
+          .toUpperCase() === sku.trim().toUpperCase(),
+    );
+
+    if (!product) return;
+
+    const cantidadRaw = product.Cantidad ?? product.cantidad ?? product.Stock ?? product.stock;
+    if (cantidadRaw === undefined) return;
+
+    const count = parseInt(String(cantidadRaw), 10);
+    if (isNaN(count)) return;
+
+    logger.info({ sku, skuName, denomination, stock: count }, "taecel: post-fulfillment stock check");
+
+    if (count < 5) {
+      await fireAdminAlert(
+        `Inventario bajo para ${skuName} $${denomination} MXN. Quedan ${count} unidades. Recargar saldo Taecel si es necesario.`,
+      );
+      logger.warn({ sku, skuName, denomination, stock: count }, "taecel: low stock alert sent to admin");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn({ sku, skuName, denomination, error: msg }, "taecel: post-fulfillment stock check failed (non-fatal)");
+  }
+}

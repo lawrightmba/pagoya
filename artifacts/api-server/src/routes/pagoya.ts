@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { routePayment } from "../billpay/services/router.js";
 import { getServiceById } from "../billpay/services/catalog.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { taecelCheckSkuAvailability, taecelCheckStockAndAlert } from "../billpay/providers/siprel.js";
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -64,6 +65,11 @@ async function deliverGiftCard(payment: {
     ).catch(() => {});
 
     logger.info({ paymentIntentId: payment.paymentIntentId, pin }, "pagoya: gift card delivered via SIPREL");
+
+    // Low-stock check — fire-and-forget, never blocks delivery
+    if (service.siprelServiceId) {
+      taecelCheckStockAndAlert(service.siprelServiceId, service.name, effectiveMonto).catch(() => {});
+    }
   } catch (err) {
     logger.error({ paymentIntentId: payment.paymentIntentId, err }, "pagoya: gift card SIPREL delivery failed");
     // Do NOT update status — leave as "succeeded" so the next GET poll retries
@@ -112,6 +118,27 @@ router.post("/payments", async (req: Request, res: Response) => {
   }
 
   try {
+    // ── Gift card SKU availability pre-check (before any charge) ──────────────
+    // Fail open: if the Taecel call errors or times out, allow the purchase.
+    const catalogService = getServiceById(categoria);
+    if (catalogService?.isGiftCard && catalogService.siprelServiceId) {
+      try {
+        const { available } = await taecelCheckSkuAvailability(catalogService.siprelServiceId);
+        if (!available) {
+          console.warn(`[GiftCard] SKU unavailable: ${catalogService.siprelServiceId} ${montoNum} MXN`);
+          res.status(409).json({
+            error: "Lo sentimos, esta tarjeta de regalo no está disponible en este momento. Por favor elige otra opción o intenta más tarde.",
+            unavailable: true,
+          });
+          return;
+        }
+      } catch (preCheckErr) {
+        const msg = preCheckErr instanceof Error ? preCheckErr.message : String(preCheckErr);
+        console.error(`[GiftCard] Pre-check failed for SKU ${catalogService.siprelServiceId}: ${msg}`);
+        // fail open — proceed with the purchase
+      }
+    }
+
     const stripe = getStripe();
 
     const totalMxn = montoNum + PLATFORM_FEE_MXN;
