@@ -41,6 +41,8 @@ import BlogCFETarde from "@/pages/BlogCFETarde";
 import BlogMejoresApps from "@/pages/BlogMejoresApps";
 import BlogServiciosPV from "@/pages/BlogServiciosPV";
 import BlogDineroElectronico from "@/pages/BlogDineroElectronico";
+import PagarAguaMonterrey from "@/pages/PagarAguaMonterrey";
+import PagarAguaCdmx from "@/pages/PagarAguaCdmx";
 import Enviar from "@/pages/Enviar";
 import Verificar from "@/pages/Verificar";
 import BankLink from "@/pages/BankLink";
@@ -92,6 +94,8 @@ function Router() {
       <Route path="/pagar-telmex-sin-tarjeta" component={BlogTelmex} />
       <Route path="/recargas-telcel-efectivo" component={BlogRecargasTelcel} />
       <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
+      <Route path="/pagar-agua-monterrey" component={PagarAguaMonterrey} />
+      <Route path="/pagar-agua-cdmx" component={PagarAguaCdmx} />
       <Route path="/que-es-oxxo-pay" component={BlogOXXOPay} />
       <Route path="/pagar-izzi-sin-cuenta-bancaria" component={BlogPagarIzzi} />
       <Route path="/pagar-predial-puerto-vallarta" component={BlogPredialPV} />
