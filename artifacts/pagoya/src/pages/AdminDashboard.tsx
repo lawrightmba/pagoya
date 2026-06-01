@@ -30,6 +30,26 @@ interface RepRow {
   referralTotal: string;
 }
 
+interface KitResult {
+  repCode: string;
+  referralLink: string;
+  name: string;
+  email: string;
+  initialPassword: string;
+}
+
+const COLONIAS = [
+  "Emiliano Zapata",
+  "Versalles",
+  "5 de Diciembre",
+  "Pitillal",
+  "Fluvial Vallarta",
+  "Las Juntas / La Mojonera",
+  "Zona Romántica",
+  "Marina Vallarta",
+  "Otra / Other",
+];
+
 export default function AdminDashboard() {
   const [reps, setReps] = useState<RepRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +58,14 @@ export default function AdminDashboard() {
   const [walletLoading, setWalletLoading] = useState(true);
   const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
+
+  const [kitOpen, setKitOpen] = useState(false);
+  const [kitName, setKitName] = useState("");
+  const [kitPhone, setKitPhone] = useState("");
+  const [kitColonia, setKitColonia] = useState(COLONIAS[0]);
+  const [kitLoading, setKitLoading] = useState(false);
+  const [kitError, setKitError] = useState("");
+  const [kitResult, setKitResult] = useState<KitResult | null>(null);
 
   const loadWallet = useCallback(() => {
     setWalletLoading(true);
@@ -85,6 +113,43 @@ export default function AdminDashboard() {
   const totalBillPayTx = reps.reduce((s, r) => s + r.billPayCount, 0);
   const totalBillPayMXN = reps.reduce((s, r) => s + parseFloat(r.billPayTotal), 0);
   const totalPending = reps.reduce((s, r) => s + parseFloat(r.billPayPending), 0);
+
+  async function handleKitSubmit() {
+    if (!kitName.trim() || !kitPhone.trim()) {
+      setKitError("Ingresa nombre y teléfono.");
+      return;
+    }
+    setKitLoading(true);
+    setKitError("");
+    try {
+      const r = await fetch("/api/reps/admin/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: kitName.trim(), phone: kitPhone.trim(), colonia: kitColonia }),
+      });
+      const data = await r.json() as KitResult & { error?: string };
+      if (!r.ok) {
+        setKitError(data.error ?? "Error al crear el rep.");
+        return;
+      }
+      setKitResult(data);
+      setKitName("");
+      setKitPhone("");
+      setKitColonia(COLONIAS[0]);
+      setReps((prev) => [...prev, {
+        id: data.repCode,
+        name: data.name,
+        phone: kitPhone.trim(),
+        billPayCount: 0, billPayTotal: "0.00", billPayPending: "0.00",
+        signupCount: 0, signupTotal: "0.00",
+        referralCount: 0, referralTotal: "0.00",
+      }]);
+    } catch {
+      setKitError("Error de red. Intenta de nuevo.");
+    } finally {
+      setKitLoading(false);
+    }
+  }
 
   return (
     <div style={{
@@ -321,99 +386,282 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {reps.length > 0 && (
+        {/* ── Rep Commission Table ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginBottom: 24,
+        }}>
+          {/* Section header with "Generar Kit" button */}
           <div style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 14,
-            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px 10px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
           }}>
             <div style={{
               fontFamily: "'Space Mono', monospace",
               fontSize: "0.52rem",
               letterSpacing: "0.08em",
               color: "#5a7080",
-              padding: "12px 16px 10px",
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
               textTransform: "uppercase",
             }}>
               Reps · Detalle de Comisiones
             </div>
+            <button
+              onClick={() => { setKitOpen(!kitOpen); setKitResult(null); setKitError(""); }}
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.48rem",
+                fontWeight: 700,
+                color: kitOpen ? "#F59E0B" : "#1D9E75",
+                background: kitOpen ? "rgba(245,158,11,0.1)" : "rgba(29,158,117,0.12)",
+                border: `1px solid ${kitOpen ? "rgba(245,158,11,0.35)" : "rgba(29,158,117,0.35)"}`,
+                borderRadius: 20,
+                padding: "4px 12px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {kitOpen ? "✕ Cerrar" : "+ Generar Kit de Rep"}
+            </button>
+          </div>
 
-            {/* Table header */}
+          {/* ── Kit Generator Form ── */}
+          {kitOpen && (
             <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 80px 80px 80px 80px 80px 64px",
-              gap: 0,
-              padding: "8px 16px",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              padding: "16px",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(29,158,117,0.04)",
             }}>
-              {["REP", "SIGNUP", "REFERRAL", "BILL PAY", "EN ESPERA", "TOTAL", ""].map((h) => (
-                <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", letterSpacing: "0.06em" }}>
-                  {h}
-                </div>
-              ))}
-            </div>
 
-            {/* Rep rows */}
-            {reps.map((rep) => (
-              <div key={rep.id} style={{
+              {/* Success state */}
+              {kitResult ? (
+                <div style={{
+                  background: "rgba(57,169,53,0.1)",
+                  border: "1px solid rgba(57,169,53,0.3)",
+                  borderRadius: 10,
+                  padding: "16px",
+                }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#39A935", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>
+                    ✅ Rep Creado
+                  </div>
+                  {[
+                    ["Nombre", kitResult.name],
+                    ["Código", kitResult.repCode],
+                    ["Link de Referido", kitResult.referralLink],
+                    ["Email (login)", kitResult.email],
+                    ["Contraseña inicial", kitResult.initialPassword],
+                  ].map(([label, val]) => (
+                    <div key={label} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", minWidth: 110, textTransform: "uppercase" }}>{label}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7", wordBreak: "break-all" }}>{val}</div>
+                    </div>
+                  ))}
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginTop: 8 }}>
+                    WhatsApp enviado · Rep puede iniciar sesión en /rep-login
+                  </div>
+                  <button
+                    onClick={() => { setKitResult(null); }}
+                    style={{
+                      marginTop: 12,
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.46rem",
+                      color: "#1D9E75",
+                      background: "rgba(29,158,117,0.12)",
+                      border: "1px solid rgba(29,158,117,0.3)",
+                      borderRadius: 20,
+                      padding: "4px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    + Crear otro rep
+                  </button>
+                </div>
+              ) : (
+                /* Input form */
+                <div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#1D9E75", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Nuevo Rep — Kit de Onboarding
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    {/* Name */}
+                    <div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Nombre completo</div>
+                      <input
+                        value={kitName}
+                        onChange={(e) => setKitName(e.target.value)}
+                        placeholder="Ej. María García"
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          color: "#e8f0f7",
+                          fontFamily: "'Space Mono', monospace",
+                          fontSize: "0.6rem",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                    {/* Phone */}
+                    <div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>WhatsApp (10 dígitos)</div>
+                      <input
+                        value={kitPhone}
+                        onChange={(e) => setKitPhone(e.target.value)}
+                        placeholder="3221234567"
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          color: "#e8f0f7",
+                          fontFamily: "'Space Mono', monospace",
+                          fontSize: "0.6rem",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                    {/* Colonia */}
+                    <div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Colonia</div>
+                      <select
+                        value={kitColonia}
+                        onChange={(e) => setKitColonia(e.target.value)}
+                        style={{
+                          width: "100%",
+                          background: "#0A2540",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          color: "#e8f0f7",
+                          fontFamily: "'Space Mono', monospace",
+                          fontSize: "0.6rem",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        {COLONIAS.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {kitError && (
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#E21A0A", marginBottom: 10 }}>
+                      {kitError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleKitSubmit}
+                    disabled={kitLoading}
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.52rem",
+                      fontWeight: 700,
+                      color: "#fff",
+                      background: kitLoading ? "rgba(29,158,117,0.4)" : "#1D9E75",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "9px 20px",
+                      cursor: kitLoading ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {kitLoading ? "Creando…" : "Generar Kit y Enviar WhatsApp"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Table header */}
+          {reps.length > 0 && (
+            <>
+              <div style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 80px 80px 80px 80px 80px 64px",
                 gap: 0,
-                padding: "12px 16px",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-                alignItems: "center",
+                padding: "8px 16px",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
               }}>
-                <div>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>{rep.name || rep.id}</div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#5a7080" }}>
-                    {rep.id} · {rep.phone}
+                {["REP", "SIGNUP", "REFERRAL", "BILL PAY", "EN ESPERA", "TOTAL", ""].map((h) => (
+                  <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", letterSpacing: "0.06em" }}>
+                    {h}
+                  </div>
+                ))}
+              </div>
+
+              {/* Rep rows */}
+              {reps.map((rep) => (
+                <div key={rep.id} style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 80px 80px 80px 80px 80px 64px",
+                  gap: 0,
+                  padding: "12px 16px",
+                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  alignItems: "center",
+                }}>
+                  <div>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>{rep.name || rep.id}</div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#5a7080" }}>
+                      {rep.id} · {rep.phone}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
+                    <div style={{ fontWeight: 700 }}>{rep.signupCount}</div>
+                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.signupTotal)}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
+                    <div style={{ fontWeight: 700 }}>{rep.referralCount}</div>
+                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.referralTotal)}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#39A935" }}>
+                    <div style={{ fontWeight: 700 }}>{rep.billPayCount}</div>
+                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.billPayTotal)}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#F59E0B" }}>
+                    {fmt(rep.billPayPending)}
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.62rem", fontWeight: 700, color: "#e8f0f7" }}>
+                    {fmt((
+                      parseFloat(rep.signupTotal) +
+                      parseFloat(rep.referralTotal) +
+                      parseFloat(rep.billPayTotal)
+                    ).toFixed(2))}
+                  </div>
+                  <div>
+                    <a
+                      href={`/rep-dashboard?repId=${encodeURIComponent(rep.id)}`}
+                      style={{
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.48rem",
+                        color: "#39A935",
+                        textDecoration: "none",
+                        padding: "3px 8px",
+                        border: "1px solid rgba(57,169,53,0.3)",
+                        borderRadius: 20,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      → Ver
+                    </a>
                   </div>
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
-                  <div style={{ fontWeight: 700 }}>{rep.signupCount}</div>
-                  <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.signupTotal)}</div>
-                </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
-                  <div style={{ fontWeight: 700 }}>{rep.referralCount}</div>
-                  <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.referralTotal)}</div>
-                </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#39A935" }}>
-                  <div style={{ fontWeight: 700 }}>{rep.billPayCount}</div>
-                  <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.billPayTotal)}</div>
-                </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#F59E0B" }}>
-                  {fmt(rep.billPayPending)}
-                </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.62rem", fontWeight: 700, color: "#e8f0f7" }}>
-                  {fmt((
-                    parseFloat(rep.signupTotal) +
-                    parseFloat(rep.referralTotal) +
-                    parseFloat(rep.billPayTotal)
-                  ).toFixed(2))}
-                </div>
-                <div>
-                  <a
-                    href={`/rep-dashboard?repId=${encodeURIComponent(rep.id)}`}
-                    style={{
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.48rem",
-                      color: "#39A935",
-                      textDecoration: "none",
-                      padding: "3px 8px",
-                      border: "1px solid rgba(57,169,53,0.3)",
-                      borderRadius: 20,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    → Ver
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </>
+          )}
+        </div>
+
       </div>
     </div>
   );

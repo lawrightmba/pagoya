@@ -1,0 +1,20 @@
+ontext: William Shaw (ENG-01) is the sole active rep. The rep system (/rep-signup, /rep-login, /rep-dashboard, /admin) is fully live with auto-commissions, fraud prevention, and audit logging. We need to make it easy to onboard a second rep quickly and confirm the system handles multiple concurrent reps cleanly.
+Task: Two parts — a rep onboarding QR kit generator and a multi-rep stress check.
+Part A — Rep Onboarding Kit Generator (Admin function)
+
+In the admin dashboard (5-tab layout), add a button to the existing rep management section: "Generar Kit de Rep".
+When clicked, the admin enters: rep name, rep WhatsApp number, assigned colonia (dropdown using the existing 9 PV colonias list). The system then:
+
+Creates the rep account via the existing rep signup logic (generating a unique rep_code in format ENG-XX where XX increments from the last used code).
+Generates a referral link: pagoyamx.com/r/{{rep_code}}.
+Sends a WhatsApp message to the new rep's number: "Hola {{repName}}, bienvenido/a al equipo PagoYa! Tu código de referido es {{rep_code}}. Tu link: pagoyamx.com/r/{{rep_code}}. Tus comisiones: $150 MXN por registro, $500 MXN primer pago, $300 MXN por referido. Dashboard: pagoseguromx.com/rep-login"
+Returns a success confirmation in admin UI showing the new rep's code and link.
+
+
+This must use the existing rep creation logic — do not duplicate fraud prevention, audit_log triggers, or commission rules. Just expose admin-initiated creation.
+
+Part B — Multi-rep validation
+
+In the existing self-referral blocking logic, confirm it correctly handles the case where Rep A refers a user who then signs up as Rep B — Rep A should get the referral commission but Rep B should not be able to refer themselves back.
+Confirm the 7-day payout hold, immutable audit_log triggers, and landlord confirmation ping all function correctly when more than one rep is active simultaneously. No code change needed if logic is correct — just verify and log confirmation.
+After implementing Part A, test: create a second rep via admin kit generator, confirm WhatsApp fires, confirm rep can log in to dashboard, confirm referral link routes correctly.

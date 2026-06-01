@@ -108,6 +108,14 @@ function Router() {
       <Route path="/video" component={VideoPage} />
       <Route path="/lloyd" component={FounderBio} />
       <Route path="/bienvenida" component={Bienvenida} />
+      <Route path="/r/:repCode">
+        {(params: { repCode: string }) => {
+          useEffect(() => {
+            window.location.replace(`/register?ref=${params.repCode}`);
+          }, [params.repCode]);
+          return null;
+        }}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
