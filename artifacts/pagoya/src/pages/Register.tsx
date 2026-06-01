@@ -743,7 +743,11 @@ export default function Register() {
               <input
                 type="tel"
                 autoComplete="tel-national"
-                placeholder="Número de teléfono"
+                placeholder={
+                  countryCode === "+52" ? "Ej. 322 183 9799" :
+                  countryCode === "+1"  ? "Ej. 555 123 4567" :
+                  "10 dígitos locales"
+                }
                 value={localNumber}
                 onChange={(e) => {
                   setLocalNumber(e.target.value);
@@ -763,7 +767,12 @@ export default function Register() {
                 }}
               />
             </div>
-            {fieldErrors.phone && <p style={fieldErrorStyle}>{fieldErrors.phone}</p>}
+            {fieldErrors.phone
+              ? <p style={fieldErrorStyle}>{fieldErrors.phone}</p>
+              : <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.45)" }}>
+                  Solo los {countryCode === "+1" ? "10 digits" : "10 dígitos"} locales — el código de país ya está en el selector
+                </p>
+            }
           </div>
 
           {/* CURP */}

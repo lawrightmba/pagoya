@@ -237,7 +237,7 @@ export default function PaymentForm() {
             <Field label="Número de teléfono" error={errors.telefono}>
               <input
                 type="tel"
-                placeholder="Ej. 55 1234 5678"
+                placeholder="Ej. 52 322 183 9799"
                 value={form.telefono}
                 onChange={(e) => handleChange("telefono", e.target.value)}
                 onFocus={() => setFocusedField("telefono")}
@@ -245,6 +245,11 @@ export default function PaymentForm() {
                 className="w-full px-4 py-4 rounded-2xl border bg-[#FAFAFA] text-sm text-[#1F1F1F] placeholder-gray-400"
                 style={inputStyle("telefono", !!errors.telefono)}
               />
+              {!errors.telefono && (
+                <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#6B7280" }}>
+                  Incluye código de país · 52 para México, 1 para EE.UU.
+                </p>
+              )}
             </Field>
 
             <Field label="Notas (opcional)">
