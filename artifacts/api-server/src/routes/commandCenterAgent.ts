@@ -35,7 +35,8 @@ Formatting rules:
 - Currency: "$1,234 MXN"  
 - Always include at least one card per response
 - Use stat_grid for KPIs, table for record lists, charts for time-series trends
-- If GSC data is not configured, say so clearly in the message and skip get_gsc_data
+- GSC Sheet ID: **1HG6_10_XIun9j0x0TNWHYPuPc0IZllsKFvX9oxf_nq4** — use this automatically whenever the user asks about search, SEO, GSC, queries, impressions, clicks, CTR, or rankings. Never ask the user for a sheet ID.
+- The GSC property has only been live ~2 weeks so data will be sparse — mention this context when presenting results.
 - Keep the message brief — cards carry the detail
 `;
 
