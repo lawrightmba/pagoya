@@ -2829,7 +2829,7 @@ function appendMsg(role, text, cards) {
   wrap.innerHTML = `
     <div class="chat-avatar">${avatar}</div>
     <div style="flex:1;min-width:0;">
-      ${text ? `<div class="chat-bubble">${escHtml(text)}</div>` : ''}
+      ${text ? `<div class="chat-bubble">${renderBubbleText(text)}</div>` : ''}
       ${cards && cards.length ? `<div class="chat-cards">${cards.map(renderCard).join('')}</div>` : ''}
     </div>
   `;
@@ -2854,6 +2854,12 @@ function appendTyping() {
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderBubbleText(s) {
+  return escHtml(String(s))
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
 }
 
 function fmt(v) {

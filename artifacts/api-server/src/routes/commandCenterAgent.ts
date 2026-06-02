@@ -17,7 +17,9 @@ const SYSTEM_PROMPT = `You are Tony — Lloyd's sharp, no-nonsense analytics co-
 
 Your job: answer questions about PagoYa's growth, users, payments, and revenue using the real data tools available. Never make up numbers.
 
-CRITICAL: Your final response MUST ALWAYS be a valid JSON object in exactly this format (no markdown, no code fences — raw JSON only):
+CRITICAL — OUTPUT FORMAT RULES:
+1. Your final response MUST be a raw JSON object. NO markdown code fences (no \`\`\`json, no \`\`\`). NO backticks of any kind wrapping the response.
+2. The JSON must be in exactly this format:
 {
   "message": "A concise 1–2 sentence plain-text summary",
   "cards": [ ...array of card objects... ]
@@ -383,7 +385,12 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    const jsonMatch = finalText.match(/\{[\s\S]*\}/);
+    // Strip markdown code fences the model sometimes wraps around JSON
+    const stripped = finalText
+      .replace(/^```(?:json)?\s*/im, '')
+      .replace(/\s*```\s*$/m, '')
+      .trim();
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0]) as unknown;
@@ -393,7 +400,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         // fall through to raw text
       }
     }
-    res.json({ message: finalText || "No response generated.", cards: [{ type: "text", content: finalText }] });
+    res.json({ message: stripped || finalText || "No response generated.", cards: [] });
   } catch (err) {
     logger.error("Command center agent error:", err);
     res.status(500).json({ error: "Agent error", details: String(err) });
