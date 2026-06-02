@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { sql as drizzleSql } from "drizzle-orm";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { logger } from "../lib/logger.js";
+import { siprelProvider } from "../billpay/services/router.js";
 
 const router = Router();
 
@@ -39,6 +40,7 @@ Formatting rules:
 - Use stat_grid for KPIs, table for record lists, charts for time-series trends
 - GSC Sheet ID: **1HG6_10_XIun9j0x0TNWHYPuPc0IZllsKFvX9oxf_nq4** — use this automatically whenever the user asks about search, SEO, GSC, queries, impressions, clicks, CTR, or rankings. Never ask the user for a sheet ID.
 - The GSC property has only been live ~2 weeks so data will be sparse — mention this context when presenting results.
+- SIPREL/Taecel balance: call get_taecel_balance automatically whenever the user asks about balance, SIPREL saldo, Taecel wallet, how much money we have, or whether we can process payments. This is live API data.
 - Keep the message brief — cards carry the detail
 `;
 
@@ -116,6 +118,11 @@ const TOOLS = [
       },
       required: ["sheet_id"],
     },
+  },
+  {
+    name: "get_taecel_balance",
+    description: "Get real-time SIPREL/Taecel wallet balances: Bolsa Pago de Servicios (bills & gift cards) and Bolsa Tiempo Aire (top-ups). Use whenever the user asks about wallet balance, SIPREL balance, Taecel balance, how much money is left, or whether we can process payments.",
+    input_schema: { type: "object", properties: {}, required: [] },
   },
 ];
 
@@ -305,6 +312,23 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           pending: pending.rows[0],
           totals: totals.rows[0],
           wallets: walletAgg.rows[0],
+        };
+      }
+
+      case "get_taecel_balance": {
+        if (!siprelProvider.getSaldoBalance) {
+          return { error: "getSaldoBalance not available on provider" };
+        }
+        const { tiempoAire, pagoServicios } = await siprelProvider.getSaldoBalance();
+        const LOW_THRESHOLD = 500;
+        return {
+          pago_servicios_mxn: pagoServicios,
+          tiempo_aire_mxn: tiempoAire,
+          total_mxn: pagoServicios + tiempoAire,
+          pago_servicios_status: pagoServicios < LOW_THRESHOLD ? "⚠️ LOW" : "✅ OK",
+          tiempo_aire_status: tiempoAire < LOW_THRESHOLD ? "⚠️ LOW" : "✅ OK",
+          low_threshold_mxn: LOW_THRESHOLD,
+          note: "Live data from SIPREL API",
         };
       }
 
