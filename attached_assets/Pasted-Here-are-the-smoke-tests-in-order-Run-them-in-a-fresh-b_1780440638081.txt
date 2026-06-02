@@ -1,0 +1,63 @@
+Here are the smoke tests in order. Run them in a fresh browser session with the chat closed first, then open Paula for each one.
+
+Pre-test setup
+
+	1.	Open pagoyamx.com in an incognito window
+	2.	Scroll past the hero section until Paula’s FAB appears
+	3.	Confirm the “Pregúntame” green pill is visible below the button
+	4.	Confirm the speech bubble reads “Paga tu luz, agua o cel — aquí mismo”
+
+Block C — Plain language / typo tolerance (5 tests)
+
+Open Paula and send each message. After each one, close and reopen with a fresh conversation.
+
+	1.	Type: kiero pagar mi luss
+	•	✅ Pass: Paula interprets as CFE, asks for account number, does NOT say “no entendí”
+	2.	Type: telemex
+	•	✅ Pass: Paula recognizes as Telmex, asks what you want to do
+	3.	Type: cuanto tengo
+	•	✅ Pass: Paula calls get_wallet_balance, does not ask “¿a qué te refieres?”
+	4.	Type: pagar cfe por fabor
+	•	✅ Pass: Paula asks for account number in plain Spanish — “número de cliente” not “referencia”
+	5.	Type: quiero una netfliss
+	•	✅ Pass: Paula recognizes Netflix, offers denominations
+
+Block A — Cancel/undo (3 tests)
+
+	6.	Type: pagar mi luz, give a fake account number like 1234567890, give amount $500
+— When Paula stages the payment, type: espera no
+	•	✅ Pass: Paula cancels, does NOT proceed to confirmation card, says something like “Claro, cancelé ese pago”
+	7.	Same flow as above, but this time let the confirmation card appear, then click Cancelar
+	•	✅ Pass: Card dismisses, Paula says “Pago cancelado. ¿En qué más te puedo ayudar?”
+	8.	Type: pagar telmex then immediately me equivoqué
+	•	✅ Pass: Paula drops the flow without staging anything
+
+Block B — Error recovery language (2 tests)
+
+	9.	Type: cuanto tengo when no phone number is in localStorage (incognito = no stored tel)
+	•	✅ Pass: Paula responds gracefully — either asks for your number or explains she needs it, no technical error language
+	10.	Type: pagar mi luz, give account number, give an amount larger than any realistic wallet balance (e.g. $50,000)
+	•	✅ Pass: Paula flags insufficient balance in plain Spanish, offers to help load more — no “error” or technical language
+
+Block D — Escalation (2 tests)
+
+	11.	Type: me cobraron y no llegó mi pago
+	•	✅ Pass: Paula calls escalate_to_support, tells user the team will contact them on WhatsApp, does NOT try to troubleshoot it herself
+	12.	Type: quiero hablar con una persona
+	•	✅ Pass: Same — escalates immediately, no pushback
+
+Registration path (Batch 3)
+
+	13.	Go to pagoyamx.com/registro (with the typo)
+	•	✅ Pass: Redirects to /register, no 404
+	14.	On the register form, leave CURP blank and complete all other fields, submit
+	•	✅ Pass: Form accepts it, no CURP validation error
+	15.	Confirm all labels are in Spanish only — no “FULL NAME / NOMBRE COMPLETO” bilingual doubles
+
+Navigation (Batch 2)
+
+	16.	Register or login with a test account, go to the wallet, click “Mis pagos”
+	•	✅ Pass: Routes to /wallet/historial, not a 404
+	17.	On the register page, confirm the ← back button is visible and returns to the previous page
+
+Total: 17 tests. Log any fails with the exact message Paula returned

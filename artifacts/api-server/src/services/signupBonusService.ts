@@ -29,11 +29,14 @@ export async function checkBonusEligibility(
   | { eligible: false; reason: "duplicate" | "inactive" | "rep_not_eligible" | "config_missing" | "error" }
 > {
   try {
-    // Duplicate check — phone OR CURP already in users table
+    // Duplicate check — phone already in users table; also check CURP if one was provided
+    const dupConditions = curp
+      ? or(eq(usersTable.telefono, phone), eq(usersTable.kycCurp, curp))
+      : eq(usersTable.telefono, phone);
     const existing = await db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(or(eq(usersTable.telefono, phone), eq(usersTable.kycCurp, curp)))
+      .where(dupConditions)
       .limit(1);
 
     if (existing.length > 0) {

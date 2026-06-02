@@ -54,10 +54,6 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Se requiere el teléfono.", field: "phone" });
     return;
   }
-  if (!curp?.trim()) {
-    res.status(400).json({ error: "Se requiere el CURP.", field: "curp" });
-    return;
-  }
   if (!city?.trim()) {
     res.status(400).json({ error: "Se requiere la ciudad.", field: "city" });
     return;
@@ -80,7 +76,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
 
   try {
     // ── 1. Bonus eligibility check ─────────────────────────────────────────
-    const eligibility = await checkBonusEligibility(phoneCleaned, curp.trim().toUpperCase(), refCodeResolved);
+    const eligibility = await checkBonusEligibility(phoneCleaned, curp?.trim().toUpperCase() ?? "", refCodeResolved);
     if (!eligibility.eligible) {
       logger.info({ phone: phoneCleaned, reason: eligibility.reason }, "streetTeamBonus: not eligible");
       res.status(400).json({ eligible: false, reason: eligibility.reason });
@@ -99,7 +95,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
     req.session.pending_bonus_registration = {
       name: name.trim(),
       phone: phoneCleaned,
-      curp: curp.trim().toUpperCase(),
+      curp: curp?.trim().toUpperCase() ?? "",
       city: city.trim(),
       colonia: colonia.trim(),
       ref_code: refCodeResolved,
