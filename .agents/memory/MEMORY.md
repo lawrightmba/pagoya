@@ -9,4 +9,5 @@
 - [Command center dual-file sync](command-center-dual-file.md) — two copies exist; edit pagoya/public, then cp to api-server/public after every session
 - [YC docs generation](yc-docs.md) — use python-docx not JS docx lib; .md files don't download from Replit presenter, use .txt copy as workaround
 - [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)
+- [Pre-demo checklist](pre-demo-checklist.md) — verify signup_bonus_config is_active=true before every demo and go-live
 - [STP CLABE + CEP integration](stp-clabe-cep.md) — per-user CLABE in users.stp_clabe; CLABE assigned on registration (fire-and-forget); webhook matches by CLABE first then conceptoPago phone; CEP URL stored in wallet_transactions.cep_url
