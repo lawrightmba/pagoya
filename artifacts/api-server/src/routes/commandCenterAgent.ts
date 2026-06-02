@@ -121,7 +121,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   try {
     switch (name) {
       case "get_overview": {
-        const [users, payments, revenue, reps] = await Promise.all([
+        const [users, payments, revenue, repsCount] = await Promise.all([
           db.execute(drizzleSql`
             SELECT COUNT(*) as total,
               COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as new_7d,
@@ -137,23 +137,17 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           `),
           db.execute(drizzleSql`
             SELECT 
-              COALESCE(SUM(platform_fee_mxn::numeric) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as fee_7d,
-              COALESCE(SUM(platform_fee_mxn::numeric), 0) as fee_total,
-              COALESCE(SUM(monto::numeric) FILTER (WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '7 days'), 0) as volume_7d
+              COALESCE(SUM(platform_fee_mxn) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as fee_7d,
+              COALESCE(SUM(platform_fee_mxn), 0) as fee_total,
+              COALESCE(SUM(monto) FILTER (WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '7 days'), 0) as volume_7d
             FROM bill_payments
           `),
-          db.execute(drizzleSql`
-            SELECT COUNT(DISTINCT ref_code) as active_reps
-            FROM users
-            WHERE signup_source = 'rep_referral'
-              AND ref_code IS NOT NULL
-              AND ref_code NOT IN ('WEB','')
-          `),
+          db.execute(drizzleSql`SELECT COUNT(*)::int as total FROM reps`),
         ]);
         const u = users.rows[0] as Record<string, unknown>;
         const p = payments.rows[0] as Record<string, unknown>;
         const r = revenue.rows[0] as Record<string, unknown>;
-        const rp = reps.rows[0] as Record<string, unknown>;
+        const rc = repsCount.rows[0] as Record<string, unknown>;
         return {
           total_users: u.total,
           new_users_7d: u.new_7d,
@@ -165,7 +159,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           fee_revenue_7d_mxn: parseFloat(String(r.fee_7d)).toFixed(2),
           fee_revenue_total_mxn: parseFloat(String(r.fee_total)).toFixed(2),
           volume_7d_mxn: parseFloat(String(r.volume_7d)).toFixed(2),
-          active_rep_codes: rp.active_reps,
+          total_reps: rc.total,
         };
       }
 
@@ -175,13 +169,13 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const whereClause = source ? drizzleSql`WHERE u.signup_source = ${source}` : drizzleSql``;
         const rows = await db.execute(drizzleSql`
           SELECT u.id, u.telefono, u.kyc_full_name as name,
-            u.signup_source as source, u.ref_code,
+            u.signup_source as source, u.signup_ref_code as ref_code,
             (u.nudge_sent_at IS NOT NULL) as nudge_sent,
             u.welcome_shown,
             TO_CHAR(u.created_at, 'Mon DD') as joined,
-            COALESCE(w.balance::numeric, 0)::text as wallet_balance
+            COALESCE(w.balance_mxn, 0)::text as wallet_balance
           FROM users u
-          LEFT JOIN wallets w ON w.user_id = u.id
+          LEFT JOIN wallets w ON w.user_id = u.id::text
           ${whereClause}
           ORDER BY u.created_at DESC
           LIMIT ${limit}
@@ -202,13 +196,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         const status = input.status as string | undefined;
         const statusFilter = status ? drizzleSql`AND bp.status = ${status}` : drizzleSql``;
         const rows = await db.execute(drizzleSql`
-          SELECT bp.id, u.telefono, bp.service_id,
-            bp.monto::numeric as amount_mxn,
-            bp.platform_fee_mxn::numeric as fee_mxn,
+          SELECT bp.id, bp.telefono, bp.service_id,
+            bp.monto as amount_mxn,
+            bp.platform_fee_mxn as fee_mxn,
             bp.status,
             TO_CHAR(bp.created_at, 'Mon DD HH24:MI') as date
           FROM bill_payments bp
-          LEFT JOIN users u ON u.id = bp.user_id
           WHERE bp.created_at >= NOW() - (${days} || ' days')::INTERVAL
           ${statusFilter}
           ORDER BY bp.created_at DESC
@@ -272,12 +265,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       case "get_reps": {
         const rows = await db.execute(drizzleSql`
-          SELECT r.id, r.name, r.telefono, r.ref_code,
+          SELECT r.id, r.name, r.phone, r.rep_code, r.status,
             COUNT(u.id)::int as signups,
             TO_CHAR(r.created_at, 'Mon DD') as joined
           FROM reps r
-          LEFT JOIN users u ON u.ref_code = r.ref_code
-          GROUP BY r.id, r.name, r.telefono, r.ref_code, r.created_at
+          LEFT JOIN users u ON u.signup_ref_code = r.rep_code
+          GROUP BY r.id, r.name, r.phone, r.rep_code, r.status, r.created_at
           ORDER BY signups DESC
           LIMIT 50
         `);
@@ -300,9 +293,9 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           `),
           db.execute(drizzleSql`
             SELECT 
-              COALESCE(SUM(balance::numeric), 0)::text as total_wallet_balance,
-              COALESCE(AVG(balance::numeric) FILTER (WHERE balance > 0), 0)::text as avg_wallet_balance,
-              COUNT(*) FILTER (WHERE balance > 0)::int as wallets_with_balance
+              COALESCE(SUM(balance_mxn), 0)::text as total_wallet_balance,
+              COALESCE(AVG(balance_mxn) FILTER (WHERE balance_mxn > 0), 0)::text as avg_wallet_balance,
+              COUNT(*) FILTER (WHERE balance_mxn > 0)::int as wallets_with_balance
             FROM wallets
           `),
         ]);
