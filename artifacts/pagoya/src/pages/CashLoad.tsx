@@ -878,8 +878,6 @@ export default function CashLoad() {
               {/* Helper text */}
               <p className="text-xs text-gray-400 text-center leading-relaxed">
                 Mínimo $50 · Máximo $10,000 · Válido 5 días
-                <br />
-                <span className="text-gray-300">Mínimo $50 · Máximo $10,000 · Valid 5 days</span>
               </p>
 
               {/* Error */}

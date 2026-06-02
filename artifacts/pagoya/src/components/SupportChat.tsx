@@ -34,20 +34,22 @@ const STRINGS = {
   es: {
     header: "Paula · PagoYa",
     placeholder: "Escribe tu mensaje...",
-    greetingWithTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
-    greetingNoTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
+    greetingWithTel: "Paga tu luz, agua o cel — aquí mismo. ¿Cuál quieres pagar? 💡",
+    greetingNoTel: "Paga tu luz, agua o cel — aquí mismo. ¿Cuál quieres pagar? 💡",
     escalationBanner: "Un agente humano te contactará pronto por WhatsApp.",
     newConversation: "Nueva conversación",
     errorMsg: "Lo sentimos, ocurrió un error. Intenta de nuevo.",
+    fabLabel: "Pregúntame",
   },
   en: {
     header: "Paula · PagoYa",
     placeholder: "Type your message...",
-    greetingWithTel: "How can I help? Ask me anything you need!",
-    greetingNoTel: "How can I help? Ask me anything you need!",
+    greetingWithTel: "Pay your electricity, water or phone — right here. What do you want to pay? 💡",
+    greetingNoTel: "Pay your electricity, water or phone — right here. What do you want to pay? 💡",
     escalationBanner: "A human agent will contact you soon on WhatsApp.",
     newConversation: "New conversation",
     errorMsg: "Sorry, something went wrong. Please try again.",
+    fabLabel: "Ask me",
   },
 };
 
@@ -751,89 +753,120 @@ export default function SupportChat() {
         </div>
       )}
 
-      {/* ── Floating button ──────────────────────────────────────────────────── */}
-      <button
-        onClick={() => {
-          setOpen((prev) => {
-            if (!prev) setHasUnread(false);
-            return !prev;
-          });
-        }}
-        aria-label={open ? "Cerrar chat" : "Abrir chat de soporte"}
-        className="pgchat-fab pgchat-fab-pos"
+      {/* ── Floating button + label ───────────────────────────────────────────── */}
+      <div
+        className="pgchat-fab-pos"
         style={{
           position: "fixed",
           bottom: 24,
           right: 24,
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
-          border: "2.5px solid rgba(255,255,255,0.18)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)",
           zIndex: 9999,
-          padding: 0,
-          overflow: "hidden",
-          transition: "transform 0.2s, box-shadow 0.2s",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(29,158,117,0.7), 0 0 0 6px rgba(29,158,117,0.15)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)";
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 5,
         }}
       >
-        {open ? (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <img
-            src={`${BASE_URL}/ai-avatar.png`}
-            alt="PagoYa AI"
-            style={{
-              width: 58,
-              height: 58,
-              borderRadius: "50%",
-              objectFit: "cover",
-              objectPosition: "top center",
-              display: "block",
-              pointerEvents: "none",
-            }}
-          />
-        )}
+        <button
+          onClick={() => {
+            setOpen((prev) => {
+              if (!prev) setHasUnread(false);
+              return !prev;
+            });
+          }}
+          aria-label={open ? "Cerrar chat" : "Abrir chat de soporte"}
+          className="pgchat-fab"
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
+            border: "2.5px solid rgba(255,255,255,0.18)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)",
+            padding: 0,
+            overflow: "hidden",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            position: "relative",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(29,158,117,0.7), 0 0 0 6px rgba(29,158,117,0.15)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)";
+          }}
+        >
+          {open ? (
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <img
+              src={`${BASE_URL}/ai-avatar.png`}
+              alt="PagoYa AI"
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: "50%",
+                objectFit: "cover",
+                objectPosition: "top center",
+                display: "block",
+                pointerEvents: "none",
+              }}
+            />
+          )}
 
-        {/* Unread dot */}
-        {hasUnread && !open && (
+          {/* Unread dot */}
+          {hasUnread && !open && (
+            <span
+              style={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                width: 13,
+                height: 13,
+                borderRadius: "50%",
+                background: "#EF4444",
+                border: "2px solid white",
+              }}
+            />
+          )}
+        </button>
+
+        {/* Label — only when closed */}
+        {!open && (
           <span
             style={{
-              position: "absolute",
-              top: 4,
-              right: 4,
-              width: 13,
-              height: 13,
-              borderRadius: "50%",
-              background: "#EF4444",
-              border: "2px solid white",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#FFFFFF",
+              background: "#046C2C",
+              borderRadius: 99,
+              padding: "2px 9px",
+              letterSpacing: "0.02em",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+              boxShadow: "0 2px 8px rgba(4,108,44,0.4)",
             }}
-          />
+          >
+            {s.fabLabel}
+          </span>
         )}
-      </button>
+      </div>
 
       {/* Keyframes */}
       <style>{`

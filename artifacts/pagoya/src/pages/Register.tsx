@@ -70,7 +70,7 @@ function validatePhone(localNum: string): string {
 }
 
 function validateCurp(val: string): string {
-  if (!val.trim()) return "Por favor ingresa tu CURP";
+  if (!val.trim()) return "";
   if (val.length < 18) return "La CURP debe tener 18 caracteres";
   if (!CURP_REGEX.test(val)) return "Formato de CURP inválido — ejemplo: LOAM850101HDFPLN09";
   return "";
@@ -650,7 +650,31 @@ export default function Register() {
         <link rel="canonical" href="https://pagoyamx.com/register" />
       </Helmet>
 
-      <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>
+      <div style={{ marginBottom: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+        <div style={{ width: "100%", maxWidth: "400px", display: "flex", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "50%",
+              width: "36px",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "rgba(255,255,255,0.7)",
+              flexShrink: 0,
+            }}
+            aria-label="Volver al inicio"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        </div>
         <PagoYaLogo style={{ height: "44px", width: "auto" }} />
       </div>
 
@@ -679,7 +703,7 @@ export default function Register() {
 
           {/* Name */}
           <div>
-            <label style={labelStyle}>Nombre / Name</label>
+            <label style={labelStyle}>Nombre completo</label>
             <input
               type="text"
               autoComplete="name"
@@ -777,14 +801,18 @@ export default function Register() {
 
           {/* CURP */}
           <div>
-            <label style={labelStyle}>CURP</label>
+            <label style={labelStyle}>
+              CURP{" "}
+              <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.32)", textTransform: "none", letterSpacing: 0 }}>
+                (opcional)
+              </span>
+            </label>
             <input
               type="text"
               autoComplete="off"
               placeholder="Ej: LOAM850101HDFPLN09"
               value={curp}
               onChange={(e) => { setCurp(e.target.value.toUpperCase()); setFieldError("curp", ""); }}
-              required
               maxLength={18}
               style={{
                 ...inputStyle,
@@ -807,7 +835,7 @@ export default function Register() {
               <div style={{ marginTop: "6px" }}>
                 <PaulaHint
                   message="¿Dónde encuentro mi CURP? No tengo claro en qué documento aparece."
-                  label="¿Dónde encuentro mi CURP?"
+                  label="¿Dónde encuentro mi CURP? (opcional)"
                   variant="dark"
                 />
               </div>
@@ -840,7 +868,7 @@ export default function Register() {
 
           {/* City */}
           <div>
-            <label style={labelStyle}>Ciudad / City</label>
+            <label style={labelStyle}>Ciudad</label>
             <div style={{ position: "relative" }}>
               <select
                 value={city}
@@ -877,7 +905,7 @@ export default function Register() {
 
           {/* Colonia */}
           <div>
-            <label style={labelStyle}>¿En qué colonia vives? / Your neighborhood</label>
+            <label style={labelStyle}>Tu colonia</label>
             <div style={{ position: "relative" }}>
               <select
                 value={colonia}

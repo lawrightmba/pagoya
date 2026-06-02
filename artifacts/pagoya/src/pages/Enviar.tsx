@@ -31,7 +31,8 @@ function maskPhone(phone: string) {
 export default function Enviar() {
   const [, navigate] = useLocation();
 
-  const [senderPhone, setSenderPhone] = useState("");
+  const storedPhone = (() => { try { return localStorage.getItem("pagoya_telefono") ?? ""; } catch { return ""; } })();
+  const [senderPhone, setSenderPhone] = useState(storedPhone.replace(/\D/g, "").slice(-10));
   const [recipientPhone, setRecipientPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");

@@ -435,7 +435,14 @@ export default function BillPaySelector() {
             </div>
 
             {/* Category chips */}
-            <div className="px-4 pb-4 overflow-x-auto">
+            <div className="px-4 pb-4 overflow-x-auto" style={{ position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute", top: 0, right: 0, bottom: 0, width: "40px",
+                  background: "linear-gradient(to right, transparent, #F7F7F7)",
+                  pointerEvents: "none", zIndex: 1,
+                }}
+              />
               <div className="flex gap-2 max-w-sm mx-auto" style={{ width: "max-content" }}>
                 {CATEGORIES.map((cat) => (
                   <button

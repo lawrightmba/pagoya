@@ -57,6 +57,12 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
 const queryClient = new QueryClient();
 
+function RouteRedirect({ to }: { to: string }) {
+  const [, navigate] = useLocation();
+  useEffect(() => { navigate(to, { replace: true }); }, []);
+  return null;
+}
+
 function Router() {
   const [location] = useLocation();
 
@@ -69,6 +75,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/registro"><RouteRedirect to="/register" /></Route>
+      <Route path="/historial"><RouteRedirect to="/wallet/historial" /></Route>
+      <Route path="/mis-pagos"><RouteRedirect to="/wallet/historial" /></Route>
+      <Route path="/login"><RouteRedirect to="/" /></Route>
+      <Route path="/pagos"><RouteRedirect to="/wallet/historial" /></Route>
       <Route path="/servicios" component={BillPaySelector} />
       <Route path="/pagar" component={PaymentForm} />
       <Route path="/revisar" component={PaymentReview} />

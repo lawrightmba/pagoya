@@ -285,17 +285,17 @@ export default function Home() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
-          <a
-            href="/historial.html"
+          <button
+            onClick={() => navigate("/wallet/historial")}
             style={{
               fontSize: "12px", fontWeight: 700, color: "rgba(255,255,255,0.80)",
               border: "1.5px solid rgba(255,255,255,0.28)", borderRadius: "999px",
               padding: "4px 10px", background: "rgba(255,255,255,0.10)", cursor: "pointer",
-              whiteSpace: "nowrap", textDecoration: "none",
+              whiteSpace: "nowrap", fontFamily: "inherit",
             }}
           >
             {es ? "Mis pagos" : "My payments"}
-          </a>
+          </button>
           <button
             onClick={() => navigate("/puntos")}
             style={{
