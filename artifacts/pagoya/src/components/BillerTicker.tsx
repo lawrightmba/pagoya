@@ -16,8 +16,12 @@ const BILLERS = [
   { icon: "🎮", name: "Recarga" },
 ];
 
+// Row 1 starts from the beginning; Row 2 starts from the midpoint so the
+// two rows never show the same icons in the same visible window.
+const MID = Math.ceil(BILLERS.length / 2);
 const ROW1 = [...BILLERS, ...BILLERS];
-const ROW2 = [...BILLERS, ...BILLERS];
+const ROW2_BASE = [...BILLERS.slice(MID), ...BILLERS.slice(0, MID)];
+const ROW2 = [...ROW2_BASE, ...ROW2_BASE];
 
 interface PillProps {
   icon: string;
