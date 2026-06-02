@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>PagoYa — Command Center</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -476,13 +477,197 @@
     transition: all 0.25s; pointer-events: none; z-index: 999;
   }
   .tr-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Drawer ─────────────────────────────────────────────────────────── */
+  .drawer-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    z-index:200; backdrop-filter:blur(2px);
+  }
+  .drawer-overlay.open { display:block; }
+  .drawer {
+    position:fixed; top:0; left:0; bottom:0; width:280px; z-index:201;
+    background:#0f1117; border-right:1px solid #1e2330;
+    transform:translateX(-100%); transition:transform 0.25s cubic-bezier(.4,0,.2,1);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .drawer.open { transform:translateX(0); }
+  .drawer-top {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid #1e2330; flex-shrink:0;
+  }
+  .drawer-brand { font-size:15px; font-weight:800; color:#fff; letter-spacing:-0.3px; }
+  .drawer-close {
+    background:none; border:none; color:#6b7280; font-size:20px; cursor:pointer;
+    padding:4px 8px; border-radius:6px; line-height:1;
+  }
+  .drawer-close:hover { background:#1e2330; color:#fff; }
+  .drawer-nav { padding:12px 10px; border-bottom:1px solid #1e2330; flex-shrink:0; }
+  .drawer-nav-btn {
+    display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px;
+    background:none; border:none; color:#9ca3af; font-size:13px; font-weight:600;
+    cursor:pointer; border-radius:8px; text-align:left; transition:all 0.15s;
+  }
+  .drawer-nav-btn:hover { background:#1a1e27; color:#fff; }
+  .drawer-nav-btn.active-nav { background:#1D9E7520; color:#1D9E75; }
+  .drawer-nav-icon { font-size:16px; width:20px; text-align:center; }
+  .drawer-panel-wrap { flex:1; overflow-y:auto; }
+  .drawer-panel-wrap .panel {
+    display:none; padding:16px; animation:fadeIn 0.2s ease;
+  }
+  .drawer-panel-wrap .panel.active { display:block; }
+
+  /* ── Menu button ─────────────────────────────────────────────────────── */
+  .menu-btn {
+    background:none; border:1px solid #2e3440; color:#9ca3af;
+    font-size:16px; padding:6px 10px; border-radius:8px; cursor:pointer;
+    line-height:1; margin-right:8px; transition:all 0.15s;
+  }
+  .menu-btn:hover { background:#1e2330; color:#fff; border-color:#3e4450; }
+
+  /* ── Chat panel ──────────────────────────────────────────────────────── */
+  #panel-chat {
+    display:flex; flex-direction:column; height:calc(100vh - 108px);
+    padding:0; overflow:hidden;
+  }
+  #panel-chat.active { display:flex; }
+  .chat-thread {
+    flex:1; overflow-y:auto; padding:16px 16px 8px; scroll-behavior:smooth;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .chat-msg { display:flex; gap:10px; max-width:100%; animation:fadeIn 0.2s ease; }
+  .chat-msg.user { flex-direction:row-reverse; }
+  .chat-bubble {
+    max-width:75%; padding:10px 14px; border-radius:16px; font-size:13px;
+    line-height:1.55; word-break:break-word;
+  }
+  .chat-msg.user .chat-bubble {
+    background:#1D9E75; color:#fff; border-bottom-right-radius:4px;
+  }
+  .chat-msg.assistant .chat-bubble {
+    background:#161921; color:#d1d5db; border-bottom-left-radius:4px;
+    border:1px solid #252830;
+  }
+  .chat-avatar {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; margin-top:2px;
+  }
+  .chat-msg.user .chat-avatar { background:#1D9E75; color:#fff; }
+  .chat-msg.assistant .chat-avatar { background:#1e2330; color:#9ca3af; }
+  .chat-cards { display:flex; flex-direction:column; gap:10px; margin-top:10px; width:100%; }
+  .chat-typing { display:flex; align-items:center; gap:6px; padding:10px 14px;
+    background:#161921; border:1px solid #252830; border-radius:16px;
+    border-bottom-left-radius:4px; font-size:12px; color:#6b7280; }
+  .chat-typing span { display:flex; gap:3px; }
+  .chat-typing span i {
+    width:5px; height:5px; border-radius:50%; background:#6b7280;
+    animation:typingDot 1.2s infinite; display:inline-block;
+  }
+  .chat-typing span i:nth-child(2) { animation-delay:0.2s; }
+  .chat-typing span i:nth-child(3) { animation-delay:0.4s; }
+  @keyframes typingDot {
+    0%,60%,100% { transform:translateY(0); opacity:.4; }
+    30% { transform:translateY(-4px); opacity:1; }
+  }
+
+  /* ── Prompt chips ────────────────────────────────────────────────────── */
+  .chat-chips {
+    padding:8px 16px; display:flex; gap:6px; flex-wrap:wrap; flex-shrink:0;
+  }
+  .chat-chip {
+    background:#161921; border:1px solid #252830; color:#9ca3af;
+    font-size:11px; font-weight:600; padding:5px 12px; border-radius:20px;
+    cursor:pointer; transition:all 0.15s; white-space:nowrap;
+  }
+  .chat-chip:hover { background:#1D9E7520; border-color:#1D9E7550; color:#1D9E75; }
+
+  /* ── Chat input ──────────────────────────────────────────────────────── */
+  .chat-input-row {
+    display:flex; gap:8px; padding:8px 16px 14px; align-items:flex-end;
+    flex-shrink:0; border-top:1px solid #1e2330;
+  }
+  #chat-input {
+    flex:1; background:#161921; border:1px solid #252830; color:#e5e7eb;
+    border-radius:12px; padding:10px 14px; font-size:13px; resize:none;
+    outline:none; font-family:inherit; line-height:1.45; max-height:120px;
+    overflow-y:auto;
+  }
+  #chat-input:focus { border-color:#1D9E75; }
+  #chat-input::placeholder { color:#4b5563; }
+  .chat-send-btn {
+    width:38px; height:38px; border-radius:10px; background:#1D9E75;
+    border:none; color:#fff; font-size:17px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:opacity 0.15s;
+  }
+  .chat-send-btn:hover { opacity:0.85; }
+  .chat-send-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+  .cc-card {
+    background:#161921; border:1px solid #1e2330; border-radius:12px;
+    padding:14px 16px; width:100%; box-sizing:border-box;
+  }
+  .cc-card-title { font-size:11px; font-weight:700; color:#6b7280;
+    text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+  .cc-stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+  .cc-stat-tile {
+    background:#0f1117; border:1px solid #252830; border-radius:8px;
+    padding:10px 12px;
+  }
+  .cc-stat-val { font-size:22px; font-weight:800; color:#fff; line-height:1.2; }
+  .cc-stat-label { font-size:10px; color:#6b7280; margin-top:3px; }
+  .cc-stat-sub { font-size:10px; color:#4b5563; margin-top:2px; }
+  .cc-stat-delta { font-size:10px; color:#1D9E75; margin-top:2px; font-weight:700; }
+  .cc-stat-delta.neg { color:#ef4444; }
+  .cc-table-wrap { overflow-x:auto; border-radius:8px; border:1px solid #1e2330; }
+  .cc-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .cc-table th {
+    background:#0f1117; color:#6b7280; font-weight:600; padding:8px 10px;
+    text-align:left; border-bottom:1px solid #1e2330; white-space:nowrap;
+  }
+  .cc-table td { padding:8px 10px; border-bottom:1px solid #1a1e27; color:#d1d5db; }
+  .cc-table tr:last-child td { border-bottom:none; }
+  .cc-table tr:hover td { background:#1a1e27; }
+  .cc-text-card { font-size:13px; color:#d1d5db; line-height:1.6; white-space:pre-wrap; }
+  .cc-chart-wrap { position:relative; height:180px; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 </style>
 </head>
 <body>
 
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+
+<!-- DRAWER SIDEBAR -->
+<div class="drawer" id="drawer">
+  <div class="drawer-top">
+    <div class="drawer-brand">⚡ PagoYa CC</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <nav class="drawer-nav">
+    <button class="drawer-nav-btn" id="dnav-chat" onclick="drawerGo('chat')">
+      <span class="drawer-nav-icon">💬</span> Agent Chat
+    </button>
+    <button class="drawer-nav-btn" id="dnav-checklist" onclick="drawerGo('checklist')">
+      <span class="drawer-nav-icon">📋</span> Days 1–30 Plan
+    </button>
+    <button class="drawer-nav-btn" id="dnav-traction" onclick="drawerGo('traction')">
+      <span class="drawer-nav-icon">📈</span> Traction
+    </button>
+    <button class="drawer-nav-btn" id="dnav-usuarios" onclick="drawerGo('usuarios')">
+      <span class="drawer-nav-icon">👤</span> Usuarios
+    </button>
+  </nav>
+  <div class="drawer-panel-wrap" id="drawer-panel-wrap">
+    <!-- sub-panels injected by drawerGo() -->
+  </div>
+</div>
+
 <!-- HEADER -->
 <div class="header">
   <div class="header-left">
+    <button class="menu-btn" onclick="toggleDrawer()" title="Menu">☰</button>
     <div class="header-title">⚡ PagoYa CC</div>
     <div class="today-badge" id="today-badge"></div>
   </div>
@@ -492,28 +677,42 @@
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('checklist', this)">Days 1–30 Plan</button>
-  <button class="tab" onclick="switchTab('calendar', this)">Content Calendar</button>
-  <button class="tab" onclick="switchTab('reminders', this)">Reminders</button>
-  <button class="tab" onclick="switchTab('roadmap', this)">30-Day Roadmap</button>
-  <button class="tab" onclick="switchTab('sprint', this)">30-DAY SPRINT</button>
-  <button class="tab" onclick="switchTab('completed', this)">✓ Completed</button>
-  <button class="tab" onclick="switchTab('traction', this)">📈 Traction</button>
-  <button class="tab" onclick="switchTab('usuarios', this)">👤 Usuarios</button>
+<!-- BACK-TO-CHAT BAR (shown when not on chat panel) -->
+<div class="tabs" id="back-bar" style="display:none;padding:6px 12px;gap:8px;align-items:center;">
+  <button class="tab active" onclick="switchTab('chat')" style="font-size:12px;padding:5px 14px;">← Back to Chat</button>
+  <span id="back-bar-label" style="font-size:12px;color:#6b7280;"></span>
 </div>
 
-<!-- PROGRESS (shown on checklist tab) -->
-<div class="progress-wrap" id="progress-wrap">
+<!-- PROGRESS (shown on checklist tab only) -->
+<div class="progress-wrap" id="progress-wrap" style="display:none">
   <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
   <div class="progress-label" id="prog-label">0 / 32</div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════
+     PANEL 0 — AGENT CHAT (default view)
+══════════════════════════════════════════════════════ -->
+<div class="panel active" id="panel-chat">
+  <div class="chat-thread" id="chat-thread"></div>
+  <div class="chat-chips" id="chat-chips">
+    <button class="chat-chip" onclick="askChip('Give me a full overview of PagoYa right now')">📊 Overview</button>
+    <button class="chat-chip" onclick="askChip('Show me all users with their signup source and wallet balance')">👥 Users</button>
+    <button class="chat-chip" onclick="askChip('Show payments from the last 7 days with totals')">💸 Payments</button>
+    <button class="chat-chip" onclick="askChip('Show me daily signup trend for the last 14 days as a chart')">📈 Growth</button>
+    <button class="chat-chip" onclick="askChip('Show revenue breakdown by service for last 30 days')">💰 Revenue</button>
+    <button class="chat-chip" onclick="askChip('Check system health — pending payments, wallet totals, any issues')">🏥 Health</button>
+    <button class="chat-chip" onclick="askChip('List all reps with their signup counts')">🫂 Reps</button>
+  </div>
+  <div class="chat-input-row">
+    <textarea id="chat-input" placeholder="Ask anything about PagoYa…" rows="1" onkeydown="chatKeyDown(event)" oninput="autoGrow(this)"></textarea>
+    <button class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()" title="Send">↑</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
      PANEL 1 — DAYS 1–30 CHECKLIST
 ══════════════════════════════════════════════════════ -->
-<div class="panel active" id="panel-checklist">
+<div class="panel" id="panel-checklist">
 
   <!-- TAECEL BALANCE WIDGET -->
   <div class="taecel-widget" id="taecel-widget">
@@ -1906,16 +2105,48 @@ function daysUntil(isoDate) {
 
 // ── TABS ─────────────────────────────────────────────────────────────────────
 
-function switchTab(id, btn) {
+function switchTab(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + id).classList.add('active');
-  btn.classList.add('active');
-  document.getElementById('progress-wrap').style.display = id === 'checklist' ? 'flex' : 'none';
+  const panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('active');
+  const backBar = document.getElementById('back-bar');
+  const progressWrap = document.getElementById('progress-wrap');
+  if (id === 'chat') {
+    backBar.style.display = 'none';
+    progressWrap.style.display = 'none';
+    document.getElementById('chat-input')?.focus();
+    document.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active-nav'));
+    document.getElementById('dnav-chat')?.classList.add('active-nav');
+  } else {
+    backBar.style.display = 'flex';
+    const labels = { checklist:'Days 1–30 Plan', traction:'📈 Traction', usuarios:'👤 Usuarios',
+      calendar:'Content Calendar', reminders:'Reminders', roadmap:'30-Day Roadmap',
+      sprint:'30-Day Sprint', completed:'✓ Completed' };
+    document.getElementById('back-bar-label').textContent = labels[id] || id;
+    progressWrap.style.display = id === 'checklist' ? 'flex' : 'none';
+    document.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active-nav'));
+    const nb = document.getElementById('dnav-' + id);
+    if (nb) nb.classList.add('active-nav');
+  }
   if (id === 'reminders') renderRemindersPanel();
   if (id === 'completed' && window.csRenderCompleted) window.csRenderCompleted();
   if (id === 'usuarios') uuLoad();
   if (id === 'traction') loadTractionLiveStats();
+}
+
+function toggleDrawer() {
+  const d = document.getElementById('drawer');
+  const o = document.getElementById('drawer-overlay');
+  d.classList.toggle('open');
+  o.classList.toggle('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+function drawerGo(id) {
+  closeDrawer();
+  switchTab(id);
 }
 
 // ── PROGRESS ─────────────────────────────────────────────────────────────────
@@ -2556,6 +2787,234 @@ function trRenderMilestones() {
 
 trRenderMilestones();
 trLoadWeek(1);
+
+// ── CHAT AGENT ────────────────────────────────────────────────────────────────
+
+let chatMessages = [];
+let chatBusy = false;
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+function askChip(prompt) {
+  const input = document.getElementById('chat-input');
+  input.value = prompt;
+  autoGrow(input);
+  sendChatMessage();
+}
+
+function scrollChat() {
+  const t = document.getElementById('chat-thread');
+  if (t) t.scrollTop = t.scrollHeight;
+}
+
+function appendMsg(role, text, cards) {
+  const thread = document.getElementById('chat-thread');
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + role;
+  const avatarLetter = role === 'user' ? 'Y' : 'AI';
+  wrap.innerHTML = `
+    <div class="chat-avatar">${avatarLetter}</div>
+    <div style="flex:1;min-width:0;">
+      ${text ? `<div class="chat-bubble">${escHtml(text)}</div>` : ''}
+      ${cards && cards.length ? `<div class="chat-cards">${cards.map(renderCard).join('')}</div>` : ''}
+    </div>
+  `;
+  thread.appendChild(wrap);
+  scrollChat();
+  return wrap;
+}
+
+function appendTyping() {
+  const thread = document.getElementById('chat-thread');
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg assistant';
+  wrap.id = 'chat-typing-indicator';
+  wrap.innerHTML = `
+    <div class="chat-avatar">AI</div>
+    <div class="chat-typing"><span><i></i><i></i><i></i></span> Thinking…</div>
+  `;
+  thread.appendChild(wrap);
+  scrollChat();
+  return wrap;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmt(v) {
+  if (v === null || v === undefined) return '—';
+  const n = parseFloat(v);
+  if (!isNaN(n) && String(v).match(/^\d+\.?\d*$/)) {
+    return n % 1 === 0 ? n.toLocaleString() : n.toFixed(2);
+  }
+  return String(v);
+}
+
+function renderCard(card) {
+  if (!card || !card.type) return '';
+  switch (card.type) {
+    case 'stat_grid': return renderStatGrid(card);
+    case 'table':     return renderTable(card);
+    case 'bar_chart': return renderBarChart(card);
+    case 'line_chart':return renderLineChart(card);
+    case 'text':      return renderTextCard(card);
+    default:          return `<div class="cc-card"><pre style="color:#9ca3af;font-size:11px">${escHtml(JSON.stringify(card,null,2))}</pre></div>`;
+  }
+}
+
+function renderStatGrid(card) {
+  const title = card.title ? `<div class="cc-card-title">${escHtml(card.title)}</div>` : '';
+  const stats = (card.stats || []).map(s => {
+    const deltaClass = s.delta && s.delta.startsWith('-') ? 'neg' : '';
+    return `<div class="cc-stat-tile">
+      <div class="cc-stat-val">${escHtml(String(s.value))}</div>
+      <div class="cc-stat-label">${escHtml(s.label)}</div>
+      ${s.sub ? `<div class="cc-stat-sub">${escHtml(s.sub)}</div>` : ''}
+      ${s.delta ? `<div class="cc-stat-delta ${deltaClass}">${escHtml(s.delta)}</div>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="cc-card">${title}<div class="cc-stat-grid">${stats}</div></div>`;
+}
+
+function renderTable(card) {
+  const title = card.title ? `<div class="cc-card-title">${escHtml(card.title)}</div>` : '';
+  const headers = (card.headers || []).map(h => `<th>${escHtml(h)}</th>`).join('');
+  const rows = (card.rows || []).map(row =>
+    `<tr>${(row || []).map(cell => `<td>${escHtml(fmt(cell))}</td>`).join('')}</tr>`
+  ).join('');
+  return `<div class="cc-card">${title}
+    <div class="cc-table-wrap">
+      <table class="cc-table"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+    </div></div>`;
+}
+
+const chartInstances = {};
+function renderBarChart(card) {
+  const id = 'chart-' + Math.random().toString(36).slice(2,8);
+  setTimeout(() => {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (chartInstances[id]) chartInstances[id].destroy();
+    chartInstances[id] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: card.labels || [],
+        datasets: [{ data: card.values || [], backgroundColor: '#1D9E75', borderRadius: 4 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: '#1e2330' } },
+          y: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: '#1e2330' } }
+        }
+      }
+    });
+  }, 60);
+  return `<div class="cc-card">
+    <div class="cc-card-title">${escHtml(card.title || '')}</div>
+    <div class="cc-chart-wrap"><canvas id="${id}"></canvas></div>
+  </div>`;
+}
+
+function renderLineChart(card) {
+  const id = 'chart-' + Math.random().toString(36).slice(2,8);
+  const colors = ['#1D9E75','#D85A30','#60a5fa','#c084fc'];
+  setTimeout(() => {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (chartInstances[id]) chartInstances[id].destroy();
+    chartInstances[id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: card.labels || [],
+        datasets: (card.datasets || []).map((ds, i) => ({
+          label: ds.label || '',
+          data: ds.data || [],
+          borderColor: colors[i % colors.length],
+          backgroundColor: colors[i % colors.length] + '22',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 2,
+        }))
+      },
+      options: {
+        plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: '#1e2330' } },
+          y: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: '#1e2330' } }
+        }
+      }
+    });
+  }, 60);
+  return `<div class="cc-card">
+    <div class="cc-card-title">${escHtml(card.title || '')}</div>
+    <div class="cc-chart-wrap"><canvas id="${id}"></canvas></div>
+  </div>`;
+}
+
+function renderTextCard(card) {
+  return `<div class="cc-card"><div class="cc-text-card">${escHtml(card.content || '')}</div></div>`;
+}
+
+async function sendChatMessage() {
+  if (chatBusy) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  chatBusy = true;
+  document.getElementById('chat-send-btn').disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  chatMessages.push({ role: 'user', content: text });
+  appendMsg('user', text, null);
+
+  const typing = appendTyping();
+
+  try {
+    const resp = await fetch('/api/command-center/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatMessages }),
+    });
+    typing.remove();
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const assistantText = data.message || '';
+    const cards = Array.isArray(data.cards) ? data.cards : [];
+    chatMessages.push({ role: 'assistant', content: assistantText + (cards.length ? '\n[cards]' : '') });
+    appendMsg('assistant', assistantText, cards);
+  } catch (err) {
+    typing.remove();
+    appendMsg('assistant', '⚠️ Error: ' + err.message, null);
+  } finally {
+    chatBusy = false;
+    document.getElementById('chat-send-btn').disabled = false;
+  }
+}
+
+// Welcome message on load
+(function initChat() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  appendMsg('assistant',
+    `Good ${now.getHours()<12?'morning':now.getHours()<17?'afternoon':'evening'}. PagoYa Command Center ready — ${timeStr}. Ask me anything or pick a quick action below.`,
+    null
+  );
+  document.getElementById('dnav-chat').classList.add('active-nav');
+})();
 </script>
 </body>
 </html>
