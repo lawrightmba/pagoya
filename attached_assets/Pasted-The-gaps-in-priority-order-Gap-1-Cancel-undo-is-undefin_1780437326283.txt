@@ -1,0 +1,17 @@
+The gaps, in priority order:
+
+Gap 1 — Cancel/undo is undefined (Heuristic 3, Critical)
+The prompt tells Paula what to do when a user wants a payment, but says nothing about what to do when they hesitate, say "espera," "me equivoqué," or "no, cancela." Right now Paula will improvise that — inconsistently. The SupportChat.tsx has handleCancelPayment() wired up correctly, so the cancel mechanic exists. The gap is that Paula doesn't know she should offer it proactively before the confirmation card appears, or how to handle a mid-flow "nevermind."
+Gap 2 — Error recovery language is absent (Heuristic 9)
+The prompt has no instructions for what Paula says when prepare_bill_payment fails, when the user has insufficient balance, or when escalate_to_support is called. She'll generate something reasonable but inconsistent. For a fintech app, "algo salió mal" from an AI is trust-destroying.
+Gap 3 — Señora Ramirez calibration is missing
+"Máximo 3 oraciones" is good but not enough. The prompt has no instruction about vocabulary level, avoiding fintech jargon, or what to do when a message is ambiguous or garbled. An elderly user who types "kiero pagar mi luuss" needs Paula to interpret charitably and confirm, not ask for clarification.
+Gap 4 — Greeting is generic
+greetingWithTel and greetingNoTel are identical and say the same thing: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!" That's a missed activation opportunity. The user opens Paula and gets no orientation — they have to already know what to ask. For Carmen or Señora Ramirez, that's often a session-ending moment.
+Gap 5 — Escalation threshold is undefined
+escalate_to_support exists but the prompt only gives one trigger: "pago fallido sin reembolso, cuenta bloqueada, disputa." What about a user who has asked the same question three times and is clearly confused? What about a payment that processed but the user says they didn't receive service? The threshold is too narrow.
+
+Here are the specific additions to paste into buildSystemPrompt(), and the greeting change for SupportChat.tsx:Viewed a file, created a file, read a fileViewed a file, created a file, read a fileThe patches doc has everything copy-pasteable into Replit. A few things worth calling out:
+The greeting change is the highest-ROI single edit. Right now Paula opens cold — the user sees a blank invitation and has to generate their own query. For Carmen or Señora Ramirez, that's friction. The replacement greeting tells them exactly what to do in the first sentence: "Paga tu luz, agua o cel — aquí mismo." That's the difference between a confused close and a first payment.
+Block C (plain language) will change Paula's behavior noticeably. The instruction to interpret typos charitably and confirm the intent rather than asking for clarification ("¿Quieres pagar tu luz?") is borrowed from how good human agents handle low-literacy customers. It also makes the 3-sentence ceiling more enforceable because Paula is confirming one thing per turn, not trying to gather all missing info at once.
+The get_service_providers tool is optional but worth adding later — it makes the catalog maintainable in one place rather than embedded in a string that grows over time. Not a launch blocker

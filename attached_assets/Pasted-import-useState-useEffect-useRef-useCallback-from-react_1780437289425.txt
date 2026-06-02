@@ -1,0 +1,886 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+const SCROLL_THRESHOLD = 500;
+
+const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+const STORAGE_KEY = "pagoya_chat_history";
+const LANG_KEY = "pagoya_lang";
+const TEL_KEY = "pagoya_telefono";
+
+// PagoYa brand colors
+const CORAL  = "#D85A30";
+const NAVY   = "#1B2B5E";
+const TEAL   = "#2AA6A1";
+
+interface PendingPaymentStage {
+  serviceId: string;
+  serviceName: string;
+  referencia: string;
+  monto: number;
+  telefono: string;
+  fee: number;
+  walletBalance: number;
+  paymentMethod: string;
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+  escalated?: boolean;
+}
+
+const STRINGS = {
+  es: {
+    header: "Paula · PagoYa",
+    placeholder: "Escribe tu mensaje...",
+    greetingWithTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
+    greetingNoTel: "¿En qué te puedo ayudar? ¡Pregúntame lo que necesitas!",
+    escalationBanner: "Un agente humano te contactará pronto por WhatsApp.",
+    newConversation: "Nueva conversación",
+    errorMsg: "Lo sentimos, ocurrió un error. Intenta de nuevo.",
+  },
+  en: {
+    header: "Paula · PagoYa",
+    placeholder: "Type your message...",
+    greetingWithTel: "How can I help? Ask me anything you need!",
+    greetingNoTel: "How can I help? Ask me anything you need!",
+    escalationBanner: "A human agent will contact you soon on WhatsApp.",
+    newConversation: "New conversation",
+    errorMsg: "Sorry, something went wrong. Please try again.",
+  },
+};
+
+function Row({ emoji, label, value, highlight = false }: { emoji: string; label: string; value: string; highlight?: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 12 }}>
+      <span style={{ flexShrink: 0, width: 18, textAlign: "center" }}>{emoji}</span>
+      <span style={{ color: "#64748B", flexShrink: 0, minWidth: 72 }}>{label}:</span>
+      <span style={{ color: highlight ? NAVY : "#1A202C", fontWeight: highlight ? 700 : 500, wordBreak: "break-all" }}>{value}</span>
+    </div>
+  );
+}
+
+export default function SupportChat() {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [telefono, setTelefono] = useState("");
+  const [lang, setLang] = useState<"es" | "en">("es");
+  const [initialized, setInitialized] = useState(false);
+  const [greetingShown, setGreetingShown] = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<PendingPaymentStage | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasShownBubble = useRef(false);
+  const nudgeRef = useRef<string>("");
+
+  const s = STRINGS[lang];
+
+  // ── Boot: load persisted state from localStorage ─────────────────────────────
+  useEffect(() => {
+    const tel = localStorage.getItem(TEL_KEY) ?? "";
+    const l = (localStorage.getItem(LANG_KEY) as "es" | "en") ?? "es";
+    const stored = localStorage.getItem(STORAGE_KEY);
+
+    setTelefono(tel);
+    setLang(l);
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          setGreetingShown(true);
+        }
+      } catch {
+        /* ignore malformed data */
+      }
+    }
+
+    setInitialized(true);
+  }, []);
+
+  // ── Mobile breakpoint ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 480);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // ── Show bubble after user scrolls past hero ──────────────────────────────────
+  useEffect(() => {
+    const onScroll = () => {
+      if (!hasShownBubble.current && window.scrollY > SCROLL_THRESHOLD) {
+        hasShownBubble.current = true;
+        setShowBubble(true);
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // ── Global events: pagoya:openChat and pagoya:chatNudge ───────────────────────
+  useEffect(() => {
+    const handleOpen = () => {
+      setOpen(true);
+      setHasUnread(false);
+      setShowBubble(false);
+    };
+    const handleNudge = (e: Event) => {
+      const detail = (e as CustomEvent<{ context?: string }>).detail;
+      if (detail?.context) nudgeRef.current = detail.context;
+      setOpen(true);
+      setHasUnread(false);
+      setShowBubble(false);
+    };
+    window.addEventListener("pagoya:openChat", handleOpen);
+    window.addEventListener("pagoya:chatNudge", handleNudge);
+    return () => {
+      window.removeEventListener("pagoya:openChat", handleOpen);
+      window.removeEventListener("pagoya:chatNudge", handleNudge);
+    };
+  }, []);
+
+  // ── Persist messages to localStorage ─────────────────────────────────────────
+  useEffect(() => {
+    if (initialized && messages.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages, initialized]);
+
+  // ── Auto-scroll to bottom on new messages / typing ───────────────────────────
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  // ── Show greeting on first open (uses nudge context if provided) ─────────────
+  useEffect(() => {
+    if (open && initialized && !greetingShown) {
+      const content = nudgeRef.current
+        ? nudgeRef.current
+        : (telefono ? s.greetingWithTel : s.greetingNoTel);
+      nudgeRef.current = "";
+      const greeting: ChatMessage = {
+        role: "assistant",
+        content,
+        timestamp: Date.now(),
+      };
+      setMessages([greeting]);
+      setGreetingShown(true);
+    }
+    if (open) {
+      setHasUnread(false);
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }, [open, initialized]);
+
+  // ── Clear conversation ────────────────────────────────────────────────────────
+  const clearConversation = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setGreetingShown(false);
+    const greeting: ChatMessage = {
+      role: "assistant",
+      content: telefono ? s.greetingWithTel : s.greetingNoTel,
+      timestamp: Date.now(),
+    };
+    setMessages([greeting]);
+    setGreetingShown(true);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [telefono, s]);
+
+  // ── Send message ──────────────────────────────────────────────────────────────
+  const sendMessage = useCallback(async () => {
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg: ChatMessage = { role: "user", content: trimmed, timestamp: Date.now() };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setInput("");
+    setLoading(true);
+
+    try {
+      // History = all messages before the new user message, text-only
+      const history = updatedMessages
+        .slice(0, -1)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch(`${BASE_URL}/api/agent/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: trimmed,
+          telefono: telefono || undefined,
+          history,
+        }),
+      });
+
+      const data = (await res.json()) as {
+        reply: string;
+        escalated: boolean;
+        pendingPayment: PendingPaymentStage | null;
+      };
+
+      // Show confirmation card before OTP input when Paula stages a payment
+      if (data.pendingPayment) {
+        setPendingPayment(data.pendingPayment);
+      }
+
+      const assistantMsg: ChatMessage = {
+        role: "assistant",
+        content: data.reply,
+        timestamp: Date.now(),
+        escalated: data.escalated ?? false,
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      if (!open) {
+        setHasUnread(true);
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: s.errorMsg, timestamp: Date.now() },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages, telefono, open, s, BASE_URL]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendMessage();
+    }
+  };
+
+  const handleConfirmPayment = useCallback(async () => {
+    if (!pendingPayment || confirmLoading) return;
+    setConfirmLoading(true);
+    const tel = pendingPayment.telefono || telefono;
+    try {
+      const res = await fetch(`${BASE_URL}/api/bills/pending/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefono: tel }),
+      });
+      const data = (await res.json()) as { success?: boolean; confirmationCode?: string; error?: string };
+
+      const billerName  = pendingPayment.serviceName;
+      const amount      = pendingPayment.monto;
+      const userId      = tel;
+
+      console.log(`[Paula] Payment confirmation: confirmed | biller: ${billerName} | amount: ${amount} | userId: ${userId}`);
+
+      setPendingPayment(null);
+
+      const resultMsg: ChatMessage = {
+        role: "assistant",
+        content: data.success
+          ? `✅ *Pago exitoso*\n\n⚡ ${billerName}\nMonto: $${amount.toFixed(2)} MXN${data.confirmationCode ? `\nFolio: ${data.confirmationCode}` : ""}\n\n¡Listo! Guarda este folio como comprobante.`
+          : `❌ ${data.error ?? "Error al procesar el pago. Intenta de nuevo."}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, resultMsg]);
+    } catch {
+      setPendingPayment(null);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: s.errorMsg, timestamp: Date.now() },
+      ]);
+    } finally {
+      setConfirmLoading(false);
+    }
+  }, [pendingPayment, confirmLoading, telefono, s, BASE_URL]);
+
+  const handleCancelPayment = useCallback(async () => {
+    if (!pendingPayment || confirmLoading) return;
+    setConfirmLoading(true);
+    const tel = pendingPayment.telefono || telefono;
+    const billerName = pendingPayment.serviceName;
+    const amount     = pendingPayment.monto;
+
+    try {
+      await fetch(`${BASE_URL}/api/bills/pending/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefono: tel }),
+      });
+      console.log(`[Paula] Payment confirmation: cancelled | biller: ${billerName} | amount: ${amount} | userId: ${tel}`);
+    } catch { /* best-effort */ }
+
+    setPendingPayment(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "❌ Pago cancelado. ¿En qué más te puedo ayudar?", timestamp: Date.now() },
+    ]);
+    setConfirmLoading(false);
+  }, [pendingPayment, confirmLoading, telefono, BASE_URL]);
+
+  const formatTime = (ts: number) =>
+    new Date(ts).toLocaleTimeString(lang === "es" ? "es-MX" : "en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const panelRadius = isMobile ? 0 : 16;
+
+  return (
+    <>
+      {/* ── Chat panel ─────────────────────────────────────────────────────── */}
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            zIndex: 9998,
+            display: "flex",
+            flexDirection: "column",
+            background: "white",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+            ...(isMobile
+              ? { inset: 0, borderRadius: 0 }
+              : {
+                  bottom: 92,
+                  right: 24,
+                  width: 360,
+                  height: 480,
+                  borderRadius: panelRadius,
+                }),
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              height: 52,
+              background: "#0A2540",
+              borderRadius: `${panelRadius}px ${panelRadius}px 0 0`,
+              display: "flex",
+              alignItems: "center",
+              padding: "0 14px",
+              flexShrink: 0,
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                color: "white",
+                fontSize: 14,
+                fontWeight: 700,
+                flex: 1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {s.header}
+            </span>
+            <button
+              onClick={clearConversation}
+              style={{
+                color: "rgba(255,255,255,0.5)",
+                fontSize: 11,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px 0",
+                whiteSpace: "nowrap",
+                fontFamily: "inherit",
+              }}
+            >
+              {s.newConversation}
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Cerrar chat"
+              style={{
+                color: "rgba(255,255,255,0.8)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+                borderRadius: 6,
+                flexShrink: 0,
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Message list */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "14px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            {messages.map((msg, idx) => (
+              <div key={idx}>
+                {/* Bubble */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "80%",
+                      padding: "9px 13px",
+                      borderRadius:
+                        msg.role === "user"
+                          ? "12px 12px 0 12px"
+                          : "12px 12px 12px 0",
+                      background: msg.role === "user" ? "#046C2C" : "#F1F5F9",
+                      color: msg.role === "user" ? "white" : "#1A202C",
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+
+                {/* Timestamp */}
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#94A3B8",
+                    marginTop: 3,
+                    textAlign: msg.role === "user" ? "right" : "left",
+                    paddingLeft: msg.role === "user" ? 0 : 4,
+                    paddingRight: msg.role === "user" ? 4 : 0,
+                  }}
+                >
+                  {formatTime(msg.timestamp)}
+                </div>
+
+                {/* Escalation banner */}
+                {msg.escalated && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: "7px 11px",
+                      borderRadius: 8,
+                      background: "#FEF3C7",
+                      border: "1px solid #FDE68A",
+                      color: "#92400E",
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    📞 {s.escalationBanner}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {loading && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#F1F5F9",
+                    borderRadius: "12px 12px 12px 0",
+                    padding: "10px 14px",
+                    display: "flex",
+                    gap: 5,
+                    alignItems: "center",
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: "#94A3B8",
+                        display: "inline-block",
+                        animation: `pgchat-bounce 1.2s ease-in-out ${i * 0.18}s infinite`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+
+          {/* ── Payment confirmation card — shown instead of OTP input ──────── */}
+          {pendingPayment && (
+            <div
+              style={{
+                margin: "0 10px 10px",
+                borderRadius: 12,
+                border: `1.5px solid ${TEAL}`,
+                background: `linear-gradient(135deg, ${NAVY}08 0%, ${TEAL}10 100%)`,
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              {/* Card header */}
+              <div
+                style={{
+                  background: NAVY,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>✅</span>
+                <span style={{ color: "white", fontSize: 13, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                  Resumen de pago
+                </span>
+              </div>
+
+              {/* Card body */}
+              <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <Row emoji="🏢" label="Servicio" value={pendingPayment.serviceName} />
+                {pendingPayment.referencia && pendingPayment.referencia !== pendingPayment.telefono && (
+                  <Row emoji="📋" label="Referencia" value={pendingPayment.referencia} />
+                )}
+                <Row emoji="💰" label="Monto" value={`$${pendingPayment.monto.toFixed(2)} MXN`} />
+                <Row
+                  emoji="💳"
+                  label="Cargo total"
+                  value={
+                    pendingPayment.fee > 0
+                      ? `$${(pendingPayment.monto + pendingPayment.fee).toFixed(2)} MXN (comisión $${pendingPayment.fee.toFixed(0)})`
+                      : `$${pendingPayment.monto.toFixed(2)} MXN (sin comisión 🎁)`
+                  }
+                  highlight
+                />
+                <Row
+                  emoji="👛"
+                  label="Método"
+                  value={`${pendingPayment.paymentMethod ?? "Cartera PagoYa"} · Saldo: $${pendingPayment.walletBalance.toFixed(2)} MXN`}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ padding: "0 14px 14px", display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => void handleConfirmPayment()}
+                  disabled={confirmLoading}
+                  style={{
+                    flex: 1,
+                    padding: "9px 0",
+                    borderRadius: 8,
+                    border: "none",
+                    background: confirmLoading ? "#ccc" : CORAL,
+                    color: "white",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: confirmLoading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  {confirmLoading ? "Procesando…" : "Confirmar pago"}
+                </button>
+                <button
+                  onClick={() => void handleCancelPayment()}
+                  disabled={confirmLoading}
+                  style={{
+                    flex: 1,
+                    padding: "9px 0",
+                    borderRadius: 8,
+                    border: `1.5px solid ${CORAL}`,
+                    background: "transparent",
+                    color: CORAL,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: confirmLoading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Input area — disabled while confirmation card is visible */}
+          <div
+            style={{
+              borderTop: "1px solid #E2E8F0",
+              padding: "8px 10px",
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexShrink: 0,
+              height: 56,
+              opacity: pendingPayment ? 0.4 : 1,
+              pointerEvents: pendingPayment ? "none" : "auto",
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={pendingPayment ? "Usa los botones de arriba para confirmar" : s.placeholder}
+              disabled={loading || !!pendingPayment}
+              style={{
+                flex: 1,
+                border: "1.5px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "8px 12px",
+                fontSize: 14,
+                outline: "none",
+                background: loading || pendingPayment ? "#F9FAFB" : "white",
+                color: "#1A202C",
+                fontFamily: "inherit",
+                transition: "border-color 0.15s",
+              }}
+            />
+            <button
+              onClick={() => void sendMessage()}
+              disabled={loading || !input.trim() || !!pendingPayment}
+              aria-label="Enviar"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                border: "none",
+                background: loading || !input.trim() || pendingPayment ? "#E2E8F0" : "#046C2C",
+                color: loading || !input.trim() || pendingPayment ? "#94A3B8" : "white",
+                cursor: loading || !input.trim() || pendingPayment ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                transition: "background 0.15s",
+              }}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── "Hola" speech bubble — shown only after scrolling past hero ────── */}
+      {!open && showBubble && (
+        <div
+          className="pgchat-hola"
+          onClick={() => { setOpen(true); setHasUnread(false); }}
+          style={{
+            position: "fixed",
+            bottom: 100,
+            right: 16,
+            background: "white",
+            color: "#0A2540",
+            fontSize: 13,
+            fontWeight: 600,
+            padding: "10px 14px",
+            borderRadius: "14px 14px 14px 4px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.16)",
+            cursor: "pointer",
+            zIndex: 9998,
+            maxWidth: 180,
+            lineHeight: 1.45,
+            userSelect: "none",
+          }}
+        >
+          <span style={{ display: "block", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
+            Hola, soy Paula 👋
+          </span>
+          <span style={{ display: "block", color: "#374151", fontSize: 12, fontWeight: 500 }}>
+            Estoy aquí para ayudarte. ¡Pregúntame lo que necesitas!
+          </span>
+          {/* tail pointing down-right toward avatar */}
+          <span style={{
+            position: "absolute",
+            right: 22,
+            bottom: -8,
+            width: 0,
+            height: 0,
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderTop: "9px solid white",
+          }} />
+        </div>
+      )}
+
+      {/* ── Floating button ──────────────────────────────────────────────────── */}
+      <button
+        onClick={() => {
+          setOpen((prev) => {
+            if (!prev) setHasUnread(false);
+            return !prev;
+          });
+        }}
+        aria-label={open ? "Cerrar chat" : "Abrir chat de soporte"}
+        className="pgchat-fab pgchat-fab-pos"
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
+          border: "2.5px solid rgba(255,255,255,0.18)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)",
+          zIndex: 9999,
+          padding: 0,
+          overflow: "hidden",
+          transition: "transform 0.2s, box-shadow 0.2s",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(29,158,117,0.7), 0 0 0 6px rgba(29,158,117,0.15)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)";
+        }}
+      >
+        {open ? (
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          <img
+            src={`${BASE_URL}/ai-avatar.png`}
+            alt="PagoYa AI"
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: "50%",
+              objectFit: "cover",
+              objectPosition: "top center",
+              display: "block",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
+        {/* Unread dot */}
+        {hasUnread && !open && (
+          <span
+            style={{
+              position: "absolute",
+              top: 4,
+              right: 4,
+              width: 13,
+              height: 13,
+              borderRadius: "50%",
+              background: "#EF4444",
+              border: "2px solid white",
+            }}
+          />
+        )}
+      </button>
+
+      {/* Keyframes */}
+      <style>{`
+        @keyframes pgchat-bounce {
+          0%, 80%, 100% { transform: scale(0.65); opacity: 0.45; }
+          40%           { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes pgchat-pulse {
+          0%, 100% { box-shadow: 0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4); }
+          50%       { box-shadow: 0 4px 24px rgba(29,158,117,0.55), 0 0 0 8px rgba(29,158,117,0); }
+        }
+        @keyframes pgchat-blink {
+          0%, 90%, 100% { transform: scaleY(1); }
+          95%           { transform: scaleY(0.1); }
+        }
+        @keyframes pgchat-antblink {
+          0%, 85%, 100% { opacity: 1; }
+          90%           { opacity: 0.1; }
+        }
+        @keyframes pgchat-popin {
+          0%   { opacity: 0; transform: scale(0.7) translateX(10px); }
+          60%  { opacity: 1; transform: scale(1.06) translateX(-2px); }
+          100% { opacity: 1; transform: scale(1) translateX(0); }
+        }
+        .pgchat-fab {
+          animation: pgchat-pulse 2.8s ease-in-out infinite;
+        }
+        .pgchat-fab:hover {
+          animation: none;
+        }
+        .pgchat-hola {
+          animation: pgchat-popin 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @media (max-height: 700px) {
+          .pgchat-fab-pos { bottom: 44px !important; }
+        }
+        .pgchat-eye-l, .pgchat-eye-r {
+          transform-origin: 50% 50%;
+          animation: pgchat-blink 4s ease-in-out infinite;
+        }
+        .pgchat-eye-r {
+          animation-delay: 0.06s;
+        }
+        .pgchat-blink-dot {
+          animation: pgchat-antblink 3s ease-in-out infinite;
+        }
+      `}</style>
+    </>
+  );
+}
