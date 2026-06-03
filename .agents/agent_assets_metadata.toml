@@ -185,3 +185,15 @@ id = "gjCpCf272W9Ko3jk-Rt_c"
 uri = "file://docs/yc/yc-revenue-growth-answer.txt"
 type = "text"
 title = "YC Revenue & Growth Answer — updated .txt"
+
+[[outputs]]
+id = "n8j6OlndbmT9CKjQgm5EL"
+uri = "file://docs/yc/yc-revenue-sources-answer.docx"
+type = "word_document"
+title = "YC Revenue Sources Answer — .docx"
+
+[[outputs]]
+id = "oKJ3hrr9VddCb_ZKjR84d"
+uri = "file://docs/yc/yc-revenue-sources-answer.txt"
+type = "text"
+title = "YC Revenue Sources Answer — .txt (cut & paste)"

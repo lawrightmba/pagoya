@@ -1,0 +1,102 @@
+YC APPLICATION — "Where does your revenue come from?"
+
+---
+
+PagoYa has three distinct revenue streams, each with a different margin profile. They run on the same infrastructure.
+
+---
+
+STREAM 1: BILL PAYMENT PLATFORM FEE
+$25 MXN flat fee per completed transaction — charged to the user at the moment of payment.
+
+Applies to: CFE (electricity), Telmex, Telcel, Izzi, Sky, Totalplay, and 20+ billers via SIPREL
+(primary) and Evoluciona Movil (fallback). Recargas included.
+
+This is the volume stream. The fee is intentionally lower than OXXO's variable service charges
+for the same billers. We are not trying to be the highest-margin product per transaction — we
+are trying to be the product users reach for every month, automatically, because it is cheaper,
+faster, and they never have to leave WhatsApp.
+
+At 100 transactions/day: $2,500 MXN/day ($150 USD)
+At 1,000 transactions/day: $25,000 MXN/day ($1,500 USD)
+Infrastructure supports thousands of transactions/day without additional engineering.
+
+---
+
+STREAM 2: DIGITAL GIFT CARD MARGIN
+This is the higher-margin stream — and it launched the same week as our first paid transaction.
+
+Revenue structure: PagoYa earns the wholesale spread on each gift card denomination sold,
+plus a $25 MXN platform fee on card-funded purchases (wallet-funded purchases carry zero
+platform fee — a deliberate acquisition lever for wallet engagement).
+
+Nine brands live at launch:
+- Entertainment:  Netflix ($300 / $400 / $500 / $700 MXN)
+- E-commerce:     Amazon ($100 / $200 / $500 / $1,000 MXN)
+- Mobile apps:    Google Play ($50 / $100 / $200 / $500 MXN)
+- Rideshare:      Uber ($150 MXN)
+- Food delivery:  Uber Eats ($300 MXN)
+- Cinema:         Cinépolis ($60 / $120 / $210 MXN)
+- Coffee:         Starbucks ($200 / $300 MXN)
+- Department:     Liverpool ($500 / $1,000 / $2,000 MXN)
+- Grocery:        Soriana ($500 MXN)
+
+32 SKUs covering every major category of Mexican consumer discretionary spending.
+
+Why this matters as a revenue stream: the gift card market in Mexico is $2.8B annually, and
+virtually all of it flows through OXXO counters and supermarket kiosks — requiring a commute,
+cash, and store hours. PagoYa delivers the same product in seconds via WhatsApp, 24/7, with
+no cash required and no app download. The addressable market is large, the delivery mechanism
+is genuinely better, and the wholesale margin on each denomination is the highest per-transaction
+revenue we generate.
+
+A single Liverpool $2,000 MXN gift card sale generates more gross revenue than 80 bill
+payment transactions.
+
+---
+
+STREAM 3: PAGOSEGURO RENT COLLECTION FEES
+Percentage-based, applied per rent payment processed through the platform.
+
+Fee structure:
+- Landlord: 1.75% of rent amount
+- Tenant: 1.00% of rent amount
+- Blended: ~2.75% per transaction
+
+On a $10,000 MXN/month rent payment: $275 MXN gross revenue per transaction.
+On a $20,000 MXN/month rent (common in Puerto Vallarta tourist areas): $550 MXN per
+transaction — recurring, monthly, without any additional user action.
+
+PagoSeguro is currently collecting rent for properties in Puerto Vallarta and Riviera Nayarit.
+56 brokers are in an active 28-day HubSpot + Brevo email sequence. This vertical compounds
+on its own — a landlord with 5 properties paying rent monthly is $1,375 MXN/month in revenue
+from a single acquisition event.
+
+---
+
+REVENUE TO DATE
+$25 MXN — one completed gift card transaction, June 1, 2026. First week of live deployment.
+
+The honest framing: the number is small. The infrastructure behind it is not.
+The same platform that processed that $25 MXN transaction can process $250,000 MXN/day
+without a single additional line of code, a single new server, or a single new hire. The
+constraint is distribution, not capacity — and distribution is what the street team activation
+is for.
+
+---
+
+NEAR-TERM REVENUE UNLOCKS (BUILT, PENDING ACTIVATION)
+Each of the following adds transaction volume without adding a new fee model:
+
+- STP / SPEI outbound: wallet-to-bank cashout unlocks the "full digital wallet" use case —
+  users hold balances and transact more frequently when they can also withdraw.
+- Belvo direct debit: one-tap bank-linked top-up removes the largest funding friction point
+  for the 60M+ banked Mexicans we can reach.
+- RENAPO KYC Level 2: higher wallet limits ($24,000 MXN/month vs. $6,000) unlock
+  larger-denomination transactions — especially relevant for PagoSeguro rent payments.
+
+None of these require engineering. They are credential activations.
+
+---
+PagoYa — pagoyamx.com | PagoSeguro — pagoseguromx.com
+Longview Meridian Technologies LLC
