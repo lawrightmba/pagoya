@@ -4,7 +4,7 @@ import { Banknote, CreditCard, Zap } from 'lucide-react';
 import { useLang } from '@/lib/video/LangContext';
 
 const C = '#00C875';
-const O = '#E8631A';
+const O = '#FF5C1A';
 
 export function Scene6() {
   const lang = useLang();
@@ -66,7 +66,7 @@ export function Scene6() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden"
-      style={{ background: 'linear-gradient(140deg, #071C2E 0%, #0a2540 100%)' }}
+      style={{ background: 'linear-gradient(140deg, #004F2D 0%, #005432 100%)' }}
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -30 }}

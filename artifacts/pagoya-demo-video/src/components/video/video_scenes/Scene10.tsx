@@ -20,11 +20,11 @@ export function Scene10() {
   const streams = lang === 'en' ? [
     { label: 'Bill Payment Fee', value: '$25 MXN', sub: '~$1.35 USD · per transaction', color: C, width: '100%' },
     { label: 'Gift Card Margin', value: '~40%', sub: 'Wholesale spread on 9 brands · 32 SKUs', color: '#A78BFA', width: '70%' },
-    { label: 'PagoSeguro Brokerage', value: '2.75%', sub: 'Rent & P2P collection · coming soon', color: '#E8631A', width: '45%' },
+    { label: 'PagoSeguro Brokerage', value: '2.75%', sub: 'Rent & P2P collection · coming soon', color: '#FF5C1A', width: '45%' },
   ] : [
     { label: 'Comisión por pago de facturas', value: '$25 MXN', sub: '~$1.35 USD · por transacción', color: C, width: '100%' },
     { label: 'Margen tarjetas de regalo', value: '~40%', sub: 'Diferencial wholesale · 9 marcas · 32 SKUs', color: '#A78BFA', width: '70%' },
-    { label: 'Corretaje PagoSeguro', value: '2.75%', sub: 'Cobro de renta y P2P · próximamente', color: '#E8631A', width: '45%' },
+    { label: 'Corretaje PagoSeguro', value: '2.75%', sub: 'Cobro de renta y P2P · próximamente', color: '#FF5C1A', width: '45%' },
   ];
 
   const economics = lang === 'en' ? [
@@ -40,7 +40,7 @@ export function Scene10() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}

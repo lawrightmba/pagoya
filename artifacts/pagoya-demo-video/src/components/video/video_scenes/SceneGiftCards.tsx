@@ -48,7 +48,7 @@ export function SceneGiftCards() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0, x: 40 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -40 }}

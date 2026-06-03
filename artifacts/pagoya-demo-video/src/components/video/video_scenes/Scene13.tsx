@@ -24,14 +24,14 @@ export function Scene13() {
     { icon: '💳', value: 'Stripe Live', sub: 'Card payments activated May 31', color: C },
     { icon: '🎁', value: '9 Brands', sub: 'Gift cards · 40%+ margins', color: '#A78BFA' },
     { icon: '🤖', value: 'Paula', sub: '7 tools · WhatsApp + in-app', color: '#60A5FA' },
-    { icon: '🏘️', value: 'Street Team', sub: '$5/payment · community model', color: '#E8631A' },
+    { icon: '🏘️', value: 'Street Team', sub: '$5/payment · community model', color: '#FF5C1A' },
     { icon: '✅', value: '17/17', sub: 'Smoke tests passing · June 2, 2026', color: '#34D399' },
     { icon: '⚡', value: '3 events', sub: 'STP · Belvo · RENAPO from scale', color: '#FCD34D' },
   ] : [
     { icon: '💳', value: 'Stripe Activo', sub: 'Pagos con tarjeta desde el 31 mayo', color: C },
     { icon: '🎁', value: '9 Marcas', sub: 'Gift cards · márgenes 40%+', color: '#A78BFA' },
     { icon: '🤖', value: 'Paula', sub: '7 herramientas · WhatsApp + app', color: '#60A5FA' },
-    { icon: '🏘️', value: 'Equipo de campo', sub: '$5/pago · modelo comunitario', color: '#E8631A' },
+    { icon: '🏘️', value: 'Equipo de campo', sub: '$5/pago · modelo comunitario', color: '#FF5C1A' },
     { icon: '✅', value: '17/17', sub: 'Pruebas smoke · 2 junio 2026', color: '#34D399' },
     { icon: '⚡', value: '3 eventos', sub: 'STP · Belvo · RENAPO para escalar', color: '#FCD34D' },
   ];
@@ -39,7 +39,7 @@ export function Scene13() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -122,7 +122,7 @@ export function Scene13() {
           transition={{ duration: 0.5 }}
         >
           <motion.div className="px-7 py-3 rounded-2xl font-bold"
-            style={{ background: C, color: '#071C2E', fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 1.4vw, 20px)', fontWeight: 800 }}
+            style={{ background: C, color: '#004F2D', fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 1.4vw, 20px)', fontWeight: 800 }}
             animate={{ boxShadow: [`0 0 0px rgba(0,200,117,0)`, `0 0 40px rgba(0,200,117,0.6)`, `0 0 0px rgba(0,200,117,0)`] }}
             transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
           >

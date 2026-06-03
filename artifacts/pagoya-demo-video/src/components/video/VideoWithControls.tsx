@@ -136,7 +136,7 @@ function ControlBar({
           className="px-3 py-2 text-xs font-bold transition-colors"
           style={{
             background: lang === 'es' ? '#00C875' : 'transparent',
-            color: lang === 'es' ? '#071C2E' : 'rgba(255,255,255,0.4)',
+            color: lang === 'es' ? '#004F2D' : 'rgba(255,255,255,0.4)',
             fontFamily: 'var(--font-body)',
             letterSpacing: '0.08em',
           }}
@@ -147,7 +147,7 @@ function ControlBar({
           className="px-3 py-2 text-xs font-bold transition-colors"
           style={{
             background: lang === 'en' ? '#00C875' : 'transparent',
-            color: lang === 'en' ? '#071C2E' : 'rgba(255,255,255,0.4)',
+            color: lang === 'en' ? '#004F2D' : 'rgba(255,255,255,0.4)',
             fontFamily: 'var(--font-body)',
             letterSpacing: '0.08em',
           }}

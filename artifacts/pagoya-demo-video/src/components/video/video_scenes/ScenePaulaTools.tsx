@@ -38,7 +38,7 @@ export function ScenePaulaTools() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center px-[6vw]"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}

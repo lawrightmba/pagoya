@@ -72,7 +72,7 @@ export default function VideoTemplate({ lang = 'es' }: VideoTemplateProps) {
 
   return (
     <LangProvider lang={lang}>
-      <div className="w-full h-screen overflow-hidden relative" style={{ backgroundColor: '#071C2E' }}>
+      <div className="w-full h-screen overflow-hidden relative" style={{ backgroundColor: '#004F2D' }}>
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.04]"
           style={{
@@ -89,7 +89,7 @@ export default function VideoTemplate({ lang = 'es' }: VideoTemplateProps) {
         />
         <motion.div
           className="absolute w-[650px] h-[650px] rounded-full blur-[90px] opacity-[0.14] pointer-events-none mix-blend-screen"
-          style={{ background: '#E8631A' }}
+          style={{ background: '#FF5C1A' }}
           animate={{ x: OX[currentScene], y: OY[currentScene], scale: OS[currentScene] }}
           transition={{ duration: 4, ease: 'easeInOut' }}
         />

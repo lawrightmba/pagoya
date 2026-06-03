@@ -33,7 +33,7 @@ export function Scene4() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #071C2E 0%, #0a2540 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #004F2D 0%, #005432 100%)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

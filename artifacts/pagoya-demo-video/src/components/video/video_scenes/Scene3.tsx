@@ -22,12 +22,12 @@ export function Scene3() {
 
   const badges = lang === 'en' ? [
     { label: '+500 services', color: C },
-    { label: 'OXXO · Stripe · SPEI', color: '#E8631A' },
+    { label: 'OXXO · Stripe · SPEI', color: '#FF5C1A' },
     { label: 'Native AI · Paula', color: '#818CF8' },
     { label: 'Gift Cards', color: '#F59E0B' },
   ] : [
     { label: '+500 servicios', color: C },
-    { label: 'OXXO · Stripe · SPEI', color: '#E8631A' },
+    { label: 'OXXO · Stripe · SPEI', color: '#FF5C1A' },
     { label: 'IA Nativa · Paula', color: '#818CF8' },
     { label: 'Tarjetas de regalo', color: '#F59E0B' },
   ];
@@ -35,7 +35,7 @@ export function Scene3() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -102,7 +102,7 @@ export function Scene3() {
           </motion.div>
 
           <motion.div className="mt-7 px-6 py-3 rounded-full font-bold"
-            style={{ background: C, color: '#071C2E', fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 1.3vw, 20px)' }}
+            style={{ background: C, color: '#004F2D', fontFamily: 'var(--font-body)', fontSize: 'clamp(14px, 1.3vw, 20px)' }}
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: phase >= 5 ? 1 : 0, scale: phase >= 5 ? 1 : 0.85 }}
             transition={{ type: 'spring', stiffness: 260, damping: 18 }}

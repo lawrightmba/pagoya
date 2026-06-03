@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLang } from '@/lib/video/LangContext';
 
 const C = '#00C875';
-const O = '#E8631A';
+const O = '#FF5C1A';
 
 function AnimatedNumber({ target, suffix = '', prefix = '', duration = 1.8 }: { target: number; suffix?: string; prefix?: string; duration?: number }) {
   const [current, setCurrent] = useState(0);
@@ -51,7 +51,7 @@ export function Scene2() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -20 }}

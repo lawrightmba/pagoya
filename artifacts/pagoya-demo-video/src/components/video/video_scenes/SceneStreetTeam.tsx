@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLang } from '@/lib/video/LangContext';
 
 const C = '#00C875';
-const O = '#E8631A';
+const O = '#FF5C1A';
 
 export function SceneStreetTeam() {
   const lang = useLang();
@@ -39,7 +39,7 @@ export function SceneStreetTeam() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}

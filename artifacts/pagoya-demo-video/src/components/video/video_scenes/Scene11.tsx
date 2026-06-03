@@ -29,7 +29,7 @@ export function Scene11() {
       emoji: '🏪',
       title: 'WhatsApp as the OS',
       body: '95M+ WhatsApp users in Mexico. Paula lives where users already are — no app download, no friction.',
-      color: '#E8631A',
+      color: '#FF5C1A',
     },
     {
       emoji: '🤖',
@@ -48,7 +48,7 @@ export function Scene11() {
       emoji: '🏪',
       title: 'WhatsApp como sistema operativo',
       body: '+95M usuarios de WhatsApp en México. Paula vive donde ya están los usuarios — sin descargar ninguna app.',
-      color: '#E8631A',
+      color: '#FF5C1A',
     },
     {
       emoji: '🤖',
@@ -61,7 +61,7 @@ export function Scene11() {
   return (
     <motion.div
       className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center px-[7vw]"
-      style={{ background: '#071C2E' }}
+      style={{ background: '#004F2D' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}
