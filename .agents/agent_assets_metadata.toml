@@ -178,10 +178,10 @@ title = "YC AI Coding Transcript — download as .txt, rename to .md"
 id = "RgdjRgnEl4MERXJKgcqQp"
 uri = "file://docs/yc/yc-revenue-growth-answer.docx"
 type = "word_document"
-title = "YC Revenue & Growth Answer — .docx"
+title = "YC Revenue & Growth Answer — updated .docx"
 
 [[outputs]]
 id = "gjCpCf272W9Ko3jk-Rt_c"
 uri = "file://docs/yc/yc-revenue-growth-answer.txt"
 type = "text"
-title = "YC Revenue & Growth Answer — .txt (cut & paste)"
+title = "YC Revenue & Growth Answer — updated .txt"
