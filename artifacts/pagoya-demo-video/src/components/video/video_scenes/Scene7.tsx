@@ -49,16 +49,14 @@ export function Scene7() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-4" style={{ paddingTop: 10 }}>
-          <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(22px, 2.8vw, 44px)' }}
-            initial={{ y: '110%' }}
-            animate={{ y: phase >= 1 ? '0%' : '110%' }}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {lang === 'en' ? <>Receipt<br /><span style={{ color: C }}>instantly</span></> : <>Comprobante<br /><span style={{ color: C }}>al instante</span></>}
-          </motion.h2>
-        </div>
+        <motion.h2
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.2, fontSize: 'clamp(22px, 2.8vw, 44px)', marginBottom: '1rem' }}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 18 }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {lang === 'en' ? <>Receipt<br /><span style={{ color: C }}>instantly</span></> : <>Comprobante<br /><span style={{ color: C }}>al instante</span></>}
+        </motion.h2>
 
         <motion.p
           style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(14px, 1.3vw, 19px)', lineHeight: 1.5, marginBottom: '1.8rem' }}
