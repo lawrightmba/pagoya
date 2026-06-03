@@ -60,7 +60,7 @@ export function ScenePaulaTools() {
 
       <div className="overflow-hidden mb-6">
         <motion.h2
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.0, fontSize: 'clamp(26px, 3.2vw, 48px)' }}
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.15, fontSize: 'clamp(26px, 3.2vw, 48px)' }}
           initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >

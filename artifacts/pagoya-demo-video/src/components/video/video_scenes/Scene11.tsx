@@ -81,7 +81,7 @@ export function Scene11() {
 
       <div className="overflow-hidden mb-8">
         <motion.h2
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', fontSize: 'clamp(32px, 4.5vw, 68px)', lineHeight: 1.0 }}
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', fontSize: 'clamp(32px, 4.5vw, 68px)', lineHeight: 1.15 }}
           initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >

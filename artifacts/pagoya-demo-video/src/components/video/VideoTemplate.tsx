@@ -100,7 +100,7 @@ export default function VideoTemplate({ lang = 'es' }: VideoTemplateProps) {
           animate={{ opacity: currentScene === 0 || currentScene === 12 ? 0 : 1 }}
           transition={{ duration: 0.5 }}
         >
-          <img src={logoPng} alt="PagoYa" style={{ height: '28px', width: 'auto', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))' }} />
+          <img src={logoPng} alt="PagoYa" style={{ height: '38px', width: 'auto', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))' }} />
         </motion.div>
 
         <AnimatePresence mode="popLayout">

@@ -64,7 +64,7 @@ export function SceneStreetTeam() {
 
         <div className="overflow-hidden mb-4">
           <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.0, fontSize: 'clamp(28px, 3.6vw, 54px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(28px, 3.6vw, 54px)' }}
             initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >

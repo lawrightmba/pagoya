@@ -71,7 +71,7 @@ export function Scene12() {
 
         <div className="overflow-hidden mb-4">
           <motion.h1
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.0, fontSize: 'clamp(44px, 6.5vw, 96px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.15, fontSize: 'clamp(44px, 6.5vw, 96px)' }}
             initial={{ y: '110%' }}
             animate={{ y: phase >= 2 ? '0%' : '110%' }}
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}

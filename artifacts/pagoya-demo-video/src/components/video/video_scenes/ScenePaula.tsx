@@ -72,7 +72,7 @@ export function ScenePaula() {
 
         <div className="overflow-hidden mb-3">
           <motion.h1
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.0, fontSize: 'clamp(36px, 4.5vw, 68px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(36px, 4.5vw, 68px)' }}
             initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
