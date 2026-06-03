@@ -11,3 +11,4 @@
 - [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)
 - [Pre-demo checklist](pre-demo-checklist.md) — verify signup_bonus_config is_active=true before every demo and go-live
 - [STP CLABE + CEP integration](stp-clabe-cep.md) — per-user CLABE in users.stp_clabe; CLABE assigned on registration (fire-and-forget); webhook matches by CLABE first then conceptoPago phone; CEP URL stored in wallet_transactions.cep_url
+- [Demo video architecture](demo-video-architecture.md) — 13-scene bilingual video; LangProvider in VideoTemplate; lang prop from VideoWithControls; Scene10 has correct $25 MXN / ~40% / 2.75% model

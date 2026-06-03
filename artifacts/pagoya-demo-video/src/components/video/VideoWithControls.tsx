@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Repeat } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
+import type { Lang } from '@/lib/video/LangContext';
 
 const PROGRESS_TICK_MS = 60;
 
@@ -13,9 +14,11 @@ interface ControlBarProps {
   activeIndex: number;
   activeDuration: number;
   tick: number;
+  lang: Lang;
   onToggleLock: () => void;
   onJumpTo: (index: number) => void;
   onToggleCollapsed: () => void;
+  onToggleLang: () => void;
 }
 
 function ProgressSegments({
@@ -45,7 +48,7 @@ function ProgressSegments({
   const progress = activeDuration > 0 ? Math.min(1, elapsed / activeDuration) : 0;
 
   return (
-    <div className="flex-1 flex items-center gap-1.5">
+    <div className="flex-1 flex items-center gap-1">
       {sceneKeys.map((key, i) => {
         const isActive = i === activeIndex;
         const fill = isActive ? progress * 100 : 0;
@@ -53,7 +56,7 @@ function ProgressSegments({
           <button
             key={key}
             onClick={() => onJumpTo(i)}
-            className="flex-1 h-3 bg-white/20 rounded-full overflow-hidden cursor-pointer hover:h-4 hover:bg-white/25 transition-all relative min-h-[12px]"
+            className="flex-1 h-2.5 bg-white/20 rounded-full overflow-hidden cursor-pointer hover:h-3.5 hover:bg-white/25 transition-all relative min-h-[10px]"
             aria-label={`Jump to scene ${i + 1}`}
             aria-current={isActive ? 'true' : undefined}
           >
@@ -76,13 +79,15 @@ function ControlBar({
   activeIndex,
   activeDuration,
   tick,
+  lang,
   onToggleLock,
   onJumpTo,
   onToggleCollapsed,
+  onToggleLang,
 }: ControlBarProps) {
   return (
     <div
-      className={`flex items-center gap-3 bg-black/50 backdrop-blur-sm px-5 py-4 transition-all duration-200 ease-out ${
+      className={`flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-3 transition-all duration-200 ease-out ${
         visible
           ? 'translate-y-0 opacity-100 pointer-events-auto'
           : 'translate-y-full opacity-0 pointer-events-none'
@@ -91,16 +96,16 @@ function ControlBar({
     >
       <button
         onClick={onToggleLock}
-        className={`w-14 h-14 flex items-center justify-center transition-colors rounded-lg shrink-0 ${
+        className={`w-12 h-12 flex items-center justify-center transition-colors rounded-lg shrink-0 ${
           locked
             ? 'text-white bg-white/15 hover:bg-white/25'
             : 'text-white/60 hover:text-white hover:bg-white/10'
         }`}
-        title={locked ? 'Loop current scene: on' : 'Loop current scene: off'}
-        aria-label={locked ? 'Loop current scene: on' : 'Loop current scene: off'}
+        title={locked ? 'Loop: on' : 'Loop: off'}
+        aria-label={locked ? 'Loop: on' : 'Loop: off'}
         aria-pressed={locked}
       >
-        <Repeat className="w-8 h-8" />
+        <Repeat className="w-7 h-7" />
       </button>
 
       <div className="w-px self-stretch bg-white/15" aria-hidden="true" />
@@ -113,18 +118,52 @@ function ControlBar({
         onJumpTo={onJumpTo}
       />
 
-      <div className="text-xl text-white/60 font-mono tabular-nums shrink-0">
+      <div className="text-base text-white/50 font-mono tabular-nums shrink-0 px-1">
         {activeIndex + 1}/{sceneKeys.length}
       </div>
 
+      <div className="w-px self-stretch bg-white/15" aria-hidden="true" />
+
+      {/* Language toggle */}
+      <button
+        onClick={onToggleLang}
+        className="flex items-center shrink-0 rounded-lg overflow-hidden"
+        style={{ border: '1px solid rgba(255,255,255,0.15)' }}
+        aria-label={`Switch to ${lang === 'en' ? 'Spanish' : 'English'}`}
+        title={`Switch to ${lang === 'en' ? 'Spanish' : 'English'}`}
+      >
+        <span
+          className="px-3 py-2 text-xs font-bold transition-colors"
+          style={{
+            background: lang === 'es' ? '#00C875' : 'transparent',
+            color: lang === 'es' ? '#071C2E' : 'rgba(255,255,255,0.4)',
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.08em',
+          }}
+        >
+          ES
+        </span>
+        <span
+          className="px-3 py-2 text-xs font-bold transition-colors"
+          style={{
+            background: lang === 'en' ? '#00C875' : 'transparent',
+            color: lang === 'en' ? '#071C2E' : 'rgba(255,255,255,0.4)',
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.08em',
+          }}
+        >
+          EN
+        </span>
+      </button>
+
       <button
         onClick={onToggleCollapsed}
-        className="w-14 h-14 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
+        className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
         title={collapsed ? 'Show controls' : 'Hide controls'}
         aria-label={collapsed ? 'Show controls' : 'Hide controls'}
         aria-expanded={!collapsed}
       >
-        {collapsed ? <ChevronUp className="w-10 h-10" /> : <ChevronDown className="w-10 h-10" />}
+        {collapsed ? <ChevronUp className="w-8 h-8" /> : <ChevronDown className="w-8 h-8" />}
       </button>
     </div>
   );
@@ -150,6 +189,7 @@ export default function VideoWithControls() {
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
+  const [lang, setLang] = useState<Lang>('es');
 
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') setHovering(true);
@@ -167,6 +207,9 @@ export default function VideoWithControls() {
       return !c;
     });
   }, []);
+  const handleToggleLang = useCallback(() => {
+    setLang(l => l === 'es' ? 'en' : 'es');
+  }, []);
 
   useEffect(() => {
     if (!(collapsed && tapPinned)) return;
@@ -181,7 +224,7 @@ export default function VideoWithControls() {
 
   const barVisible = !collapsed || hovering || tapPinned;
 
-  if (!isIframed) return <VideoTemplate />;
+  if (!isIframed) return <VideoTemplate lang={lang} />;
 
   return (
     <div className="relative w-full h-screen">
@@ -190,6 +233,7 @@ export default function VideoWithControls() {
         durations={durations}
         loop
         onSceneChange={onSceneChange}
+        lang={lang}
       />
       <div
         ref={sensorRef}
@@ -208,9 +252,11 @@ export default function VideoWithControls() {
           activeIndex={activeIndex}
           activeDuration={activeDuration}
           tick={tick}
+          lang={lang}
           onToggleLock={toggleLock}
           onJumpTo={jumpTo}
           onToggleCollapsed={handleToggleCollapsed}
+          onToggleLang={handleToggleLang}
         />
       </div>
     </div>
