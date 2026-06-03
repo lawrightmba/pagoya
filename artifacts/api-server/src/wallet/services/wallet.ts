@@ -16,7 +16,7 @@ export async function getOrCreateWallet(telefono: string): Promise<Wallet> {
 
   await db
     .insert(usersTable)
-    .values({ telefono })
+    .values({ telefono, signupSource: 'web_organic' })
     .onConflictDoNothing();
 
   const [wallet] = await db
