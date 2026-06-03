@@ -1,0 +1,25 @@
+I am the founder of PagoYa. I hold an MBA from Rice University and a degree in International Finance from Howard University — a background built for exactly this: cross-border financial systems serving underserved markets. But credentials alone are not the advantage. The advantage is what I did with them.
+
+
+I spent five years living and operating businesses in Puerto Vallarta, including Sin Semilla Health & Wellness — the first health and wellness dispensary of its kind in the city. I hired local staff, navigated Mexican regulatory and banking systems firsthand, and built the kind of neighborhood trust that only comes from showing up daily in the community you serve. That five-year presence gave me something no market research report can replicate: existing relationships, on-the-ground credibility, and a deep intuitive understanding of how underserved Mexican consumers make financial decisions. When PagoYa needed a street team, I didn't have to build from scratch — I had a network already in place.
+
+
+My career spans management consulting, government contracting, and economic development in underserved communities. As Director of the Procurement Technical Assistance Center (PTAC) at the University of Houston — a Department of Defense-funded program helping small businesses navigate federal contracting — I grew annual contract awards from approximately $6M to $20M. That work continued at the PVAMU Small Business Development Center, where I deepened the same muscle: earning trust with underserved business owners, navigating compliance complexity, and driving adoption of unfamiliar systems in skeptical communities. That is the exact playbook PagoYa runs at street level — and I have a measurable track record of executing it.
+
+
+I also serve as Community Outreach Director for Texas State Senator Borris Miles (SD-13) and teach Entrepreneurship, Leadership, and Small Business Management as adjunct faculty at the University of Houston. These roles are not ceremonial — they keep me operationally connected to the policy environment, community organizing infrastructure, and institutional relationships that determine how underserved populations engage with new financial services. That access is not available to most fintech founders.
+
+
+On the technical side, PagoYa has already done what takes most Mexico-market fintechs 12 months just to figure out: we are fully integrated with STP for SPEI transfers, Conekta for card processing, Belvo for bank direct debit, and SIPREL for bill payment rails. We didn't spend a year mapping the Mexican fintech infrastructure — we built on it.
+
+
+Perhaps the most structurally significant advantage is the platform we chose not to build. WhatsApp has over 90% penetration in Mexico — it is not a communication tool for this market, it is the operating system of daily life. Rather than asking underbanked users to download a new app, create an account on an unfamiliar platform, or develop new digital habits, PagoYa rides the rails they already trust. Our AI payment agent Paula lives inside WhatsApp — users text her, describe their bill, and pay in under two minutes without ever leaving a conversation thread they already have open. Paula is not a chatbot. She is the first AI-powered bill payment agent introduced to this market, and she operates entirely within the environment our customers already know. That is not a feature — that is a distribution moat.
+
+
+Dr. Douglas Franklin serves as PagoYa's Venture Advisor. He holds an MBA from Rice University — the same program I completed — and leads DeckLaunch LLC, specializing in capital formation, investor positioning, and scaling early-stage ventures. Two Rice MBAs means our financial modeling and investor narrative are stress-tested from day one. Doug is actively engaged — not a name on a slide.
+
+
+Together we bring something rare: a founder who has lived in the market, built in the market, and already earned trust in the market — backed by institutional credibility, government relationships, live payment infrastructure, and a distribution strategy built on the platform 90% of our customers already use every day. Most fintech founders building for the unbanked have never lived among them. We have. And we are already in the field.
+
+
+PagoYa is not theoretical. Twilio is live. Our street team is deployed across Puerto Vallarta colonias. First real user transactions are imminent. We are not pitching a concept — we are reporting from the field.
