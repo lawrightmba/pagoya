@@ -94,18 +94,18 @@ export default function VideoTemplate({ lang = 'es' }: VideoTemplateProps) {
           transition={{ duration: 4, ease: 'easeInOut' }}
         />
 
+        <AnimatePresence mode="popLayout">
+          {SceneComponent && <SceneComponent key={currentSceneKey} />}
+        </AnimatePresence>
+
         <motion.div
-          className="absolute top-5 left-7 z-50"
+          className="absolute top-5 right-7 z-[100] pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: currentScene === 0 || currentScene === 12 ? 0 : 1 }}
           transition={{ duration: 0.5 }}
         >
           <img src={logoPng} alt="PagoYa" style={{ height: '56px', width: 'auto', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.6))' }} />
         </motion.div>
-
-        <AnimatePresence mode="popLayout">
-          {SceneComponent && <SceneComponent key={currentSceneKey} />}
-        </AnimatePresence>
 
         <motion.div
           className="absolute top-1/2 left-1/2 flex items-center justify-center pointer-events-none z-40"
