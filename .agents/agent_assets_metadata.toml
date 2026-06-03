@@ -167,3 +167,9 @@ id = "hfJc5qX7TC3ldAom4DX8K"
 uri = "file://docs/yc/ai-coding-transcript.md"
 type = "text"
 title = "YC AI Coding Transcript — ai-coding-transcript.md"
+
+[[outputs]]
+id = "eFvK-4iSVAwDYc2urMVx1"
+uri = "file://docs/yc/ai-coding-transcript.txt"
+type = "text"
+title = "YC AI Coding Transcript — download as .txt, rename to .md"
