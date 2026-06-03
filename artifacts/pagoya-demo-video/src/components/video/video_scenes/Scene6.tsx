@@ -79,7 +79,7 @@ export function Scene6() {
         transition={{ duration: 11, repeat: Infinity }}
       />
 
-      <div className="absolute inset-0 flex flex-col justify-center pl-[8vw]" style={{ width: '46vw' }}>
+      <div className="absolute inset-0 flex flex-col justify-start pl-[8vw]" style={{ width: '46vw', paddingTop: 100 }}>
         <motion.div
           className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full mb-6"
           style={{ background: `${O}18`, border: `1px solid ${O}40` }}

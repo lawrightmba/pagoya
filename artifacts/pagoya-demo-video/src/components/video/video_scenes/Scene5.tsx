@@ -52,7 +52,7 @@ export function Scene5() {
       <motion.div className="absolute top-[10%] left-[25%] w-[50vw] h-[50vw] rounded-full blur-[140px] opacity-[0.12] pointer-events-none"
         style={{ background: C }} animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 9, repeat: Infinity }} />
 
-      <div className="absolute inset-0 flex flex-col justify-center pl-[8vw]" style={{ width: '44vw' }}>
+      <div className="absolute inset-0 flex flex-col justify-start pl-[8vw]" style={{ width: '44vw', paddingTop: 100 }}>
         <motion.div
           className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full mb-6"
           style={{ background: `${C}18`, border: `1px solid ${C}40` }}

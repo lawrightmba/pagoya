@@ -50,7 +50,7 @@ export function SceneStreetTeam() {
         animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 6, repeat: Infinity }} />
 
       {/* LEFT — headline */}
-      <div className="flex flex-col justify-center pl-[7vw]" style={{ width: '42%' }}>
+      <div className="flex flex-col justify-start pl-[7vw]" style={{ width: '42%', paddingTop: 100 }}>
         <motion.div
           className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full mb-5"
           style={{ background: `${O}18`, border: `1px solid ${O}40` }}

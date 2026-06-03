@@ -44,7 +44,7 @@ export function Scene4() {
         animate={{ scale: [1, 1.2, 1], x: [0, 20, 0] }}
         transition={{ duration: 10, repeat: Infinity }} />
 
-      <div className="absolute inset-0 flex flex-col justify-center pl-[8vw]" style={{ width: '44vw' }}>
+      <div className="absolute inset-0 flex flex-col justify-start pl-[8vw]" style={{ width: '44vw', paddingTop: 100 }}>
         <motion.div
           className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full mb-6"
           style={{ background: `${C}18`, border: `1px solid ${C}40` }}

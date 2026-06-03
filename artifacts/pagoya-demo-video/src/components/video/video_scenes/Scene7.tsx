@@ -36,7 +36,7 @@ export function Scene7() {
       <motion.div className="absolute top-[10%] left-[10%] w-[50vw] h-[50vw] rounded-full blur-[150px] opacity-[0.12] pointer-events-none"
         style={{ background: C }} animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 8, repeat: Infinity }} />
 
-      <div className="absolute inset-0 flex flex-col justify-center pl-[8vw]" style={{ width: '46vw' }}>
+      <div className="absolute inset-0 flex flex-col justify-start pl-[8vw]" style={{ width: '46vw', paddingTop: 100 }}>
         <motion.div
           className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full mb-6"
           style={{ background: `${C}18`, border: `1px solid ${C}40` }}
