@@ -1,0 +1,32 @@
+YC APPLICATION — "Anything else you would like us to know regarding your revenue or growth rate?"
+
+---
+
+Three things worth knowing.
+
+1. The infrastructure-to-revenue gap is days, not months.
+
+PagoYa has been production-ready since May 2026. The first paid transaction happened June 1 — the same week street team deployment began. We are not a startup waiting to build. We are a startup that built everything and is now turning on distribution. The growth rate from here is a function of street team reach and credential activations, not engineering.
+
+2. Three credential activations will each materially expand the addressable transaction pool.
+
+STP / SPEI outbound — enables wallet-to-bank cashout, transforming PagoYa from a payment tool into a full digital wallet. Code is written. Pending 4 environment variables from STP.
+
+Belvo production approval — enables one-tap bank-linked top-up for the 60M+ banked Mexicans. One environment variable swap from live.
+
+RENAPO — unlocks KYC Level 2+ users and CNBV Nivel 2 compliance conversations with institutional partners. Integration stubbed and ready.
+
+None of these require engineering sprints. They are activation events.
+
+3. The unit economics are designed to compound — and gift cards are the highest-margin vertical.
+
+Bill payments carry a flat $25 MXN fee per transaction — intentionally lower than OXXO's variable fees for the same services. That fee is the floor.
+
+Digital gift cards are the ceiling. Launched May 31, PagoYa now sells nine major brands with 40%+ margins at the point of sale: Netflix, Amazon, Google Play, Uber, Uber Eats, Cinépolis, Starbucks, Liverpool, and Soriana — covering entertainment, food delivery, e-commerce, rideshare, retail, and grocery. That is the full map of how a Mexican consumer spends discretionary income. Every category a user shops in, PagoYa can now serve. The gift card market in Mexico is $2.8B annually. Virtually all of it flows through OXXO counters and supermarket kiosks — requiring a commute, cash, and store hours. PagoYa delivers the same product in seconds, via WhatsApp, at any hour, with no cash required. For a user who wants to renew Netflix at midnight or send their kid a Cinépolis card before the weekend, PagoYa is the only option that exists.
+
+The loyalty tier system (Bronce / Plata / Oro) and free transaction token activation (first 3 payments free for every new user) are both live and engineered to increase transaction frequency. The street team commission structure ties acquisition cost directly to revenue events — reps earn $5 MXN per confirmed user payment, on a 7-day hold, so we pay for users only when they pay us.
+
+The honest summary: early revenue today. The infrastructure behind it supports thousands of transactions per day — bill payments and gift cards — without a single additional line of code. And every new user who arrives to pay a CFE bill is now also one tap away from buying Netflix.
+
+---
+PagoYa — pagoyamx.com | Longview Meridian Technologies LLC

@@ -173,3 +173,15 @@ id = "eFvK-4iSVAwDYc2urMVx1"
 uri = "file://docs/yc/ai-coding-transcript.txt"
 type = "text"
 title = "YC AI Coding Transcript — download as .txt, rename to .md"
+
+[[outputs]]
+id = "RgdjRgnEl4MERXJKgcqQp"
+uri = "file://docs/yc/yc-revenue-growth-answer.docx"
+type = "word_document"
+title = "YC Revenue & Growth Answer — .docx"
+
+[[outputs]]
+id = "gjCpCf272W9Ko3jk-Rt_c"
+uri = "file://docs/yc/yc-revenue-growth-answer.txt"
+type = "text"
+title = "YC Revenue & Growth Answer — .txt (cut & paste)"
