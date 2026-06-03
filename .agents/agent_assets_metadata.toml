@@ -161,3 +161,9 @@ id = "A-ycDGVXbHWtT41pYQ4Bl"
 uri = "file://docs/yc/technical-summary.txt"
 type = "text"
 title = "technical-summary.txt (plain text copy)"
+
+[[outputs]]
+id = "hfJc5qX7TC3ldAom4DX8K"
+uri = "file://docs/yc/ai-coding-transcript.md"
+type = "text"
+title = "YC AI Coding Transcript — ai-coding-transcript.md"
