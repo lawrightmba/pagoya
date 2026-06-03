@@ -197,3 +197,9 @@ id = "oKJ3hrr9VddCb_ZKjR84d"
 uri = "file://docs/yc/yc-revenue-sources-answer.txt"
 type = "text"
 title = "YC Revenue Sources Answer — .txt (cut & paste)"
+
+[[outputs]]
+id = "6wjHibb2GJhS5jbBt3UE3"
+uri = "file://.local/outputs/PagoYa---500-Global-LATAM-Pitch-Deck.pptx"
+type = "slides"
+title = "PagoYa — 500 Global LATAM Pitch Deck.pptx"
