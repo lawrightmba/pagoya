@@ -66,16 +66,15 @@ export function Scene5() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-5" style={{ paddingTop: 6 }}>
-          <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.2, fontSize: 'clamp(28px, 3.4vw, 52px)' }}
-            initial={{ y: '110%' }}
-            animate={{ y: phase >= 1 ? '0%' : '110%' }}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {lang === 'en' ? <>AI fills the form<br /><span style={{ color: C }}>automatically</span></> : <>La IA llena el formulario<br /><span style={{ color: C }}>automáticamente</span></>}
-          </motion.h2>
-        </div>
+        <motion.h2
+          className="mb-5"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.2, fontSize: 'clamp(28px, 3.4vw, 52px)' }}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 14 }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {lang === 'en' ? <>AI fills the form<br /><span style={{ color: C }}>automatically</span></> : <>La IA llena el formulario<br /><span style={{ color: C }}>automáticamente</span></>}
+        </motion.h2>
 
         <motion.p
           style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.2vw, 17px)', lineHeight: 1.6, marginBottom: '1.5rem' }}

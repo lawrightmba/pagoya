@@ -92,16 +92,15 @@ export function Scene6() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-4" style={{ paddingTop: 6 }}>
-          <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(30px, 3.8vw, 58px)' }}
-            initial={{ y: '110%' }}
-            animate={{ y: phase >= 1 ? '0%' : '110%' }}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {lang === 'en' ? <>Pay<br /><span style={{ color: O }}>your way</span></> : <>Paga<br /><span style={{ color: O }}>como quieras</span></>}
-          </motion.h2>
-        </div>
+        <motion.h2
+          className="mb-4"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(30px, 3.8vw, 58px)' }}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: phase >= 1 ? 1 : 0, y: phase >= 1 ? 0 : 14 }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {lang === 'en' ? <>Pay<br /><span style={{ color: O }}>your way</span></> : <>Paga<br /><span style={{ color: O }}>como quieras</span></>}
+        </motion.h2>
 
         <motion.p
           style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.25vw, 18px)', lineHeight: 1.5, marginBottom: '1.6rem' }}
