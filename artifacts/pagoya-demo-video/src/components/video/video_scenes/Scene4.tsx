@@ -57,7 +57,7 @@ export function Scene4() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-4">
+        <div className="overflow-hidden mb-4" style={{ paddingTop: 6 }}>
           <motion.h2
             style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(30px, 3.8vw, 58px)' }}
             initial={{ y: '110%' }}

@@ -66,9 +66,9 @@ export function Scene5() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-5">
+        <div className="overflow-hidden mb-5" style={{ paddingTop: 6 }}>
           <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.05, fontSize: 'clamp(28px, 3.4vw, 52px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.2, fontSize: 'clamp(28px, 3.4vw, 52px)' }}
             initial={{ y: '110%' }}
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}

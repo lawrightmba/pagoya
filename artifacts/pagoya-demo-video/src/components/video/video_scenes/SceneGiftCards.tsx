@@ -74,7 +74,7 @@ export function SceneGiftCards() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-5">
+        <div className="overflow-hidden mb-5" style={{ paddingTop: 6 }}>
           <motion.h2
             style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(28px, 3.5vw, 52px)' }}
             initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
