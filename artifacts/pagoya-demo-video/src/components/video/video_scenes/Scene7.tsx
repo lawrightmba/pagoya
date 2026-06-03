@@ -49,9 +49,9 @@ export function Scene7() {
           </span>
         </motion.div>
 
-        <div className="overflow-hidden mb-4" style={{ paddingTop: 6 }}>
+        <div className="overflow-hidden mb-4" style={{ paddingTop: 10 }}>
           <motion.h2
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(30px, 3.8vw, 58px)' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', lineHeight: 1.15, fontSize: 'clamp(22px, 2.8vw, 44px)' }}
             initial={{ y: '110%' }}
             animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
