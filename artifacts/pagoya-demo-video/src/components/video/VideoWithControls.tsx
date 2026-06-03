@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Repeat } from 'lucide-react';
+import { ChevronDown, ChevronUp, Repeat, Download } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
 import type { Lang } from '@/lib/video/LangContext';
 
 const PROGRESS_TICK_MS = 60;
+
+function getLangFromUrl(): Lang {
+  const p = new URLSearchParams(window.location.search).get('lang');
+  return p === 'en' ? 'en' : 'es';
+}
 
 interface ControlBarProps {
   visible: boolean;
@@ -85,6 +90,11 @@ function ControlBar({
   onToggleCollapsed,
   onToggleLang,
 }: ControlBarProps) {
+  const handleDownload = useCallback(() => {
+    const exportUrl = `${window.location.pathname}?export=true`;
+    window.open(exportUrl, '_blank', 'noopener');
+  }, []);
+
   return (
     <div
       className={`flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-3 transition-all duration-200 ease-out ${
@@ -156,6 +166,23 @@ function ControlBar({
         </span>
       </button>
 
+      {/* Download English MP4 */}
+      <button
+        onClick={handleDownload}
+        className="flex items-center gap-1.5 shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition-colors hover:bg-white/10"
+        style={{
+          border: '1px solid rgba(0,200,117,0.5)',
+          color: '#00C875',
+          fontFamily: 'var(--font-body)',
+          letterSpacing: '0.06em',
+        }}
+        title="Download English version as MP4"
+        aria-label="Download English MP4"
+      >
+        <Download className="w-4 h-4" />
+        EN MP4
+      </button>
+
       <button
         onClick={onToggleCollapsed}
         className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
@@ -189,7 +216,7 @@ export default function VideoWithControls() {
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
-  const [lang, setLang] = useState<Lang>('es');
+  const [lang, setLang] = useState<Lang>(getLangFromUrl);
 
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') setHovering(true);
