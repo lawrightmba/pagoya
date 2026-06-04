@@ -94,7 +94,6 @@ export default function Slide09GoToMarket() {
             { title: "Rent reporting & credit building", sub: "First credit file for users excluded from BURÓ de Crédito", color: "#00C875" },
             { title: "Microloan underwriting", sub: "Behavioral data replaces the credit score no one here has", color: "#00C875" },
             { title: "BNPL for utilities", sub: "Split your CFE into 3 payments — underwritten by our own data", color: "#FF5C1A" },
-            { title: "Insurance eligibility scoring", sub: "Life, health, and property for households with zero formal history", color: "#FF5C1A" },
           ].map(({ title, sub, color }) => (
             <div key={title} className="flex items-start gap-[1vw]">
               <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.2vh", background: color, marginTop: "0.3vh" }} />
