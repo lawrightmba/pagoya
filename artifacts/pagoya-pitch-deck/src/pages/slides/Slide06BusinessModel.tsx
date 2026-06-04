@@ -1,8 +1,8 @@
 export default function Slide06BusinessModel() {
   const rows = [
-    { users: "1,000", base: "$60K MXN", target: "$150K MXN", usd: "" },
-    { users: "10,000", base: "$600K MXN", target: "$1.5M MXN", usd: "" },
-    { users: "100,000", base: "$6M MXN", target: "$15M MXN", usd: "~$350K–$880K USD" },
+    { users: "2,500", base: "$150K MXN", target: "$375K MXN", usd: "" },
+    { users: "25,000", base: "$1.5M MXN", target: "$3.75M MXN", usd: "" },
+    { users: "250,000", base: "$15M MXN", target: "$37.5M MXN", usd: "~$880K–$2.2M USD" },
     { users: "1,000,000", base: "$600M MXN", target: "$1.5B MXN", usd: "~$35M–$88M USD", highlight: true },
   ];
 
