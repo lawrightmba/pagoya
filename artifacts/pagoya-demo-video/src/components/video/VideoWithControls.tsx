@@ -95,13 +95,15 @@ function ControlBar({
   onToggleFullscreen,
 }: ControlBarProps) {
   const handleDownload = useCallback(() => {
-    // Exit fullscreen first (browser exits it anyway on navigation — do it cleanly)
+    // Build the real app URL (not the iframe wrapper URL)
+    const base = import.meta.env.BASE_URL ?? '/pagoya-demo-video/';
+    const exportUrl = `${window.location.origin}${base}?export=true`;
+    // Open in a real browser tab, escaping any iframe wrapper
+    const openIt = () => (window.top ?? window).open(exportUrl, '_blank', 'noopener');
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {}).finally(() => {
-        window.location.href = `${window.location.pathname}?export=true`;
-      });
+      document.exitFullscreen().catch(() => {}).finally(openIt);
     } else {
-      window.location.href = `${window.location.pathname}?export=true`;
+      openIt();
     }
   }, []);
 
