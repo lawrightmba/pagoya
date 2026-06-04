@@ -37,7 +37,7 @@ export default function Slide09GoToMarket() {
             marginBottom: "0.8vh"
           }}>
             Every payment builds a credit profile<br />
-            <span style={{ color: "#00C875" }}>60M people have never had.</span>
+            <span style={{ color: "#00C875" }}>65M people have never had.</span>
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
