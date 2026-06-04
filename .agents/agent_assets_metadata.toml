@@ -209,3 +209,9 @@ id = "p8gBpypPErkLr51SjZY3Z"
 uri = "file://.local/outputs/PagoYa-Techstars-Pitch-Deck.pdf"
 type = "pdf"
 title = "PagoYa — Techstars Pitch Deck (PDF)"
+
+[[outputs]]
+id = "FCqVFs18VhDg_HkUoLp0b"
+uri = "file://artifacts/pagoya/public/lloyd-wright-cv.pdf"
+type = "pdf"
+title = "Lloyd A. Wright, MBA — CV"
