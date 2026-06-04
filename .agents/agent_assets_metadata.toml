@@ -203,3 +203,9 @@ id = "6wjHibb2GJhS5jbBt3UE3"
 uri = "file://.local/outputs/PagoYa---500-Global-LATAM-Pitch-Deck.pptx"
 type = "slides"
 title = "PagoYa — 500 Global LATAM Pitch Deck.pptx"
+
+[[outputs]]
+id = "p8gBpypPErkLr51SjZY3Z"
+uri = "file://.local/outputs/PagoYa-Techstars-Pitch-Deck.pdf"
+type = "pdf"
+title = "PagoYa — Techstars Pitch Deck (PDF)"
