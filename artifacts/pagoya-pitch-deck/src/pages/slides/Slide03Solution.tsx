@@ -51,8 +51,8 @@ export default function Slide03Solution() {
             {[
               {
                 n: "01",
-                title: "Load once at OXXO or by card",
-                sub: "Any of 22,000 OXXO locations — or Stripe card — wallet credited in real time"
+                title: "Load once at OXXO, by card, or bank debit",
+                sub: "22,000 OXXO locations · Stripe card · Belvo bank debit — credited in real time"
               },
               {
                 n: "02",
@@ -61,8 +61,8 @@ export default function Slide03Solution() {
               },
               {
                 n: "03",
-                title: "Buy digital gift cards instantly",
-                sub: "Netflix, Amazon, Google Play, Spotify — first Netflix purchase processed June 2026"
+                title: "Buy gift cards & pay subscriptions",
+                sub: "Netflix, Amazon, Google Play, Spotify — pay monthly fees or send as gifts. First Netflix purchase June 2026"
               },
               {
                 n: "04",

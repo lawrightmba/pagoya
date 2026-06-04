@@ -33,18 +33,16 @@ export default function Slide01Cover() {
           <h1
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "9vw",
+              fontSize: "7.8vw",
               fontWeight: 900,
               color: "#FFFFFF",
-              lineHeight: 0.9,
+              lineHeight: 0.92,
               letterSpacing: "-0.01em",
               marginBottom: "3.5vh",
-              textWrap: "balance"
+              whiteSpace: "pre-line"
             }}
           >
-            Pay any bill.
-            Buy any gift card.
-            In Mexico.
+            {"Pay any bill.\nBuy any gift card.\nIn Mexico."}
           </h1>
           <div
             style={{

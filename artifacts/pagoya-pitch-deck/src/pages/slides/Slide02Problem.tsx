@@ -43,7 +43,7 @@ export default function Slide02Problem() {
           }}
         >
           65 million unbanked adults
-          pay bills at OXXO.
+          pay bills at convenience stores.
         </h2>
         <div style={{ width: "6vw", height: "0.4vh", background: "#FF5C1A", marginBottom: "4vh" }} />
 
@@ -56,7 +56,7 @@ export default function Slide02Problem() {
             marginBottom: "3.5vh"
           }}
         >
-          $14–20 MXN per service, per trip, every month — cash only, no digital record.
+          $14–20 MXN per service, per trip, every month — standing in line, cash only, no digital record.
         </p>
 
         <div className="grid grid-cols-2 gap-x-[5vw] gap-y-[2.8vh]" style={{ maxWidth: "80vw" }}>

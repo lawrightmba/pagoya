@@ -44,19 +44,19 @@ export default function Slide12Ask() {
             about to make have
             already been solved.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3.5vh" }} />
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: "3vh" }}>
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: "2vh" }}>
             Techstars alumni — Clip, Kueski — solved CNBV licensing, SPEI rails, and city-by-city scaling in Mexico. We are not applying for validation. We are applying because those operators are in your network.
           </p>
           <div
             style={{
               background: "rgba(0,200,117,0.1)",
               borderLeft: "0.4vw solid #00C875",
-              padding: "2vh 2vw",
+              padding: "1.5vh 2vw",
               borderRadius: "0 0.6vw 0.6vw 0"
             }}
           >
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.5, fontStyle: "italic" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.45, fontStyle: "italic" }}>
               "We need the fintech mentorship + LATAM distribution network + Demo Day access to investors who understand Mexican unit economics — not US SaaS metrics."
             </p>
           </div>

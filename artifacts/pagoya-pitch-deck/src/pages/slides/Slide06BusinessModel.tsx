@@ -16,8 +16,8 @@ export default function Slide06BusinessModel() {
         style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }}
       />
 
-      <div className="relative z-10 flex flex-col" style={{ padding: "5.5vh 8vw 4.5vh" }}>
-        <div style={{ marginBottom: "3vh" }}>
+      <div className="relative z-10 flex flex-col" style={{ padding: "4vh 8vw 3.5vh" }}>
+        <div style={{ marginBottom: "2vh" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
@@ -48,7 +48,7 @@ export default function Slide06BusinessModel() {
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
 
-        <div className="flex gap-[3vw]" style={{ marginBottom: "3vh" }}>
+        <div className="flex gap-[3vw]" style={{ marginBottom: "2vh" }}>
           <div
             style={{
               background: "rgba(255,255,255,0.05)",
@@ -117,7 +117,7 @@ export default function Slide06BusinessModel() {
             borderRadius: "0 0.6vw 0.6vw 0"
           }}
         >
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
             Unit economics: direct rails (SIPREL, Conekta, Stripe, Belvo) remove aggregator markups —
             <span style={{ color: "#00C875", fontWeight: 700 }}> profitable at $25 MXN from launch</span>, not a loss-leader.
           </p>
