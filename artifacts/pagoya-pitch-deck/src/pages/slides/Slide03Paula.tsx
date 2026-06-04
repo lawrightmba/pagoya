@@ -134,12 +134,12 @@ export default function Slide03Paula() {
               }}
             >
               {[
-                { from: "user", text: "Quiero pagar mi CFE por favor" },
-                { from: "paula", text: "¡Hola! Soy Paula 👋\n\nEncontré tu recibo de CFE por $380 MXN con vencimiento el 12 de junio.\n\n¿Te lo pago ahora de tu saldo? Tienes $520 MXN disponibles." },
-                { from: "user", text: "Sí, págalo" },
-                { from: "paula", text: "✅ ¡Listo! CFE pagada.\n\n📄 Comprobante #CFE-2026-0604-8821\nMonto: $380 MXN + $25 MXN fee\nFecha: 4 jun 2026, 12:33 am\n\nTe aviso cuando llegue tu próximo recibo 🔔" },
-                { from: "user", text: "También quiero Netflix este mes" },
-                { from: "paula", text: "Claro 🎬 Tengo tarjetas Netflix disponibles:\n\n• $99 MXN — 1 mes\n• $199 MXN — 2 meses\n\n¿Cuál quieres?" },
+                { from: "user", text: "I want to pay my CFE electric bill" },
+                { from: "paula", text: "Hi! I'm Paula 👋\n\nI found your CFE bill for $380 MXN due June 12.\n\nShould I pay it now from your balance? You have $520 MXN available." },
+                { from: "user", text: "Yes, pay it" },
+                { from: "paula", text: "✅ Done! CFE paid.\n\n📄 Receipt #CFE-2026-0604-8821\nAmount: $380 MXN + $25 MXN fee\nDate: Jun 4 2026, 12:33 am\n\nI'll alert you when your next bill arrives 🔔" },
+                { from: "user", text: "Also get me Netflix this month" },
+                { from: "paula", text: "Sure 🎬 Netflix gift cards available:\n\n• $99 MXN — 1 month\n• $199 MXN — 2 months\n\nWhich one?" },
               ].map(({ from, text }, i) => (
                 <div
                   key={i}
@@ -190,7 +190,7 @@ export default function Slide03Paula() {
                   padding: "1vh 1.5vw"
                 }}
               >
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#AAA" }}>Escribe un mensaje…</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#AAA" }}>Type a message…</p>
               </div>
               <div
                 style={{
@@ -207,6 +207,18 @@ export default function Slide03Paula() {
               </div>
             </div>
           </div>
+          <p
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: "1.15vw",
+              color: "rgba(255,255,255,0.4)",
+              marginTop: "1.2vh",
+              fontStyle: "italic",
+              textAlign: "right"
+            }}
+          >
+            * Users interact with Paula in Spanish
+          </p>
         </div>
       </div>
     </div>
