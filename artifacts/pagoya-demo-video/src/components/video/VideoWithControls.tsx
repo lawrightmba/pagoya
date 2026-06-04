@@ -95,8 +95,14 @@ function ControlBar({
   onToggleFullscreen,
 }: ControlBarProps) {
   const handleDownload = useCallback(() => {
-    const exportUrl = `${window.location.pathname}?export=true`;
-    window.open(exportUrl, '_blank', 'noopener');
+    // Exit fullscreen first (browser exits it anyway on navigation — do it cleanly)
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {}).finally(() => {
+        window.location.href = `${window.location.pathname}?export=true`;
+      });
+    } else {
+      window.location.href = `${window.location.pathname}?export=true`;
+    }
   }, []);
 
   return (
