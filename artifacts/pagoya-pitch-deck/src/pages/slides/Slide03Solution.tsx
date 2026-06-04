@@ -28,7 +28,7 @@ export default function Slide03Solution() {
             marginBottom: "1.8vh"
           }}
         >
-          The Solution
+          La Solución
         </p>
         <h2
           style={{
@@ -41,58 +41,57 @@ export default function Slide03Solution() {
             marginBottom: "1.5vh"
           }}
         >
-          One wallet. Every bill.
-          Every gift card. From your phone.
+          Una billetera. Todas las facturas.
+          Todas las tarjetas de regalo. Desde tu teléfono.
         </h2>
         <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3.5vh" }} />
 
         <div className="flex gap-[5vw]">
           <div className="flex flex-col gap-[2.2vh]" style={{ flex: 1 }}>
-            {[
-              {
-                n: "01",
-                title: "Load once at OXXO, by card, or bank debit",
-                sub: "22,000 OXXO locations · Stripe card · Belvo bank debit — credited in real time"
-              },
-              {
-                n: "02",
-                title: "Pay any utility from your phone",
-                sub: "CFE, Telmex, Izzi, TotalPlay, Gas Natural, Telcel, Sky, Megacable, Dish, AT&T"
-              },
-              {
-                n: "03",
-                title: "Buy gift cards & pay subscriptions",
-                sub: "Netflix, Amazon, Google Play, Spotify — pay monthly fees or send as gifts. First Netflix purchase June 2026"
-              },
-              {
-                n: "04",
-                title: "Confirmed via WhatsApp · Paula",
-                sub: "Instant receipt, permanent record, due-date reminders — no app download"
-              }
-            ].map(({ n, title, sub }) => (
-              <div key={n} className="flex items-start gap-[1.4vw]">
-                <span
-                  style={{
-                    fontFamily: "Barlow Condensed, sans-serif",
-                    fontSize: "2.6vw",
-                    fontWeight: 900,
-                    color: "#00C875",
-                    lineHeight: 1,
-                    minWidth: "3vw"
-                  }}
-                >
-                  {n}
-                </span>
-                <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
-                    {title}
-                  </p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                    {sub}
-                  </p>
-                </div>
+            <div className="flex items-start gap-[1.4vw]">
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>01</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
+                  Carga una vez en OXXO, con tarjeta o débito bancario
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  22,000 ubicaciones OXXO · Tarjeta Stripe · Débito bancario Belvo — acreditado en tiempo real
+                </p>
               </div>
-            ))}
+            </div>
+            <div className="flex items-start gap-[1.4vw]">
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>02</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
+                  Paga cualquier servicio desde tu teléfono
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  CFE, Telmex, Izzi, TotalPlay, Gas Natural, Telcel, Sky, Megacable, Dish, AT&T
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-[1.4vw]">
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>03</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
+                  Compra tarjetas de regalo y paga suscripciones
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  Netflix, Amazon, Google Play, Spotify — paga mensualidades o envía como regalo. Primera compra Netflix junio 2026
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-[1.4vw]">
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>04</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
+                  Confirmado por WhatsApp · Paula
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  Recibo instantáneo, registro permanente, recordatorios de vencimiento — sin descarga de app
+                </p>
+              </div>
+            </div>
           </div>
 
           <div
@@ -108,36 +107,15 @@ export default function Slide03Solution() {
               gap: "2vh"
             }}
           >
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "8vw",
-                fontWeight: 900,
-                color: "#00C875",
-                lineHeight: 0.9,
-                letterSpacing: "-0.02em"
-              }}
-            >
-              $25
-            </p>
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "2.2vw",
-                fontWeight: 700,
-                color: "#FFFFFF",
-                lineHeight: 1.1
-              }}
-            >
-              MXN flat fee
-            </p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "8vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, letterSpacing: "-0.02em" }}>$25</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1 }}>Tarifa fija MXN</p>
             <div style={{ width: "3vw", height: "0.35vh", background: "#00C875" }} />
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
-              Any service. Any amount. Bills or gift cards.
+              Cualquier servicio. Cualquier monto. Facturas o tarjetas de regalo.
             </p>
             <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)" }} />
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "#00C875", fontWeight: 600, lineHeight: 1.4 }}>
-              Profitable at $25 from launch — no loss-leader pricing.
+              Rentable desde $25 en el lanzamiento — sin precios de pérdida.
             </p>
           </div>
         </div>

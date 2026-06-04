@@ -28,7 +28,7 @@ export default function Slide01Cover() {
               marginBottom: "2.5vh"
             }}
           >
-            Acción Ventures — Pre-Seed Pitch · June 2026
+            Acción Ventures — Presentación Pre-Semilla · Junio 2026
           </p>
           <h1
             style={{
@@ -63,7 +63,7 @@ export default function Slide01Cover() {
               marginBottom: "1.2vh"
             }}
           >
-            Two minutes. $25 MXN flat. No bank account required.
+            Dos minutos. $25 MXN fijo. Sin cuenta bancaria.
           </p>
           <p
             style={{
@@ -74,7 +74,7 @@ export default function Slide01Cover() {
               lineHeight: 1.4
             }}
           >
-            The AI financial agent built for Mexico's 65 million unbanked adults.
+            El agente financiero de IA para los 65 millones de adultos no bancarizados de México.
           </p>
         </div>
 

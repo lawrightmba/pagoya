@@ -27,7 +27,7 @@ export default function Slide12Ask() {
               marginBottom: "1.8vh"
             }}
           >
-            Why Acción Ventures
+            Por Qué Acción Ventures
           </p>
           <h2
             style={{
@@ -40,13 +40,13 @@ export default function Slide12Ask() {
               marginBottom: "1.5vh"
             }}
           >
-            The right partner
-            builds the right
-            network.
+            El socio correcto
+            construye la red
+            correcta.
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: "2vh" }}>
-            Acción Ventures portfolio — Clip, Konfío, Destacame — have navigated CNBV licensing, SPEI rails, and financial inclusion at scale in LATAM. We are not applying for capital alone. We are applying because those operators and that network are the fastest path to 100K wallets.
+            El portafolio de Acción Ventures — Clip, Konfío, Destacame — ha navegado licencias CNBV, rieles SPEI e inclusión financiera a escala en LATAM. No buscamos solo capital. Buscamos este socio porque esos operadores y esa red son el camino más rápido a 100K billeteras.
           </p>
           <div
             style={{
@@ -57,7 +57,7 @@ export default function Slide12Ask() {
             }}
           >
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.45, fontStyle: "italic" }}>
-              "We need the fintech expertise + LATAM distribution network + investor access from a firm that has funded the financial inclusion stack in Mexico before."
+              "Necesitamos la experiencia fintech + la red de distribución LATAM + acceso a inversores de una firma que ya ha financiado la inclusión financiera en México."
             </p>
           </div>
         </div>
@@ -67,37 +67,32 @@ export default function Slide12Ask() {
           style={{ flex: 1, padding: "7vh 8vw 7vh 4vw", gap: "2.8vh" }}
         >
           <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-            What we want from Acción Ventures
+            Lo que buscamos de Acción Ventures
           </p>
 
-          {[
-            {
-              n: "01",
-              title: "Regulatory navigation",
-              sub: "CNBV SOFOM licensing as wallet volume scales · Banxico SPEI reporting thresholds · CONDUSEF compliance",
-              color: "#00C875"
-            },
-            {
-              n: "02",
-              title: "Rep network scaling playbook",
-              sub: "From 2 reps in Puerto Vallarta to 50+ reps across 5 Mexican cities — we need operators who've done this",
-              color: "#00C875"
-            },
-            {
-              n: "03",
-              title: "Demo Day access",
-              sub: "LATAM fintech investors who understand $25 MXN flat-fee unit economics — not US SaaS investors who will misread the numbers",
-              color: "#FF5C1A"
-            }
-          ].map(({ n, title, sub, color }) => (
-            <div key={n} className="flex items-start gap-[1.5vw]">
-              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color, lineHeight: 1, minWidth: "2.5vw" }}>{n}</span>
-              <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.4vh" }}>{title}</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>{sub}</p>
-              </div>
+          <div className="flex items-start gap-[1.5vw]">
+            <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "2.5vw" }}>01</span>
+            <div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.4vh" }}>Navegación regulatoria</p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>Licencia CNBV SOFOM conforme escala el volumen · Umbrales de reporte SPEI Banxico · Cumplimiento CONDUSEF</p>
             </div>
-          ))}
+          </div>
+
+          <div className="flex items-start gap-[1.5vw]">
+            <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "2.5vw" }}>02</span>
+            <div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.4vh" }}>Guía para escalar la red de representantes</p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>De 2 representantes en Puerto Vallarta a 50+ en 5 ciudades mexicanas — necesitamos operadores que hayan logrado esto</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-[1.5vw]">
+            <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#FF5C1A", lineHeight: 1, minWidth: "2.5vw" }}>03</span>
+            <div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.4vh" }}>Acceso a inversores LATAM</p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>Inversores fintech LATAM que entiendan la economía unitaria de $25 MXN — no inversores SaaS de EE.UU. que malinterpreten los números</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

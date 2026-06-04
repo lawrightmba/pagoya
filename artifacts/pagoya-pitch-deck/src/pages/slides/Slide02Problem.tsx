@@ -28,7 +28,7 @@ export default function Slide02Problem() {
             marginBottom: "1.8vh"
           }}
         >
-          The Problem
+          El Problema
         </p>
         <h2
           style={{
@@ -42,8 +42,8 @@ export default function Slide02Problem() {
             textWrap: "balance"
           }}
         >
-          65 million unbanked adults
-          pay bills at convenience stores.
+          65 millones de adultos no bancarizados
+          pagan facturas en tiendas de conveniencia.
         </h2>
         <div style={{ width: "6vw", height: "0.4vh", background: "#FF5C1A", marginBottom: "4vh" }} />
 
@@ -56,7 +56,7 @@ export default function Slide02Problem() {
             marginBottom: "3.5vh"
           }}
         >
-          $14–20 MXN per service, per trip, every month — standing in line, cash only, no digital record.
+          $14–20 MXN por servicio, por viaje, cada mes — haciendo fila, solo efectivo, sin registro digital.
         </p>
 
         <div className="grid grid-cols-2 gap-x-[5vw] gap-y-[2.8vh]" style={{ maxWidth: "80vw" }}>
@@ -64,10 +64,10 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                $60–80 MXN/month
+                $60–80 MXN/mes
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                in fees for a typical household (CFE + Telmex + 2 top-ups)
+                en comisiones por hogar típico (CFE + Telmex + 2 recargas)
               </p>
             </div>
           </div>
@@ -75,10 +75,10 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                20–35 minutes
+                20–35 minutos
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                per convenience store visit including travel and wait time
+                por visita a tienda incluyendo traslado y tiempo de espera
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default function Slide02Problem() {
                 $400–600 MXN
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                CFE reconnection fee if you miss the due date
+                comisión de reconexión CFE si se atrasa el pago
               </p>
             </div>
           </div>
@@ -97,10 +97,10 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                Zero digital record
+                Sin registro digital
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                no payment history, no credit trail, no receipts — financially invisible
+                sin historial de pagos, sin huella crediticia, sin recibos — invisibles financieramente
               </p>
             </div>
           </div>

@@ -215,3 +215,9 @@ id = "FCqVFs18VhDg_HkUoLp0b"
 uri = "file://artifacts/pagoya/public/lloyd-wright-cv.pdf"
 type = "pdf"
 title = "Lloyd A. Wright, MBA — CV (Updated)"
+
+[[outputs]]
+id = "AT4qJjwas42r0imUjmvzM"
+uri = "file://.local/outputs/PagoYa-Accion-Ventures-PreSemilla-2026.pdf"
+type = "pdf"
+title = "PagoYa — Acción Ventures Pre-Semilla 2026 (PDF)"

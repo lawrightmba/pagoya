@@ -1,11 +1,4 @@
 export default function Slide06BusinessModel() {
-  const rows = [
-    { users: "2,500", base: "$150K MXN", target: "$375K MXN", usd: "" },
-    { users: "25,000", base: "$1.5M MXN", target: "$3.75M MXN", usd: "" },
-    { users: "250,000", base: "$15M MXN", target: "$37.5M MXN", usd: "~$880K–$2.2M USD" },
-    { users: "1,000,000", base: "$600M MXN", target: "$1.5B MXN", usd: "~$35M–$88M USD", highlight: true },
-  ];
-
   return (
     <div
       className="relative w-screen h-screen overflow-hidden"
@@ -29,7 +22,7 @@ export default function Slide06BusinessModel() {
               marginBottom: "1.2vh"
             }}
           >
-            Business Model & Revenue
+            Modelo de Negocio e Ingresos
           </p>
           <h2
             style={{
@@ -42,8 +35,8 @@ export default function Slide06BusinessModel() {
               marginBottom: "1.5vh"
             }}
           >
-            $25 MXN flat fee per transaction.
-            2× base · 5× target per wallet.
+            Tarifa fija de $25 MXN por transacción.
+            Base 2× · Meta 5× por billetera.
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
@@ -58,11 +51,11 @@ export default function Slide06BusinessModel() {
               flex: "0 0 20vw"
             }}
           >
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.2vh" }}>Per Transaction</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.2vh" }}>Por Transacción</p>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "6vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, marginBottom: "0.6vh" }}>$25</p>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF" }}>MXN flat</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF" }}>MXN fija</p>
             <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)", margin: "1.5vh 0" }} />
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Bills or gift cards. Direct rails — profitable from transaction 1.</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Facturas o tarjetas de regalo. Rieles directos — rentable desde la transacción 1.</p>
           </div>
 
           <div style={{ flex: 1 }}>
@@ -77,34 +70,69 @@ export default function Slide06BusinessModel() {
               }}
             >
               <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Active Wallets</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Billeteras Activas</p>
               </div>
               <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(0,200,117,0.8)", textTransform: "uppercase", letterSpacing: "0.06em" }}>2× / month</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(0,200,117,0.8)", textTransform: "uppercase", letterSpacing: "0.06em" }}>2× / mes</p>
               </div>
               <div style={{ background: "rgba(255,92,26,0.1)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "#FF5C1A", textTransform: "uppercase", letterSpacing: "0.06em" }}>5× / month</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "#FF5C1A", textTransform: "uppercase", letterSpacing: "0.06em" }}>5× / mes</p>
               </div>
               <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em" }}>USD range</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Equivalente USD</p>
               </div>
 
-              {rows.map(({ users, base, target, usd, highlight }) => (
-                <div key={users} style={{ display: "contents" }}>
-                  <div style={{ background: highlight ? "rgba(0,200,117,0.1)" : "transparent", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 800, color: highlight ? "#00C875" : "#FFFFFF" }}>{users}</p>
-                  </div>
-                  <div style={{ background: highlight ? "rgba(0,200,117,0.08)" : "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: highlight ? "#00C875" : "rgba(255,255,255,0.8)", fontWeight: highlight ? 700 : 400 }}>{base}</p>
-                  </div>
-                  <div style={{ background: highlight ? "rgba(255,92,26,0.1)" : "rgba(255,92,26,0.04)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: highlight ? "#FF5C1A" : "rgba(255,255,255,0.8)", fontWeight: highlight ? 700 : 400 }}>{target}</p>
-                  </div>
-                  <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: highlight ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)", fontWeight: highlight ? 600 : 400 }}>{usd || "—"}</p>
-                  </div>
-                </div>
-              ))}
+              <div style={{ background: "transparent", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 800, color: "#FFFFFF" }}>2,500</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$150K MXN</p>
+              </div>
+              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$375K MXN</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>—</p>
+              </div>
+
+              <div style={{ background: "transparent", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 800, color: "#FFFFFF" }}>25,000</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$1.5M MXN</p>
+              </div>
+              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$3.75M MXN</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>—</p>
+              </div>
+
+              <div style={{ background: "transparent", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 800, color: "#FFFFFF" }}>250,000</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$15M MXN</p>
+              </div>
+              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.8)" }}>$37.5M MXN</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>~$880K–$2.2M USD</p>
+              </div>
+
+              <div style={{ background: "rgba(0,200,117,0.1)", padding: "1.4vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 800, color: "#00C875" }}>1,000,000</p>
+              </div>
+              <div style={{ background: "rgba(0,200,117,0.08)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#00C875", fontWeight: 700 }}>$600M MXN</p>
+              </div>
+              <div style={{ background: "rgba(255,92,26,0.1)", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#FF5C1A", fontWeight: 700 }}>$1.5B MXN</p>
+              </div>
+              <div style={{ background: "transparent", padding: "1.4vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>~$35M–$88M USD</p>
+              </div>
             </div>
           </div>
         </div>
@@ -118,8 +146,8 @@ export default function Slide06BusinessModel() {
           }}
         >
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
-            Unit economics: direct rails (SIPREL, Conekta, Stripe, Belvo) remove aggregator markups —
-            <span style={{ color: "#00C875", fontWeight: 700 }}> profitable at $25 MXN from launch</span>, not a loss-leader.
+            Economía unitaria: los rieles directos (SIPREL, Conekta, Stripe, Belvo) eliminan márgenes de intermediarios —
+            <span style={{ color: "#00C875", fontWeight: 700 }}> rentable a $25 MXN desde el lanzamiento</span>, sin precios de pérdida.
           </p>
         </div>
       </div>
