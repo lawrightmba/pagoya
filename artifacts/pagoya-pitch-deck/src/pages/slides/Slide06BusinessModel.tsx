@@ -16,8 +16,8 @@ export default function Slide06BusinessModel() {
         style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }}
       />
 
-      <div className="relative z-10 flex flex-col" style={{ padding: "4vh 8vw 3.5vh" }}>
-        <div style={{ marginBottom: "2vh" }}>
+      <div className="relative z-10 flex flex-col" style={{ padding: "3vh 8vw 3vh" }}>
+        <div style={{ marginBottom: "1.5vh" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
