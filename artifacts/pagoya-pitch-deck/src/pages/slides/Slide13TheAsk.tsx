@@ -35,10 +35,10 @@ export default function Slide13TheAsk() {
               marginBottom: "1.5vh"
             }}
           >
-            Pre-seed: $150K–$500K USD
+            Pre-seed: $250K–$750K USD
           </h2>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.55)", marginBottom: "1.5vh" }}>
-            SAFE · 18-month runway · Milestone: 1,000 active wallets · Currently in: Founder Institute Austin Summer 2026
+            SAFE · 18-month runway · Milestone: 2,500 active wallets · Currently in: Founder Institute Austin Summer 2026
           </p>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "4vh" }} />
         </div>
@@ -56,7 +56,7 @@ export default function Slide13TheAsk() {
             {
               pct: "30%",
               label: "Growth",
-              detail: "Rep network expansion to 3 cities · First 1,000 active wallets",
+              detail: "Rep network expansion to 3 cities · First 2,500 active wallets",
               color: "#FF5C1A",
               bgColor: "rgba(255,92,26,0.1)",
               border: "rgba(255,92,26,0.25)"

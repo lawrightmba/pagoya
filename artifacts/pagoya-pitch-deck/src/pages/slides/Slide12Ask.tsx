@@ -27,7 +27,7 @@ export default function Slide12Ask() {
               marginBottom: "1.8vh"
             }}
           >
-            Why Techstars
+            Why Acción Ventures
           </p>
           <h2
             style={{
@@ -40,13 +40,13 @@ export default function Slide12Ask() {
               marginBottom: "1.5vh"
             }}
           >
-            The mistakes we're
-            about to make have
-            already been solved.
+            The right partner
+            builds the right
+            network.
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: "2vh" }}>
-            Techstars alumni — Clip, Kueski — solved CNBV licensing, SPEI rails, and city-by-city scaling in Mexico. We are not applying for validation. We are applying because those operators are in your network.
+            Acción Ventures portfolio — Clip, Konfío, Destacame — have navigated CNBV licensing, SPEI rails, and financial inclusion at scale in LATAM. We are not applying for capital alone. We are applying because those operators and that network are the fastest path to 100K wallets.
           </p>
           <div
             style={{
@@ -57,7 +57,7 @@ export default function Slide12Ask() {
             }}
           >
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.45, fontStyle: "italic" }}>
-              "We need the fintech mentorship + LATAM distribution network + Demo Day access to investors who understand Mexican unit economics — not US SaaS metrics."
+              "We need the fintech expertise + LATAM distribution network + investor access from a firm that has funded the financial inclusion stack in Mexico before."
             </p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function Slide12Ask() {
           style={{ flex: 1, padding: "7vh 8vw 7vh 4vw", gap: "2.8vh" }}
         >
           <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-            What we want from Techstars
+            What we want from Acción Ventures
           </p>
 
           {[
