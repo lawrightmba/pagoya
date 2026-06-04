@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Repeat, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Repeat, Download, Maximize, Minimize } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
 import type { Lang } from '@/lib/video/LangContext';
@@ -20,10 +20,12 @@ interface ControlBarProps {
   activeDuration: number;
   tick: number;
   lang: Lang;
+  isFullscreen: boolean;
   onToggleLock: () => void;
   onJumpTo: (index: number) => void;
   onToggleCollapsed: () => void;
   onToggleLang: () => void;
+  onToggleFullscreen: () => void;
 }
 
 function ProgressSegments({
@@ -85,10 +87,12 @@ function ControlBar({
   activeDuration,
   tick,
   lang,
+  isFullscreen,
   onToggleLock,
   onJumpTo,
   onToggleCollapsed,
   onToggleLang,
+  onToggleFullscreen,
 }: ControlBarProps) {
   const handleDownload = useCallback(() => {
     const exportUrl = `${window.location.pathname}?export=true`;
@@ -183,6 +187,16 @@ function ControlBar({
         EN MP4
       </button>
 
+      {/* Fullscreen toggle */}
+      <button
+        onClick={onToggleFullscreen}
+        className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      >
+        {isFullscreen ? <Minimize className="w-7 h-7" /> : <Maximize className="w-7 h-7" />}
+      </button>
+
       <button
         onClick={onToggleCollapsed}
         className="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
@@ -212,11 +226,13 @@ export default function VideoWithControls() {
     toggleLock,
   } = useSceneControls(SCENE_DURATIONS);
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const sensorRef = useRef<HTMLDivElement | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
   const [lang, setLang] = useState<Lang>(getLangFromUrl);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') setHovering(true);
@@ -238,6 +254,20 @@ export default function VideoWithControls() {
     setLang(l => l === 'es' ? 'en' : 'es');
   }, []);
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
   useEffect(() => {
     if (!(collapsed && tapPinned)) return;
     const onDocPointerDown = (e: PointerEvent) => {
@@ -254,7 +284,7 @@ export default function VideoWithControls() {
   if (!isIframed) return <VideoTemplate lang={lang} />;
 
   return (
-    <div className="relative w-full h-screen">
+    <div ref={containerRef} className="relative w-full h-screen">
       <VideoTemplate
         key={mountKey}
         durations={durations}
@@ -280,10 +310,12 @@ export default function VideoWithControls() {
           activeDuration={activeDuration}
           tick={tick}
           lang={lang}
+          isFullscreen={isFullscreen}
           onToggleLock={toggleLock}
           onJumpTo={jumpTo}
           onToggleCollapsed={handleToggleCollapsed}
           onToggleLang={handleToggleLang}
+          onToggleFullscreen={handleToggleFullscreen}
         />
       </div>
     </div>
