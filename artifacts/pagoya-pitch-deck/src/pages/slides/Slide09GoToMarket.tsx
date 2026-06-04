@@ -1,115 +1,109 @@
-const base = import.meta.env.BASE_URL;
-
 export default function Slide09GoToMarket() {
   return (
-    <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#0A2540" }}>
-      <img
-        src={`${base}hero-gtm.png`}
-        crossOrigin="anonymous"
-        alt="Mexican street market"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: 0.35 }}
-      />
+    <div
+      className="relative w-screen h-screen overflow-hidden"
+      style={{ background: "#004F2D" }}
+    >
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(100deg, rgba(10,37,64,0.96) 0%, rgba(10,37,64,0.75) 50%, rgba(10,37,64,0.55) 100%)" }}
+        style={{ background: "radial-gradient(ellipse at 30% 60%, rgba(0,200,117,0.1) 0%, transparent 60%)" }}
       />
 
-      <div className="absolute inset-0 flex" style={{ padding: "7vh 8vw" }}>
-        <div className="flex flex-col justify-center" style={{ width: "55%" }}>
+      <div
+        className="absolute left-0 top-0 bottom-0"
+        style={{ width: "0.4vw", background: "linear-gradient(180deg, #00C875 0%, transparent 100%)", opacity: 0.7 }}
+      />
+
+      <div className="relative z-10 flex h-full" style={{ padding: "6.5vh 8vw" }}>
+        <div className="flex flex-col justify-center" style={{ width: "50%", paddingRight: "4vw" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
               fontSize: "1.6vw",
               fontWeight: 700,
-              color: "#1D9E75",
+              color: "#00C875",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               marginBottom: "1.8vh"
             }}
           >
-            Go-To-Market
+            The Data Moat
           </p>
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "5.2vw",
+              fontSize: "4.8vw",
               fontWeight: 900,
-              color: "#F5F0EB",
+              color: "#FFFFFF",
               letterSpacing: "-0.01em",
               lineHeight: 1,
               marginBottom: "1.5vh"
             }}
           >
-            In person.
-            In the colonia.
+            AI builds financial
+            identity for the invisible.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#D85A30", marginBottom: "3.5vh" }} />
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3vh" }} />
 
-          <div className="flex flex-col gap-[2.2vh]">
-            <div className="flex items-start gap-[1.2vw]">
-              <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#1D9E75", marginTop: "0.3vh" }} />
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "#F5F0EB", lineHeight: 1.35 }}>
-                Street reps walk into taquerías, tianguis, and family businesses
-              </p>
-            </div>
-            <div className="flex items-start gap-[1.2vw]">
-              <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#1D9E75", marginTop: "0.3vh" }} />
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "#F5F0EB", lineHeight: 1.35 }}>
-                Opens pagoyamx.com, registers user, completes first payment on the spot
-              </p>
-            </div>
-            <div className="flex items-start gap-[1.2vw]">
-              <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#1D9E75", marginTop: "0.3vh" }} />
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "#F5F0EB", lineHeight: 1.35 }}>
-                No app download. 100% activation rate on contact.
-              </p>
-            </div>
-            <div className="flex items-start gap-[1.2vw]">
-              <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#D85A30", marginTop: "0.3vh" }} />
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "#F5F0EB", lineHeight: 1.35 }}>
-                Rep earns commission on every transaction — recurring income, zero upfront CAC
-              </p>
-            </div>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.55, marginBottom: "2.5vh" }}>
+            Every transaction Paula processes builds a structured financial profile on someone with no bank account and no credit file.
+          </p>
+
+          <div
+            style={{
+              background: "rgba(0,200,117,0.1)",
+              borderLeft: "0.4vw solid #00C875",
+              padding: "2vh 2vw",
+              borderRadius: "0 0.6vw 0.6vw 0"
+            }}
+          >
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.5, fontStyle: "italic" }}>
+              "We are not just processing payments — we are creating financial identity for 65 million invisible people."
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col justify-center" style={{ flex: 1, paddingLeft: "5vw" }}>
+        <div className="flex flex-col justify-center" style={{ flex: 1, gap: "2vh" }}>
           <div
             style={{
-              background: "rgba(10,37,64,0.8)",
-              border: "1px solid rgba(29,158,117,0.3)",
-              borderRadius: "1.2vw",
-              padding: "3.5vh 3vw"
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "0.8vw",
+              padding: "2.2vh 2.5vw",
+              marginBottom: "0.5vh"
             }}
           >
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#8BA8C0", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2.5vh" }}>
-              The flywheel
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.8vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.5vh" }}>
+              Data we collect per user
             </p>
-            <div className="flex flex-col gap-[1.8vh]">
+            <div className="grid grid-cols-2 gap-x-[2vw] gap-y-[0.8vh]">
+              {["Payment history", "Bill cadence", "Income signals", "Service mix", "Cash load patterns", "Payment reliability score"].map(d => (
+                <div key={d} className="flex items-center gap-[0.8vw]">
+                  <div style={{ width: "0.4vw", height: "0.4vw", borderRadius: "50%", background: "#00C875", flexShrink: 0 }} />
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "#FFFFFF" }}>{d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.8vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            What it unlocks (future products)
+          </p>
+
+          {[
+            { title: "Rent reporting & credit building", sub: "First credit file for users excluded from BURÓ de Crédito", color: "#00C875" },
+            { title: "Microloan underwriting", sub: "Behavioral data replaces the credit score no one here has", color: "#00C875" },
+            { title: "BNPL for utilities", sub: "Split your CFE into 3 payments — underwritten by our own data", color: "#FF5C1A" },
+            { title: "Insurance eligibility scoring", sub: "Life, health, and property for households with zero formal history", color: "#FF5C1A" },
+          ].map(({ title, sub, color }) => (
+            <div key={title} className="flex items-start gap-[1vw]">
+              <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.2vh", background: color, marginTop: "0.3vh" }} />
               <div>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#1D9E75", lineHeight: 1 }}>1 rep</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0" }}>activates 20–30 users in 30 days</p>
-              </div>
-              <div style={{ width: "0.3vw", height: "2vh", background: "rgba(29,158,117,0.4)", marginLeft: "1.5vw" }} />
-              <div>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#1D9E75", lineHeight: 1 }}>Passive commissions</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0" }}>on every repeat payment, every month</p>
-              </div>
-              <div style={{ width: "0.3vw", height: "2vh", background: "rgba(29,158,117,0.4)", marginLeft: "1.5vw" }} />
-              <div>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color: "#D85A30", lineHeight: 1 }}>CAC drops</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0" }}>as rep network compounds</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>{title}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{sub}</p>
               </div>
             </div>
-            <div style={{ height: "0.2vh", background: "rgba(255,255,255,0.08)", margin: "2vh 0" }} />
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0" }}>
-              Beachhead: Puerto Vallarta
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0" }}>
-              Next: Guadalajara, CDMX periphery
-            </p>
-          </div>
+          ))}
         </div>
       </div>
     </div>

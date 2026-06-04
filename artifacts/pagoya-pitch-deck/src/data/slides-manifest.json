@@ -3,8 +3,8 @@
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567801",
     "position": 1,
     "filepath": "src/pages/slides/Slide01Cover.tsx",
-    "title": "PagoYa",
-    "description": "Cover slide — Pay any bill in Mexico. Two minutes. $25 MXN flat.",
+    "title": "PagoYa — Cover",
+    "description": "Cover: Pay any bill. Buy any gift card. In Mexico. Techstars pre-seed application June 2026.",
     "speakerNotes": ""
   },
   {
@@ -12,7 +12,7 @@
     "position": 2,
     "filepath": "src/pages/slides/Slide02Problem.tsx",
     "title": "The Problem",
-    "description": "50 million unbanked adults pay bills at OXXO — fees, time, disconnection risk.",
+    "description": "65 million unbanked adults pay bills at OXXO — fees, time, disconnection risk, zero digital record.",
     "speakerNotes": ""
   },
   {
@@ -20,79 +20,87 @@
     "position": 3,
     "filepath": "src/pages/slides/Slide03Solution.tsx",
     "title": "The Solution",
-    "description": "One OXXO cash load. Every bill from your phone. $25 MXN flat.",
+    "description": "One wallet: pay utilities, buy gift cards (Netflix, Amazon, Spotify), confirmed via WhatsApp. $25 MXN flat.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
     "position": 4,
     "filepath": "src/pages/slides/Slide04Market.tsx",
-    "title": "Market Size",
-    "description": "Mexico bill payment market — 50M unbanked, 22K OXXO locations, $1B+ MXN fee pool.",
+    "title": "What's Live Right Now",
+    "description": "We didn't pitch this. We built it. 5 rails live: Stripe, SIPREL, Conekta/OXXO, Belvo, gift cards.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567805",
     "position": 5,
     "filepath": "src/pages/slides/Slide05HowItWorks.tsx",
-    "title": "How It Works",
-    "description": "Three steps: register, load, pay. Confirmed via WhatsApp.",
+    "title": "Market Size",
+    "description": "Three markets: bill payments $180B MXN, digital gift cards $4.2B MXN, P2P transfers $42B MXN.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567806",
     "position": 6,
     "filepath": "src/pages/slides/Slide06BusinessModel.tsx",
-    "title": "Business Model",
-    "description": "$25 MXN flat fee. Year 1: 5,000 users. Year 2: 25,000 users.",
+    "title": "Business Model & Revenue",
+    "description": "$25 MXN flat fee. Revenue table: 2x base to 5x target — $35M to $88M USD ARR at 1M wallets.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567807",
     "position": 7,
     "filepath": "src/pages/slides/Slide07Infrastructure.tsx",
-    "title": "Our Infrastructure",
-    "description": "Direct rails: DigitalFemsa/Conekta, STP, SIPREL + Taecel. No intermediaries.",
+    "title": "Go-To-Market",
+    "description": "Street team + referral network: 3-layer MLM flywheel. Rep activates, earns passive commission, users refer users.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567808",
     "position": 8,
     "filepath": "src/pages/slides/Slide08Competition.tsx",
-    "title": "Competitive Landscape",
-    "description": "Comparison table: OXXO Pay, Mercado Pago, Spin by OXXO vs. PagoYa.",
+    "title": "P2P: Payments Become Social",
+    "description": "Next iteration: split bills, send balances, pay each other in WhatsApp. Each payment is a product demo.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
     "position": 9,
     "filepath": "src/pages/slides/Slide09GoToMarket.tsx",
-    "title": "Go-To-Market",
-    "description": "Street rep activation — the Collison install method in Mexican colonias.",
+    "title": "The Data Moat",
+    "description": "AI builds financial identity for 65M invisible people. Data unlocks credit, BNPL, insurance, microloans.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567810",
     "position": 10,
     "filepath": "src/pages/slides/Slide10Traction.tsx",
-    "title": "Traction",
-    "description": "Product live, 10 providers integrated, OXXO cash-in live, STP in progress.",
+    "title": "Infrastructure",
+    "description": "5 rails live: Stripe, SIPREL, Conekta/OXXO, Belvo, gift cards. STP/SPEI in progress. No intermediaries.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567811",
     "position": 11,
     "filepath": "src/pages/slides/Slide11Why500.tsx",
-    "title": "Why 500 Global",
-    "description": "500's LATAM portfolio has navigated exactly what we face next.",
+    "title": "Competitive Landscape",
+    "description": "Comparison table: OXXO Pay, Mercado Pago, Spin by OXXO vs. PagoYa. Only wallet for cash-first users.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567812",
     "position": 12,
     "filepath": "src/pages/slides/Slide12Ask.tsx",
+    "title": "Why Techstars",
+    "description": "Regulatory nav, rep network scaling, Demo Day access to LATAM fintech investors who understand our unit economics.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567813",
+    "position": 13,
+    "filepath": "src/pages/slides/Slide13TheAsk.tsx",
     "title": "The Ask",
-    "description": "Seed round: $150,000 USD — 40% tech, 30% growth, 20% regulatory, 10% ops.",
+    "description": "Pre-seed $150K–$500K USD on SAFE. 18-month runway. 1,000 active wallets milestone. FI Austin Summer 2026.",
     "speakerNotes": ""
   }
 ]

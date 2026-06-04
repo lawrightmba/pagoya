@@ -2,174 +2,102 @@ export default function Slide12Ask() {
   return (
     <div
       className="relative w-screen h-screen overflow-hidden"
-      style={{ background: "#0A2540" }}
+      style={{ background: "#004F2D" }}
     >
       <div
         className="absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at 50% 50%, rgba(29,158,117,0.1) 0%, transparent 65%)"
-        }}
+        style={{ background: "radial-gradient(ellipse at 70% 50%, rgba(0,200,117,0.1) 0%, transparent 60%)" }}
       />
 
-      <div className="absolute inset-0 flex flex-col justify-between" style={{ padding: "7vh 8vw" }}>
-        <div>
+      <div
+        className="absolute right-0 top-0 bottom-0"
+        style={{ width: "0.4vw", background: "linear-gradient(180deg, #00C875 0%, transparent 100%)", opacity: 0.7 }}
+      />
+
+      <div className="relative z-10 flex h-full">
+        <div className="flex flex-col justify-center" style={{ padding: "7vh 5vw 7vh 8vw", width: "50%" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
               fontSize: "1.6vw",
               fontWeight: 700,
-              color: "#1D9E75",
+              color: "#00C875",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               marginBottom: "1.8vh"
             }}
           >
-            The Ask
+            Why Techstars
           </p>
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "6vw",
+              fontSize: "5vw",
               fontWeight: 900,
-              color: "#F5F0EB",
+              color: "#FFFFFF",
               letterSpacing: "-0.01em",
               lineHeight: 1,
               marginBottom: "1.5vh"
             }}
           >
-            Seed round:
-            $150,000 USD
+            The mistakes we're
+            about to make have
+            already been solved.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#1D9E75", marginBottom: "4vh" }} />
-        </div>
-
-        <div className="grid grid-cols-4 gap-[2vw]" style={{ flex: 1, alignContent: "start" }}>
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3.5vh" }} />
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: "3vh" }}>
+            Techstars alumni — Clip, Kueski — solved CNBV licensing, SPEI rails, and city-by-city scaling in Mexico. We are not applying for validation. We are applying because those operators are in your network.
+          </p>
           <div
             style={{
-              background: "rgba(29,158,117,0.1)",
-              border: "1px solid rgba(29,158,117,0.25)",
-              borderRadius: "0.8vw",
-              padding: "2.5vh 2vw"
+              background: "rgba(0,200,117,0.1)",
+              borderLeft: "0.4vw solid #00C875",
+              padding: "2vh 2vw",
+              borderRadius: "0 0.6vw 0.6vw 0"
             }}
           >
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "5.5vw",
-                fontWeight: 900,
-                color: "#1D9E75",
-                lineHeight: 0.9,
-                marginBottom: "1vh"
-              }}
-            >
-              40%
-            </p>
-            <div style={{ width: "2.5vw", height: "0.3vh", background: "#1D9E75", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.6vh" }}>
-              Technology
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-              STP integration, WhatsApp Business API, platform hardening
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(216,90,48,0.1)",
-              border: "1px solid rgba(216,90,48,0.25)",
-              borderRadius: "0.8vw",
-              padding: "2.5vh 2vw"
-            }}
-          >
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "5.5vw",
-                fontWeight: 900,
-                color: "#D85A30",
-                lineHeight: 0.9,
-                marginBottom: "1vh"
-              }}
-            >
-              30%
-            </p>
-            <div style={{ width: "2.5vw", height: "0.3vh", background: "#D85A30", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.6vh" }}>
-              Growth
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-              Rep network expansion to 3 cities, first 1,000 active users
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "0.8vw",
-              padding: "2.5vh 2vw"
-            }}
-          >
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "5.5vw",
-                fontWeight: 900,
-                color: "#F5F0EB",
-                lineHeight: 0.9,
-                marginBottom: "1vh"
-              }}
-            >
-              20%
-            </p>
-            <div style={{ width: "2.5vw", height: "0.3vh", background: "#8BA8C0", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.6vh" }}>
-              Regulatory
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-              CNBV SOFOM licensing preparation, legal infrastructure
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "0.8vw",
-              padding: "2.5vh 2vw"
-            }}
-          >
-            <p
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "5.5vw",
-                fontWeight: 900,
-                color: "#F5F0EB",
-                lineHeight: 0.9,
-                marginBottom: "1vh"
-              }}
-            >
-              10%
-            </p>
-            <div style={{ width: "2.5vw", height: "0.3vh", background: "#8BA8C0", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.6vh" }}>
-              Operations
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-              Team, compliance, customer support
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.5, fontStyle: "italic" }}>
+              "We need the fintech mentorship + LATAM distribution network + Demo Day access to investors who understand Mexican unit economics — not US SaaS metrics."
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-end" style={{ marginTop: "3vh" }}>
-          <div className="flex flex-col items-end gap-[0.5vh]">
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#F5F0EB" }}>
-              Lloyd A. Wright, MBA
-            </span>
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#1D9E75" }}>
-              lloyd@pagoyamx.com · pagoyamx.com
-            </span>
-          </div>
+        <div
+          className="flex flex-col justify-center"
+          style={{ flex: 1, padding: "7vh 8vw 7vh 4vw", gap: "2.8vh" }}
+        >
+          <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
+            What we want from Techstars
+          </p>
+
+          {[
+            {
+              n: "01",
+              title: "Regulatory navigation",
+              sub: "CNBV SOFOM licensing as wallet volume scales · Banxico SPEI reporting thresholds · CONDUSEF compliance",
+              color: "#00C875"
+            },
+            {
+              n: "02",
+              title: "Rep network scaling playbook",
+              sub: "From 2 reps in Puerto Vallarta to 50+ reps across 5 Mexican cities — we need operators who've done this",
+              color: "#00C875"
+            },
+            {
+              n: "03",
+              title: "Demo Day access",
+              sub: "LATAM fintech investors who understand $25 MXN flat-fee unit economics — not US SaaS investors who will misread the numbers",
+              color: "#FF5C1A"
+            }
+          ].map(({ n, title, sub, color }) => (
+            <div key={n} className="flex items-start gap-[1.5vw]">
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3vw", fontWeight: 900, color, lineHeight: 1, minWidth: "2.5vw" }}>{n}</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.4vh" }}>{title}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>{sub}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

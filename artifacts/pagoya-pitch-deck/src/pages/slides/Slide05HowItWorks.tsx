@@ -2,157 +2,106 @@ export default function Slide05HowItWorks() {
   return (
     <div
       className="relative w-screen h-screen overflow-hidden"
-      style={{ background: "#0A2540" }}
+      style={{ background: "#004F2D" }}
     >
       <div
         className="absolute inset-0"
         style={{
-          background: "radial-gradient(ellipse at 75% 30%, rgba(29,158,117,0.07) 0%, transparent 55%)"
+          background: "radial-gradient(ellipse at 50% 80%, rgba(0,200,117,0.08) 0%, transparent 60%)"
         }}
       />
 
-      <div className="relative z-10 flex h-full">
-        <div className="flex flex-col justify-center" style={{ padding: "7vh 8vw", width: "55%" }}>
+      <div className="relative z-10 flex flex-col" style={{ padding: "6.5vh 8vw 5vh" }}>
+        <div style={{ marginBottom: "3.5vh" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
               fontSize: "1.6vw",
               fontWeight: 700,
-              color: "#1D9E75",
+              color: "#00C875",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              marginBottom: "1.8vh"
+              marginBottom: "1.2vh"
             }}
           >
-            How It Works
+            Market Size
           </p>
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "5vw",
+              fontSize: "4.8vw",
               fontWeight: 900,
-              color: "#F5F0EB",
+              color: "#FFFFFF",
               letterSpacing: "-0.01em",
               lineHeight: 1,
               marginBottom: "1.5vh"
             }}
           >
-            Three steps.
-            Under two minutes.
+            Three massive markets.
+            One wallet to serve them all.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#1D9E75", marginBottom: "4.5vh" }} />
-
-          <div className="flex flex-col gap-[3.5vh]">
-            <div className="flex items-start gap-[2vw]">
-              <div
-                style={{
-                  minWidth: "4.5vw",
-                  height: "4.5vw",
-                  borderRadius: "50%",
-                  background: "rgba(29,158,117,0.15)",
-                  border: "1px solid rgba(29,158,117,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#1D9E75" }}>1</span>
-              </div>
-              <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2.1vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.5vh" }}>
-                  Register at pagoyamx.com
-                </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-                  No app download. No email required.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-[2vw]">
-              <div
-                style={{
-                  minWidth: "4.5vw",
-                  height: "4.5vw",
-                  borderRadius: "50%",
-                  background: "rgba(29,158,117,0.15)",
-                  border: "1px solid rgba(29,158,117,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#1D9E75" }}>2</span>
-              </div>
-              <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2.1vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.5vh" }}>
-                  Load cash at any OXXO or by mobile
-                </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-                  Wallet credited in real time.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-[2vw]">
-              <div
-                style={{
-                  minWidth: "4.5vw",
-                  height: "4.5vw",
-                  borderRadius: "50%",
-                  background: "rgba(29,158,117,0.15)",
-                  border: "1px solid rgba(29,158,117,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#1D9E75" }}>3</span>
-              </div>
-              <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2.1vw", fontWeight: 700, color: "#F5F0EB", marginBottom: "0.5vh" }}>
-                  Pay any bill — confirmed via WhatsApp
-                </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0", lineHeight: 1.3 }}>
-                  Receipt stored permanently. Reminders before every due date.
-                </p>
-              </div>
-            </div>
-          </div>
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
 
-        <div
-          className="flex flex-col justify-center"
-          style={{ flex: 1, padding: "7vh 6vw 7vh 2vw" }}
-        >
-          <div
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "1.5vw",
-              padding: "4vh 3vw",
-              display: "flex",
-              flexDirection: "column",
-              gap: "2.5vh"
-            }}
-          >
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#8BA8C0", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Works on any smartphone
-            </p>
-            <div style={{ width: "3vw", height: "0.3vh", background: "#1D9E75" }} />
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2vw", color: "#F5F0EB", lineHeight: 1.4 }}>
-              pagoyamx.com
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0", lineHeight: 1.4 }}>
-              PWA — no install, no app store, no data plan requirement beyond a basic browser session.
-            </p>
-            <div style={{ height: "0.2vh", background: "rgba(255,255,255,0.06)" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#8BA8C0", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              WhatsApp-native
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "#8BA8C0", lineHeight: 1.4 }}>
-              94% of Mexican smartphone users have WhatsApp. Confirmation, receipts, and reminders live where users already live.
-            </p>
-          </div>
+        <div className="grid grid-cols-4 gap-[2vw]" style={{ marginBottom: "3.5vh" }}>
+          {[
+            { val: "65M", label: "unbanked adults in Mexico", accent: "#00C875" },
+            { val: "22K", label: "OXXO locations processing cash bills daily", accent: "#00C875" },
+            { val: "$1B+", label: "MXN annual OXXO bill payment fee revenue", accent: "#FF5C1A" },
+            { val: "$4.2B", label: "MXN Mexico digital gift card market 2025", accent: "#FF5C1A" },
+          ].map(({ val, label, accent }) => (
+            <div
+              key={val}
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "0.8vw",
+                padding: "2.8vh 2vw"
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "Barlow Condensed, sans-serif",
+                  fontSize: "5.5vw",
+                  fontWeight: 900,
+                  color: accent,
+                  lineHeight: 0.9,
+                  marginBottom: "1.2vh"
+                }}
+              >
+                {val}
+              </p>
+              <div style={{ width: "2.5vw", height: "0.3vh", background: accent, marginBottom: "1.2vh" }} />
+              <p
+                style={{
+                  fontFamily: "DM Sans, sans-serif",
+                  fontSize: "1.65vw",
+                  color: "rgba(255,255,255,0.55)",
+                  lineHeight: 1.3
+                }}
+              >
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-[2vw]">
+          {[
+            { label: "Bill Payments (SAM)", pct: 75, color: "#00C875", note: "$180B MXN annual market" },
+            { label: "Digital Gift Cards", pct: 45, color: "#FF5C1A", note: "$4.2B MXN · fastest growing" },
+            { label: "P2P Transfers (next)", pct: 30, color: "rgba(0,200,117,0.45)", note: "$42B MXN informal transfers" },
+          ].map(({ label, pct, color, note }) => (
+            <div key={label} style={{ flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.8vh" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 600, color: "#FFFFFF" }}>{label}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "rgba(255,255,255,0.5)" }}>{note}</p>
+              </div>
+              <div style={{ height: "1.5vh", background: "rgba(255,255,255,0.08)", borderRadius: "1vw", overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: "1vw" }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
