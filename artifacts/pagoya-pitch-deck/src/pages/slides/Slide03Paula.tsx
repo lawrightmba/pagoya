@@ -12,23 +12,38 @@ export default function Slide03Paula() {
       <div className="relative z-10 flex w-full h-full" style={{ padding: "5.5vh 8vw" }}>
 
         <div className="flex flex-col justify-center" style={{ width: "48%", paddingRight: "4vw" }}>
-          <p
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.6vw",
-              fontWeight: 700,
-              color: "#00C875",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              marginBottom: "1.6vh"
-            }}
-          >
-            Meet Paula · Your AI Agent
-          </p>
+          <div className="flex items-center gap-[1vw]" style={{ marginBottom: "1.6vh" }}>
+            <p
+              style={{
+                fontFamily: "DM Sans, sans-serif",
+                fontSize: "1.6vw",
+                fontWeight: 700,
+                color: "#00C875",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase"
+              }}
+            >
+              Meet Paula
+            </p>
+            <div
+              style={{
+                background: "rgba(255,92,26,0.18)",
+                border: "1px solid #FF5C1A",
+                borderRadius: "2vw",
+                padding: "0.3vh 1vw",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4vw"
+              }}
+            >
+              <span style={{ fontSize: "1.1vw" }}>🤖</span>
+              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>LLM-Powered Agent</span>
+            </div>
+          </div>
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "5.2vw",
+              fontSize: "5vw",
               fontWeight: 900,
               color: "#FFFFFF",
               letterSpacing: "-0.01em",
@@ -36,43 +51,43 @@ export default function Slide03Paula() {
               marginBottom: "1.5vh"
             }}
           >
-            One WhatsApp message.
-            Every financial task. Done.
+            Not a chatbot.
+            An agent that acts.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3vh" }} />
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
 
-          <div className="flex flex-col gap-[2vh]">
+          <div className="flex flex-col gap-[1.8vh]">
             {[
               {
+                icon: "🧠",
+                title: "Understands natural language",
+                body: "No menus, no forms, no app. Say \"Pay my CFE\" or \"Get me Netflix\" — Paula figures out the rest",
+                color: "#00C875"
+              },
+              {
                 icon: "⚡",
-                title: "Pays bills in seconds",
-                body: "CFE, Telmex, Sky, Izzi, TotalPlay, Gas Natural, Telcel, AT&T — just say the word",
+                title: "Reasons and acts autonomously",
+                body: "Looks up the bill, checks your balance, confirms the amount, executes the payment — one message",
                 color: "#00C875"
               },
               {
-                icon: "🎁",
-                title: "Buys gift cards & subscriptions",
-                body: "Netflix, Amazon, Google Play, Spotify — pay monthly fees or send as gifts",
-                color: "#00C875"
-              },
-              {
-                icon: "🔔",
-                title: "Sends smart reminders",
-                body: "Learns your due dates. Alerts you before services get cut off",
+                icon: "🔮",
+                title: "Persistent memory across sessions",
+                body: "Remembers every bill, due date, and payment. Builds a financial identity for people with no bank account",
                 color: "#FF5C1A"
               },
               {
-                icon: "📊",
-                title: "Builds your financial record",
-                body: "Every transaction stored permanently — no bank required, no paperwork",
+                icon: "📡",
+                title: "Proactive — alerts before cutoffs",
+                body: "Paula messages you 3 days before your bill is due. You don't have to remember. She does.",
                 color: "#FF5C1A"
               }
-            ].map(({ icon, title, body, color }) => (
+            ].map(({ icon, title, body }) => (
               <div key={title} className="flex items-start gap-[1.2vw]">
                 <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>{icon}</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>{title}</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>{body}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>{title}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>{body}</p>
                 </div>
               </div>
             ))}
@@ -134,20 +149,38 @@ export default function Slide03Paula() {
               }}
             >
               {[
-                { from: "user", text: "I want to pay my CFE electric bill" },
-                { from: "paula", text: "Hi! I'm Paula 👋\n\nI found your CFE bill for $380 MXN due June 12.\n\nShould I pay it now from your balance? You have $520 MXN available." },
-                { from: "user", text: "Yes, pay it" },
-                { from: "paula", text: "✅ Done! CFE paid.\n\n📄 Receipt #CFE-2026-0604-8821\nAmount: $380 MXN + $25 MXN fee\nDate: Jun 4 2026, 12:33 am\n\nI'll alert you when your next bill arrives 🔔" },
-                { from: "user", text: "Also get me Netflix this month" },
-                { from: "paula", text: "Sure 🎬 Netflix gift cards available:\n\n• $99 MXN — 1 month\n• $199 MXN — 2 months\n\nWhich one?" },
-              ].map(({ from, text }, i) => (
+                { from: "paula", text: "⚠️ Heads up — your CFE bill ($380 MXN) is due in 3 days.\n\nShould I pay it now from your balance? You have $520 MXN available.", label: "Paula proactively alerts you" },
+                { from: "user", text: "Yes, pay it", label: null },
+                { from: "paula", text: "Checking your balance… ✓\nVerifying CFE account… ✓\nProcessing via SIPREL… ✓\n\n✅ Done. CFE paid.\n📄 Receipt #CFE-2026-0604-8821 · $380 MXN + $25 fee", label: "Paula reasons, verifies, executes" },
+                { from: "user", text: "Also grab me Netflix", label: null },
+                { from: "paula", text: "Got it 🎬 You bought Netflix last month for $99 MXN.\n\nSame card again? Or send as a gift this time?", label: "Paula remembers your history" },
+              ].map(({ from, text, label }, i) => (
                 <div
                   key={i}
                   style={{
                     alignSelf: from === "user" ? "flex-end" : "flex-start",
-                    maxWidth: "78%"
+                    maxWidth: "82%",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.4vh"
                   }}
                 >
+                  {label && (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignSelf: "flex-start",
+                        background: "rgba(0,200,117,0.18)",
+                        border: "1px solid rgba(0,200,117,0.5)",
+                        borderRadius: "2vw",
+                        padding: "0.2vh 0.8vw"
+                      }}
+                    >
+                      <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
+                        ✦ {label}
+                      </span>
+                    </div>
+                  )}
                   <div
                     style={{
                       background: from === "user" ? "#DCF8C6" : "#FFFFFF",
