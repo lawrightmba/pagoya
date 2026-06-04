@@ -58,6 +58,11 @@ export default function RepDashboard() {
   // ── Copy button state ─────────────────────────────────────────────────────
   const [copied, setCopied] = useState(false);
 
+  // ── Income calculator state ───────────────────────────────────────────────
+  const [calcVecinos, setCalcVecinos] = useState(10);
+  const [calcRecargas, setCalcRecargas] = useState(3);
+  const [calcFacturas, setCalcFacturas] = useState(1);
+
   // ── Fetch commission data ─────────────────────────────────────────────────
   useEffect(() => {
     if (!repId) {
@@ -246,6 +251,139 @@ export default function RepDashboard() {
                 Retención 7 días
               </div>
             </div>
+
+            {/* ── INCOME CALCULATOR ────────────────────────────────────── */}
+            {(() => {
+              const COMMISSION = 5;
+              const totalPagos = calcVecinos * (calcRecargas + calcFacturas);
+              const monthly = totalPagos * COMMISSION;
+              const annual = monthly * 12;
+
+              const sliderStyle: React.CSSProperties = {
+                width: "100%",
+                accentColor: "#39A935",
+                cursor: "pointer",
+              };
+              const labelRowStyle: React.CSSProperties = {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+              };
+              const sliderLabelStyle: React.CSSProperties = {
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.55rem",
+                color: "#a0b4c4",
+              };
+              const sliderValueStyle: React.CSSProperties = {
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.62rem",
+                fontWeight: 700,
+                color: "#39A935",
+              };
+
+              return (
+                <div style={{ ...cardStyle, marginBottom: 24 }}>
+                  <div style={sectionLabelStyle}>💰 Calculadora de Ingresos</div>
+
+                  {/* Sliders */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 18, marginBottom: 22 }}>
+
+                    {/* Vecinos */}
+                    <div>
+                      <div style={labelRowStyle}>
+                        <span style={sliderLabelStyle}>Vecinos registrados 👥</span>
+                        <span style={sliderValueStyle}>{calcVecinos}</span>
+                      </div>
+                      <input type="range" min={1} max={50} value={calcVecinos}
+                        onChange={e => setCalcVecinos(Number(e.target.value))}
+                        style={sliderStyle} />
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>1</span>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>50</span>
+                      </div>
+                    </div>
+
+                    {/* Recargas */}
+                    <div>
+                      <div style={labelRowStyle}>
+                        <span style={sliderLabelStyle}>Recargas / persona / mes 📱</span>
+                        <span style={sliderValueStyle}>{calcRecargas}×</span>
+                      </div>
+                      <input type="range" min={0} max={8} value={calcRecargas}
+                        onChange={e => setCalcRecargas(Number(e.target.value))}
+                        style={sliderStyle} />
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>0</span>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>8</span>
+                      </div>
+                    </div>
+
+                    {/* Facturas */}
+                    <div>
+                      <div style={labelRowStyle}>
+                        <span style={sliderLabelStyle}>Facturas / persona / mes 🧾</span>
+                        <span style={sliderValueStyle}>{calcFacturas}×</span>
+                      </div>
+                      <input type="range" min={0} max={4} value={calcFacturas}
+                        onChange={e => setCalcFacturas(Number(e.target.value))}
+                        style={sliderStyle} />
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>0</span>
+                        <span style={{ ...sliderLabelStyle, color: "#3a5060" }}>4</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Results */}
+                  <div style={{
+                    background: "rgba(57,169,53,0.07)",
+                    border: "1px solid rgba(57,169,53,0.2)",
+                    borderRadius: 12,
+                    padding: "16px 14px",
+                    marginBottom: 14,
+                  }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                      {[
+                        { label: "Total pagos/mes", value: String(totalPagos), color: "#a0b4c4", big: false },
+                        { label: "Ingreso mensual", value: `$${monthly.toLocaleString("es-MX")} MXN`, color: "#39A935", big: true },
+                        { label: "Ingreso anual", value: `$${annual.toLocaleString("es-MX")} MXN`, color: "#F59E0B", big: false },
+                      ].map(c => (
+                        <div key={c.label} style={{ textAlign: "center" }}>
+                          <div style={{
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: c.big ? "1.05rem" : "0.78rem",
+                            fontWeight: 800,
+                            color: c.color,
+                            marginBottom: 4,
+                            lineHeight: 1.1,
+                          }}>{c.value}</div>
+                          <div style={{
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: "0.44rem",
+                            color: "#5a7080",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                          }}>{c.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Breakdown hint */}
+                  <div style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.5rem",
+                    color: "#3a5060",
+                    lineHeight: 1.7,
+                    borderTop: "1px solid rgba(255,255,255,0.05)",
+                    paddingTop: 12,
+                  }}>
+                    {calcVecinos} vecinos × ({calcRecargas} recargas + {calcFacturas} facturas) = {totalPagos} pagos × $5 MXN = <span style={{ color: "#39A935", fontWeight: 700 }}>${monthly.toLocaleString("es-MX")} MXN/mes</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── RECRUITMENT SECTION ───────────────────────────────────── */}
             <div style={{ ...cardStyle, marginBottom: 24 }}>
