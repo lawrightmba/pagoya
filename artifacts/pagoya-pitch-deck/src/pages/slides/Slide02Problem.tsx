@@ -78,7 +78,7 @@ export default function Slide02Problem() {
                 20–35 minutes
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                per OXXO visit including travel and wait time
+                per convenience store visit including travel and wait time
               </p>
             </div>
           </div>
