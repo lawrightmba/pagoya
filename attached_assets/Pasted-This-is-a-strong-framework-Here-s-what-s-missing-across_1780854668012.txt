@@ -1,0 +1,93 @@
+This is a strong framework. Here’s what’s missing across each bucket, plus two entirely new buckets worth adding.
+
+Gaps Within Your Existing Buckets
+
+🕐 Routine & Stability — Missing:
+
+	•	Biller diversity over time — starts with 1 biller, adds 2–3 more = growing household responsibility (more to lose = lower risk)
+	•	Session time-of-day consistency — night owl vs. morning person matters less than consistency itself
+	•	Top-up source consistency — same OXXO location repeatedly = stable physical anchor (same neighborhood, possibly employed nearby)
+	•	Absence recovery pattern — went dormant 2 weeks, then returned = life event resilience vs. permanent churn
+	•	Holiday behavior — do they maintain payment discipline during Semana Santa, Navidad? High-stress periods reveal true habits
+
+💳 Financial Behavior — Missing:
+
+	•	Overpayment behavior — paying more than minimum on a biller (if applicable) signals surplus mentality
+	•	Failed payment attempts — tried to pay but insufficient balance = demand exists, supply constrained (different risk than someone who never tried)
+	•	Time-to-recover after a failed payment — recovered same day vs. 2 weeks tells you about liquidity access
+	•	Multi-biller sequencing — do they pay high-priority bills (CFE, agua) before discretionary ones? Prioritization = financial judgment
+	•	Voucher/gift card redemption timing — hoarding vs. immediate spend signals impulse control
+	•	Wallet load amount variance — high variance = irregular income (gig worker); low variance = salaried
+
+📱 Digital Engagement — Missing:
+
+	•	Error/help-seeking behavior — users who use help features and then continue show problem-solving resilience
+	•	Language pattern in Paula interactions — formal vs. informal Spanish can signal education level (proxy for income stability)
+	•	Feature abandonment vs. completion rate — started a payment flow and abandoned = friction or insufficient funds?
+	•	Device consistency — same device model over time vs. frequent changes (device stability = economic stability)
+	•	Time to first transaction after signup — fast activation = high intent = committed user
+
+🤝 Social & Community — Missing:
+
+	•	Referral conversion rate — not just who they bring in, but what % actually activate
+	•	Bilateral P2P relationships — do they both send and receive, or only one direction? Bidirectional = embedded in a real trust network
+	•	Network payment behavior mirroring — if their P2P contacts pay on time, they likely do too (peer network as credit signal — classic microfinance logic)
+	•	Rep longevity — a rep still active at month 6 is a fundamentally different risk profile than a month-1 rep
+
+Two New Buckets You’re Missing Entirely
+
+📦 Consumption Pattern Signals
+
+“What they buy and how often reveals income tier and stability”
+
+	•	Recarga denomination progression — $50 MXN recargas growing to $100–$200 over time = income growth
+	•	Gift card category mix — gaming vouchers vs. grocery gift cards vs. streaming = lifestyle and discretionary income
+	•	Biller category diversity — utilities only vs. utilities + internet + streaming = middle-class signal
+	•	Spend velocity post-load — do they spend the wallet down in 24 hours or over 2 weeks? Urgency of spend = liquidity pressure
+	•	Seasonal spend normalization — do they maintain baseline spend even in lean months (Jan after Navidad spending)?
+	•	OXXO vs. digital top-up ratio — shift from OXXO cash-in to card/SPEI top-up over time = formalizing into digital economy (big upward mobility signal)
+
+⏳ Longitudinal Trajectory Signals
+
+“Direction of travel matters more than snapshot position”
+
+This entire bucket is missing from your framework — you have cross-sectional signals but not trend signals over time.
+
+	•	30/60/90-day wallet balance trend — growing, flat, or declining?
+	•	Biller count trajectory — adding billers = household growth; dropping billers = financial stress
+	•	Tier velocity — how fast did they move Bronce → Plata? Fast movers are different risk than slow movers
+	•	Transaction frequency trend — accelerating usage = increasing reliance on PagoYa = deeper integration
+	•	Payment timing trend — were they paying on the 8th, now paying on the 3rd? Getting earlier over time = improving financial health
+	•	Recarga frequency trend — increasing phone top-ups over 6 months = growing disposable income
+	•	Dormancy and reactivation count — one reactivation = life event; three reactivations = unstable pattern
+
+The key insight here: a user at Bronce who is accelerating is a better credit risk than an Oro user who is plateauing. Your credit model needs vectors, not just positions.
+
+The Signal You’re Likely Undervaluing Most
+
+The OXXO → digital top-up migration signal.
+
+When a user shifts from loading their wallet at OXXO with cash to loading via SPEI or card, they have:
+
+	1.	Opened a bank account (or received digital income)
+	2.	Linked it to PagoYa
+	3.	Voluntarily deepened the relationship
+
+That single behavioral transition is one of the strongest credit-positive signals in the entire framework — it marks the moment someone crosses from informal to formal economy participation. Track it explicitly.
+
+How to Architect This
+
+The framework you have maps cleanly to a weighted scorecard with four dimensions:
+
+
+
+|Dimension              |Weight Suggestion|Primary Signals                         |
+|-----------------------|-----------------|----------------------------------------|
+|Longitudinal Trajectory|30%              |Trend signals — direction of travel     |
+|Financial Behavior     |25%              |Payment timing, buffer, sequencing      |
+|Routine & Stability    |25%              |Consistency, geography, biller stability|
+|Social & Community     |20%              |Network quality, P2P bidirectionality   |
+
+Digital Engagement and Consumption Pattern signals feed into the above four rather than standing alone — they’re modifiers, not primary dimensions.
+
+The output isn’t a credit score yet — it’s a PagoYa Trust Index (PTI), which becomes the basis for unlocking Adelanto features, higher transaction limits, and eventually a credit product. Framing it as a trust index rather than a credit score keeps you out of CNBV regulated territory while you’re building the dataset.

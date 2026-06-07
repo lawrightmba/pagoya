@@ -21,9 +21,16 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   const ALLOWED_EVENTS = new Set([
-    "login", "session_end", "bill_paid", "wallet_loaded", "wallet_checked",
-    "game_played", "recarga_initiated", "feature_viewed", "referral_sent",
-    "push_opened", "streak_completed", "loyalty_checked",
+    // Core engagement
+    "login", "session_end", "feature_viewed", "push_opened",
+    // Payment behavior
+    "bill_paid", "failed_payment_attempt", "payment_recovered",
+    // Wallet & load
+    "wallet_loaded", "wallet_checked", "recarga_initiated",
+    // Social & community
+    "referral_sent", "game_played", "streak_completed", "loyalty_checked",
+    // Consumption & trajectory (Phase 1 additions)
+    "biller_added", "feature_abandoned", "oxxo_to_digital_upgrade",
   ]);
 
   if (!ALLOWED_EVENTS.has(event_type)) {

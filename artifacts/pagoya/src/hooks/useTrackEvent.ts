@@ -6,19 +6,34 @@ function getPhone(): string {
   try { return localStorage.getItem("pagoya_telefono") ?? ""; } catch { return ""; }
 }
 
+/**
+ * Phase 1 PTI (PagoYa Trust Index) event taxonomy.
+ * Phase 2 will add: wallet_balance_snapshot | biller_dropped | tier_upgraded | payment_timing_early
+ * Phase 3 will add: p2p_sent | p2p_received | referral_activated | rep_milestone
+ */
 export type EventType =
+  // Core engagement
   | "login"
   | "session_end"
+  | "feature_viewed"
+  | "push_opened"
+  // Payment behavior — financial dimension
   | "bill_paid"
+  | "failed_payment_attempt"
+  | "payment_recovered"
+  // Wallet & load
   | "wallet_loaded"
   | "wallet_checked"
-  | "game_played"
   | "recarga_initiated"
-  | "feature_viewed"
+  // Social & community
   | "referral_sent"
-  | "push_opened"
+  | "game_played"
   | "streak_completed"
-  | "loyalty_checked";
+  | "loyalty_checked"
+  // Trajectory signals (Phase 1 additions)
+  | "biller_added"
+  | "feature_abandoned"
+  | "oxxo_to_digital_upgrade";
 
 /**
  * Silent behavioral event logger for PagoScore credit building.
