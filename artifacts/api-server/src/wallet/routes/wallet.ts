@@ -72,6 +72,9 @@ router.post("/load/oxxo", async (req: Request, res: Response) => {
       })
       .returning();
 
+    // Tag payment_source for OXXO→digital migration signal in PTI scoring
+    db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'oxxo' WHERE id = ${tx.id}`).catch(() => {});
+
     res.status(201).json({
       voucherUrl: oxxo.voucherUrl,
       barcodeReference: oxxo.reference,
@@ -130,6 +133,9 @@ router.post("/load/card", async (req: Request, res: Response) => {
         description,
       })
       .returning();
+
+    // Tag payment_source for OXXO→digital migration signal in PTI scoring
+    db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'card' WHERE id = ${tx.id}`).catch(() => {});
 
     if (cardOrder.status === "paid") {
       await creditWallet(tx.walletId, amt, tx.id);

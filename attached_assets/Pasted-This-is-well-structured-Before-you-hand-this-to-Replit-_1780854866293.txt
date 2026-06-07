@@ -1,0 +1,95 @@
+This is well-structured. Before you hand this to Replit, here are the gaps and refinements that will save you a rebuild later.
+
+Phase 1 — Implementation Notes & Gaps
+
+Schema Changes Needed
+
+You’ll need at minimum these new event types in your transactions/events table:
+
+failed_payment_attempt    (biller_id, amount, timestamp, reason)
+payment_recovered         (linked to failed_payment_attempt_id, hours_to_recover)
+wallet_load               (source: 'oxxo' | 'spei' | 'card' | 'conekta', amount)
+feature_interaction       (feature_name, completed: boolean)
+
+
+Gap you’re missing: You don’t have a payment_source field tracked consistently today. Before you can compute the OXXO→digital migration signal, every wallet load needs source tagging. Add this now before more transactions accumulate untagged — retroactive tagging is nearly impossible.
+
+PTI Scoring Architecture Decision
+
+You need to decide before writing the scoring function: is the PTI a static snapshot (computed nightly) or a rolling window (recomputed on every transaction)?
+
+Recommendation: nightly batch for Phase 1, event-triggered recalculation for Phase 2+. Nightly is simpler, auditable, and sufficient until you have a credit product that needs real-time gating.
+
+The Weights Problem
+
+Your current PagoScore likely has ad-hoc weights. For PTI to be defensible to Accion or YC, you want weights that are either:
+
+	•	Empirically derived (from repayment data — you don’t have this yet), or
+	•	Explicitly labeled as heuristic with a documented rationale
+
+For now, label them heuristic and version the weights (pti_model_version: 'v1.0-heuristic'). This lets you swap weights when you have real repayment data without breaking the score history.
+
+Phase 2 — What You’re Missing
+
+The Baseline Problem
+
+30/60/90-day trends require a baseline snapshot stored at day zero for each user. If you don’t start capturing daily/weekly wallet balance snapshots now, you won’t have the trend data in 30 days — you’ll still have zero trend data.
+
+Action: Add a user_financial_snapshots table today, populated by a nightly cron:
+
+user_id, snapshot_date, wallet_balance, biller_count, 
+tx_count_30d, avg_days_before_due, pti_score, tier
+
+
+This single table enables almost all of Phase 2 without additional instrumentation.
+
+Tier Velocity — Edge Case
+
+Bronce→Plata speed is only meaningful if tier thresholds are fixed. If you adjust tier thresholds (which you likely will as you tune the loyalty system), earlier velocity scores become incomparable to later ones. Store the raw points-per-day rate, not just the tier transition date.
+
+Phase 3 — The Hard Dependency Nobody Names
+
+All of Phase 3 assumes P2P is live. Without outbound transfers, you have no social graph, no bilateral relationship data, no network mirroring signal. P2P isn’t just a product feature — it’s the data infrastructure prerequisite for your most sophisticated credit signals.
+
+This makes the STP contract the single highest-leverage item on your entire roadmap, not just for product but for the credit model.
+
+Paula Language Formality — Flag This Carefully
+
+This signal has real predictive value but also fair lending risk. Using language formality as a credit proxy could constitute discrimination by education level or socioeconomic class in a regulated context. Use it as a soft engagement signal (formal users are more digitally integrated) rather than a credit input. Document this distinction explicitly before Accion diligence — they will ask.
+
+The Missing Phase: Phase 0
+
+Before Phase 1 ships, you need a data hygiene sprint that nobody usually thinks of until it’s too late:
+
+	•	Backfill source tagging on all existing wallet loads (OXXO vs. digital) — even if you have to estimate from Conekta vs. SIPREL API logs
+	•	Audit for duplicate user detection — same phone number, multiple accounts skews all longitudinal signals
+	•	Define “active user” formally in the schema (a user_activity_status computed field) — dormancy detection requires a clear definition
+	•	Timestamp timezone normalization — all events should store UTC with a separate user_local_timezone field, or your “pays on the 5th” signal will be off by 6 hours for CDMX users vs. PV users
+
+One Architectural Recommendation
+
+Consider a separate pti_signals table that stores each computed signal independently, not just the final score:
+
+user_id, signal_name, signal_value, computed_at, model_version
+
+
+e.g.:
+
+user_123 | oxxo_to_digital_migration | 0.82 | 2026-06-07 | v1.0
+user_123 | biller_diversity_score    | 0.45 | 2026-06-07 | v1.0
+user_123 | load_variance_index       | 0.71 | 2026-06-07 | v1.0
+
+
+Why this matters: When Accion or a future credit partner asks “how did you arrive at this user’s score,” you can show your work signal by signal. It also lets you A/B test weight changes without losing signal history. And when you eventually apply to be a SOFOM or partner with a lender, this audit trail is exactly what regulators want to see.
+
+Summary of Actions Before Replit Prompt
+
+	1.	Add payment_source field to wallet load events today — don’t lose another transaction untagged
+	2.	Create user_financial_snapshots nightly cron today — Phase 2 clock starts now
+	3.	Decide PTI computation frequency (recommend: nightly batch)
+	4.	Version your weights from day one (v1.0-heuristic)
+	5.	Build pti_signals table for individual signal storage
+	6.	Document Paula language signal as engagement-only, not credit input
+	7.	Treat STP/P2P contract as Phase 3 infrastructure prerequisite, not just a product feature
+
+The framework is solid. The risk is implementation drift — building the score before the data hygiene foundation is in place.

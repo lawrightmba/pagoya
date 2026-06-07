@@ -12,3 +12,4 @@
 - [Pre-demo checklist](pre-demo-checklist.md) — verify signup_bonus_config is_active=true before every demo and go-live
 - [STP CLABE + CEP integration](stp-clabe-cep.md) — per-user CLABE in users.stp_clabe; CLABE assigned on registration (fire-and-forget); webhook matches by CLABE first then conceptoPago phone; CEP URL stored in wallet_transactions.cep_url
 - [Demo video architecture](demo-video-architecture.md) — 13-scene bilingual video; LangProvider in VideoTemplate; lang prop from VideoWithControls; Scene10 has correct $25 MXN / ~40% / 2.75% model
+- [PTI architecture](pti-architecture.md) — PagoYa Trust Index; nightly batch cron 2AM MX; pti_signals + user_financial_snapshots tables; model version v1.0-heuristic; payment_source tagged on all loads

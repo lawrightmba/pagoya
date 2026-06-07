@@ -14,7 +14,7 @@
 
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -214,6 +214,9 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
       .returning();
 
     await creditWallet(wallet.id, amountMXN, tx.id);
+
+    // Tag payment_source for OXXO→digital migration signal in PTI scoring
+    db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'spei' WHERE id = ${tx.id}`).catch(() => {});
 
     // WhatsApp confirmation — include CEP link for official receipt
     const cepLine = cepUrl

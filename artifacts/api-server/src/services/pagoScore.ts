@@ -1,10 +1,16 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
+export const PTI_MODEL_VERSION = "v1.0-heuristic";
+// Bump this version whenever weights or signal definitions change.
+// Keeps score history comparable — old rows retain their version tag.
+// Empirically-derived weights replace this once repayment data exists.
+
 export interface PagoScoreResult {
   telefono: string;
   pagoScore: number;
-  // PTI dimensions (PagoYa Trust Index — internal name)
+  modelVersion: string;
+  // PTI dimensions (PagoYa Trust Index — internal name, user-facing = PagoScore)
   trajectoryScore: number;   // 30pts — direction of travel
   financialScore: number;    // 25pts — payment discipline & behavior
   routineScore: number;      // 25pts — consistency & stability
@@ -243,7 +249,7 @@ export async function computePagoScore(telefono: string): Promise<PagoScoreResul
 
     const pagoScore = trajectoryScore + financialScore + routineScore + socialScore;
 
-    // ── Persist ──────────────────────────────────────────────────────────────
+    // ── Persist: credit_profiles ──────────────────────────────────────────────
     const totalEvents = eventsRecent + eventsPrior;
     await db.execute(sql`
       INSERT INTO credit_profiles
@@ -271,9 +277,42 @@ export async function computePagoScore(telefono: string): Promise<PagoScoreResul
         updated_at        = NOW()
     `);
 
-    logger.info({ telefono, pagoScore, trajectoryScore, financialScore, routineScore, socialScore }, "pti: computed");
+    // ── Persist: pti_signals — per-signal audit trail ─────────────────────────
+    // Each signal stored independently so Accion / regulators can inspect
+    // how any individual score was derived. Also enables A/B weight testing.
+    const signals: Array<{ name: string; value: number; meta: Record<string, unknown> }> = [
+      // Routine & Stability (25pts)
+      { name: "routine_login_days",       value: Math.min(uniqueLoginDays / 30, 1),          meta: { uniqueLoginDays } },
+      { name: "routine_login_consistency", value: loginConsistency,                           meta: { hourStddev } },
+      { name: "routine_biller_diversity",  value: Math.min((billerCount - 1) / 4, 1),         meta: { billerCount } },
+      { name: "routine_topup_stability",   value: topupSourceDominance,                       meta: {} },
+      // Financial Behavior (25pts)
+      { name: "financial_on_time_rate",    value: onTimeRate,                                 meta: { billsPaid, onTimeCount } },
+      { name: "financial_income_stability",value: incomeStabilitySignal,                      meta: { cv: Math.round(cv * 100) / 100, avgLoad, loadCount } },
+      { name: "financial_recovery_rate",   value: failures > 0 ? Math.min(recoveries / failures, 1) : 1, meta: { failures, recoveries } },
+      { name: "financial_activation_speed",value: activationBonus / 3,                        meta: { hoursToFirst } },
+      // Longitudinal Trajectory (30pts)
+      { name: "trajectory_digital_ratio",  value: digitalRatio,                               meta: { oxxoLoads, digitalLoads } },
+      { name: "trajectory_oxxo_migration", value: recentDigitalBonus,                         meta: { digitalRecent, recentDigitalBonus } },
+      { name: "trajectory_activity_growth",value: Math.min(activityGrowth / 3, 1),            meta: { eventsRecent, eventsPrior } },
+      { name: "trajectory_load_frequency", value: Math.min(loadCount / 8, 1),                 meta: { loadCount } },
+      // Social & Community (20pts)
+      { name: "social_game_engagement",    value: Math.min(gamePlays / 15, 1),                meta: { gamePlays } },
+      { name: "social_referrals",          value: Math.min(referrals / 3, 1),                 meta: { referrals } },
+      { name: "social_streaks",            value: Math.min(streaks / 5, 1),                   meta: { streaks } },
+    ];
+
+    // Batch insert — all signals at once, one row per signal per computation
+    for (const sig of signals) {
+      await db.execute(sql`
+        INSERT INTO pti_signals (telefono, signal_name, signal_value, signal_meta, model_version, computed_at)
+        VALUES (${telefono}, ${sig.name}, ${sig.value}, ${JSON.stringify(sig.meta)}::jsonb, ${PTI_MODEL_VERSION}, NOW())
+      `).catch(() => {}); // non-blocking — audit trail failure must never break score
+    }
+
+    logger.info({ telefono, pagoScore, trajectoryScore, financialScore, routineScore, socialScore, modelVersion: PTI_MODEL_VERSION }, "pti: computed");
     return {
-      telefono, pagoScore,
+      telefono, pagoScore, modelVersion: PTI_MODEL_VERSION,
       trajectoryScore, financialScore, routineScore, socialScore,
       breakdown: {
         billsPaid, uniqueLoginDays, billerCount, digitalRatio: Math.round(digitalRatio * 100),
