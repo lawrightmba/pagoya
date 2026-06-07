@@ -1,5 +1,6 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import Bienvenida from "@/pages/Bienvenida";
+import Juegos from "@/pages/Juegos";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -122,6 +123,7 @@ function Router() {
       <Route path="/deck" component={Deck} />
       <Route path="/video" component={VideoPage} />
       <Route path="/lloyd" component={FounderBio} />
+      <Route path="/juegos" component={Juegos} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {

@@ -36,6 +36,8 @@ import kycRouter from "./kyc.js";
 import pushRouter from "./push.js";
 import pendingPaymentsRouter from "./pendingPayments.js";
 import videoConvertRouter from "./videoConvert.js";
+import eventsRouter from "./events.js";
+import gamesRouter from "./games.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -63,6 +65,8 @@ router.use("/kyc", kycRouter);
 router.use("/push", pushRouter);
 router.use("/bills/pending", pendingPaymentsRouter);
 router.use("/video", videoConvertRouter);
+router.use("/events", eventsRouter);
+router.use("/games", gamesRouter);
 
 console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
 

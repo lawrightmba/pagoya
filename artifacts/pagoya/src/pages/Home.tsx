@@ -7,6 +7,7 @@ import AutofillInput from "@/components/AutofillInput";
 import BillerTicker from "@/components/BillerTicker";
 import PaulaHint from "@/components/PaulaHint";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useTrackEvent, trackEvent } from "@/hooks/useTrackEvent";
 
 // ─── Language helpers ──────────────────────────────────────────────────────────
 
@@ -162,6 +163,19 @@ export default function Home() {
       .then((d) => { if (d && typeof d.points_balance === "number") setPointsBalance(d.points_balance); })
       .catch(() => {});
   }, []);
+
+  // ── Silent credit-score event tracking ───────────────────────────────────
+  const track = useTrackEvent();
+  useEffect(() => {
+    const tel = (() => { try { return localStorage.getItem("pagoya_telefono") ?? ""; } catch { return ""; } })();
+    if (!tel) return;
+    const sessionStart = Date.now();
+    track("login", { hour: new Date().getHours(), day_of_week: new Date().getDay() });
+    return () => {
+      const seconds = Math.round((Date.now() - sessionStart) / 1000);
+      trackEvent("session_end", { session_seconds: seconds });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const es = lang === "es";
 
@@ -549,6 +563,41 @@ export default function Home() {
               {es ? "Ver todas las gift cards →" : "See all gift cards →"}
             </button>
           </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
+            E-0. RASPA Y GANA TEASER
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "20px 24px 0", background: "linear-gradient(180deg, #008A52 0%, #FFFFFF 100%)" }}>
+          <button
+            onClick={() => navigate("/juegos")}
+            style={{
+              width: "100%", border: "none", cursor: "pointer", padding: 0,
+              background: "linear-gradient(135deg, #004F2D 0%, #007A4A 60%, #00C875 100%)",
+              borderRadius: "18px", overflow: "hidden",
+              boxShadow: "0 8px 28px rgba(0,79,45,0.35)",
+              display: "flex", alignItems: "center", gap: "16px",
+              padding: "18px 20px",
+              position: "relative",
+            }}
+          >
+            <div style={{ position: "absolute", top: "-12px", right: "-12px", width: "80px", height: "80px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
+            <span style={{ fontSize: "40px", flexShrink: 0 }}>🎟️</span>
+            <div style={{ textAlign: "left", flex: 1 }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>
+                Gratis · cada día
+              </p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "22px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "4px" }}>
+                Raspa y Gana
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>
+                Gana puntos y saldo MXN en segundos →
+              </p>
+            </div>
+            <div style={{ background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0 }}>
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>JUGAR</span>
+            </div>
+          </button>
         </section>
 
         {/* ══════════════════════════════════════════════════════

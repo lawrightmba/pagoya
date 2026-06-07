@@ -1,17 +1,17 @@
 import { useLocation } from "wouter";
-import { Home, Zap, Send, CreditCard, Clock } from "lucide-react";
+import { Home, Zap, Send, CreditCard, Gamepad2 } from "lucide-react";
 
 const TABS = [
-  { path: "/",                  icon: Home,       label: "Inicio"    },
-  { path: "/pagar",             icon: Zap,        label: "Pagar"     },
-  { path: "/enviar",            icon: Send,       label: "Enviar"    },
-  { path: "/cargar",            icon: CreditCard, label: "Cargar"    },
-  { path: "/wallet/historial",  icon: Clock,      label: "Historial" },
+  { path: "/",       icon: Home,      label: "Inicio"   },
+  { path: "/pagar",  icon: Zap,       label: "Pagar"    },
+  { path: "/juegos", icon: Gamepad2,  label: "Juegos"   },
+  { path: "/enviar", icon: Send,      label: "Enviar"   },
+  { path: "/cargar", icon: CreditCard, label: "Cargar"  },
 ];
 
 const SHOW_ON = new Set([
   "/", "/pagar", "/servicios", "/enviar", "/cargar",
-  "/wallet/historial", "/puntos", "/verificar", "/revisar",
+  "/wallet/historial", "/puntos", "/verificar", "/revisar", "/juegos",
 ]);
 
 export default function BottomNav() {
