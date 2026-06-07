@@ -1,0 +1,77 @@
+Good question — let me make sure I have the right context before answering.
+
+Got it. From the prior session, here’s where things stood on Cialdini’s six principles mapped to PagoYa — with what was built vs. what was deferred.
+
+Where Each Principle Stands Now + New PTI-Era Integrations
+
+1. 🎁 Reciprocity
+
+Built: Signup bonus (₱50 MXN), Raspa y Gana game rewards
+PTI adds:
+
+	•	PTI milestone rewards — when a user crosses a PTI threshold, Paula proactively sends “Tu confianza creció — aquí tienes ₱20 de regalo.” Unexpected reward for invisible progress is the purest reciprocity trigger
+	•	Early bill reminder as gift — Paula messages 5 days before CFE due date unprompted, framed as a favor not a push notification. No ask attached
+
+2. 📣 Social Proof
+
+Built: Live transaction counter (deferred until 50 users/colonia)
+PTI adds:
+
+	•	PTI tier distribution by colonia — “23 vecinos de Versalles ya son nivel Plata” is stronger than a generic user count because it’s hyper-local and aspirational
+	•	Colonia PTI leaderboard — anonymized ranking. “Tu colonia está en top 3 de Puerto Vallarta por puntaje de confianza.” Community pride as social proof
+	•	Rep PTI badge — William and future reps display their own PTI publicly to recruits, signaling that the system rewards real behavior
+
+3. 🏛️ Authority
+
+Built: Paula as trusted AI advisor persona
+PTI adds:
+
+	•	PTI score as credential — “Tu PTI es 74/100 — estás en el top 30% de usuarios PagoYa.” Score itself confers authority status on the user, not just the platform
+	•	“Verified by PagoYa” badge concept — Oro-tier + high PTI users get a shareable digital badge. Turns your trust index into a social credential
+	•	Paula citing the PTI in her language — “Basado en tu historial de pagos, eres un usuario de alta confianza” shifts Paula from assistant to evaluator, which increases perceived authority of the system
+
+4. ❤️ Liking
+
+Built: Paula’s persona, bilingual colonia-aware copy
+PTI adds:
+
+	•	PTI-personalized Paula tone — Bronce users get more warm/encouraging language; Oro users get peer-level language (“como usuario Oro, ya sabes cómo funciona esto”). Liking increases when the app feels like it knows you
+	•	Milestone celebration messages — Paula celebrating a user’s 10th bill payment, 6-month anniversary, first SPEI load. These feel human, not transactional
+	•	Colonia identity integration — “Orgullo de 5 de Diciembre” framing in comms. People like things that reflect their identity back at them
+
+5. ⏰ Scarcity
+
+Built: Paula bono expiry timer (Day 3 + Day 6 nudges drafted)
+PTI adds:
+
+	•	PTI-gated feature unlocks — “Alcanza PTI 60 para desbloquear pagos en cuotas.” The feature exists but is locked — creates urgency without fabricating it
+	•	Tier downgrade warnings — “Tu nivel Plata expira en 7 días si no realizas una transacción.” Real scarcity because tier has real consequences
+	•	Raspa y Gana daily limit — one scratch per day is already scarcity by design; add “Tienes 4 horas para usar tu raspa de hoy” to drive same-day opens
+
+6. 🤝 Commitment & Consistency
+
+Built: “Paga tus primeros 3 servicios SIN COMISIÓN” CTA reframe — already above the fold
+PTI adds:
+
+	•	PTI as identity anchor — once a user sees themselves as a “70 PTI usuario,” they behave consistently with that identity. The score creates commitment to maintaining it
+	•	Streak mechanics — “Has pagado puntualmente 4 meses seguidos. No rompas tu racha.” Consistency principle at its purest
+	•	Progressive feature onboarding — each new feature unlocked (recargas → gift cards → SPEI → savings) is a small commitment that makes the next one more likely. The PTI tier system already does this structurally — you just need Paula to narrate the journey explicitly
+
+The Integration That Ties All Six Together
+
+The PTI score is the missing connective tissue across all six principles:
+
+
+
+|Principle   |PTI Role                                   |
+|------------|-------------------------------------------|
+|Reciprocity |Unexpected rewards at PTI milestones       |
+|Social Proof|Colonia PTI distributions and leaderboards |
+|Authority   |Score as credential, Paula citing it       |
+|Liking      |Personalized tone by PTI tier              |
+|Scarcity    |PTI-gated features and tier expiry warnings|
+|Commitment  |Score as identity, streak protection       |
+
+Before PTI, these six principles were applied tactically and independently. Now the PTI score is the single behavioral variable that can power all six simultaneously — and it gets richer every night the cron runs.
+
+The Raspa y Gana game fits neatly into Reciprocity (unexpected reward) and Scarcity (daily limit) without any additional work. That was a good instinct.

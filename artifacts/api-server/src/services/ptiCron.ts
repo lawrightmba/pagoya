@@ -15,6 +15,135 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
+
+// ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
+// Unexpected rewards at threshold crossings — never announced in advance.
+// Points/cash credited silently so the WhatsApp message feels like a genuine gift.
+const PTI_MILESTONES = [
+  {
+    threshold: 30,
+    label: "Bronce Establecido",
+    msg: (tel: string) =>
+      `🌱 *Tu confianza PagoYa creció*\n\n` +
+      `Alcanzaste *30 puntos de confianza* — estás construyendo un historial sólido.\n\n` +
+      `Te regalamos *15 puntos* como reconocimiento. ¡Sigue así!\n\n` +
+      `_PagoYa — construyendo contigo._`,
+    points: 15,
+    mxn: 0,
+  },
+  {
+    threshold: 50,
+    label: "Nivel Plata",
+    msg: (tel: string) =>
+      `⭐ *¡Increíble progreso!*\n\n` +
+      `Tu puntaje de confianza llegó a *50* — eres usuario Plata.\n\n` +
+      `Te enviamos *$10 MXN* directo a tu billetera como reconocimiento.\n\n` +
+      `_Este saldo ya está disponible en tu cuenta._`,
+    points: 0,
+    mxn: 10,
+  },
+  {
+    threshold: 70,
+    label: "Top 25%",
+    msg: (tel: string) =>
+      `🏅 *Eres de los mejores usuarios PagoYa*\n\n` +
+      `Con *70 puntos de confianza* estás en el top 25% de nuestra comunidad.\n\n` +
+      `Te regalamos *25 puntos* por tu disciplina de pago.\n\n` +
+      `Próximamente desbloquearás acceso a adelantos y mejores límites.`,
+    points: 25,
+    mxn: 0,
+  },
+  {
+    threshold: 85,
+    label: "Élite",
+    msg: (tel: string) =>
+      `🏆 *Usuario élite PagoYa*\n\n` +
+      `Tu puntaje de *85 puntos* te pone entre el top 5% de nuestra comunidad.\n\n` +
+      `Te enviamos *$20 MXN* de regalo y te ponemos en lista de acceso anticipado a crédito PagoYa.\n\n` +
+      `_Gracias por confiar en nosotros._`,
+    points: 0,
+    mxn: 20,
+  },
+];
+
+// ── Milestone detector — runs after each nightly PTI computation ──────────────
+async function checkPtiMilestones(
+  telefono: string,
+  prevScore: number,
+  newScore: number,
+): Promise<void> {
+  if (newScore <= prevScore) return; // only reward upward movement
+  const { db } = await import("@workspace/db");
+
+  for (const m of PTI_MILESTONES) {
+    // Crossed this threshold for the first time (was below, now at or above)
+    if (prevScore < m.threshold && newScore >= m.threshold) {
+      try {
+        // Credit loyalty points
+        if (m.points > 0) {
+          await db.execute(sql`
+            INSERT INTO loyalty_transactions (telefono, points, type, description, created_at)
+            VALUES (${telefono}, ${m.points}, 'earn', ${`Milestone PTI: ${m.label}`}, NOW())
+          `).catch(() => {});
+        }
+        // Credit wallet cash
+        if (m.mxn > 0) {
+          await db.execute(sql`
+            INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
+            VALUES (${telefono}, 'PTI_REWARD', ${m.mxn}, 'confirmed', ${`Premio PTI: ${m.label}`}, NOW())
+          `).catch(() => {});
+        }
+        // Send WhatsApp — unexpected = strongest reciprocity trigger
+        await sendWhatsApp(telefono, m.msg(telefono));
+        logger.info({ telefono, milestone: m.label, prevScore, newScore }, "pti-milestone: reward sent");
+      } catch (err) {
+        logger.error({ err, telefono, milestone: m.label }, "pti-milestone: reward failed");
+      }
+    }
+  }
+}
+
+// ── Scratch card reminder — 5 PM Mexico City (23:00 UTC) ─────────────────────
+// Cialdini: Scarcity — "tienes hasta medianoche" creates urgency without fabrication
+export async function sendScratchCardReminders(): Promise<void> {
+  logger.info("pti-cron: sendScratchCardReminders running");
+  try {
+    const { db } = await import("@workspace/db");
+
+    // Users active in last 7 days who have NOT played today's scratch card
+    const targets = await db.execute(sql`
+      SELECT DISTINCT ue.telefono
+      FROM user_events ue
+      WHERE ue.created_at > NOW() - INTERVAL '7 days'
+        AND ue.telefono IS NOT NULL
+        AND ue.telefono != ''
+        AND NOT EXISTS (
+          SELECT 1 FROM scratch_card_plays scp
+          WHERE scp.telefono = ue.telefono
+            AND scp.play_date = CURRENT_DATE
+        )
+      LIMIT 500
+    `);
+
+    const phones = targets.rows.map(r => (r as Record<string, unknown>).telefono as string);
+    logger.info({ count: phones.length }, "pti-cron: scratch reminder targets");
+
+    for (const telefono of phones) {
+      await sendWhatsApp(
+        telefono,
+        `🎟️ *Tu tarjeta Raspa y Gana de hoy te está esperando*\n\n` +
+        `Tienes hasta *medianoche* para raspar — podrías ganar puntos o saldo MXN.\n\n` +
+        `Juega aquí → pagoya.mx/juegos`,
+      ).catch(() => {});
+      await new Promise(r => setTimeout(r, 200)); // rate-limit WhatsApp sends
+    }
+
+    logger.info({ count: phones.length }, "pti-cron: scratch reminders sent");
+  } catch (err) {
+    logger.error({ err }, "pti-cron: sendScratchCardReminders failed");
+  }
+}
 
 // ── JOB 1: Financial snapshot — one row per user per day ──────────────────────
 // This is the single most important Phase 0 action:
@@ -141,8 +270,20 @@ export async function runNightlyPtiBatch(): Promise<void> {
 
     for (const telefono of phones) {
       try {
-        await computePagoScore(telefono);
+        // Capture prev score BEFORE computing so we can detect milestone crossings
+        const prevRow = await db.execute(sql`
+          SELECT pago_score FROM credit_profiles WHERE telefono = ${telefono} LIMIT 1
+        `);
+        const prevScore = Number((prevRow.rows[0] as Record<string, unknown> | undefined)?.pago_score ?? 0);
+
+        const result = await computePagoScore(telefono);
         await takeFinancialSnapshot(telefono);
+
+        // Check for milestone crossings — sends WhatsApp + credits rewards (non-blocking)
+        if (result && result.pagoScore !== prevScore) {
+          checkPtiMilestones(telefono, prevScore, result.pagoScore).catch(() => {});
+        }
+
         computed++;
       } catch (err) {
         logger.error({ err, telefono }, "pti-cron: user batch failed");
@@ -186,5 +327,7 @@ function scheduleDailyAt(utcHour: number, fn: () => Promise<void>, label: string
 export function startPtiCron(): void {
   // 2 AM Mexico City (UTC-6 = 08:00 UTC) — after overnight transactions settle
   scheduleDailyAt(8, runNightlyPtiBatch, "nightlyPtiBatch");
-  logger.info("pti-cron: scheduled (nightly 2 AM MX / 08:00 UTC)");
+  // 5 PM Mexico City (UTC-6 = 23:00 UTC) — scratch card scarcity reminder
+  scheduleDailyAt(23, sendScratchCardReminders, "scratchCardReminders");
+  logger.info("pti-cron: scheduled (PTI 2 AM MX / scratch reminder 5 PM MX)");
 }

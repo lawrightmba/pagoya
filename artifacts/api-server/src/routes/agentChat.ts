@@ -27,9 +27,29 @@ export interface PendingPaymentStage {
 }
 
 // ─── System prompt ─────────────────────────────────────────────────────────────
-function buildSystemPrompt(profileName?: string | null): string {
+function buildSystemPrompt(
+  profileName?: string | null,
+  ptiTier?: string | null,
+  ptiScore?: number | null,
+): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
-  return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario.${greeting} Eres conversacional, empática y directa. Hablas en español mexicano natural.
+
+  // PTI-personalized tone — Cialdini: Liking + Authority
+  // Bronce: warm, encouraging (building confidence)
+  // Plata: peer-level warmth (acknowledging progress)
+  // Oro: peer-level, assumes competence (respects autonomy)
+  let ptiContext = "";
+  if (ptiTier && ptiScore != null) {
+    if (ptiTier === "Oro" || ptiScore >= 70) {
+      ptiContext = ` Este usuario es de nivel *Oro* con ${ptiScore} puntos de confianza PagoYa — está en el top 25% de usuarios. Trátalo como par: asume que ya conoce el sistema, sé directo y profesional. Puedes mencionar su buen historial cuando sea relevante: "Como usuario Oro, ya sabes cómo funciona esto."`;
+    } else if (ptiTier === "Plata" || ptiScore >= 50) {
+      ptiContext = ` Este usuario es de nivel *Plata* con ${ptiScore} puntos de confianza — lleva buen camino. Usa un tono cálido y de reconocimiento. Puedes reforzar su progreso sutilmente: "Con tu historial, esto es pan comido."`;
+    } else {
+      ptiContext = ` Este usuario está en nivel *Bronce* con ${ptiScore} puntos de confianza — está comenzando su camino. Usa un tono especialmente cálido, paciente y alentador. Celebra cada acción que tome.`;
+    }
+  }
+
+  return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario.${greeting}${ptiContext} Eres conversacional, empática y directa. Hablas en español mexicano natural.
 
 MISIÓN DE PAGOYA: Permitir que cualquier persona con WhatsApp pague sus servicios (luz, agua, gas, internet, celular) sin necesitar una cuenta bancaria ni descargar una app. Solo WhatsApp + saldo en la billetera digital.
 
@@ -372,6 +392,22 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
+    // Fetch PTI for tone personalization — non-blocking, degrades gracefully
+    let ptiTier: string | null = null;
+    let ptiScore: number | null = null;
+    if (telefono) {
+      try {
+        const ptiRow = await db.execute(
+          sql`SELECT tier, pago_score FROM credit_profiles WHERE telefono = ${telefono} LIMIT 1`
+        );
+        if (ptiRow.rows.length > 0) {
+          const r = ptiRow.rows[0] as Record<string, unknown>;
+          ptiTier = (r.tier as string) ?? null;
+          ptiScore = r.pago_score != null ? Number(r.pago_score) : null;
+        }
+      } catch { /* PTI unavailable — Paula falls back to neutral tone */ }
+    }
+
     const messages: MessageParam[] = [
       ...history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: message.trim() },
@@ -388,7 +424,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore),
         tools: TOOLS,
         messages,
       });

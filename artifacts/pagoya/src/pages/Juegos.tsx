@@ -254,9 +254,30 @@ function ScratchCard({ zones, scratched, onScratch, allScratched, showResult, is
   );
 }
 
+function useCountdownToMidnight() {
+  const [countdown, setCountdown] = useState("");
+  useEffect(() => {
+    function calc() {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setCountdown(`${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    }
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return countdown;
+}
+
 function AlreadyPlayed({ reward, playedAt }: { reward?: Prize; playedAt?: string }) {
   const time = playedAt ? new Date(playedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "";
   const won = reward && reward.type !== "nothing" && reward.value > 0;
+  const countdown = useCountdownToMidnight();
   return (
     <div style={{ textAlign: "center" }}>
       <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "20px", padding: "40px 24px", marginBottom: "20px" }}>
@@ -270,16 +291,24 @@ function AlreadyPlayed({ reward, playedAt }: { reward?: Prize; playedAt?: string
           </p>
         )}
         {won && reward && (
-          <div style={{ background: "rgba(0,200,117,0.12)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "10px", padding: "12px 20px", display: "inline-block" }}>
+          <div style={{ background: "rgba(0,200,117,0.12)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "10px", padding: "12px 20px", display: "inline-block", marginBottom: "0" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "14px", fontWeight: 700, color: "#00C875" }}>
               {EMOJI_MAP[reward.type]} Ganaste {reward.type === "cashback" ? `$${reward.value} MXN` : `${reward.value} puntos`}
             </p>
           </div>
         )}
       </div>
-      <div style={{ background: "rgba(0,200,117,0.07)", borderRadius: "12px", padding: "14px 20px" }}>
-        <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.55)" }}>
-          🕛 Nueva tarjeta disponible a medianoche
+
+      {/* Scarcity countdown — "tienes X horas para la siguiente raspa" */}
+      <div style={{ background: "rgba(0,200,117,0.07)", border: "1px solid rgba(0,200,117,0.14)", borderRadius: "14px", padding: "18px 20px" }}>
+        <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
+          Tu próxima tarjeta en
+        </p>
+        <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.04em", lineHeight: 1 }}>
+          {countdown || "—"}
+        </p>
+        <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "4px" }}>
+          hrs · min · seg
         </p>
       </div>
     </div>
