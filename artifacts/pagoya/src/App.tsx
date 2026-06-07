@@ -51,6 +51,7 @@ import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import Deck from "@/pages/Deck";
 import VideoPage from "@/pages/VideoPage";
 import FounderBio from "@/pages/FounderBio";
+import Confianza from "@/pages/Confianza";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -124,6 +125,8 @@ function Router() {
       <Route path="/video" component={VideoPage} />
       <Route path="/lloyd" component={FounderBio} />
       <Route path="/juegos" component={Juegos} />
+      <Route path="/confianza" component={Confianza} />
+      <Route path="/pti" component={Confianza} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {
@@ -142,7 +145,8 @@ function AppShell() {
   const [location] = useLocation();
   const isBienvenida = location === "/bienvenida";
   const isVincularBanco = location === "/vincular-banco";
-  const hideShell = isBienvenida || isVincularBanco;
+  const isConfianza = location === "/confianza" || location === "/pti";
+  const hideShell = isBienvenida || isVincularBanco || isConfianza;
   return (
     <>
       <Router />

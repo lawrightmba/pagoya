@@ -242,6 +242,44 @@ export async function takeFinancialSnapshot(telefono: string): Promise<void> {
   }
 }
 
+// ── JOB 3: Consecutive payment month streak ───────────────────────────────────
+// Logic:
+//   - If user paid at least one bill this calendar month AND streak was updated
+//     last month → increment counter
+//   - If user paid this month but no prior streak → set to 1
+//   - Otherwise (gap or no payment this month) → reset to 0
+//   - Always write last_payment_streak_updated = today
+export async function updatePaymentStreak(telefono: string): Promise<void> {
+  try {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      UPDATE users SET
+        consecutive_payment_months = CASE
+          WHEN EXISTS (
+            SELECT 1 FROM bill_payments
+            WHERE telefono = ${telefono}
+              AND created_at >= date_trunc('month', CURRENT_DATE)
+              AND status IN ('completed', 'success')
+          ) AND (
+            last_payment_streak_updated >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
+            AND last_payment_streak_updated <  date_trunc('month', CURRENT_DATE)
+          ) THEN consecutive_payment_months + 1
+          WHEN EXISTS (
+            SELECT 1 FROM bill_payments
+            WHERE telefono = ${telefono}
+              AND created_at >= date_trunc('month', CURRENT_DATE)
+              AND status IN ('completed', 'success')
+          ) AND last_payment_streak_updated IS NULL THEN 1
+          ELSE 0
+        END,
+        last_payment_streak_updated = CURRENT_DATE
+      WHERE telefono = ${telefono}
+    `);
+  } catch (err) {
+    logger.error({ err, telefono }, "pti-cron: updatePaymentStreak failed");
+  }
+}
+
 // ── JOB 2: Nightly PTI batch — recompute for all active users ─────────────────
 export async function runNightlyPtiBatch(): Promise<void> {
   const startedAt = Date.now();
@@ -278,6 +316,7 @@ export async function runNightlyPtiBatch(): Promise<void> {
 
         const result = await computePagoScore(telefono);
         await takeFinancialSnapshot(telefono);
+        await updatePaymentStreak(telefono);
 
         // Check for milestone crossings — sends WhatsApp + credits rewards (non-blocking)
         if (result && result.pagoScore !== prevScore) {
