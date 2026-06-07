@@ -1,0 +1,64 @@
+What PagoYa Has (Superapp Foundation)
+
+	•	WhatsApp-native wallet + bill pay (SIPREL/Taecel)
+	•	Loyalty tiers (Bronce/Plata/Oro) — proto-behavioral credit scoring
+	•	Street team colonia distribution
+	•	Gift cards / PIN vouchers (Reloadly)
+	•	SPEI inbound + Conekta card top-up
+	•	AI agent Paula for conversational UX
+
+This is a solid payments utility layer. The gap is everything that makes people live inside an app beyond bill pay.
+
+The Superapp Gap Analysis
+
+1. 🎯 Daily Engagement Anchor (Biggest Gap)
+
+Bill pay is monthly. Superapps need daily or weekly touchpoints.
+
+What Baz has that PagoYa doesn’t:
+
+	•	Chat / social messaging inside the app
+	•	Music streaming (Baz integrates Azteca music)
+	•	News feed (Azteca Digital content)
+	•	TV/video content (Azteca UNO streaming)
+
+For PagoYa, the WhatsApp Channel colonia social feed concept you already designed is the right move — it creates daily reasons to open/engage without building a media empire. This is the single highest-leverage missing piece.
+
+2. 💰 Outbound P2P Transfers (Currently Blocked)
+
+Users can receive SPEI inbound but can’t send money peer-to-peer yet (pending STP contract). P2P is the stickiest financial feature in any wallet — it’s what made CashApp, Venmo, and M-Pesa viral. Every time a user sends money to a friend, that friend becomes a potential user.
+
+Priority: High. This is table stakes for a wallet superapp.
+
+3. 🛍️ Marketplace / Local Commerce Layer
+
+Baz lets micro-businesses create online stores and accept QR payments. PagoYa has the street team colonia presence to do something Baz can’t — a hyperlocal merchant directory and QR acceptance network for PV tiendas, taquerías, and chanclas vendors.
+
+Merchants become nodes. Customers pay via PagoYa. Both sides are locked in.
+
+4. 💳 Credit / Lending Signal (Medium-Term)
+
+Your loyalty tier system is already capturing behavioral data. The next step is a micro-credit or BNPL product — even something small like “Adelanto PagoYa” (advance your next bill payment). Baz offers loans up to $70,000 MXN. This is what converts a utility into a financial relationship.
+
+The data you’re already collecting (payment frequency, on-time behavior, tier progression) is the underwriting model. You just need the product wrapper.
+
+5. 📱 Savings / Yield Product
+
+Mercado Pago and PicPay both offer in-app savings with yield. Even 4–6% on idle wallet balances keeps money in the PagoYa wallet instead of users topping up only when they need to pay a bill. This dramatically increases average wallet balance and float.
+
+6. 🤝 QR Merchant Acceptance Network
+
+Right now PagoYa is consumer-side only. Adding a merchant-facing QR payment acceptance tool — even just a static QR linked to a merchant wallet — creates a closed-loop economy in each colonia. Money paid to merchants stays in PagoYa. This is what Baz and M-Pesa both built to create ecosystem lock-in.
+
+7. 🎮 Gamification Beyond Tiers
+
+The loyalty tiers are a start, but superapps use:
+
+	•	Streaks (pay 3 bills in a row, earn bonus points)
+	•	Referral leaderboards by colonia
+	•	Seasonal challenges (summer bill-pay sprint)
+	•	Cashback surprises at milestone transactions
+
+This keeps Oro-tier users engaged and gives Bronce users a visible path upward.
+
+Prioritized Roadmap to Superapp
