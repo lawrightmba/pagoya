@@ -284,9 +284,9 @@ export default function WalletHistorial() {
                 Así se ve tu historial
               </p>
               {[
-                { icon: "⚡", label: "CFE Clásica", sub: "Pago de servicio · 15 jun", amount: "-$245.00 MXN", credit: false },
-                { icon: "🏪", label: "Carga OXXO", sub: "Recarga billetera · 12 jun", amount: "+$500.00 MXN", credit: true },
-                { icon: "📱", label: "Telcel Prepago", sub: "Pago de servicio · 10 jun", amount: "-$100.00 MXN", credit: false },
+                { icon: "⚡", label: "CFE Clásica", sub: "Pago de servicio · 5 jun", amount: "-$245.00 MXN", credit: false },
+                { icon: "🏪", label: "Carga OXXO", sub: "Recarga billetera · 3 jun", amount: "+$500.00 MXN", credit: true },
+                { icon: "📱", label: "Telcel Prepago", sub: "Pago de servicio · 1 jun", amount: "-$100.00 MXN", credit: false },
               ].map((tx) => (
                 <div
                   key={tx.label}
