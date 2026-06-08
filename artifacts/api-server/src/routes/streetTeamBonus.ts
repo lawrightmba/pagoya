@@ -258,14 +258,17 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
     // ── 10. WhatsApp confirmation ──────────────────────────────────────────
     try {
       const firstName = pending.name.trim().split(" ")[0] || pending.name.trim();
+      const accountNum = `PY-${String(userId).padStart(5, "0")}`;
       let message =
-        `🎉 Bienvenido/a a PagoYa, ${firstName}! Tu cuenta está activa. ` +
-        `Tienes 3 pagos gratuitos esperándote — sin comisión. ` +
-        `Paga tu primera cuenta ahora: pagoyamx.com`;
+        `¡Hola ${firstName}! Bienvenido/a a PagoYa 👋\n` +
+        `Soy Paula, la asistente oficial de PagoYa Technologies — empresa mexicana de pagos digitales.\n\n` +
+        `Tu cuenta está activa y protegida.\n` +
+        `Número de cuenta: *${accountNum}*\n\n` +
+        `Escribe *PAGAR* para hacer tu primer pago, o *SALDO* para ver tu cartera.`;
 
       if (bonusCredited) {
         message +=
-          `\n\nAdemás, hemos acreditado $${bonusAmount.toFixed(2)} MXN a tu cartera` +
+          `\n\nAdemás, hemos acreditado *$${bonusAmount.toFixed(2)} MXN* a tu cartera` +
           ` como bono de bienvenida. Úsalos en cualquier pago.`;
       }
 

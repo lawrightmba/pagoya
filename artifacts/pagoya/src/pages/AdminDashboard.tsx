@@ -1,5 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 
+interface ColoniaRow { colonia: string; count: number; pct: number; }
+interface ColoniaBreakdown { total: number; breakdown: ColoniaRow[]; }
+
+interface TxRow {
+  id: string;
+  type: string;
+  amount: string;
+  description: string;
+  balanceAfter: string;
+  createdAt: string;
+}
+interface UserDetail {
+  id: number;
+  name: string;
+  phone: string;
+  colonia: string | null;
+}
+interface UserTransactions { user: UserDetail; transactions: TxRow[]; }
+
 interface WalletStats {
   walletCount: number;
   totalBalanceMXN: number;
@@ -59,6 +78,14 @@ export default function AdminDashboard() {
   const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
 
+  const [colonia, setColonia] = useState<ColoniaBreakdown | null>(null);
+  const [coloniaLoading, setColoniaLoading] = useState(true);
+
+  const [userPhone, setUserPhone] = useState("");
+  const [userTxData, setUserTxData] = useState<UserTransactions | null>(null);
+  const [userTxLoading, setUserTxLoading] = useState(false);
+  const [userTxError, setUserTxError] = useState("");
+
   const [kitOpen, setKitOpen] = useState(false);
   const [kitName, setKitName] = useState("");
   const [kitPhone, setKitPhone] = useState("");
@@ -99,6 +126,11 @@ export default function AdminDashboard() {
       });
     loadWallet();
     loadRevenue();
+    setColoniaLoading(true);
+    fetch("/api/bills/admin/colonia-breakdown")
+      .then((r) => r.json())
+      .then((d: ColoniaBreakdown) => { setColonia(d); setColoniaLoading(false); })
+      .catch(() => setColoniaLoading(false));
 
     const interval = setInterval(() => {
       loadWallet();
@@ -106,6 +138,26 @@ export default function AdminDashboard() {
     }, 30000);
     return () => clearInterval(interval);
   }, [loadWallet, loadRevenue]);
+
+  async function lookupUser() {
+    if (!userPhone.trim()) return;
+    setUserTxLoading(true);
+    setUserTxError("");
+    setUserTxData(null);
+    try {
+      const r = await fetch(`/api/bills/admin/user-transactions?phone=${encodeURIComponent(userPhone.trim())}`);
+      const data = await r.json() as UserTransactions & { error?: string };
+      if (!r.ok) {
+        setUserTxError(data.error ?? "Error al buscar usuario.");
+        return;
+      }
+      setUserTxData(data);
+    } catch {
+      setUserTxError("Error de red. Intenta de nuevo.");
+    } finally {
+      setUserTxLoading(false);
+    }
+  }
 
   const fmt = (n: string) =>
     "$" + parseFloat(n).toLocaleString("es-MX", { minimumFractionDigits: 2 });
@@ -660,6 +712,156 @@ export default function AdminDashboard() {
               ))}
             </>
           )}
+        </div>
+
+        {/* ── Colonia Breakdown Panel ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginTop: 24,
+        }}>
+          <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+              Usuarios por Colonia · {coloniaLoading ? "…" : `${colonia?.total ?? 0} registrados`}
+            </div>
+          </div>
+          <div style={{ padding: "14px 16px" }}>
+            {coloniaLoading ? (
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Cargando…</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(colonia?.breakdown ?? []).map((row) => (
+                  <div key={row.colonia} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7", minWidth: 160 }}>
+                      {row.colonia}
+                    </div>
+                    <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 4, height: 6, overflow: "hidden" }}>
+                      <div style={{ width: `${row.pct}%`, height: "100%", background: "#1D9E75", borderRadius: 4 }} />
+                    </div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#1D9E75", minWidth: 52, textAlign: "right" }}>
+                      {row.count} <span style={{ color: "#5a7080" }}>({row.pct}%)</span>
+                    </div>
+                  </div>
+                ))}
+                {(colonia?.breakdown ?? []).length === 0 && (
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Sin datos aún.</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Per-User Transaction Drill-Down ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginTop: 24,
+        }}>
+          <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+              Historial por Usuario
+            </div>
+          </div>
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <input
+                value={userPhone}
+                onChange={(e) => { setUserPhone(e.target.value); setUserTxError(""); }}
+                placeholder="Teléfono del usuario (ej. 3221234567)"
+                style={{
+                  flex: 1,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  color: "#e8f0f7",
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: "0.6rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") lookupUser(); }}
+              />
+              <button
+                onClick={lookupUser}
+                disabled={userTxLoading}
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: "0.52rem",
+                  color: "#fff",
+                  background: userTxLoading ? "rgba(29,158,117,0.4)" : "#1D9E75",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  cursor: userTxLoading ? "not-allowed" : "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {userTxLoading ? "Buscando…" : "→ Buscar"}
+              </button>
+            </div>
+
+            {userTxError && (
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#E21A0A", marginBottom: 10 }}>
+                {userTxError}
+              </div>
+            )}
+
+            {userTxData && (
+              <div>
+                <div style={{
+                  background: "rgba(29,158,117,0.08)",
+                  border: "1px solid rgba(29,158,117,0.2)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  marginBottom: 12,
+                }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "#1D9E75", fontWeight: 700 }}>
+                    {userTxData.user.name}
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.48rem", color: "#5a7080", marginTop: 4 }}>
+                    {userTxData.user.phone} · {userTxData.user.colonia ?? "—"} · ID {userTxData.user.id}
+                  </div>
+                </div>
+
+                {userTxData.transactions.length === 0 ? (
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Sin transacciones.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px", gap: 0, padding: "4px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      {["DESCRIPCIÓN", "TIPO", "MONTO", "SALDO"].map((h) => (
+                        <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", letterSpacing: "0.06em" }}>{h}</div>
+                      ))}
+                    </div>
+                    {userTxData.transactions.map((tx) => {
+                      const amt = parseFloat(tx.amount ?? "0");
+                      return (
+                        <div key={tx.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px", gap: 0, padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7" }}>{tx.description ?? "—"}</div>
+                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginTop: 2 }}>
+                              {tx.createdAt ? new Date(tx.createdAt).toLocaleString("es-MX", { timeZone: "America/Mexico_City", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080" }}>{tx.type}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: amt >= 0 ? "#1D9E75" : "#E21A0A", fontWeight: 700 }}>
+                            {amt >= 0 ? "+" : ""}${Math.abs(amt).toFixed(2)}
+                          </div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7" }}>
+                            ${parseFloat(tx.balanceAfter ?? "0").toFixed(2)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>

@@ -1,0 +1,172 @@
+This is excellent. You have more trust infrastructure already built than you realize — the gaps are specific and fixable. Let me give you the full audit.
+
+---
+
+## PagoYa Trust Layer Audit
+### Current State → Gap → Fix
+
+---
+
+**REGISTRATION (`/register` page)**
+
+Current state is functional but cold. The form collects data without explaining *why* it's safe to give it.
+
+Gaps:
+- No regulatory anchor anywhere on the page
+- CURP field will cause abandonment — it feels invasive with no trust context
+- No mention of what happens to the phone number (WhatsApp = surveillance anxiety for some users)
+- Paula bubble is present but passive
+
+Fixes:
+- Add below the form header: *"PagoYa Technologies SA de CV • Empresa mexicana registrada • Tus datos están protegidos"*
+- CURP subtext should add: *"Solo se usa para verificar tu identidad. No compartimos tu información."*
+- WhatsApp field subtext: *"Te enviaremos un mensaje de bienvenida de Paula, tu asistente de pagos."* — frame it as a benefit, not a data grab
+- Add a one-line footer: *"🔒 Tus datos viajan cifrados y nunca se venden."*
+
+---
+
+**REGISTRATION WELCOME (WhatsApp)**
+
+Current:
+> *¡Hola [Nombre]! Bienvenido/a a PagoYa 💜 ¿En qué te puedo ayudar?*
+
+This is warm but anonymous. There's no institutional anchor. A scammer could send this exact message.
+
+Fix:
+> *¡Hola [Nombre]! Bienvenido/a a PagoYa 👋*
+> *Soy Paula, la asistente oficial de PagoYa Technologies — empresa mexicana de pagos digitales.*
+> *Tu cuenta está activa y protegida. Número de cuenta: PY-[USERID].*
+> *Escribe PAGAR para hacer tu primer pago, o SALDO para ver tu cartera.*
+
+The account number is the key move. Even if it's just their user ID formatted as PY-00041, it signals: *you are in a system, you have a record, you exist here.*
+
+---
+
+**PRE-CONFIRMATION CARD**
+
+This is actually your strongest trust element already. The structured card is excellent. Two gaps:
+
+- The fee is labeled "comisión $25" — that's currently wrong ($15 MXN flat fee per your config). Fix the copy to match.
+- No rail name visible. Users don't know *how* the money moves.
+
+Fix — add one line to the confirmation card:
+> *🏦 Red de pago: SIPREL / STP*
+
+That's it. One line. Users in PV may not know what SIPREL is, but the word "red de pago" + an official-sounding name signals infrastructure.
+
+---
+
+**PAYMENT PROCESSING MESSAGE**
+
+Current:
+> *⏳ Procesando tu pago de CFE...*
+
+This is a single message with no follow-through. The user stares at their phone and waits. Silence = doubt.
+
+Fix — three sequential messages, ~4 seconds apart:
+> *⏳ Conectando con CFE...*
+> *🔄 Enviando tu pago a través de SIPREL...*
+> *✅ ¡Pago confirmado por CFE!*
+
+This narrates the process. The user feels the money moving through real infrastructure. This is the digital equivalent of watching the teller.
+
+---
+
+**SUCCESS MESSAGE (WhatsApp)**
+
+Current:
+> *✅ Pago exitoso — Folio: SIPREL-ABC123 — ¡Listo! Guarda este folio como comprobante.*
+
+Good bones. Missing the institutional anchor and timestamp.
+
+Fix:
+> *✅ PagoYa | Comprobante Oficial*
+> *──────────────────*
+> *Servicio: CFE Jalisco*
+> *Monto: $450.00 MXN*
+> *Comisión: $15.00 MXN*
+> *Folio SIPREL: ABC123*
+> *Fecha: 07 jun 2026, 18:37*
+> *──────────────────*
+> *Tu pago está respaldado por STP/SPEI — sistema de pagos del Banco de México.*
+> *Conserva este mensaje como comprobante oficial.*
+
+"Sistema de pagos del Banco de México" is your Safaricom. Drop that name every time money moves.
+
+---
+
+**ERROR STATES — your biggest gap**
+
+Current:
+> *❌ Pago no procesado — [error message from provider] — Verifica tu saldo o intenta de nuevo.*
+
+And the catch-all:
+> *Lo siento, ocurrió un error. Intenta de nuevo en un momento. 🙏*
+
+These are trust destroyers. Vague errors feel like scams. The 🙏 emoji on a payment error is particularly damaging — it reads as helpless.
+
+Fix for failed payment:
+> *❌ PagoYa | Pago No Procesado*
+> *──────────────────*
+> *Servicio: CFE*
+> *Monto: $450.00 MXN*
+> *Estado: No completado*
+> *Código: ERR-[timestamp hash]*
+> *──────────────────*
+> *⚠️ Tu dinero NO fue deducido de tu cartera.*
+> *Saldo actual: $600.00 MXN ✓*
+> *Causa: [plain Spanish reason]*
+> *Escribe AYUDA para hablar con soporte, o intenta de nuevo.*
+
+The most important line: **"Tu dinero NO fue deducido."** That's the sentence that prevents the user from calling their cousin to complain that PagoYa stole their money. Say it explicitly every time a payment fails.
+
+Fix for catch-all error:
+> *Lo siento, algo salió mal en este momento.*
+> *Código de incidencia: INC-[hash]*
+> *Tu saldo no fue afectado.*
+> *Escribe AYUDA o llama a soporte: [número].*
+
+The incident code signals there's a system logging this. Even if no one ever looks it up, it implies accountability.
+
+---
+
+**`/exito` RECEIPT PAGE**
+
+This is actually well-structured. The visual hierarchy is right. Two additions:
+
+- Below "ID transacción" add: *"Procesado vía STP/SPEI • Red oficial del Banco de México"* in the same small gray monospace style. It reads as technical metadata — exactly right.
+- The auto-opening Paula message 4 seconds later is a smart move. But the copy should change:
+
+Current:
+> *"¡Tu pago de CFE fue confirmado! 🎉 ¿Tienes alguna duda..."*
+
+Fix:
+> *"✅ Tu comprobante está guardado en este chat. Folio: SIPREL-ABC123. ¿Quieres pagar otro servicio o consultar tu saldo?"*
+
+This reframes Paula's appearance not as "are you okay?" but as "I'm your filing system." That's an institutional behavior.
+
+---
+
+**COMMAND CENTER — admin gaps worth addressing soon**
+
+Not user-facing but trust-adjacent. When you're pitching Accion or sitting with a Techstars mentor, you need to show colonia breakdown and per-user transaction history. Those two views are missing and would take Replit Agent one session to add.
+
+---
+
+## Priority Sequence
+
+**Do this week (copy changes only, no code):**
+1. Error state messages — biggest trust risk, pure copy swap
+2. Success WhatsApp message — add the Banco de México line
+3. Three-step processing narration
+
+**Do next sprint (minor code):**
+4. Account number in welcome message (PY-[USERID])
+5. Rail name on confirmation card
+6. `/register` trust footer and field subtext
+
+**Do before Accion pitch:**
+7. Command center colonia breakdown
+8. Command center per-user transaction drill-down
+
+Want me to write the Replit Agent prompt for the error states and success message first — since those are the highest-leverage, lowest-effort changes?

@@ -758,6 +758,81 @@ router.get("/admin/revenue", async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/bills/admin/colonia-breakdown
+// Returns user registration counts grouped by colonia
+router.get("/admin/colonia-breakdown", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db
+      .select({
+        colonia: usersTable.colonia,
+        count: sql<string>`COUNT(*)`,
+      })
+      .from(usersTable)
+      .groupBy(usersTable.colonia)
+      .orderBy(sql`COUNT(*) DESC`);
+
+    const total = rows.reduce((s, r) => s + parseInt(r.count ?? "0"), 0);
+    res.json({
+      total,
+      breakdown: rows.map((r) => ({
+        colonia: r.colonia ?? "—",
+        count: parseInt(r.count ?? "0"),
+        pct: total > 0 ? Math.round((parseInt(r.count ?? "0") / total) * 100) : 0,
+      })),
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error";
+    logger.error({ err }, "billpay: admin/colonia-breakdown failed");
+    res.status(500).json({ error: message });
+  }
+});
+
+// GET /api/bills/admin/user-transactions?phone=5213221234567
+// Returns transaction history for a specific user
+router.get("/admin/user-transactions", async (req: Request, res: Response) => {
+  try {
+    const rawPhone = String(req.query.phone ?? "").replace(/\D/g, "");
+    if (!rawPhone || rawPhone.length < 7) {
+      res.status(400).json({ error: "phone requerido (solo dígitos, min 7)" });
+      return;
+    }
+
+    // Accept last-10-digits match so admin can type 3221234567 or 523221234567
+    const phoneSuffix = rawPhone.slice(-10);
+
+    const [user] = await db
+      .select({ id: usersTable.id, name: usersTable.name, phone: usersTable.phone, colonia: usersTable.colonia })
+      .from(usersTable)
+      .where(sql`RIGHT(REGEXP_REPLACE(${usersTable.phone}, '[^0-9]', '', 'g'), 10) = ${phoneSuffix}`)
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+
+    const txs = await db
+      .select({
+        id: walletTransactionsTable.id,
+        type: walletTransactionsTable.type,
+        amount: walletTransactionsTable.amount,
+        description: walletTransactionsTable.description,
+        balanceAfter: walletTransactionsTable.balanceAfter,
+        createdAt: walletTransactionsTable.createdAt,
+      })
+      .from(walletTransactionsTable)
+      .where(eq(walletTransactionsTable.userId, user.id))
+      .orderBy(desc(walletTransactionsTable.createdAt))
+      .limit(50);
+
+    res.json({ user, transactions: txs });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error";
+    logger.error({ err }, "billpay: admin/user-transactions failed");
+    res.status(500).json({ error: message });
+  }
+});
+
 // GET /api/bills/admin/products
 // Returns the cached Taecel product list. Admin can force a refresh via ?refresh=1
 router.get("/admin/products", async (req: Request, res: Response) => {

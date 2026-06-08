@@ -12,6 +12,8 @@ import { logger } from "../lib/logger.js";
 
 const router = Router();
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
 
 // Strict confirmation: only SÍ / SI / si / sí / yes (+ optional punctuation/emoji)
@@ -62,12 +64,15 @@ function buildConfirmationMessage(pending: PendingPaymentRow): string {
     : "";
 
   return (
-    `✅ Resumen de pago:\n\n` +
+    `✅ Resumen de pago:\n` +
+    `──────────────────\n` +
     `🏢 Servicio: ${pending.serviceName}` +
     referenciaLine +
     `\n💰 Monto: $${pending.monto.toFixed(2)} MXN` +
     `\n💳 Cargo total: ${feeNote}` +
-    `\n👛 Método: ${pending.paymentMethod ?? "Cartera PagoYa"} (Saldo disponible: $${pending.walletBalance.toFixed(2)} MXN)\n\n` +
+    `\n👛 Método: ${pending.paymentMethod ?? "Cartera PagoYa"} (Saldo: $${pending.walletBalance.toFixed(2)} MXN)` +
+    `\n🏦 Red de pago: SIPREL / STP` +
+    `\n──────────────────\n\n` +
     `¿Confirmar este pago?\n` +
     `Responde *SÍ* para continuar o *CANCELAR* para cancelar.`
   );
@@ -101,9 +106,13 @@ router.post("/", async (req: Request, res: Response) => {
       const match = REP_CODE_PATTERN.exec(userMessage);
       if (match) {
         saveSession(phoneKey, { repCode: match[1], profileName });
+        const firstName = (profileName || "").split(" ")[0] || profileName || "";
         await sendWhatsApp(
           phoneKey,
-          `¡Hola ${profileName || ""}! Bienvenido/a a PagoYa 💜 ¿En qué te puedo ayudar?`,
+          `¡Hola ${firstName}! Bienvenido/a a PagoYa 👋\n` +
+          `Soy Paula, la asistente oficial de PagoYa Technologies — empresa mexicana de pagos digitales.\n\n` +
+          `¿En qué te puedo ayudar hoy?\n` +
+          `Escribe *PAGAR* para pagar un servicio, o *SALDO* para consultar tu cartera.`,
         );
         return;
       }
@@ -133,23 +142,52 @@ router.post("/", async (req: Request, res: Response) => {
         // Reset TTL to 5 minutes from now (spec: TTL starts from SÍ)
         await confirmPendingPayment(phoneKey);
 
-        await sendWhatsApp(phoneKey, `⏳ Procesando tu pago de ${pending.serviceName}...`);
+        // Narrative processing sequence
+        await sendWhatsApp(phoneKey, `⏳ Conectando con ${pending.serviceName}...`);
+        await sleep(3000);
+        await sendWhatsApp(phoneKey, `🔄 Enviando tu pago a través de SIPREL...`);
 
         const result = await executeStagedPayment(pending, port);
 
         // Delete regardless of outcome — prevents double-execution
         await deletePendingPayment(phoneKey);
 
+        const nowMx = new Date().toLocaleString("es-MX", {
+          timeZone: "America/Mexico_City",
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        });
+
         if (result.ok) {
-          const folio = result.confirmationCode ? `\nFolio: ${result.confirmationCode}` : "";
+          const folio = result.confirmationCode ?? "—";
           await sendWhatsApp(
             phoneKey,
-            `✅ *Pago exitoso*\n\n⚡ ${pending.serviceName}\nMonto: $${pending.monto.toFixed(2)} MXN${folio}\n\n¡Listo! Guarda este folio como comprobante.`,
+            `✅ *PagoYa | Comprobante Oficial*\n` +
+            `──────────────────\n` +
+            `Servicio: ${pending.serviceName}\n` +
+            `Monto: $${pending.monto.toFixed(2)} MXN\n` +
+            `Comisión: $${pending.fee.toFixed(2)} MXN\n` +
+            `Folio SIPREL: ${folio}\n` +
+            `Fecha: ${nowMx}\n` +
+            `──────────────────\n` +
+            `Tu pago está respaldado por STP/SPEI — sistema de pagos del Banco de México.\n` +
+            `Conserva este mensaje como comprobante oficial.`,
           );
         } else {
+          const incCode = `ERR-${Date.now().toString(36).toUpperCase().slice(-8)}`;
           await sendWhatsApp(
             phoneKey,
-            `❌ *Pago no procesado*\n\n${result.error ?? "Error desconocido."}\n\nVerifica tu saldo o intenta de nuevo.`,
+            `❌ *PagoYa | Pago No Procesado*\n` +
+            `──────────────────\n` +
+            `Servicio: ${pending.serviceName}\n` +
+            `Monto: $${pending.monto.toFixed(2)} MXN\n` +
+            `Estado: No completado\n` +
+            `Código: ${incCode}\n` +
+            `──────────────────\n` +
+            `⚠️ Tu dinero NO fue deducido de tu cartera.\n` +
+            `Saldo actual: $${pending.walletBalance.toFixed(2)} MXN ✓\n` +
+            `Causa: ${result.error ?? "Error desconocido"}\n\n` +
+            `Escribe *AYUDA* para hablar con soporte, o intenta de nuevo.`,
           );
         }
         return;
@@ -239,9 +277,13 @@ router.post("/", async (req: Request, res: Response) => {
     logger.info({ phoneKey, hasPendingPayment: !!pendingPayment }, "whatsapp-agent: reply sent");
   } catch (err) {
     logger.error({ err }, "whatsapp-agent: error");
+    const incCode = `INC-${Date.now().toString(36).toUpperCase().slice(-8)}`;
     await sendWhatsApp(
       phoneKey,
-      "Lo siento, ocurrió un error. Intenta de nuevo en un momento. 🙏",
+      `Lo siento, algo salió mal en este momento.\n` +
+      `Código de incidencia: ${incCode}\n` +
+      `Tu saldo no fue afectado.\n\n` +
+      `Escribe *AYUDA* o visita pagoyamx.com para soporte.`,
     ).catch(() => {});
   }
 });

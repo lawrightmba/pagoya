@@ -14,7 +14,7 @@ export default function PaymentSuccess() {
     const timer = setTimeout(() => {
       window.dispatchEvent(new CustomEvent("pagoya:chatNudge", {
         detail: {
-          context: `¡Tu pago de ${paymentData.empresa} fue confirmado! 🎉 ¿Tienes alguna duda sobre tu pago, saldo o próximo servicio? Estoy aquí para ayudarte.`,
+          context: `✅ Tu comprobante está guardado en este chat. ¿Quieres pagar otro servicio o consultar tu saldo?`,
         },
       }));
     }, 4000);
@@ -149,6 +149,11 @@ export default function PaymentSuccess() {
               <Row label="Referencia" value={paymentData.referencia} mono />
               <Row label="Fecha y hora" value={transactionDate} />
               <Row label="ID de transacción" value={transactionId} mono muted />
+              <div style={{ paddingTop: "4px" }}>
+                <p style={{ margin: 0, fontSize: "11px", color: "#9CA3AF", fontFamily: "monospace", lineHeight: 1.5 }}>
+                  Procesado vía STP/SPEI · Red oficial del Banco de México
+                </p>
+              </div>
             </div>
           </div>
 
@@ -175,10 +180,10 @@ export default function PaymentSuccess() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#FFFFFF" }}>
-                ¿Algo más en lo que pueda ayudarte?
+                Tu comprobante está guardado aquí
               </p>
               <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
-                Paula, tu asistente, está lista para responder
+                Paula puede enviarte el folio por WhatsApp
               </p>
             </div>
             <button

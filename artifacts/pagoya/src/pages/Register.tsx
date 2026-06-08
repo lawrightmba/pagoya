@@ -694,9 +694,20 @@ export default function Register() {
           fontSize: "15px",
           color: "rgba(255,255,255,0.48)",
           textAlign: "center",
-          margin: "0 0 36px",
+          margin: "0 0 12px",
         }}>
           Pay everything from your phone
+        </p>
+
+        <p style={{
+          fontSize: "11px",
+          color: "rgba(255,255,255,0.30)",
+          textAlign: "center",
+          margin: "0 0 28px",
+          lineHeight: 1.5,
+          letterSpacing: "0.01em",
+        }}>
+          PagoYa Technologies SA de CV&nbsp;&nbsp;•&nbsp;&nbsp;Empresa mexicana registrada&nbsp;&nbsp;•&nbsp;&nbsp;Tus datos están protegidos
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -794,7 +805,7 @@ export default function Register() {
             {fieldErrors.phone
               ? <p style={fieldErrorStyle}>{fieldErrors.phone}</p>
               : <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.45)" }}>
-                  Solo los {countryCode === "+1" ? "10 digits" : "10 dígitos"} locales — el código de país ya está en el selector
+                  Te enviaremos un mensaje de bienvenida de Paula, tu asistente de pagos.
                 </p>
             }
           </div>
@@ -828,7 +839,7 @@ export default function Register() {
             {fieldErrors.curp
               ? <p style={fieldErrorStyle}>{fieldErrors.curp}</p>
               : <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
-                  Tu CURP aparece en tu INE o acta de nacimiento
+                  Solo se usa para verificar tu identidad. No compartimos tu información.
                 </p>
             }
             {!fieldErrors.curp && (
@@ -962,9 +973,19 @@ export default function Register() {
         </form>
 
         <p style={{
-          marginTop: "24px",
+          marginTop: "20px",
+          fontSize: "12px",
+          color: "rgba(255,255,255,0.45)",
+          textAlign: "center",
+          lineHeight: 1.6,
+          fontWeight: 600,
+        }}>
+          🔒 Tus datos viajan cifrados y nunca se venden.
+        </p>
+        <p style={{
+          marginTop: "6px",
           fontSize: "11px",
-          color: "rgba(255,255,255,0.28)",
+          color: "rgba(255,255,255,0.22)",
           textAlign: "center",
           lineHeight: 1.5,
         }}>
