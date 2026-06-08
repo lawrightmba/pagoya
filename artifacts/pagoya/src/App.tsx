@@ -52,6 +52,10 @@ import Deck from "@/pages/Deck";
 import VideoPage from "@/pages/VideoPage";
 import FounderBio from "@/pages/FounderBio";
 import Confianza from "@/pages/Confianza";
+import LandingCFESinBanco from "@/pages/LandingCFESinBanco";
+import LandingTelmexEfectivo from "@/pages/LandingTelmexEfectivo";
+import LandingRecargarSinTarjeta from "@/pages/LandingRecargarSinTarjeta";
+import LandingLuzSinBanco from "@/pages/LandingLuzSinBanco";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -127,6 +131,10 @@ function Router() {
       <Route path="/juegos" component={Juegos} />
       <Route path="/confianza" component={Confianza} />
       <Route path="/pti" component={Confianza} />
+      <Route path="/pagar-cfe-sin-banco" component={LandingCFESinBanco} />
+      <Route path="/pagar-telmex-en-linea-efectivo" component={LandingTelmexEfectivo} />
+      <Route path="/recargar-saldo-sin-tarjeta" component={LandingRecargarSinTarjeta} />
+      <Route path="/pagar-luz-sin-banco" component={LandingLuzSinBanco} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {
