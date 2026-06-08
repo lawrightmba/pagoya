@@ -33,16 +33,16 @@ export default function Slide01Cover() {
           <h1
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "7.8vw",
+              fontSize: "7.5vw",
               fontWeight: 900,
               color: "#FFFFFF",
-              lineHeight: 0.92,
+              lineHeight: 0.93,
               letterSpacing: "-0.01em",
               marginBottom: "3.5vh",
               whiteSpace: "pre-line"
             }}
           >
-            {"Pay any bill.\nBuy any gift card.\nIn Mexico."}
+            {"Identidad financiera\npara los 65 millones\ninvisibles de México."}
           </h1>
           <div
             style={{
@@ -55,26 +55,27 @@ export default function Slide01Cover() {
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
-              fontSize: "2.4vw",
-              fontWeight: 400,
+              fontSize: "2.3vw",
+              fontWeight: 500,
               color: "#FFFFFF",
-              lineHeight: 1.4,
-              opacity: 0.9,
+              lineHeight: 1.45,
+              opacity: 0.92,
               marginBottom: "1.2vh"
             }}
           >
-            Dos minutos. $25 MXN fijo. Sin cuenta bancaria.
+            Paula paga tus facturas, construye tu Trust Score y te da acceso a crédito —
+            sin cuenta bancaria, en dos minutos, desde WhatsApp.
           </p>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
-              fontSize: "2vw",
+              fontSize: "1.75vw",
               fontWeight: 400,
-              color: "rgba(255,255,255,0.55)",
+              color: "rgba(255,255,255,0.5)",
               lineHeight: 1.4
             }}
           >
-            El agente financiero de IA para los 65 millones de adultos no bancarizados de México.
+            $25 MXN tarifa fija · Sin descarga de app · Rentable desde la transacción 1
           </p>
         </div>
 

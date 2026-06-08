@@ -126,12 +126,31 @@ export default function Slide11Why500() {
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.5vh 1.5vw", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#00C875", fontWeight: 700 }}>Sí — Paula</p>
           </div>
+
+          {/* NEW ROW: Trust Score / Financial Identity */}
+          <div style={{ background: "rgba(255,92,26,0.06)", padding: "1.5vh 1.8vw", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Trust Score / identidad financiera</p>
+          </div>
+          <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.5vh 1.5vw", borderTop: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.3)" }}>No</p>
+          </div>
+          <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.5vh 1.5vw", borderTop: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.3)" }}>No</p>
+          </div>
+          <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.5vh 1.5vw", borderTop: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "rgba(255,255,255,0.3)" }}>No</p>
+          </div>
+          <div style={{ background: "rgba(255,92,26,0.12)", padding: "1.5vh 1.5vw", borderTop: "1px solid rgba(255,92,26,0.2)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#FF5C1A", fontWeight: 700 }}>✅ Único</p>
+          </div>
         </div>
 
-        <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
-          PagoYa es la única billetera construida específicamente para
-          <span style={{ color: "#00C875", fontWeight: 700 }}> usuarios que prefieren efectivo y dudan de los smartphones</span> —
-          activada en persona, operada vía IA en WhatsApp, con una sola tarifa fija.
+        <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
+          PagoYa es la única billetera construida para
+          <span style={{ color: "#00C875", fontWeight: 700 }}> usuarios que prefieren efectivo</span> —
+          y la única que convierte esos pagos en
+          <span style={{ color: "#FF5C1A", fontWeight: 700 }}> identidad financiera portable</span>.
+          Esa última fila no la puede copiar ningún competidor en 18 meses.
         </p>
       </div>
     </div>

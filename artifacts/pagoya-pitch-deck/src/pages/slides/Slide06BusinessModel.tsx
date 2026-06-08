@@ -141,14 +141,49 @@ export default function Slide06BusinessModel() {
           style={{
             background: "rgba(0,200,117,0.1)",
             borderLeft: "0.4vw solid #00C875",
-            padding: "1.8vh 2.5vw",
-            borderRadius: "0 0.6vw 0.6vw 0"
+            padding: "1.5vh 2.5vw",
+            borderRadius: "0 0.6vw 0.6vw 0",
+            marginBottom: "1.5vh"
           }}
         >
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
-            Economía unitaria: los rieles directos (SIPREL, Conekta, Stripe, Belvo) eliminan márgenes de intermediarios —
-            <span style={{ color: "#00C875", fontWeight: 700 }}> rentable a $25 MXN desde el lanzamiento</span>, sin precios de pérdida.
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
+            Rieles directos (SIPREL, Conekta, Stripe) eliminan márgenes de intermediarios —
+            <span style={{ color: "#00C875", fontWeight: 700 }}> rentable a $25 MXN desde la transacción 1</span>.
           </p>
+        </div>
+
+        {/* Revenue phase expansion */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.2vw" }}>
+          <div style={{ background: "rgba(0,200,117,0.1)", border: "1px solid rgba(0,200,117,0.35)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+              <div style={{ background: "#00C875", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#004F2D" }}>1</p>
+              </div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase" }}>Ahora · Pagos</p>
+            </div>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.4vh" }}>$25 MXN</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>Tarifa fija por transacción — facturas, gift cards, recargas</p>
+          </div>
+          <div style={{ background: "rgba(255,92,26,0.08)", border: "1px solid rgba(255,92,26,0.3)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+              <div style={{ background: "#FF5C1A", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#fff" }}>2</p>
+              </div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>2027 · Crédito</p>
+            </div>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.4vh" }}>2–4%</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>Fee de originación sobre micro-créditos y BNPL habilitados por el Trust Score</p>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+              <div style={{ background: "rgba(255,255,255,0.3)", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#004F2D" }}>3</p>
+              </div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>2028+ · Plataforma</p>
+            </div>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "rgba(255,255,255,0.6)", lineHeight: 1, marginBottom: "0.4vh" }}>API SaaS</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.35 }}>Trust Score API para bancos · seguros · remesas · diáspora en EE.UU./Canadá</p>
+          </div>
         </div>
       </div>
     </div>

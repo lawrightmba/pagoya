@@ -4,7 +4,7 @@
     "position": 1,
     "filepath": "src/pages/slides/Slide01Cover.tsx",
     "title": "PagoYa — Portada",
-    "description": "Portada: Paga cualquier factura. Compra cualquier tarjeta de regalo. En México. Acción Ventures pre-semilla junio 2026.",
+    "description": "Identidad financiera para los 65 millones invisibles de México. Paula paga facturas, construye Trust Score, da acceso a crédito.",
     "speakerNotes": ""
   },
   {
@@ -32,8 +32,24 @@
     "speakerNotes": ""
   },
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567820",
     "position": 5,
+    "filepath": "src/pages/slides/SlideTrustScore.tsx",
+    "title": "El PagoYa Trust Score",
+    "description": "Cada pago construye identidad financiera. 90 días de comportamiento = Trust Score que desbloquea crédito, seguros, préstamos e historial portable al extranjero.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567821",
+    "position": 6,
+    "filepath": "src/pages/slides/SlideFlywheel.tsx",
+    "title": "El Volante de Inercia",
+    "description": "Pagos → datos → Trust Score → productos financieros → más engagement → más pagos. Capa de gamificación (ruleta, misiones, bonos semanales) acelera la frecuencia.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+    "position": 7,
     "filepath": "src/pages/slides/Slide03Solution.tsx",
     "title": "La Solución",
     "description": "Una billetera: paga servicios, compra tarjetas de regalo (Netflix, Amazon, Spotify), confirmado por WhatsApp. Tarifa fija $25 MXN.",
@@ -41,7 +57,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
-    "position": 6,
+    "position": 8,
     "filepath": "src/pages/slides/Slide04Market.tsx",
     "title": "Lo Que Está Activo Ahora",
     "description": "No lo presentamos. Lo construimos. 5 rieles activos: Stripe, SIPREL, Conekta/OXXO, Belvo, tarjetas de regalo.",
@@ -49,7 +65,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567805",
-    "position": 7,
+    "position": 9,
     "filepath": "src/pages/slides/Slide05HowItWorks.tsx",
     "title": "Tamaño del Mercado",
     "description": "Tres mercados: pagos de servicios $180B MXN, tarjetas de regalo $4.2B MXN, transferencias P2P $42B MXN.",
@@ -57,15 +73,15 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567806",
-    "position": 8,
+    "position": 10,
     "filepath": "src/pages/slides/Slide06BusinessModel.tsx",
     "title": "Modelo de Negocio e Ingresos",
-    "description": "Tarifa fija $25 MXN. Tabla de ingresos: base 2× a meta 5× — $35M a $88M USD ARR a 1M billeteras.",
+    "description": "Fase 1: $25 MXN / txn. Fase 2 (2027): 2–4% originación crédito. Fase 3 (2028+): Trust Score API SaaS para bancos, seguros, diáspora.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567807",
-    "position": 9,
+    "position": 11,
     "filepath": "src/pages/slides/Slide07Infrastructure.tsx",
     "title": "Estrategia de Mercado",
     "description": "Equipo en campo + red de referidos: modelo de 3 capas. El rep activa, gana comisión pasiva, los usuarios refieren usuarios.",
@@ -73,7 +89,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567808",
-    "position": 10,
+    "position": 12,
     "filepath": "src/pages/slides/Slide08Competition.tsx",
     "title": "P2P: Los Pagos se Vuelven Sociales",
     "description": "Siguiente fase: divide gastos, envía saldo, págense entre sí en WhatsApp. Cada pago es una demo del producto.",
@@ -81,7 +97,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
-    "position": 11,
+    "position": 13,
     "filepath": "src/pages/slides/Slide09GoToMarket.tsx",
     "title": "La Barrera de Datos",
     "description": "La IA construye identidad financiera para 65M personas invisibles. Los datos desbloquean crédito, BNPL, seguros y microcréditos.",
@@ -89,7 +105,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567810",
-    "position": 12,
+    "position": 14,
     "filepath": "src/pages/slides/Slide10Traction.tsx",
     "title": "Infraestructura",
     "description": "5 rieles activos: Stripe, SIPREL, Conekta/OXXO, Belvo, tarjetas de regalo. STP/SPEI en proceso. Sin intermediarios.",
@@ -97,15 +113,15 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567811",
-    "position": 13,
+    "position": 15,
     "filepath": "src/pages/slides/Slide11Why500.tsx",
     "title": "Panorama Competitivo",
-    "description": "Tabla comparativa: OXXO Pay, Mercado Pago, Spin by OXXO vs. PagoYa. La única billetera para usuarios que prefieren efectivo.",
+    "description": "Tabla comparativa con fila Trust Score añadida — la única dimensión que ningún competidor puede replicar en 18 meses.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567812",
-    "position": 14,
+    "position": 16,
     "filepath": "src/pages/slides/Slide12Ask.tsx",
     "title": "Por Qué Acción Ventures",
     "description": "Navegación regulatoria, escalar red de representantes, acceso a inversores fintech LATAM que entienden nuestra economía unitaria.",
@@ -113,7 +129,7 @@
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567813",
-    "position": 15,
+    "position": 17,
     "filepath": "src/pages/slides/Slide13TheAsk.tsx",
     "title": "La Inversión",
     "description": "Pre-semilla $250K–$750K USD en SAFE. 18 meses de operación. Meta 2,500 billeteras activas. FI Austin Verano 2026.",
