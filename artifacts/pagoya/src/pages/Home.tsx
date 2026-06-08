@@ -311,6 +311,26 @@ export default function Home() {
     // BEFORE: background: "#FFFFFF"
     // AFTER:  background: "#0A2540"
     <div style={{ background: "#FFFFFF", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <style>{`
+        @keyframes rypShimmer {
+          0%   { transform: translateX(-120%) skewX(-15deg); }
+          60%  { transform: translateX(220%) skewX(-15deg); }
+          100% { transform: translateX(220%) skewX(-15deg); }
+        }
+        @keyframes rypRipple {
+          0%   { transform: scale(0.85); opacity: 0.85; }
+          70%  { transform: scale(2.0);  opacity: 0; }
+          100% { transform: scale(2.0);  opacity: 0; }
+        }
+        @keyframes rypPulse {
+          0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,200,117,0.55); }
+          50%      { transform: scale(1.07); box-shadow: 0 0 0 8px rgba(0,200,117,0); }
+        }
+        @keyframes rypBounce {
+          0%, 100% { transform: translateX(0); }
+          50%      { transform: translateX(4px); }
+        }
+      `}</style>
       {showPTIIntro && storedPhone && (
         <PTIIntroModal telefono={storedPhone} onDismiss={handlePTIIntroDismiss} />
       )}
@@ -539,8 +559,32 @@ export default function Home() {
               position: "relative",
             }}
           >
+            {/* diagonal shimmer sweep — repeats every 4s */}
+            <div style={{
+              position: "absolute", inset: 0, pointerEvents: "none",
+              overflow: "hidden", borderRadius: "18px",
+            }}>
+              <div style={{
+                position: "absolute", top: 0, bottom: 0,
+                width: "40%",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)",
+                animation: "rypShimmer 4s ease-in-out infinite",
+              }} />
+            </div>
+
+            {/* background circle decoration */}
             <div style={{ position: "absolute", top: "-12px", right: "-12px", width: "80px", height: "80px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
-            <span style={{ fontSize: "40px", flexShrink: 0 }}>🎟️</span>
+
+            {/* ticket emoji + ripple ring */}
+            <div style={{ position: "relative", flexShrink: 0, width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{
+                position: "absolute", inset: 0, borderRadius: "50%",
+                border: "2.5px solid rgba(0,200,117,0.7)",
+                animation: "rypRipple 2.4s ease-out infinite",
+              }} />
+              <span style={{ fontSize: "36px", lineHeight: 1 }}>🎟️</span>
+            </div>
+
             <div style={{ textAlign: "left", flex: 1 }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>
                 Gratis · cada día
@@ -549,10 +593,16 @@ export default function Home() {
                 Raspa y Gana
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>
-                Gana puntos y saldo MXN en segundos →
+                Gana puntos y saldo MXN en segundos{" "}
+                <span style={{ display: "inline-block", animation: "rypBounce 1.2s ease-in-out infinite" }}>→</span>
               </p>
             </div>
-            <div style={{ background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0 }}>
+
+            {/* JUGAR badge — scale pulse */}
+            <div style={{
+              background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0,
+              animation: "rypPulse 2s ease-in-out infinite",
+            }}>
               <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>JUGAR</span>
             </div>
           </button>
