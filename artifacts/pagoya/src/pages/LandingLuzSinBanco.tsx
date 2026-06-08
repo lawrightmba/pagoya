@@ -134,7 +134,7 @@ export default function LandingLuzSinBanco() {
               { n: "3", title: "Selecciona CFE y paga tu recibo", desc: "En el menú de pagos elige CFE, escribe tu número de contrato (lo encuentras en tu recibo o marcando 071 gratis), confirma y listo. Recibes comprobante digital." },
             ].map(({ n, title, desc }) => (
               <li key={n} style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
-                <div style={{ minWidth: "40px", height: "40px", borderRadius: "50%", background: "#F59E0B", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "18px" }}>{n}</div>
+                <div style={{ minWidth: "40px", height: "40px", borderRadius: "50%", background: "#1D9E75", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "18px" }}>{n}</div>
                 <div>
                   <h3 style={{ color: "#fff", fontWeight: 700, margin: "0 0 6px", fontSize: "17px" }}>{title}</h3>
                   <p style={{ margin: 0, fontSize: "15px", color: "#CBD5E1", lineHeight: 1.65 }}>{desc}</p>
@@ -200,7 +200,7 @@ export default function LandingLuzSinBanco() {
         </section>
 
         {/* CTA */}
-        <section style={{ background: "linear-gradient(135deg, #1C1200 0%, #F59E0B 100%)", borderRadius: "24px", padding: "40px 32px", textAlign: "center" }}>
+        <section style={{ background: "linear-gradient(135deg, #0D3D2A 0%, #1D9E75 100%)", borderRadius: "24px", padding: "40px 32px", textAlign: "center" }}>
           <h2 style={{ color: "#fff", fontWeight: 900, margin: "0 0 12px", fontSize: "clamp(22px,4vw,32px)" }}>
             Paga la luz sin banco hoy mismo
           </h2>
@@ -208,7 +208,7 @@ export default function LandingLuzSinBanco() {
             Regístrate gratis en 90 segundos. Sin banco, sin tarjeta, sin filas.
           </p>
           <button onClick={() => navigate("/register")}
-            style={{ background: "#fff", color: "#1C1200", border: "none", borderRadius: "14px", padding: "16px 36px", fontWeight: 900, fontSize: "16px", cursor: "pointer" }}>
+            style={{ background: "#fff", color: "#0A2540", border: "none", borderRadius: "14px", padding: "16px 36px", fontWeight: 900, fontSize: "16px", cursor: "pointer" }}>
             Crear mi monedero gratis →
           </button>
           <p style={{ color: "rgba(255,255,255,0.55)", margin: "16px 0 0", fontSize: "13px" }}>

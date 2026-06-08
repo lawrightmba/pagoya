@@ -134,7 +134,7 @@ export default function LandingTelmexEfectivo() {
               { n: "3", title: "Paga tu recibo Telmex al instante", desc: "En la app selecciona Telmex, ingresa tu número de cliente o número telefónico, confirma el monto y ¡listo! Recibes comprobante digital de inmediato." },
             ].map(({ n, title, desc }) => (
               <li key={n} style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
-                <div style={{ minWidth: "40px", height: "40px", borderRadius: "50%", background: "#5B48D9", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "18px" }}>{n}</div>
+                <div style={{ minWidth: "40px", height: "40px", borderRadius: "50%", background: "#1D9E75", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "18px" }}>{n}</div>
                 <div>
                   <h3 style={{ color: "#fff", fontWeight: 700, margin: "0 0 6px", fontSize: "17px" }}>{title}</h3>
                   <p style={{ margin: 0, fontSize: "15px", color: "#CBD5E1", lineHeight: 1.65 }}>{desc}</p>
@@ -196,7 +196,7 @@ export default function LandingTelmexEfectivo() {
         </section>
 
         {/* CTA */}
-        <section style={{ background: "linear-gradient(135deg, #1a1260 0%, #5B48D9 100%)", borderRadius: "24px", padding: "40px 32px", textAlign: "center" }}>
+        <section style={{ background: "linear-gradient(135deg, #0D3D2A 0%, #1D9E75 100%)", borderRadius: "24px", padding: "40px 32px", textAlign: "center" }}>
           <h2 style={{ color: "#fff", fontWeight: 900, margin: "0 0 12px", fontSize: "clamp(22px,4vw,32px)" }}>
             Paga tu Telmex con efectivo ahora mismo
           </h2>
@@ -204,7 +204,7 @@ export default function LandingTelmexEfectivo() {
             Regístrate gratis. Sin banco, sin tarjeta, sin trámites.
           </p>
           <button onClick={() => navigate("/register")}
-            style={{ background: "#fff", color: "#1a1260", border: "none", borderRadius: "14px", padding: "16px 36px", fontWeight: 900, fontSize: "16px", cursor: "pointer" }}>
+            style={{ background: "#fff", color: "#0A2540", border: "none", borderRadius: "14px", padding: "16px 36px", fontWeight: 900, fontSize: "16px", cursor: "pointer" }}>
             Crear mi monedero gratis →
           </button>
         </section>
