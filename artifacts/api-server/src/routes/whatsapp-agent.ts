@@ -14,6 +14,55 @@ const router = Router();
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Map SIPREL/billpay raw error strings → plain Spanish cause line for users.
+ * Matches on the error-code labels embedded in thrown messages.
+ */
+function mapSiprelError(error: string, serviceName: string): string {
+  const e = error.toUpperCase();
+  // Wallet pre-check — insufficient balance
+  if (e.includes("INSUFFICIENT_BALANCE") || e.includes("SALDO INSUFICIENTE")) {
+    return "Tu cartera PagoYa no tiene saldo suficiente. Carga saldo y vuelve a intentar.";
+  }
+  // SIPREL error 2 — CFE / biller account not found
+  if (e.includes("DESTINATION_UNAVAILABLE")) {
+    return `No encontramos esa cuenta en ${serviceName}. Verifica tu número de contrato e intenta de nuevo.`;
+  }
+  // SIPREL error 1 — phone number rejected
+  if (e.includes("INVALID_PHONE")) {
+    return "El número de teléfono no es válido para este servicio. Verifica e intenta de nuevo.";
+  }
+  // SIPREL error 4 — line inactive
+  if (e.includes("INACTIVE_LINE")) {
+    return `La línea o cuenta en ${serviceName} aparece inactiva. Contacta directamente a ${serviceName}.`;
+  }
+  // SIPREL errors 3/5/6/8 — carrier / internal timeout
+  if (e.includes("NO_CARRIER_RESPONSE") || e.includes("INTERNAL_TIMEOUT") || e.includes("AUTHORIZER_UNAVAILABLE")) {
+    return `${serviceName} no respondió a tiempo. Tu pago no fue aplicado. Intenta de nuevo en unos minutos.`;
+  }
+  // SIPREL error 7/3129 — transaction table full
+  if (e.includes("TRANSACTION_TABLE_FULL")) {
+    return "El sistema de pagos está saturado temporalmente. Intenta de nuevo en 2–3 minutos.";
+  }
+  // SERVICE_WEB error 403 — bad credentials (admin alert fires separately)
+  if (e.includes("INVALID_CREDENTIALS")) {
+    return "Error de configuración interno. Ya notificamos a soporte. Intenta más tarde.";
+  }
+  // SIPREL error 3133 — product/SKU not found
+  if (e.includes("PRODUCT_NOT_FOUND") || e.includes("SKU_PENDING") || e.includes("SKU_NOT_CONFIGURED")) {
+    return `El servicio ${serviceName} no está disponible en este momento. Contáctanos para soporte.`;
+  }
+  // 60-second polling timeout (timedOut path returns success:true / status:"pending", handled separately)
+  if (e.includes("TIMED OUT") || e.includes("TIMEOUT") || e.includes("60 S")) {
+    return "SIPREL tardó demasiado en confirmar. Es posible que el pago esté en proceso — espera 5 min y revisa tu historial antes de reintentar.";
+  }
+  // Network / fetch error
+  if (e.includes("NETWORK") || e.includes("FETCH") || e.includes("CONEXIÓN") || e.includes("CONNECTION")) {
+    return "Error de conexión al procesar. Intenta de nuevo en unos segundos.";
+  }
+  return "Error técnico al procesar el pago. Tu cartera no fue afectada.";
+}
+
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
 
 // Strict confirmation: only SÍ / SI / si / sí / yes (+ optional punctuation/emoji)
@@ -142,12 +191,31 @@ router.post("/", async (req: Request, res: Response) => {
         // Reset TTL to 5 minutes from now (spec: TTL starts from SÍ)
         await confirmPendingPayment(phoneKey);
 
-        // Narrative processing sequence
-        await sendWhatsApp(phoneKey, `⏳ Conectando con ${pending.serviceName}...`);
-        await sleep(3000);
-        await sendWhatsApp(phoneKey, `🔄 Enviando tu pago a través de SIPREL...`);
+        // Start payment immediately — narration runs in parallel
+        const paymentPromise = executeStagedPayment(pending, port);
+        let paymentDone = false;
+        void paymentPromise.finally(() => { paymentDone = true; });
 
-        const result = await executeStagedPayment(pending, port);
+        // Message 1 — always shown at t=0
+        await sendWhatsApp(phoneKey, `⏳ Conectando con ${pending.serviceName}...`);
+
+        // Message 2 — shown at t≈6 s if still processing
+        await sleep(6_000);
+        if (!paymentDone) {
+          await sendWhatsApp(phoneKey, `🔄 Enviando tu pago a través de SIPREL / STP...`);
+        }
+
+        // Message 3 — "seguimos procesando" fallback at t≈16 s (slow Telcel / SIPREL retry)
+        await sleep(10_000);
+        if (!paymentDone) {
+          await sendWhatsApp(
+            phoneKey,
+            `⏱️ Seguimos procesando tu pago con ${pending.serviceName}.\n` +
+            `SIPREL está confirmando con la red STP. Un momento más.`,
+          );
+        }
+
+        const result = await paymentPromise;
 
         // Delete regardless of outcome — prevents double-execution
         await deletePendingPayment(phoneKey);
@@ -186,7 +254,7 @@ router.post("/", async (req: Request, res: Response) => {
             `──────────────────\n` +
             `⚠️ Tu dinero NO fue deducido de tu cartera.\n` +
             `Saldo actual: $${pending.walletBalance.toFixed(2)} MXN ✓\n` +
-            `Causa: ${result.error ?? "Error desconocido"}\n\n` +
+            `Causa: ${mapSiprelError(result.error ?? "", pending.serviceName)}\n\n` +
             `Escribe *AYUDA* para hablar con soporte, o intenta de nuevo.`,
           );
         }

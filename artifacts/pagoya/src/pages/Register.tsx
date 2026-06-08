@@ -157,6 +157,7 @@ export default function Register() {
   const [countryCode, setCountryCode] = useState("+52");
   const [localNumber, setLocalNumber] = useState("");
   const [curp, setCurp] = useState("");
+  const [showCurp, setShowCurp] = useState(false);
   const [city, setCity] = useState("");
   const [colonia, setColonia] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
@@ -810,45 +811,72 @@ export default function Register() {
             }
           </div>
 
-          {/* CURP */}
+          {/* CURP — collapsed behind optional toggle */}
           <div>
-            <label style={labelStyle}>
-              CURP{" "}
-              <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.32)", textTransform: "none", letterSpacing: 0 }}>
-                (opcional)
-              </span>
-            </label>
-            <input
-              type="text"
-              autoComplete="off"
-              placeholder="Ej: LOAM850101HDFPLN09"
-              value={curp}
-              onChange={(e) => { setCurp(e.target.value.toUpperCase()); setFieldError("curp", ""); }}
-              maxLength={18}
+            <button
+              type="button"
+              onClick={() => setShowCurp(v => !v)}
               style={{
-                ...inputStyle,
-                letterSpacing: "0.06em",
-                borderColor: fieldErrors.curp ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+                background: "none",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: "10px",
+                padding: "11px 14px",
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                cursor: "pointer",
+                color: "rgba(255,255,255,0.55)",
+                fontSize: "13px",
+                fontFamily: "DM Sans, sans-serif",
+                textAlign: "left",
               }}
-              onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-              onBlur={(e) => {
-                handleCurpBlur();
-                if (!fieldErrors.curp) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
-              }}
-            />
-            {fieldErrors.curp
-              ? <p style={fieldErrorStyle}>{fieldErrors.curp}</p>
-              : <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
-                  Solo se usa para verificar tu identidad. No compartimos tu información.
-                </p>
-            }
-            {!fieldErrors.curp && (
-              <div style={{ marginTop: "6px" }}>
-                <PaulaHint
-                  message="¿Dónde encuentro mi CURP? No tengo claro en qué documento aparece."
-                  label="¿Dónde encuentro mi CURP? (opcional)"
-                  variant="dark"
+            >
+              <span>🪪 ¿Quieres verificar tu identidad? <span style={{ color: "rgba(255,255,255,0.32)" }}>(opcional)</span></span>
+              <span style={{ fontSize: "11px", transition: "transform 0.2s", display: "inline-block", transform: showCurp ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+            </button>
+
+            {showCurp && (
+              <div style={{ marginTop: "10px" }}>
+                <label style={labelStyle}>
+                  CURP{" "}
+                  <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.32)", textTransform: "none", letterSpacing: 0 }}>
+                    (opcional)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Ej: LOAM850101HDFPLN09"
+                  value={curp}
+                  onChange={(e) => { setCurp(e.target.value.toUpperCase()); setFieldError("curp", ""); }}
+                  maxLength={18}
+                  style={{
+                    ...inputStyle,
+                    letterSpacing: "0.06em",
+                    borderColor: fieldErrors.curp ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
+                  }}
+                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
+                  onBlur={(e) => {
+                    handleCurpBlur();
+                    if (!fieldErrors.curp) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
+                  }}
                 />
+                {fieldErrors.curp
+                  ? <p style={fieldErrorStyle}>{fieldErrors.curp}</p>
+                  : <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
+                      Solo se usa para verificar tu identidad. No compartimos tu información.
+                    </p>
+                }
+                {!fieldErrors.curp && (
+                  <div style={{ marginTop: "6px" }}>
+                    <PaulaHint
+                      message="¿Dónde encuentro mi CURP? No tengo claro en qué documento aparece."
+                      label="¿Dónde encuentro mi CURP? (opcional)"
+                      variant="dark"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
