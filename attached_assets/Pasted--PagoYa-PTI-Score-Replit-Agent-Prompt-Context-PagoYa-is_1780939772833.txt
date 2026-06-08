@@ -1,0 +1,392 @@
+# PagoYa PTI Score — Replit Agent Prompt
+
+## Context
+
+PagoYa is a WhatsApp-native fintech wallet built on TypeScript / Express / PostgreSQL / Drizzle ORM, hosted on Replit. The existing schema includes: `users`, `transactions`, `wallet_loads`, `missions`, `user_missions`, `loyalty_points`. A `pti_score` column may or may not exist on the users table — check before adding.
+
+We are building two things:
+
+1. **A nightly cron job** that computes a PTI (PagoYa Trust Index) score (0–100) for every user and writes it back to the users table, along with a score breakdown JSON and a computed_at timestamp.
+2. **A user-facing trust score widget** that appears on the dashboard after first login post-registration, and on every subsequent login, showing the user their score, a plain-Spanish explanation of what drives it, and what they can do to improve it.
+
+There is NO fee or paywall on score refreshes at this time. Every user sees their score for free. The score updates monthly via the cron — do not build any premium refresh flow.
+
+---
+
+## Part 1 — Database migrations
+
+Run these migrations via Drizzle or direct SQL. Check if columns exist before adding.
+
+```sql
+-- Add PTI fields to users table
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS pti_score INTEGER DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS pti_breakdown JSONB DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS pti_computed_at TIMESTAMPTZ DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS pti_first_computed_at TIMESTAMPTZ DEFAULT NULL;
+```
+
+---
+
+## Part 2 — PTI computation service
+
+Create file: `lib/services/pti.ts`
+
+### Score formula (0–100, integer)
+
+Compute each component independently. Cap total at 100. Store breakdown as JSON so the frontend can explain each component to the user.
+
+```typescript
+interface PTIBreakdown {
+  payment_streak:     { score: number; weeks: number; max: number };
+  biller_diversity:   { score: number; count: number; max: number };
+  kyc_verified:       { score: number; verified: boolean; max: number };
+  wallet_balance:     { score: number; avg_balance_mxn: number; max: number };
+  mission_completions:{ score: number; count: number; max: number };
+  load_spend_ratio:   { score: number; ratio: number; max: number };
+  account_age:        { score: number; days: number; max: number };
+  total:              number;
+}
+```
+
+### Component rules
+
+| Component | Max pts | Logic |
+|---|---|---|
+| `payment_streak` | 25 | streak_weeks from user_missions WHERE mission_key = 'streak_weeks'. 1pt per week, cap 25. |
+| `biller_diversity` | 15 | COUNT(DISTINCT biller_id) from transactions WHERE user_id = ? AND status = 'success'. 5pts per distinct biller, cap 15. |
+| `kyc_verified` | 15 | 15pts if kyc_submitted_at IS NOT NULL, else 0. |
+| `wallet_balance` | 15 | Average of last 30 days of EOD balance snapshots if available, else current balance. <$50 MXN = 0pts, $50–$199 = 5pts, $200–$499 = 10pts, $500+ = 15pts. |
+| `mission_completions` | 15 | COUNT of completed missions from user_missions WHERE completed_at IS NOT NULL. 3pts each, cap 15. |
+| `load_spend_ratio` | 10 | SUM(wallet_loads) / SUM(spend) over last 90 days. ratio >= 1.0 = 10pts, 0.7–0.99 = 7pts, 0.4–0.69 = 4pts, <0.4 = 0pts. If no loads yet = 0pts. |
+| `account_age` | 5 | Days since created_at. <7 days = 0pts, 7–29 = 2pts, 30–89 = 3pts, 90+ = 5pts. |
+
+**Total = sum of all components, capped at 100.**
+
+### Score tier labels
+
+```typescript
+function getPTITier(score: number): { tier: string; color: string; label: string } {
+  if (score >= 80) return { tier: 'excelente',  color: '#00C875', label: 'Excelente' };
+  if (score >= 60) return { tier: 'bueno',      color: '#007A4A', label: 'Bueno' };
+  if (score >= 40) return { tier: 'en_proceso', color: '#F59E0B', label: 'En proceso' };
+  return           { tier: 'iniciando',          color: '#6B7280', label: 'Iniciando' };
+}
+```
+
+### Export the compute function
+
+```typescript
+export async function computePTIForUser(userId: number, db: DrizzleDB): Promise<PTIBreakdown>
+export async function computePTIForAllUsers(db: DrizzleDB): Promise<void>
+```
+
+`computePTIForAllUsers` should:
+- Select all user IDs
+- For each user, call `computePTIForUser`
+- Write result back: `UPDATE users SET pti_score = ?, pti_breakdown = ?, pti_computed_at = NOW(), pti_first_computed_at = COALESCE(pti_first_computed_at, NOW()) WHERE id = ?`
+- Log success/failure per user without throwing — one bad user should not stop the batch
+- Log total: "PTI batch complete: X users updated, Y errors"
+
+---
+
+## Part 3 — Cron job
+
+Create file: `lib/cron/pti-cron.ts`
+
+Use `node-cron` (already installed, or add it). Schedule: **1st of every month at 3:00 AM Mexico City time (UTC-6)**.
+
+```typescript
+import cron from 'node-cron';
+import { computePTIForAllUsers } from '../services/pti';
+import { db } from '../db';
+
+// Runs 1st of month at 03:00 AM UTC-6 (09:00 UTC)
+cron.schedule('0 9 1 * *', async () => {
+  console.log('[PTI Cron] Starting monthly PTI computation...');
+  try {
+    await computePTIForAllUsers(db);
+    console.log('[PTI Cron] Complete.');
+  } catch (err) {
+    console.error('[PTI Cron] Fatal error:', err);
+  }
+});
+```
+
+Register the cron in `api-server/index.ts` (or wherever the main server starts) by importing the cron file:
+
+```typescript
+import '../lib/cron/pti-cron';
+```
+
+---
+
+## Part 4 — API endpoints
+
+Add to the existing Express router.
+
+### GET /api/pti/score
+
+Returns the current user's PTI score, breakdown, tier, and next update date.
+
+```typescript
+// Middleware: requires auth (existing JWT middleware)
+GET /api/pti/score
+
+Response 200:
+{
+  score: 67,
+  tier: "bueno",
+  tier_label: "Bueno",
+  tier_color: "#007A4A",
+  breakdown: {
+    payment_streak:      { score: 16, weeks: 16, max: 25 },
+    biller_diversity:    { score: 10, count: 2,  max: 15 },
+    kyc_verified:        { score: 15, verified: true, max: 15 },
+    wallet_balance:      { score: 10, avg_balance_mxn: 320, max: 15 },
+    mission_completions: { score:  9, count: 3, max: 15 },
+    load_spend_ratio:    { score:  7, ratio: 0.85, max: 10 },
+    account_age:         { score:  3, days: 45, max: 5 }
+  },
+  computed_at: "2026-06-01T09:00:00Z",
+  next_update: "2026-07-01",
+  is_new_user: false   // true if pti_score IS NULL (never computed yet)
+}
+
+// If score not yet computed (new user):
+Response 200:
+{
+  score: null,
+  is_new_user: true,
+  message: "Tu primer puntaje se calculará el próximo día 1 del mes."
+}
+```
+
+### POST /api/pti/compute-now (admin only)
+
+Triggers immediate computation for a single user. Protected by admin middleware.
+
+```typescript
+POST /api/pti/compute-now
+Body: { telefono: string }
+Response: { score: number; breakdown: PTIBreakdown }
+```
+
+---
+
+## Part 5 — Frontend widget
+
+### Where it appears
+
+1. **Dashboard (`/inicio`)** — show the PTI card below the wallet balance widget, always visible after first login.
+2. **Post-login redirect** — if this is the user's FIRST login after registration (check: `pti_score IS NULL AND created_at > NOW() - INTERVAL '7 days'`), show a full-screen PTI intro modal before landing on the dashboard.
+
+---
+
+### Component: `PTIScoreCard.tsx`
+
+Location: `artifacts/pagoya/src/components/PTIScoreCard.tsx`
+
+This card is always visible on the dashboard. Build it as a self-contained React component that fetches `/api/pti/score` on mount.
+
+**Visual design:**
+
+```
+┌─────────────────────────────────────────────┐
+│  Tu PagoYa Trust Index                      │
+│                                             │
+│   ╔═══╗                                     │
+│   ║ 67║  ← large number, tier color         │
+│   ╚═══╝  Bueno                              │
+│   ████████████░░░░░  67/100                 │
+│   (animated progress bar, tier color fill)  │
+│                                             │
+│  ┌──────────────────────────────────────┐   │
+│  │ ✅ Identidad verificada     +15 pts  │   │
+│  │ 📅 16 semanas seguidas      +16 pts  │   │
+│  │ 🏢 2 servicios distintos    +10 pts  │   │
+│  │ 💳 Misiones completadas     +9 pts   │   │
+│  │ 💰 Saldo promedio           +10 pts  │   │
+│  │ 🔄 Proporción carga/gasto   +7 pts   │   │
+│  └──────────────────────────────────────┘   │
+│                                             │
+│  💡 Paga 1 servicio más para +5 pts         │
+│                                             │
+│  Actualizado: 1 jun 2026                    │
+│  Próxima actualización: 1 jul 2026          │
+└─────────────────────────────────────────────┘
+```
+
+**Implementation notes:**
+
+- Score number animates from 0 to actual value on first render (CSS counter animation or useEffect incrementing state, 800ms duration)
+- Progress bar fills with a 600ms CSS transition
+- Bar color matches tier: gray (Iniciando) → amber (En proceso) → dark green (Bueno) → bright green (Excelente)
+- Breakdown rows: show only components where score > 0. Components at 0 show as improvement hints instead.
+- "💡 Paga X más para +Y pts" — compute the single highest-leverage action available. Logic:
+  - If biller_diversity < 3: "Paga 1 servicio diferente para +5 pts"
+  - Else if kyc not verified: "Verifica tu identidad para +15 pts" → link to /cargar
+  - Else if streak_weeks < 25: "Sigue pagando cada semana para subir tu racha"
+  - Else: "¡Excelente historial! Sigue así."
+- "Actualizado" date formatted as "1 jun 2026" (Spanish short format)
+- Loading state: show skeleton shimmer on score number and bars
+- Error state: "No pudimos cargar tu puntaje. Intenta de nuevo." with retry button
+
+---
+
+### Component: `PTIIntroModal.tsx`
+
+Location: `artifacts/pagoya/src/components/PTIIntroModal.tsx`
+
+This is a full-screen modal shown ONCE — on first login after registration, before the user reaches the dashboard. It introduces the concept of the trust score in plain Spanish.
+
+**Trigger logic in `Dashboard.tsx` or routing layer:**
+
+```typescript
+// Show modal if:
+// 1. User is logged in
+// 2. pti_score is null (never computed)
+// 3. localStorage key 'pagoya_pti_intro_seen' is NOT set
+// After user dismisses: set localStorage + call POST /api/pti/compute-now
+//   to compute their initial score immediately (even before the monthly cron)
+```
+
+**Modal content:**
+
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│           Tu PagoYa Trust Index             │
+│                                             │
+│   [Shield icon or simple score circle]      │
+│                                             │
+│  PagoYa construye tu historial financiero   │
+│  automáticamente — sin banco, sin crédito.  │
+│                                             │
+│  Tu puntaje refleja:                        │
+│                                             │
+│  📅  Qué tan seguido pagas                  │
+│  🏢  Cuántos servicios distintos cubres     │
+│  💰  Tu saldo promedio en cartera           │
+│  🪪  Si verificaste tu identidad            │
+│  🏆  Las misiones que has completado        │
+│  🔄  Cuánto cargas vs cuánto gastas         │
+│                                             │
+│  Se actualiza automáticamente cada mes.     │
+│  Cuanto más uses PagoYa, más sube.          │
+│                                             │
+│  ┌──────────────────────────────────────┐   │
+│  │     Ver mi puntaje ahora →           │   │
+│  └──────────────────────────────────────┘   │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+**Implementation notes:**
+
+- Full-screen overlay, dark semi-transparent background, white card centered
+- "Ver mi puntaje ahora →" button:
+  1. Sets `localStorage['pagoya_pti_intro_seen'] = 'true'`
+  2. Calls `POST /api/pti/compute-now` with user's telefono
+  3. Shows a brief "Calculando tu puntaje..." spinner (1–2 seconds)
+  4. Dismisses modal → user lands on dashboard with score already populated
+- Modal is NOT dismissable by clicking outside — user must tap the button. This ensures they read it.
+- Do NOT show this modal again after it's been dismissed (localStorage guard)
+- Style: PagoYa brand colors. Forest green header. Bright green CTA button. Clean, no clutter.
+
+---
+
+## Part 6 — Dashboard integration
+
+In `Dashboard.tsx` (or the main home component):
+
+1. Import and render `<PTIScoreCard />` below the wallet balance widget and above the biller search bar.
+2. Import `PTIIntroModal` and render it conditionally:
+
+```tsx
+const [showPTIIntro, setShowPTIIntro] = useState(false);
+
+useEffect(() => {
+  const seen = localStorage.getItem('pagoya_pti_intro_seen');
+  if (!seen && user && !user.ptiScore) {
+    setShowPTIIntro(true);
+  }
+}, [user]);
+
+return (
+  <>
+    {showPTIIntro && <PTIIntroModal onDismiss={() => setShowPTIIntro(false)} />}
+    {/* rest of dashboard */}
+    <WalletBalanceWidget />
+    <PTIScoreCard />
+    <BillerSearch />
+    {/* ... */}
+  </>
+);
+```
+
+---
+
+## Part 7 — WhatsApp notification on score update
+
+In `computePTIForAllUsers`, after writing each user's score, send a WhatsApp notification via the existing Twilio integration:
+
+```
+📊 *Tu PagoYa Trust Index se actualizó*
+
+Tu puntaje este mes: *67/100 — Bueno* ✅
+
+Mayor logro: 16 semanas de pagos consecutivos 🔥
+
+Consejo: Verifica tu identidad para subir +15 pts.
+
+Ver tu puntaje completo: pagoyamx.com/inicio
+```
+
+Use the existing `sendWhatsAppMessage(telefono, message)` utility. Only send if the user has at least 1 completed transaction (don't notify zero-activity users).
+
+---
+
+## Part 8 — Smoke tests
+
+Add to the existing test suite:
+
+```typescript
+describe('PTI Score', () => {
+  it('computes score of 0 for brand new user with no activity')
+  it('awards 15pts for KYC verified user')
+  it('caps total score at 100')
+  it('GET /api/pti/score returns null score for new user with is_new_user: true')
+  it('POST /api/pti/compute-now returns score for known user')
+  it('breakdown JSON contains all 7 components')
+  it('score tier labels match expected ranges')
+})
+```
+
+---
+
+## Acceptance criteria
+
+- [ ] Migration runs without error on existing schema
+- [ ] `computePTIForUser` returns a valid PTIBreakdown for any user ID
+- [ ] Cron job registered and logs on server start: "[PTI Cron] Scheduled: runs 1st of month at 03:00 AM MX"
+- [ ] `GET /api/pti/score` returns correct structure for authenticated user
+- [ ] PTIScoreCard renders on dashboard with animated score number
+- [ ] Score bar color matches tier
+- [ ] Improvement hint is contextually correct
+- [ ] PTIIntroModal shows on first post-registration login only
+- [ ] Modal dismissal triggers immediate score computation
+- [ ] WhatsApp notification fires on monthly cron (not on every compute-now call)
+- [ ] All 7 smoke tests passing
+- [ ] No TypeScript errors, no console errors
+
+---
+
+## Do NOT build
+
+- Any payment or fee flow for score refresh
+- A separate PTI page — the card lives on the dashboard only
+- Any external credit bureau integration
+- Any score sharing or export feature
+
+These are future phases. Build only what is specified above.

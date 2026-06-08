@@ -3,6 +3,8 @@ import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
+import PTIScoreCard from "@/components/PTIScoreCard";
+import PTIIntroModal from "@/components/PTIIntroModal";
 import AutofillInput from "@/components/AutofillInput";
 import BillerTicker from "@/components/BillerTicker";
 import PaulaHint from "@/components/PaulaHint";
@@ -239,6 +241,31 @@ export default function Home() {
 
   const showPushBanner = push.supported && !push.subscribed && !pushDismissed && !!storedPhone && push.permission !== "denied";
 
+  // ── PTI intro modal (first-time score intro) ──────────────────────────────
+  const [showPTIIntro, setShowPTIIntro] = useState(false);
+  const [ptiRefreshKey, setPtiRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!storedPhone) return;
+    const seen = localStorage.getItem("pagoya_pti_intro_seen");
+    if (seen) return;
+    // Only show if user has no score yet — check via API
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/pti/score?telefono=${encodeURIComponent(storedPhone)}`)
+      .then(r => r.json())
+      .then((data: { score?: number | null; is_new_user?: boolean }) => {
+        if (data.is_new_user || data.score == null) {
+          setShowPTIIntro(true);
+        }
+      })
+      .catch(() => {});
+  }, [storedPhone]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handlePTIIntroDismiss() {
+    setShowPTIIntro(false);
+    setPtiRefreshKey(k => k + 1);
+  }
+
   useEffect(() => { setLangPref(lang); }, [lang]);
 
   function handleAutofill(result: {
@@ -282,6 +309,9 @@ export default function Home() {
     // BEFORE: background: "#FFFFFF"
     // AFTER:  background: "#0A2540"
     <div style={{ background: "#FFFFFF", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      {showPTIIntro && storedPhone && (
+        <PTIIntroModal telefono={storedPhone} onDismiss={handlePTIIntroDismiss} />
+      )}
       <Helmet>
         <title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
         <meta name="robots" content="index, follow" />
@@ -534,6 +564,11 @@ export default function Home() {
             {storedPhone && (
               <div style={{ marginBottom: "20px" }}>
                 <WalletBalanceWidget />
+              </div>
+            )}
+            {storedPhone && (
+              <div style={{ marginBottom: "20px" }}>
+                <PTIScoreCard telefono={storedPhone} refreshKey={ptiRefreshKey} />
               </div>
             )}
             <AutofillInput

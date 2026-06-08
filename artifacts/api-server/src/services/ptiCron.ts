@@ -16,6 +16,7 @@ import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { computePTIForAllUsers } from "./pti.js";
 
 // ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
 // Unexpected rewards at threshold crossings — never announced in advance.
@@ -363,10 +364,37 @@ function scheduleDailyAt(utcHour: number, fn: () => Promise<void>, label: string
   scheduleNext();
 }
 
+// ── Monthly PTI batch — 1st of month at 03:00 AM Mexico City (09:00 UTC) ─────
+function scheduleMonthly1stAt(utcHour: number, fn: () => Promise<void>, label: string) {
+  function msUntilNext(): number {
+    const now = new Date();
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, utcHour, 0, 0, 0));
+    // If it's already past the 1st of this month at that hour, schedule for next month
+    const thisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, utcHour, 0, 0, 0));
+    const target = thisMonth > now ? thisMonth : next;
+    return target.getTime() - now.getTime();
+  }
+
+  function scheduleNext() {
+    const delay = msUntilNext();
+    logger.info({ label, nextInMs: delay }, `pti-cron: ${label} scheduled`);
+    setTimeout(() => {
+      fn().catch(err => logger.error({ err }, `pti-cron: ${label} uncaught`));
+      // Re-schedule for next month
+      scheduleNext();
+    }, delay);
+  }
+
+  scheduleNext();
+}
+
 export function startPtiCron(): void {
   // 2 AM Mexico City (UTC-6 = 08:00 UTC) — after overnight transactions settle
   scheduleDailyAt(8, runNightlyPtiBatch, "nightlyPtiBatch");
   // 5 PM Mexico City (UTC-6 = 23:00 UTC) — scratch card scarcity reminder
   scheduleDailyAt(23, sendScratchCardReminders, "scratchCardReminders");
-  logger.info("pti-cron: scheduled (PTI 2 AM MX / scratch reminder 5 PM MX)");
+  // 1st of month at 03:00 AM Mexico City (09:00 UTC) — monthly user-facing PTI score
+  scheduleMonthly1stAt(9, computePTIForAllUsers, "monthlyPtiBatch");
+  logger.info("[PTI Cron] Scheduled: runs 1st of month at 03:00 AM MX");
+  logger.info("pti-cron: scheduled (PTI 2 AM MX / scratch reminder 5 PM MX / monthly PTI 1st of month 3 AM MX)");
 }

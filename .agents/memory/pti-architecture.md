@@ -1,75 +1,57 @@
 ---
 name: PTI Architecture
-description: PagoYa Trust Index scoring system — tables, cron schedule, model versioning, payment_source tagging
+description: PagoYa Trust Index — dual-model system, DB schema gotchas, cron schedule, frontend widget location
 ---
 
-## Core decisions
+## Two separate models
 
-**Internal name**: PagoYa Trust Index (PTI). **User-facing name**: PagoScore.
-Naming distinction keeps us out of CNBV regulated territory while dataset accumulates.
+| Model | File | Storage | Schedule | Purpose |
+|---|---|---|---|---|
+| PagoScore | `api-server/src/services/pagoScore.ts` | `credit_profiles.pago_score` | Nightly 2AM MX | Milestone rewards, Paula AI context, sophisticated 4-dim model |
+| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown + pti_computed_at + pti_first_computed_at` | Monthly 1st 3AM MX | User-facing score card, 7-component breakdown |
 
-**Computation frequency**: Nightly batch at 2 AM Mexico City (08:00 UTC) via `ptiCron.ts`.
-Event-triggered recalculation deferred to Phase 2+ when a real-time credit product gates on it.
+Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 
-**Model version**: `v1.0-heuristic` — exported as `PTI_MODEL_VERSION` constant in `pagoScore.ts`.
-Bump version any time weights or signal definitions change. Old rows retain their version tag for history comparison.
+## DB schema gotchas (critical — cost debugging time)
 
-## Tables (all created via direct SQL — drizzle-kit push is broken)
+- `bill_payments`: biller column is `service_id` (NOT `empresa`). Status values: `completed`, `success`, `completed_ok`.
+- `wallet_transactions`: NO `telefono` column. Uses `wallet_id` (UUID) → joins to `wallets.id`. Use `wallets.balance_mxn` directly for balance. Use subquery join for load sums.
+- `wallets.user_id` = telefono (text, format varies: `3221000001` or `+5213221000001`).
+- `user_mission_progress` (NOT `user_missions`): columns `telefono`, `mission_id`, `completed_at`, `rewarded_at`.
 
-| Table | Purpose |
-|---|---|
-| `user_events` | Behavioral event log (login, bill_paid, game_played, etc.) |
-| `credit_profiles` | Latest PTI score + dimension scores per user |
-| `pti_signals` | Per-signal audit trail — one row per signal per computation |
-| `user_financial_snapshots` | Nightly baseline snapshot — Phase 2 trend clock starts here |
-| `scratch_card_plays` | Raspa y Gana daily game state |
+## 7-component formula (pti.ts)
 
-## pti_signals schema
-```sql
-telefono, signal_name, signal_value (0–1 normalized), signal_meta (jsonb),
-model_version (text), computed_at (timestamptz)
-```
-Signals stored: routine_login_days, routine_login_consistency, routine_biller_diversity,
-routine_topup_stability, financial_on_time_rate, financial_income_stability,
-financial_recovery_rate, financial_activation_speed, trajectory_digital_ratio,
-trajectory_oxxo_migration, trajectory_activity_growth, trajectory_load_frequency,
-social_game_engagement, social_referrals, social_streaks
+| Component | Max | Data source |
+|---|---|---|
+| payment_streak | 25 | `users.consecutive_payment_months` (1pt/month) |
+| biller_diversity | 15 | `COUNT(DISTINCT service_id) FROM bill_payments` (5pts each) |
+| kyc_verified | 15 | `users.kyc_submitted_at IS NOT NULL` |
+| wallet_balance | 15 | `wallets.balance_mxn` WHERE `user_id = telefono` |
+| mission_completions | 15 | `COUNT(*) FROM user_mission_progress WHERE completed_at IS NOT NULL` (3pts each) |
+| load_spend_ratio | 10 | loads via wallet_transactions→wallets join; spend via `bill_payments.monto` |
+| account_age | 5 | `EXTRACT(EPOCH FROM NOW()-users.created_at)/86400` |
 
-## user_financial_snapshots schema
-```sql
-telefono, snapshot_date (UNIQUE per user), wallet_balance, biller_count, tx_count_30d,
-load_count_30d, digital_load_ratio, points_balance, tier, pti_score
-```
-Populated nightly by `ptiCron.ts → takeFinancialSnapshot()`. Phase 2 30/60/90-day
-trend vectors require this baseline — it must run from day one.
+## API endpoints
 
-## PTI dimension weights (v1.0-heuristic)
-- Longitudinal Trajectory: 30 pts
-- Financial Behavior: 25 pts
-- Routine & Stability: 25 pts
-- Social & Community: 20 pts
+- `GET /api/pti/score?telefono=xxx` — returns stored score or `{is_new_user: true}` if null
+- `POST /api/pti/compute-now` — telefono in body; self-service (no admin token required)
 
-**Why heuristic**: no repayment data yet. Replace with empirically-derived weights once
-a credit product exists and default rates can be observed.
+## Frontend
 
-## payment_source column
-Added to `wallet_transactions` via direct SQL. Tagged at insert time:
-- OXXO load → `payment_source = 'oxxo'`
-- Card load → `payment_source = 'card'`
-- SPEI/STP → `payment_source = 'spei'`
-- Backfill applied to existing rows via type column estimation.
+- `PTIScoreCard` → `artifacts/pagoya/src/components/PTIScoreCard.tsx` — props: `telefono`, `refreshKey`
+- `PTIIntroModal` → `artifacts/pagoya/src/components/PTIIntroModal.tsx` — full-screen, position:fixed, localStorage guard `pagoya_pti_intro_seen`
+- Both inserted in `Home.tsx`. Card below WalletBalanceWidget. Modal at top of return before `<Helmet>`.
+- `refreshKey` increments on intro modal dismiss → forces score re-fetch.
 
-This powers the OXXO→digital migration signal (single strongest upward-mobility indicator).
+## WhatsApp notification
 
-## Paula language signal — flagged non-credit
-Language formality in Paula interactions has fair lending risk (education/class proxy).
-Documented as engagement-only signal, NOT a credit input. Must be stated explicitly
-before Accion diligence — they will ask.
+In `computePTIForAllUsers()` (monthly batch only — NOT on compute-now). Only fires for users with ≥1 completed bill_payment. Message includes score/tier, biggest achievement, improvement tip.
 
-## Phase 2 prerequisite
-user_financial_snapshots must accumulate 30 days before trend vectors are computable.
-Phase 2 clock started: June 7, 2026.
+## Original pagoScore / credit_profiles model (kept intact)
 
-## Phase 3 prerequisite
-All P2P social graph signals require STP P2P transfers to be live. STP contract is
-the single highest-leverage infrastructure item for the credit model, not just product.
+- Internal name: PagoYa Trust Index. User-facing name: PagoScore.
+- Model version `v1.0-heuristic` in `PTI_MODEL_VERSION` constant.
+- 4 dimensions: Trajectory 30pts, Financial 25pts, Routine 25pts, Social 20pts.
+- Milestone rewards at 30/50/70/85 pts (WhatsApp + loyalty points/MXN credits).
+- Paula AI reads `credit_profiles.pago_score` for tone adaptation.
+- Phase 2 prerequisite: `user_financial_snapshots` accumulates 30 days of baselines (started June 2026).

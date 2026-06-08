@@ -38,6 +38,7 @@ import pendingPaymentsRouter from "./pendingPayments.js";
 import videoConvertRouter from "./videoConvert.js";
 import eventsRouter from "./events.js";
 import gamesRouter from "./games.js";
+import ptiRouter from "./pti.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { logger } from "../lib/logger.js";
 
@@ -67,8 +68,10 @@ router.use("/bills/pending", pendingPaymentsRouter);
 router.use("/video", videoConvertRouter);
 router.use("/events", eventsRouter);
 router.use("/games", gamesRouter);
+router.use("/pti", ptiRouter);
 
 console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
+console.log("✅ PTI routes ready at GET /api/pti/score and POST /api/pti/compute-now");
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 
