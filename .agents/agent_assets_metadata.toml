@@ -233,3 +233,9 @@ id = "blz7UHEDXTi7HHriS60JC"
 uri = "file://.local/outputs/PagoYa.pdf"
 type = "pdf"
 title = "PagoYa.pdf"
+
+[[outputs]]
+id = "6CAerYQQgMwzhWILDDA6x"
+uri = "file://.local/outputs/PagoYa---Techstars-Pre-Seed-Pitch-Deck.pdf"
+type = "pdf"
+title = "PagoYa — Techstars Pre-Seed Pitch Deck (PDF)"
