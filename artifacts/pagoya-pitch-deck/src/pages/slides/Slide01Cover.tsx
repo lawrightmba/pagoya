@@ -28,7 +28,7 @@ export default function Slide01Cover() {
               marginBottom: "2.5vh"
             }}
           >
-            Techstars — Presentación Pre-Semilla · Junio 2026
+            Mastercard — Presentación Pre-Semilla · Junio 2026
           </p>
           <h1
             style={{
