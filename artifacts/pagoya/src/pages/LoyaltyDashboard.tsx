@@ -39,6 +39,13 @@ interface LeaderRow {
   masked_phone: string;
 }
 
+interface Badge {
+  mission_id: string;
+  title_es: string;
+  badge_emoji: string;
+  earned_at: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TIER_EMOJI: Record<string, string> = { bronce: "🥉", plata: "🥈", oro: "🥇" };
@@ -102,6 +109,7 @@ export default function LoyaltyDashboard() {
   const [balance, setBalance] = useState<BalanceData | null>(null);
   const [history, setHistory] = useState<TxRow[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderRow[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [redeeming, setRedeeming] = useState<string | null>(null);
@@ -114,14 +122,24 @@ export default function LoyaltyDashboard() {
     if (!phone) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [balRes, histRes, lbRes] = await Promise.all([
+      const [balRes, histRes, lbRes, missionsRes] = await Promise.all([
         fetch(`${BASE_URL}/api/loyalty/balance/${encodeURIComponent(phone)}`),
         fetch(`${BASE_URL}/api/loyalty/history/${encodeURIComponent(phone)}?limit=20`),
         fetch(`${BASE_URL}/api/loyalty/leaderboard`),
+        fetch(`${BASE_URL}/api/games/missions?telefono=${encodeURIComponent(phone)}`),
       ]);
       if (balRes.ok) setBalance(await balRes.json());
       if (histRes.ok) { const d = await histRes.json(); setHistory(d.history ?? []); }
       if (lbRes.ok) { const d = await lbRes.json(); setLeaderboard(d.leaderboard ?? []); }
+      if (missionsRes.ok) {
+        const d = await missionsRes.json();
+        const earned: Badge[] = (d.missions ?? [])
+          .filter((m: { rewarded_at: string | null; badge_emoji: string | null }) => m.rewarded_at && m.badge_emoji)
+          .map((m: { mission_id: string; title_es: string; badge_emoji: string; rewarded_at: string }) => ({
+            mission_id: m.mission_id, title_es: m.title_es, badge_emoji: m.badge_emoji, earned_at: m.rewarded_at,
+          }));
+        setBadges(earned);
+      }
     } catch { /* ignore */ }
     setLoading(false);
   }, [phone]);
@@ -375,7 +393,44 @@ export default function LoyaltyDashboard() {
               )}
             </section>
 
-            {/* ── D. LEADERBOARD TEASER ── */}
+            {/* ── D. BADGES ── */}
+            {badges.length > 0 && (
+              <section style={{ background: "white", borderRadius: "20px", padding: "20px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(10,37,64,0.07)" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#0A2540", marginBottom: "4px" }}>
+                  🏅 {es ? "Mis Insignias" : "My Badges"}
+                </h3>
+                <p style={{ fontSize: "12px", color: "#6B7280", marginBottom: "14px" }}>
+                  {es ? "Misiones completadas" : "Completed missions"}
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  {badges.map(b => (
+                    <div key={b.mission_id} style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+                      background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: "1.5px solid #BBF7D0",
+                      borderRadius: "14px", padding: "12px 14px", minWidth: "72px",
+                    }}>
+                      <span style={{ fontSize: "28px" }}>{b.badge_emoji}</span>
+                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#046C2C", textAlign: "center", lineHeight: 1.2 }}>
+                        {b.title_es}
+                      </span>
+                    </div>
+                  ))}
+                  {/* Locked placeholder for next badge */}
+                  <div style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+                    background: "#F9FAFB", border: "1.5px dashed #E5E7EB",
+                    borderRadius: "14px", padding: "12px 14px", minWidth: "72px",
+                  }}>
+                    <span style={{ fontSize: "28px", filter: "grayscale(1)", opacity: 0.35 }}>🏅</span>
+                    <span style={{ fontSize: "10px", color: "#D1D5DB", textAlign: "center", lineHeight: 1.2 }}>
+                      {es ? "Próxima" : "Next"}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── E. LEADERBOARD TEASER ── */}
             {leaderboard.length > 0 && (
               <section style={{ background: "white", borderRadius: "20px", padding: "20px", marginBottom: "24px", boxShadow: "0 2px 12px rgba(10,37,64,0.07)" }}>
                 <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#0A2540", marginBottom: "14px" }}>

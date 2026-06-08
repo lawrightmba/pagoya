@@ -344,9 +344,8 @@ export default function Register() {
       const data = await res.json();
 
       if (data.success) {
-        // Store phone for bienvenida screen, then navigate there
         localStorage.setItem("pagoya_telefono", phoneRef.current);
-        navigate("/bienvenida");
+        navigate("/spin");
         return;
       }
 

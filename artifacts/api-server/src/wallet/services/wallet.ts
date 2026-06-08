@@ -81,6 +81,17 @@ export async function creditWallet(
   });
 
   logger.info({ walletId, amountMXN, txId }, "wallet: credited");
+
+  // Fire-and-forget: update wallet_load missions
+  try {
+    const wRow = await db.select({ userId: walletsTable.userId }).from(walletsTable).where(eq(walletsTable.id, walletId)).limit(1);
+    const phone = wRow[0]?.userId;
+    if (phone) {
+      import("../../services/missions.js").then(({ updateMissionProgress }) => {
+        updateMissionProgress(phone, "wallet_load").catch(() => {});
+      }).catch(() => {});
+    }
+  } catch { /* non-fatal */ }
 }
 
 export async function debitWallet(

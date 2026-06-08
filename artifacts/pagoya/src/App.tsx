@@ -56,6 +56,7 @@ import LandingCFESinBanco from "@/pages/LandingCFESinBanco";
 import LandingTelmexEfectivo from "@/pages/LandingTelmexEfectivo";
 import LandingRecargarSinTarjeta from "@/pages/LandingRecargarSinTarjeta";
 import LandingLuzSinBanco from "@/pages/LandingLuzSinBanco";
+import SpinWheel from "@/pages/SpinWheel";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -135,6 +136,8 @@ function Router() {
       <Route path="/pagar-telmex-en-linea-efectivo" component={LandingTelmexEfectivo} />
       <Route path="/recargar-saldo-sin-tarjeta" component={LandingRecargarSinTarjeta} />
       <Route path="/pagar-luz-sin-banco" component={LandingLuzSinBanco} />
+      <Route path="/spin" component={SpinWheel} />
+      <Route path="/ruleta" component={SpinWheel} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {

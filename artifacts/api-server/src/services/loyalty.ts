@@ -174,6 +174,29 @@ function sendLoyaltyWhatsApp(
   sendWhatsApp(phone, msg).catch(() => {});
 }
 
+// ─── Weekly frequency bonus ───────────────────────────────────────────────────
+
+async function weeklyPaymentCount(accountId: string): Promise<number> {
+  const r = await db.execute(
+    sql`SELECT COUNT(*)::int AS cnt
+        FROM loyalty_transactions
+        WHERE account_id = ${accountId}
+          AND type = 'earn'
+          AND created_at >= date_trunc('week', now())`,
+  );
+  const rows = r.rows as Array<{ cnt: number }>;
+  return Number(rows[0]?.cnt ?? 0);
+}
+
+function calcWeeklyBonus(weeklyCount: number): { bonus: number; desc: string } {
+  // Count AFTER this payment is added (so +1)
+  const n = weeklyCount + 1;
+  if (n >= 10) return { bonus: 50,  desc: " +50 pago #10 semana" };
+  if (n >= 5)  return { bonus: 30,  desc: " +30 pago #5 semana" };
+  if (n >= 3)  return { bonus: 15,  desc: " +15 pago #3 semana" };
+  return { bonus: 0, desc: "" };
+}
+
 // ─── Main: earnPoints ─────────────────────────────────────────────────────────
 
 export async function earnPoints(
@@ -198,6 +221,7 @@ export async function earnPoints(
 
     // Bonus events
     const paymentCount = await countPayments(account.id);
+    const wkCount = await weeklyPaymentCount(account.id);
     let bonusDesc = "";
 
     if (paymentCount === 0) {
@@ -205,13 +229,19 @@ export async function earnPoints(
       bonusDesc += " +25 primer pago";
     }
     if (paymentCount === 4) {
-      // This is the 5th payment (0-indexed)
       points += 50;
       bonusDesc += " +50 quinto pago";
     }
     if (paymentCount > 0 && await hasStreak7Days(account.id)) {
       points += 100;
       bonusDesc += " +100 racha 7 días";
+    }
+
+    // Weekly frequency bonus
+    const { bonus: wkBonus, desc: wkDesc } = calcWeeklyBonus(wkCount);
+    if (wkBonus > 0) {
+      points += wkBonus;
+      bonusDesc += wkDesc;
     }
 
     if (points <= 0) points = 1; // minimum 1 point
@@ -236,9 +266,15 @@ export async function earnPoints(
     sendLoyaltyWhatsApp(phone, points, billerName, updated.balance, updated.tier);
 
     logger.info(
-      { phone, points, tier, balance: updated.balance, paymentType },
+      { phone, points, tier, balance: updated.balance, paymentType, weeklyCount: wkCount + 1 },
       "loyalty: points earned",
     );
+
+    // Mission progress (fire and forget — never blocks payment)
+    import("../services/missions.js").then(({ updateMissionProgress }) => {
+      updateMissionProgress(phone, "bill_payment", billerName, account.id).catch(() => {});
+    }).catch(() => {});
+
   } catch (err) {
     logger.error({ err, phone, amountMxn, paymentType }, "loyalty: earnPoints failed (non-fatal)");
   }
