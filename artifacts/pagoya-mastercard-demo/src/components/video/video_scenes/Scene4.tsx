@@ -2,35 +2,46 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLang } from '@/lib/lang';
 
-// Container: 800×400, center at (400,200), central circle r=64, icon box half-size=40
-// Icons at: TL=(160,80)  TR=(640,80)  BL=(160,320)  BR=(640,320)
-// Line start = center node edge; line end = icon box edge (so lines don't overlap the icon)
+// All coordinates are in SVG viewBox space: 0 0 1000 520
+// Center PTI: (500, 260), radius 56
+// Icon centers: TL=(120,90)  TR=(880,90)  BL=(120,430)  BR=(880,430)
+// Icon box: 100×100, rounded
+// Lines stop at circle edge and icon box edge
 
-const TL = { cx: 160, cy: 80 };
-const TR = { cx: 640, cy: 80 };
-const BL = { cx: 160, cy: 320 };
-const BR = { cx: 640, cy: 320 };
+const CX = 500; // PTI center X
+const CY = 260; // PTI center Y
+const R = 56;   // PTI circle radius
+const ICON_HALF = 50; // half of 100×100 icon box
+const GAP = 6;  // gap between line endpoint and element edge
 
-function linePoints(icon: { cx: number; cy: number }) {
-  const dx = icon.cx - 400;
-  const dy = icon.cy - 200;
+const ICON_POSITIONS = [
+  { cx: 120, cy: 90, key: 'tl' },
+  { cx: 880, cy: 90, key: 'tr' },
+  { cx: 120, cy: 430, key: 'bl' },
+  { cx: 880, cy: 430, key: 'br' },
+];
+
+function computeLine(icx: number, icy: number) {
+  const dx = icx - CX;
+  const dy = icy - CY;
   const mag = Math.hypot(dx, dy);
   const ux = dx / mag;
   const uy = dy / mag;
-  const x1 = 400 + ux * 68;  // start just past center circle edge (r=64 + 4px gap)
-  const y1 = 200 + uy * 68;
-  const x2 = icon.cx - ux * 44;  // end just before icon box edge (half=40 + 4px gap)
-  const y2 = icon.cy - uy * 44;
-  return { x1, y1, x2, y2 };
+  // Icon box edge: clamp to the nearest face
+  const tx = ux >= 0 ? ICON_HALF : -ICON_HALF;
+  const ty = uy >= 0 ? ICON_HALF : -ICON_HALF;
+  // Parametric intersection with box boundary (whichever face is closer)
+  const tParamX = Math.abs(tx / ux);
+  const tParamY = Math.abs(ty / uy);
+  const tParam = Math.min(tParamX, tParamY);
+  const ex = icx - ux * (tParam + GAP);
+  const ey = icy - uy * (tParam + GAP);
+  const sx = CX + ux * (R + GAP);
+  const sy = CY + uy * (R + GAP);
+  return { sx, sy, ex, ey };
 }
 
 const LINE_DELAY = [0, 0.15, 0.3, 0.45];
-const NODES = [
-  { pos: TL, delayIdx: 0 },
-  { pos: TR, delayIdx: 1 },
-  { pos: BL, delayIdx: 2 },
-  { pos: BR, delayIdx: 3 },
-];
 
 export function Scene4() {
   const t = useLang().scene4;
@@ -43,7 +54,6 @@ export function Scene4() {
       setTimeout(() => setPhase(2), 2000),
       setTimeout(() => setPhase(3), 3500),
       setTimeout(() => setPhase(4), 6000),
-      setTimeout(() => setPhase(5), 11000),
     ];
     return () => timers.forEach(t => clearTimeout(t));
   }, []);
@@ -51,114 +61,144 @@ export function Scene4() {
   return (
     <motion.div
       className="absolute inset-0 flex flex-col items-center justify-center z-40"
-      initial={{ opacity: 0, y: 100 }}
+      initial={{ opacity: 0, y: 60 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 1.2 }}
+      exit={{ opacity: 0, scale: 1.1 }}
       transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
     >
+      {/* Headline */}
       <motion.h2
-        className="text-[4vw] font-bold text-center mb-16"
+        className="text-[4vw] font-bold text-center mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
+        transition={{ duration: 0.8 }}
       >
-        {t.headline1} <span className="text-[#FF5C1A]">{t.headline2}</span>{t.headline3}
+        {t.headline1}{' '}
+        <span className="text-[#FF5C1A]">{t.headline2}</span>
+        {t.headline3}
       </motion.h2>
 
-      {/* Network graph: 800×400 relative container */}
-      <div className="relative" style={{ width: 800, height: 400 }}>
-        {/* SVG for lines — explicit viewBox so coordinates map 1:1 to the container */}
-        <svg
-          viewBox="0 0 800 400"
-          className="absolute inset-0 w-full h-full"
-          style={{ zIndex: 0 }}
-        >
-          {NODES.map(({ pos, delayIdx }) => {
-            const { x1, y1, x2, y2 } = linePoints(pos);
-            return (
-              <motion.path
-                key={`${pos.cx}-${pos.cy}`}
-                d={`M ${x1} ${y1} L ${x2} ${y2}`}
-                fill="none"
-                stroke="#00C875"
-                strokeWidth="3"
-                strokeLinecap="round"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={
-                  phase >= 3
-                    ? { pathLength: 1, opacity: 1 }
-                    : { pathLength: 0, opacity: 0 }
-                }
-                transition={{ duration: 0.8, delay: LINE_DELAY[delayIdx], ease: [0.16, 1, 0.3, 1] }}
-              />
-            );
-          })}
-        </svg>
+      {/* Network graph — everything in ONE SVG */}
+      <svg
+        viewBox="0 0 1000 520"
+        className="w-full max-w-4xl"
+        style={{ maxHeight: '55vh' }}
+      >
+        {/* Lines */}
+        {ICON_POSITIONS.map(({ cx, cy, key }, i) => {
+          const { sx, sy, ex, ey } = computeLine(cx, cy);
+          return (
+            <motion.path
+              key={key}
+              d={`M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}`}
+              fill="none"
+              stroke="#00C875"
+              strokeWidth="3"
+              strokeLinecap="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={
+                phase >= 3
+                  ? { pathLength: 1, opacity: 1 }
+                  : { pathLength: 0, opacity: 0 }
+              }
+              transition={{
+                pathLength: { duration: 0.7, delay: LINE_DELAY[i], ease: [0.16, 1, 0.3, 1] },
+                opacity: { duration: 0.2, delay: LINE_DELAY[i] },
+              }}
+            />
+          );
+        })}
 
-        {/* Central PTI node — absolutely centered */}
-        <motion.div
-          className="absolute w-32 h-32 bg-[#005432] border-4 border-[#00C875] rounded-full flex items-center justify-center font-bold text-2xl shadow-[0_0_50px_#00C875]"
-          style={{ left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 10 }}
+        {/* Icon boxes */}
+        {ICON_POSITIONS.map(({ cx, cy, key }, i) => (
+          <motion.g
+            key={key}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={phase >= 3 ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
+            style={{ originX: `${cx}px`, originY: `${cy}px` }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20, delay: LINE_DELAY[i] + 0.1 }}
+          >
+            {/* Box */}
+            <rect
+              x={cx - ICON_HALF}
+              y={cy - ICON_HALF}
+              width={100}
+              height={100}
+              rx={16}
+              ry={16}
+              fill="rgba(255,255,255,0.08)"
+              stroke="rgba(255,255,255,0.18)"
+              strokeWidth="1.5"
+            />
+            {/* Inner dot */}
+            <circle cx={cx} cy={cy} r={18} fill="#00C875" opacity={0.65} />
+            {/* Label */}
+            <text
+              x={cx}
+              y={cy + ICON_HALF + 28}
+              textAnchor="middle"
+              fill="white"
+              fontSize={20}
+              fontWeight="600"
+              fontFamily="inherit"
+            >
+              {labels[i]}
+            </text>
+          </motion.g>
+        ))}
+
+        {/* Central PTI node */}
+        {/* Glow */}
+        <motion.circle
+          cx={CX}
+          cy={CY}
+          r={R + 18}
+          fill="none"
+          stroke="#00C875"
+          strokeWidth="6"
+          opacity={0.25}
           initial={{ scale: 0 }}
           animate={phase >= 2 ? { scale: 1 } : { scale: 0 }}
+          style={{ originX: `${CX}px`, originY: `${CY}px` }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        />
+        <motion.circle
+          cx={CX}
+          cy={CY}
+          r={R}
+          fill="#005432"
+          stroke="#00C875"
+          strokeWidth="4"
+          initial={{ scale: 0 }}
+          animate={phase >= 2 ? { scale: 1 } : { scale: 0 }}
+          style={{ originX: `${CX}px`, originY: `${CY}px` }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        />
+        <motion.text
+          x={CX}
+          y={CY + 8}
+          textAnchor="middle"
+          fill="white"
+          fontSize={26}
+          fontWeight="700"
+          fontFamily="inherit"
+          initial={{ opacity: 0 }}
+          animate={phase >= 2 ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
         >
           PTI
-        </motion.div>
+        </motion.text>
+      </svg>
 
-        {/* Orbiting icon nodes — positioned to match SVG coordinates exactly */}
-        {NODES.map(({ pos, delayIdx }, i) => (
-          <IconNode
-            key={i}
-            phase={phase}
-            delay={LINE_DELAY[delayIdx]}
-            cx={pos.cx}
-            cy={pos.cy}
-            label={labels[i]}
-          />
-        ))}
-      </div>
-
+      {/* Tagline */}
       <motion.p
-        className="mt-12 text-[2vw] text-white/60 font-medium"
+        className="mt-4 text-[2vw] text-white/60 font-medium"
         initial={{ opacity: 0, y: 20 }}
         animate={phase >= 4 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.8 }}
       >
         {t.tagline}
       </motion.p>
-    </motion.div>
-  );
-}
-
-function IconNode({
-  phase,
-  delay,
-  cx,
-  cy,
-  label,
-}: {
-  phase: number;
-  delay: number;
-  cx: number;
-  cy: number;
-  label: string;
-}) {
-  return (
-    <motion.div
-      className="absolute flex flex-col items-center"
-      style={{
-        left: cx,
-        top: cy,
-        transform: 'translate(-50%, -50%)',
-        zIndex: 20,
-      }}
-      initial={{ scale: 0, opacity: 0 }}
-      animate={phase >= 3 ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 200, damping: 20, delay: delay + 0.1 }}
-    >
-      <div className="w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 flex items-center justify-center mb-2">
-        <div className="w-8 h-8 rounded-full bg-[#00C875]/50" />
-      </div>
-      <div className="text-lg font-semibold whitespace-nowrap">{label}</div>
     </motion.div>
   );
 }
