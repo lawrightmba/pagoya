@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/pagoya-mastercard-demo/"
+title = "PagoYa — Mastercard 60s Demo"
+version = "1.0.0"
+id = "artifacts/pagoya-mastercard-demo"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/pagoya-mastercard-demo/" ]
+localPort = 18145
+
+[services.development]
+run = "pnpm --filter @workspace/pagoya-mastercard-demo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pagoya-mastercard-demo", "run", "build" ]
+publicDir = "artifacts/pagoya-mastercard-demo/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18145"
+BASE_PATH = "/pagoya-mastercard-demo/"

@@ -239,3 +239,9 @@ id = "6CAerYQQgMwzhWILDDA6x"
 uri = "file://.local/outputs/PagoYa---Techstars-Pre-Seed-Pitch-Deck.pdf"
 type = "pdf"
 title = "PagoYa — Techstars Pre-Seed Pitch Deck (PDF)"
+
+[[outputs]]
+id = "AzSMKCxnZTxZYBVRs8OIS"
+uri = "file://artifacts/pagoya-mastercard-demo/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music"
