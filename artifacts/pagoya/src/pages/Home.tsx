@@ -530,7 +530,7 @@ export default function Home() {
           <button
             onClick={() => navigate("/juegos")}
             style={{
-              width: "100%", border: "none", cursor: "pointer", padding: 0,
+              width: "100%", border: "none", cursor: "pointer",
               background: "linear-gradient(135deg, #004F2D 0%, #007A4A 60%, #00C875 100%)",
               borderRadius: "18px", overflow: "hidden",
               boxShadow: "0 8px 28px rgba(0,79,45,0.35)",
