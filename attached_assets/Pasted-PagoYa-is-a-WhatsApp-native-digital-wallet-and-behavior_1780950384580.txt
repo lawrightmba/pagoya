@@ -1,0 +1,15 @@
+PagoYa is a WhatsApp-native digital wallet and behavioral credit engine for Mexico's 65 million unbanked adults. No app download, no bank account, no credit card required.
+
+At the core is Paula, an AI agent powered by Claude (Anthropic) that handles the full payment experience conversationally. A user texts Paula the name of their service — CFE, Telmex, Telcel, IZZI, or any of 20+ billers — Paula auto-fills details, confirms the amount, and processes payment in under two minutes. Official receipts with Banco de México transaction IDs arrive via WhatsApp instantly. Flat fee: $25 MXN per transaction, no hidden charges.
+
+Users fund their wallet three ways: cash at any OXXO via a barcode voucher, SPEI transfer using a unique CLABE per user, or debit card via Conekta. Every transaction flows through SIPREL and STP — Mexico's national payment infrastructure.
+
+Beyond bill payment, PagoYa offers digital gift cards across three verticals: entertainment (Netflix, Spotify, Disney+, Max, Cinépolis, Google Play), convenience (Uber, Uber Eats, Amazon), and retail (Liverpool, Soriana, Starbucks). PINs delivered via WhatsApp within minutes.
+
+Every action feeds the PagoYa Trust Index (PTI) — a proprietary behavioral credit score across seven dimensions: payment streak, biller diversity, wallet balance, load-to-spend ratio, KYC verification, mission completions, and account age. The PTI is the first formal financial record most users have ever had. In Phase 2 it underwrites micro-credit at PTI scores above 60. In Phase 3 it becomes a licensable API for lenders, insurers, and US diaspora banks.
+
+Retention is built on a full engagement stack: loyalty tiers (Bronce, Plata, Oro), eight behavioral missions with WhatsApp notifications on completion, weekly frequency bonuses at the 3rd, 5th, and 10th payment, a scratch card, a spin-to-win wheel at registration, and a monthly $2,000 MXN Gran Premio draw. Every mechanic reinforces the behaviors that build PTI score.
+
+Distribution runs on a street team rep model. Reps cover defined colonias, earn $150 MXN per signup and $500 MXN per first completed payment, and track commissions via a live dashboard. The model saturates one colonia before expanding — launching in Puerto Vallarta's 5 de Diciembre, Versalles, and Emiliano Zapata before scaling to Guadalajara and Mexico City.
+
+PagoYa is live at pagoyamx.com — a PWA on Google Cloud, processing real transactions, with STP/SPEI outbound contract in final stages.
