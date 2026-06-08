@@ -23,10 +23,21 @@ const SERVICES = [
   { id: "at_and_t",         name: "AT&T",                category: "Teléfono móvil",  emoji: "📱" },
   { id: "movistar",         name: "Movistar",            category: "Teléfono móvil",  emoji: "📱" },
   { id: "telmex_fijo",      name: "Telmex Fijo",         category: "Teléfono móvil",  emoji: "☎️", referenceDigits: 12 },
+  // Streaming — gift card PIN flow (no reference number)
   { id: "netflix",          name: "Netflix",             category: "Streaming",       emoji: "🎬" },
   { id: "spotify",          name: "Spotify",             category: "Streaming",       emoji: "🎵" },
   { id: "disney_plus",      name: "Disney+",             category: "Streaming",       emoji: "🏰" },
   { id: "hbo_max",          name: "Max (HBO)",           category: "Streaming",       emoji: "🎭" },
+  // Gift Cards — digital PIN delivered via WhatsApp
+  { id: "amazon",           name: "Amazon",              category: "Gift Cards",      emoji: "📦" },
+  { id: "gplay",            name: "Google Play",         category: "Gift Cards",      emoji: "🎮" },
+  { id: "uber",             name: "Uber",                category: "Gift Cards",      emoji: "🚗" },
+  { id: "uber_eats",        name: "Uber Eats",           category: "Gift Cards",      emoji: "🍔" },
+  { id: "cinepolis",        name: "Cinépolis",           category: "Gift Cards",      emoji: "🎬" },
+  { id: "starbucks",        name: "Starbucks",           category: "Gift Cards",      emoji: "☕" },
+  { id: "liverpool",        name: "Liverpool",           category: "Gift Cards",      emoji: "🛍️" },
+  { id: "soriana",          name: "Soriana",             category: "Gift Cards",      emoji: "🛒" },
+  // Other services
   { id: "kueski",           name: "Kueski",              category: "Préstamos",       emoji: "💳" },
   { id: "konfio",           name: "Konfío",              category: "Préstamos",       emoji: "💳" },
   { id: "gnp",              name: "GNP Seguros",         category: "Seguro",          emoji: "🛡️" },
@@ -37,7 +48,99 @@ const SERVICES = [
 
 type Service = (typeof SERVICES)[number];
 
-const CATEGORIES = ["Todos", "Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono móvil", "Streaming", "Préstamos", "Seguro", "Escuela", "Renta"] as const;
+// ---------------------------------------------------------------------------
+// Gift-card-only services: no reference number — user picks a denomination
+// and receives a PIN code via WhatsApp to redeem on the platform.
+// ---------------------------------------------------------------------------
+const GIFT_CARD_SERVICE_IDS = new Set([
+  "netflix", "spotify", "disney_plus", "hbo_max",
+  "amazon", "gplay", "uber", "uber_eats",
+  "cinepolis", "starbucks", "liverpool", "soriana",
+]);
+
+interface GCDenomination { serviceId: string; amount: number; label?: string }
+
+// Mexico market denominations — aligned with OXXO / SIPREL prepaid catalog
+const GIFT_CARD_DENOMINATIONS: Record<string, GCDenomination[]> = {
+  // ── Streaming ────────────────────────────────────────────────────────────
+  netflix: [
+    { serviceId: "netflix_100",  amount: 100 },
+    { serviceId: "netflix_200",  amount: 200 },
+    { serviceId: "netflix_300",  amount: 300,  label: "Básico ~3 meses" },
+    { serviceId: "netflix_400",  amount: 400 },
+    { serviceId: "netflix_500",  amount: 500,  label: "Estándar ~2 meses" },
+    { serviceId: "netflix_700",  amount: 700,  label: "Premium ~2 meses" },
+  ],
+  spotify: [
+    { serviceId: "spotify_79",   amount: 79,   label: "Individual ~1 mes" },
+    { serviceId: "spotify_99",   amount: 99 },
+    { serviceId: "spotify_149",  amount: 149,  label: "Dúo ~1 mes" },
+    { serviceId: "spotify_199",  amount: 199,  label: "Familiar ~1 mes" },
+  ],
+  disney_plus: [
+    { serviceId: "disney_99",    amount: 99 },
+    { serviceId: "disney_139",   amount: 139,  label: "Standard ~1 mes" },
+    { serviceId: "disney_209",   amount: 209 },
+    { serviceId: "disney_279",   amount: 279,  label: "Premium ~1 mes" },
+  ],
+  hbo_max: [
+    { serviceId: "hbo_max_109",  amount: 109 },
+    { serviceId: "hbo_max_169",  amount: 169,  label: "Básico ~1 mes" },
+    { serviceId: "hbo_max_219",  amount: 219,  label: "Estándar ~1 mes" },
+    { serviceId: "hbo_max_279",  amount: 279,  label: "Ultimate ~1 mes" },
+  ],
+  // ── Digital Gift Cards ───────────────────────────────────────────────────
+  amazon: [
+    { serviceId: "amazon_100",   amount: 100 },
+    { serviceId: "amazon_200",   amount: 200 },
+    { serviceId: "amazon_300",   amount: 300 },
+    { serviceId: "amazon_500",   amount: 500 },
+    { serviceId: "amazon_1000",  amount: 1000 },
+  ],
+  gplay: [
+    { serviceId: "google_play_50",  amount: 50 },
+    { serviceId: "google_play_100", amount: 100 },
+    { serviceId: "google_play_200", amount: 200 },
+    { serviceId: "google_play_300", amount: 300 },
+    { serviceId: "google_play_500", amount: 500 },
+  ],
+  uber: [
+    { serviceId: "uber_100",     amount: 100 },
+    { serviceId: "uber_150",     amount: 150 },
+    { serviceId: "uber_200",     amount: 200 },
+    { serviceId: "uber_300",     amount: 300 },
+    { serviceId: "uber_500",     amount: 500 },
+  ],
+  uber_eats: [
+    { serviceId: "uber_eats_100", amount: 100 },
+    { serviceId: "uber_eats_200", amount: 200 },
+    { serviceId: "uber_eats_300", amount: 300 },
+  ],
+  cinepolis: [
+    { serviceId: "cinepolis_60",  amount: 60,   label: "Infantil" },
+    { serviceId: "cinepolis_100", amount: 100,  label: "General" },
+    { serviceId: "cinepolis_140", amount: 140 },
+    { serviceId: "cinepolis_210", amount: 210,  label: "IMAX / 3D" },
+  ],
+  starbucks: [
+    { serviceId: "starbucks_100", amount: 100 },
+    { serviceId: "starbucks_200", amount: 200 },
+    { serviceId: "starbucks_300", amount: 300 },
+    { serviceId: "starbucks_500", amount: 500 },
+  ],
+  liverpool: [
+    { serviceId: "liverpool_500",  amount: 500 },
+    { serviceId: "liverpool_1000", amount: 1000 },
+    { serviceId: "liverpool_2000", amount: 2000 },
+  ],
+  soriana: [
+    { serviceId: "soriana_200",  amount: 200 },
+    { serviceId: "soriana_500",  amount: 500 },
+    { serviceId: "soriana_1000", amount: 1000 },
+  ],
+};
+
+const CATEGORIES = ["Todos", "Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono móvil", "Streaming", "Gift Cards", "Préstamos", "Seguro", "Escuela", "Renta"] as const;
 
 // ---------------------------------------------------------------------------
 // Barcode extraction helper
@@ -297,8 +400,8 @@ export default function BillPaySelector() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<typeof CATEGORIES[number]>("Todos");
 
-  // Step 2 — reference entry
-  const [step, setStep] = useState<"select" | "reference">("select");
+  // Step 2 — denomination (gift cards) or reference (bill pay)
+  const [step, setStep] = useState<"select" | "denomination" | "reference">("select");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [referencia, setReferencia] = useState("");
   const [referenciaFlash, setReferenciaFlash] = useState(false);
@@ -321,7 +424,24 @@ export default function BillPaySelector() {
     setSelectedService(svc);
     setReferencia("");
     setRefError(null);
-    setStep("reference");
+    if (GIFT_CARD_SERVICE_IDS.has(svc.id as string)) {
+      setStep("denomination");
+    } else {
+      setStep("reference");
+    }
+  };
+
+  // ── Gift card denomination handler ──────────────────────────────────────
+  const handleSelectDenomination = (den: GCDenomination) => {
+    if (!selectedService) return;
+    setPaymentData({
+      ...paymentData,
+      empresa: selectedService.name,
+      categoria: den.serviceId,
+      monto: String(den.amount),
+      referencia: "",
+    });
+    navigate("/revisar");
   };
 
   // ── Step 2 helpers ──────────────────────────────────────────────────────
@@ -382,7 +502,7 @@ export default function BillPaySelector() {
         >
           <button
             onClick={() => {
-              if (step === "reference") {
+              if (step === "reference" || step === "denomination") {
                 setStep("select");
               } else {
                 navigate("/");
@@ -394,12 +514,21 @@ export default function BillPaySelector() {
             <ArrowLeft className="w-5 h-5" style={{ color: "#046C2C" }} />
           </button>
           <div>
-            {step === "select" ? (
+            {step === "select" && (
               <>
                 <h1 className="text-base font-black text-[#1F1F1F] leading-tight">Elige tu servicio</h1>
                 <p className="text-xs text-gray-400">Selecciona para continuar con el pago</p>
               </>
-            ) : (
+            )}
+            {step === "denomination" && (
+              <>
+                <h1 className="text-base font-black text-[#1F1F1F] leading-tight">
+                  {selectedService?.emoji} {selectedService?.name}
+                </h1>
+                <p className="text-xs text-gray-400">Elige el monto · PIN llega por WhatsApp</p>
+              </>
+            )}
+            {step === "reference" && (
               <>
                 <h1 className="text-base font-black text-[#1F1F1F] leading-tight">
                   {selectedService?.emoji} {selectedService?.name}
@@ -486,7 +615,15 @@ export default function BillPaySelector() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-[#1F1F1F]">{svc.name}</p>
-                        <p className="text-xs text-gray-400">{svc.category}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {GIFT_CARD_SERVICE_IDS.has(svc.id as string) ? (
+                            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#FFF0E8", color: "#C45C1A", border: "1px solid #FFDCC9" }}>
+                              🎁 Gift Card · PIN por WhatsApp
+                            </span>
+                          ) : (
+                            <p className="text-xs text-gray-400">{svc.category}</p>
+                          )}
+                        </div>
                       </div>
                       <ArrowRight className="w-4 h-4 flex-shrink-0" style={{ color: "#D4EDDA" }} />
                     </button>
@@ -519,7 +656,65 @@ export default function BillPaySelector() {
           </main>
         )}
 
-        {/* ── STEP 2: REFERENCE ENTRY ────────────────────────────────── */}
+        {/* ── STEP 2: DENOMINATION PICKER (gift cards) ────────────────── */}
+        {step === "denomination" && selectedService && (() => {
+          const dens = GIFT_CARD_DENOMINATIONS[selectedService.id as string] ?? [];
+          return (
+            <main className="flex-1 flex flex-col px-4 pt-6 pb-10 max-w-sm mx-auto w-full">
+              {/* How it works explainer */}
+              <div
+                className="rounded-2xl px-4 py-4 mb-6 flex items-start gap-3"
+                style={{ background: "linear-gradient(135deg, #F0FAF3 0%, #E8F7EE 100%)", border: "1px solid #CBE9D9" }}
+              >
+                <span className="text-xl flex-shrink-0 mt-0.5">🎁</span>
+                <div>
+                  <p className="text-sm font-bold text-[#046C2C] leading-tight mb-1">¿Cómo funciona?</p>
+                  <p className="text-xs text-[#3A8A5A] leading-relaxed">
+                    Elige el monto · Paga por OXXO, tarjeta o saldo · Recibe tu PIN por WhatsApp · Canjéalo en{" "}
+                    <span className="font-semibold">{selectedService.name.toLowerCase().replace(/ /g, "")}.com</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Denomination list */}
+              <div className="flex flex-col gap-3 mb-6">
+                {dens.map((den) => (
+                  <button
+                    key={den.serviceId}
+                    onClick={() => handleSelectDenomination(den)}
+                    className="bg-white rounded-2xl px-5 py-4 flex items-center gap-4 text-left w-full transition-all active:scale-[0.98]"
+                    style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1.5px solid #F0F0F0" }}
+                  >
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)" }}
+                    >
+                      <span className="text-white font-black text-xs leading-tight text-center px-1">
+                        ${den.amount >= 1000 ? `${den.amount / 1000}K` : den.amount}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-[#1F1F1F]">${den.amount} MXN</p>
+                      {den.label && <p className="text-xs text-gray-400">{den.label}</p>}
+                    </div>
+                    <div
+                      className="rounded-xl px-4 py-2 text-sm font-bold flex-shrink-0"
+                      style={{ background: "#F0FAF3", color: "#046C2C", border: "1px solid #CBE9D9" }}
+                    >
+                      Comprar →
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-center text-xs text-gray-400">
+                🔒 Pago seguro · PIN enviado por WhatsApp en minutos
+              </p>
+            </main>
+          );
+        })()}
+
+        {/* ── STEP 3: REFERENCE ENTRY (bill pay) ──────────────────────── */}
         {step === "reference" && selectedService && (
           <main className="flex-1 flex flex-col px-4 pt-6 pb-10 max-w-sm mx-auto w-full">
             {/* Service pill */}

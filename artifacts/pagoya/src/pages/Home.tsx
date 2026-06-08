@@ -37,49 +37,72 @@ const QUICK_ACCESS = [
 // ─── Gift card catalog ────────────────────────────────────────────────────────
 
 const GIFT_CARD_BRANDS = [
-  { id: "netflix",   emoji: "🎬", name: "Netflix",     denominations: [
-    { serviceId: "netflix_300",  amount: 300 },
-    { serviceId: "netflix_400",  amount: 400 },
-    { serviceId: "netflix_500",  amount: 500 },
-    { serviceId: "netflix_700",  amount: 700 },
+  { id: "netflix",      emoji: "🎬", name: "Netflix",     denominations: [
+    { serviceId: "netflix_100",      amount: 100 },
+    { serviceId: "netflix_300",      amount: 300 },
+    { serviceId: "netflix_500",      amount: 500 },
+    { serviceId: "netflix_700",      amount: 700 },
   ]},
-  { id: "amazon",    emoji: "📦", name: "Amazon",      denominations: [
-    { serviceId: "amazon_100",   amount: 100 },
-    { serviceId: "amazon_200",   amount: 200 },
-    { serviceId: "amazon_300",   amount: 300 },
-    { serviceId: "amazon_500",   amount: 500 },
-    { serviceId: "amazon_1000",  amount: 1000 },
+  { id: "spotify",      emoji: "🎵", name: "Spotify",     denominations: [
+    { serviceId: "spotify_79",       amount: 79 },
+    { serviceId: "spotify_99",       amount: 99 },
+    { serviceId: "spotify_149",      amount: 149 },
+    { serviceId: "spotify_199",      amount: 199 },
   ]},
-  { id: "gplay",     emoji: "🎮", name: "Google Play", denominations: [
-    { serviceId: "google_play_50",  amount: 50 },
-    { serviceId: "google_play_100", amount: 100 },
-    { serviceId: "google_play_200", amount: 200 },
-    { serviceId: "google_play_300", amount: 300 },
-    { serviceId: "google_play_500", amount: 500 },
+  { id: "disney_plus",  emoji: "🏰", name: "Disney+",     denominations: [
+    { serviceId: "disney_99",        amount: 99 },
+    { serviceId: "disney_139",       amount: 139 },
+    { serviceId: "disney_279",       amount: 279 },
   ]},
-  { id: "uber",      emoji: "🚗", name: "Uber",        denominations: [
-    { serviceId: "uber_150",      amount: 150 },
+  { id: "hbo_max",      emoji: "🎭", name: "Max (HBO)",   denominations: [
+    { serviceId: "hbo_max_169",      amount: 169 },
+    { serviceId: "hbo_max_219",      amount: 219 },
+    { serviceId: "hbo_max_279",      amount: 279 },
   ]},
-  { id: "uber_eats", emoji: "🍔", name: "Uber Eats",   denominations: [
-    { serviceId: "uber_eats_300", amount: 300 },
+  { id: "amazon",       emoji: "📦", name: "Amazon",      denominations: [
+    { serviceId: "amazon_100",       amount: 100 },
+    { serviceId: "amazon_200",       amount: 200 },
+    { serviceId: "amazon_500",       amount: 500 },
+    { serviceId: "amazon_1000",      amount: 1000 },
   ]},
-  { id: "cinepolis", emoji: "🎬", name: "Cinépolis",   denominations: [
-    { serviceId: "cinepolis_60",  amount: 60 },
-    { serviceId: "cinepolis_100", amount: 100 },
-    { serviceId: "cinepolis_140", amount: 140 },
-    { serviceId: "cinepolis_210", amount: 210 },
+  { id: "gplay",        emoji: "🎮", name: "Google Play", denominations: [
+    { serviceId: "google_play_50",   amount: 50 },
+    { serviceId: "google_play_100",  amount: 100 },
+    { serviceId: "google_play_200",  amount: 200 },
+    { serviceId: "google_play_500",  amount: 500 },
   ]},
-  { id: "starbucks", emoji: "☕", name: "Starbucks",   denominations: [
-    { serviceId: "starbucks_200", amount: 200 },
-    { serviceId: "starbucks_300", amount: 300 },
+  { id: "uber",         emoji: "🚗", name: "Uber",        denominations: [
+    { serviceId: "uber_100",         amount: 100 },
+    { serviceId: "uber_200",         amount: 200 },
+    { serviceId: "uber_300",         amount: 300 },
+    { serviceId: "uber_500",         amount: 500 },
   ]},
-  { id: "liverpool", emoji: "🛍️", name: "Liverpool",   denominations: [
-    { serviceId: "liverpool_500",  amount: 500 },
-    { serviceId: "liverpool_1000", amount: 1000 },
-    { serviceId: "liverpool_2000", amount: 2000 },
+  { id: "uber_eats",    emoji: "🍔", name: "Uber Eats",   denominations: [
+    { serviceId: "uber_eats_100",    amount: 100 },
+    { serviceId: "uber_eats_200",    amount: 200 },
+    { serviceId: "uber_eats_300",    amount: 300 },
   ]},
-  { id: "soriana",   emoji: "🛒", name: "Soriana",     denominations: [
-    { serviceId: "soriana_500", amount: 500 },
+  { id: "cinepolis",    emoji: "🎬", name: "Cinépolis",   denominations: [
+    { serviceId: "cinepolis_60",     amount: 60 },
+    { serviceId: "cinepolis_100",    amount: 100 },
+    { serviceId: "cinepolis_140",    amount: 140 },
+    { serviceId: "cinepolis_210",    amount: 210 },
+  ]},
+  { id: "starbucks",    emoji: "☕", name: "Starbucks",   denominations: [
+    { serviceId: "starbucks_100",    amount: 100 },
+    { serviceId: "starbucks_200",    amount: 200 },
+    { serviceId: "starbucks_300",    amount: 300 },
+    { serviceId: "starbucks_500",    amount: 500 },
+  ]},
+  { id: "liverpool",    emoji: "🛍️", name: "Liverpool",   denominations: [
+    { serviceId: "liverpool_500",    amount: 500 },
+    { serviceId: "liverpool_1000",   amount: 1000 },
+    { serviceId: "liverpool_2000",   amount: 2000 },
+  ]},
+  { id: "soriana",      emoji: "🛒", name: "Soriana",     denominations: [
+    { serviceId: "soriana_200",      amount: 200 },
+    { serviceId: "soriana_500",      amount: 500 },
+    { serviceId: "soriana_1000",     amount: 1000 },
   ]},
 ];
 
