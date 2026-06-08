@@ -28,15 +28,17 @@ const SERVICES = [
   { id: "spotify",          name: "Spotify",             category: "Streaming",       emoji: "🎵" },
   { id: "disney_plus",      name: "Disney+",             category: "Streaming",       emoji: "🏰" },
   { id: "hbo_max",          name: "Max (HBO)",           category: "Streaming",       emoji: "🎭" },
-  // Gift Cards — digital PIN delivered via WhatsApp
-  { id: "amazon",           name: "Amazon",              category: "Gift Cards",      emoji: "📦" },
-  { id: "gplay",            name: "Google Play",         category: "Gift Cards",      emoji: "🎮" },
-  { id: "uber",             name: "Uber",                category: "Gift Cards",      emoji: "🚗" },
-  { id: "uber_eats",        name: "Uber Eats",           category: "Gift Cards",      emoji: "🍔" },
-  { id: "cinepolis",        name: "Cinépolis",           category: "Gift Cards",      emoji: "🎬" },
-  { id: "starbucks",        name: "Starbucks",           category: "Gift Cards",      emoji: "☕" },
-  { id: "liverpool",        name: "Liverpool",           category: "Gift Cards",      emoji: "🛍️" },
-  { id: "soriana",          name: "Soriana",             category: "Gift Cards",      emoji: "🛒" },
+  // Gift Cards — Entretenimiento
+  { id: "cinepolis",        name: "Cinépolis",           category: "Entretenimiento", emoji: "🎟️" },
+  { id: "gplay",            name: "Google Play",         category: "Entretenimiento", emoji: "🎮" },
+  // Gift Cards — Conveniencia
+  { id: "uber",             name: "Uber",                category: "Conveniencia",    emoji: "🚗" },
+  { id: "uber_eats",        name: "Uber Eats",           category: "Conveniencia",    emoji: "🍔" },
+  { id: "amazon",           name: "Amazon",              category: "Conveniencia",    emoji: "📦" },
+  // Gift Cards — Tiendas
+  { id: "starbucks",        name: "Starbucks",           category: "Tiendas",         emoji: "☕" },
+  { id: "liverpool",        name: "Liverpool",           category: "Tiendas",         emoji: "🛍️" },
+  { id: "soriana",          name: "Soriana",             category: "Tiendas",         emoji: "🛒" },
   // Other services
   { id: "kueski",           name: "Kueski",              category: "Préstamos",       emoji: "💳" },
   { id: "konfio",           name: "Konfío",              category: "Préstamos",       emoji: "💳" },
@@ -140,7 +142,7 @@ const GIFT_CARD_DENOMINATIONS: Record<string, GCDenomination[]> = {
   ],
 };
 
-const CATEGORIES = ["Todos", "Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono móvil", "Streaming", "Gift Cards", "Préstamos", "Seguro", "Escuela", "Renta"] as const;
+const CATEGORIES = ["Todos", "Luz", "Agua", "Gas", "Internet", "Cable", "Teléfono móvil", "Streaming", "Entretenimiento", "Conveniencia", "Tiendas", "Préstamos", "Seguro", "Escuela", "Renta"] as const;
 
 // ---------------------------------------------------------------------------
 // Barcode extraction helper
