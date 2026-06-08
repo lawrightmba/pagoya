@@ -334,44 +334,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── ANNOUNCEMENT BAR — $25 MXN bonus, always above fold, dismissible ── */}
-      {!bonusBannerDismissed && (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => navigate("/register")}
-          onKeyDown={(e) => e.key === "Enter" && navigate("/register")}
-          style={{
-            background: "linear-gradient(90deg, #C44E20 0%, #D85A30 55%, #C44E20 100%)",
-            color: "white",
-            padding: "0 10px 0 16px",
-            height: "38px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            cursor: "pointer",
-            flexShrink: 0,
-            userSelect: "none",
-          }}
-        >
-          <span style={{ fontSize: "13px", fontWeight: 700, flex: 1, textAlign: "center", lineHeight: 1.2 }}>
-            🎁&nbsp;
-            {es
-              ? "Regístrate gratis · recibe $25 MXN en tu billetera →"
-              : "Sign up free · get $25 MXN in your wallet →"}
-          </span>
-          <button
-            onClick={dismissBonusBanner}
-            style={{
-              background: "none", border: "none", color: "rgba(255,255,255,0.65)",
-              fontSize: "15px", cursor: "pointer", padding: "4px 6px",
-              lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center",
-            }}
-            aria-label="Cerrar"
-          >✕</button>
-        </div>
-      )}
 
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 

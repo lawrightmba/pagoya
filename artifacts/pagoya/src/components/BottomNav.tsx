@@ -1,16 +1,16 @@
 import { useLocation } from "wouter";
-import { Home, Zap, Send, CreditCard, Gamepad2 } from "lucide-react";
+import { Home, Zap, History, CreditCard, Gamepad2 } from "lucide-react";
 
 const TABS = [
-  { path: "/",       icon: Home,      label: "Inicio"   },
-  { path: "/pagar",  icon: Zap,       label: "Pagar"    },
-  { path: "/juegos", icon: Gamepad2,  label: "Juegos"   },
-  { path: "/enviar", icon: Send,      label: "Enviar"   },
-  { path: "/cargar", icon: CreditCard, label: "Cargar"  },
+  { path: "/",                  icon: Home,      label: "Inicio"   },
+  { path: "/pagar",             icon: Zap,       label: "Pagar"    },
+  { path: "/juegos",            icon: Gamepad2,  label: "Juegos"   },
+  { path: "/wallet/historial",  icon: History,   label: "Historial"},
+  { path: "/cargar",            icon: CreditCard, label: "Cargar"  },
 ];
 
 const SHOW_ON = new Set([
-  "/", "/pagar", "/servicios", "/enviar", "/cargar",
+  "/", "/pagar", "/servicios", "/cargar",
   "/wallet/historial", "/puntos", "/verificar", "/revisar", "/juegos",
 ]);
 

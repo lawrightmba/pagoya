@@ -6,14 +6,19 @@ const BILLERS = [
   { icon: "📡", name: "Sky" },
   { icon: "🎬", name: "Netflix" },
   { icon: "🎵", name: "Spotify" },
-  { icon: "💧", name: "Agua" },
-  { icon: "🔥", name: "Gas" },
+  { icon: "💧", name: "Agua SAPAP" },
+  { icon: "🔥", name: "Gas Natural" },
   { icon: "🏠", name: "Renta" },
   { icon: "🏛️", name: "Predial" },
   { icon: "🚗", name: "Tenencia" },
   { icon: "📡", name: "Totalplay" },
   { icon: "📱", name: "AT&T" },
   { icon: "🎮", name: "Recarga" },
+  { icon: "🎓", name: "Colegiatura" },
+  { icon: "🛡️", name: "Seguro" },
+  { icon: "🎶", name: "Disney+" },
+  { icon: "📦", name: "Amazon" },
+  { icon: "🚰", name: "SACMEX" },
 ];
 
 // Split into two exclusive halves so the rows never share the same icon.

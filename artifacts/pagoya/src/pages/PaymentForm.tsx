@@ -202,7 +202,7 @@ export default function PaymentForm() {
             {/* Referencia — hidden for gift cards (server auto-fills from telefono) */}
             {!isGiftCard && (
               <>
-                <Field label="Número de referencia" error={errors.referencia}>
+                <Field label="Número de cuenta" error={errors.referencia}>
                   <input
                     type="text"
                     placeholder="Ej. 1234567890"
@@ -215,8 +215,8 @@ export default function PaymentForm() {
                   />
                 </Field>
                 <PaulaHint
-                  message={`¿Dónde encuentro el número de referencia de ${form.empresa || "mi servicio"}?`}
-                  label="¿Dónde encuentro mi número de referencia?"
+                  message={`¿Dónde encuentro el número de cuenta de ${form.empresa || "mi servicio"}?`}
+                  label="¿Dónde encuentro mi número de cuenta?"
                 />
               </>
             )}

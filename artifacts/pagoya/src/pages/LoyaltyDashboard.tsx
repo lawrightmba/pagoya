@@ -168,13 +168,18 @@ export default function LoyaltyDashboard() {
           <p style={{ fontSize: "14px", color: "#6B7280", marginBottom: "20px" }}>
             {es ? "Ingresa tu número para ver tu saldo." : "Enter your phone to see your balance."}
           </p>
-          <input
-            type="tel"
-            value={phoneInput}
-            onChange={(e) => setPhoneInput(e.target.value)}
-            placeholder="+52 322 100 2030"
-            style={{ width: "100%", padding: "13px 14px", borderRadius: "10px", border: "1.5px solid #D1D5DB", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }}
-          />
+          <div style={{ display: "flex", alignItems: "center", border: "1.5px solid #D1D5DB", borderRadius: "10px", marginBottom: "12px", overflow: "hidden" }}>
+            <span style={{ padding: "13px 10px 13px 14px", fontSize: "14px", color: "#6B7280", background: "#F9FAFB", borderRight: "1px solid #E5E7EB", whiteSpace: "nowrap" }}>🇲🇽 +52</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="10 dígitos locales"
+              style={{ flex: 1, padding: "13px 14px", fontSize: "15px", outline: "none", border: "none", background: "transparent", boxSizing: "border-box" }}
+            />
+          </div>
           <button
             onClick={() => {
               if (phoneInput.trim()) {

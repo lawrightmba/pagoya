@@ -104,10 +104,37 @@ export default function Juegos() {
       <div style={{ padding: "24px 20px" }}>
 
         {!telefono && (
-          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: "16px", padding: "32px 20px", textAlign: "center" }}>
-            <p style={{ fontSize: "40px", marginBottom: "12px" }}>🔒</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "15px", color: "rgba(255,255,255,0.7)" }}>
-              Inicia sesión para jugar
+          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: "16px", padding: "36px 24px", textAlign: "center" }}>
+            <p style={{ fontSize: "44px", marginBottom: "12px" }}>🎟️</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "22px", fontWeight: 900, color: "#FFFFFF", marginBottom: "8px", letterSpacing: "0.02em" }}>
+              Una tarjeta gratis cada día
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.55)", marginBottom: "24px", lineHeight: 1.4 }}>
+              Crea tu cuenta gratis para raspar y ganar puntos o saldo MXN.
+            </p>
+            <a
+              href="/register"
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "16px",
+                background: "#00C875",
+                border: "none",
+                borderRadius: "14px",
+                fontFamily: "Barlow Condensed, sans-serif",
+                fontSize: "18px",
+                fontWeight: 900,
+                color: "#004F2D",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+                textDecoration: "none",
+                boxSizing: "border-box",
+              }}
+            >
+              🎲 CREAR CUENTA GRATIS
+            </a>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "12px" }}>
+              Sin banco. Sin tarjeta. En 2 minutos.
             </p>
           </div>
         )}
