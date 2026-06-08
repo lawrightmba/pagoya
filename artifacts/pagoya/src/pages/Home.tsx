@@ -330,6 +330,13 @@ export default function Home() {
           0%, 100% { transform: translateX(0); }
           50%      { transform: translateX(4px); }
         }
+        @keyframes rypFlipIn {
+          0%   { transform: rotateY(-90deg); opacity: 0; }
+          100% { transform: rotateY(0deg);   opacity: 1; }
+        }
+        .ryp-ticket {
+          animation: rypFlipIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
       `}</style>
       {showPTIIntro && storedPhone && (
         <PTIIntroModal telefono={storedPhone} onDismiss={handlePTIIntroDismiss} />
@@ -575,14 +582,56 @@ export default function Home() {
             {/* background circle decoration */}
             <div style={{ position: "absolute", top: "-12px", right: "-12px", width: "80px", height: "80px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
 
-            {/* ticket emoji + ripple ring */}
-            <div style={{ position: "relative", flexShrink: 0, width: "48px", height: "48px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {/* ticket badge + ripple ring */}
+            <div style={{ position: "relative", flexShrink: 0, width: "72px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* ripple ring */}
               <div style={{
-                position: "absolute", inset: 0, borderRadius: "50%",
-                border: "2.5px solid rgba(0,200,117,0.7)",
+                position: "absolute", inset: 0, borderRadius: "12px",
+                border: "2px solid rgba(0,200,117,0.7)",
                 animation: "rypRipple 2.4s ease-out infinite",
               }} />
-              <span style={{ fontSize: "36px", lineHeight: 1 }}>🎟️</span>
+              {/* ticket badge — flips on lang change via key */}
+              <div
+                key={lang}
+                className="ryp-ticket"
+                style={{
+                  width: "68px", height: "48px",
+                  background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                  borderRadius: "8px",
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  position: "relative", overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                }}
+              >
+                {/* serrated edge line */}
+                <div style={{
+                  position: "absolute", left: 0, right: 0, top: "56%",
+                  borderTop: "1.5px dashed rgba(0,0,0,0.25)",
+                }} />
+                {/* notch left */}
+                <div style={{ position: "absolute", left: "-6px", top: "calc(56% - 6px)", width: "12px", height: "12px", borderRadius: "50%", background: "#007A4A" }} />
+                {/* notch right */}
+                <div style={{ position: "absolute", right: "-6px", top: "calc(56% - 6px)", width: "12px", height: "12px", borderRadius: "50%", background: "#007A4A" }} />
+                {/* top stub text */}
+                <span style={{
+                  fontSize: "7.5px", fontWeight: 900, letterSpacing: "0.08em",
+                  color: "rgba(0,0,0,0.75)", textTransform: "uppercase",
+                  lineHeight: 1, marginBottom: "18px",
+                  fontFamily: "DM Sans, sans-serif",
+                }}>
+                  {lang === "es" ? "UN BOLETO" : "ADMIT ONE"}
+                </span>
+                {/* bottom stub text */}
+                <span style={{
+                  position: "absolute", bottom: "5px",
+                  fontSize: "6px", fontWeight: 700, letterSpacing: "0.06em",
+                  color: "rgba(0,0,0,0.45)", textTransform: "uppercase",
+                  fontFamily: "DM Sans, sans-serif",
+                }}>
+                  {lang === "es" ? "RASPA Y GANA" : "SCRATCH & WIN"}
+                </span>
+              </div>
             </div>
 
             <div style={{ textAlign: "left", flex: 1 }}>
