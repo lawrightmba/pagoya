@@ -30,6 +30,15 @@ interface StpInstructions {
   enabled: boolean;
 }
 
+/** Extract YYYY-MM-DD from CURP positions 4-9 (YYMMDD encoded). */
+function dobFromCurp(c: string): string {
+  const yy = c.slice(4, 6);
+  const mm = c.slice(6, 8);
+  const dd = c.slice(8, 10);
+  const year = parseInt(yy, 10) <= 30 ? `20${yy}` : `19${yy}`;
+  return `${year}-${mm}-${dd}`;
+}
+
 function useStoredTelefono() {
   const [telefono, setTelefonoState] = useState(() => {
     return localStorage.getItem("pagoya_telefono") ?? "";
@@ -136,6 +145,16 @@ export default function CashLoad() {
   const [telefono, setTelefono] = useStoredTelefono();
   const [telefonoInput, setTelefonoInput] = useState(telefono);
   const [amount, setAmount] = useState("");
+
+  // ── KYC / identity verification (collected at first wallet load) ──────────
+  const [kycDone, setKycDone] = useState(() => {
+    try { return localStorage.getItem("pagoya_kyc_v1") === "1"; } catch { return false; }
+  });
+  const [kycCurp, setKycCurp] = useState("");
+  const [kycName, setKycName] = useState("");
+  const [kycSubmitting, setKycSubmitting] = useState(false);
+  const [kycError, setKycError] = useState<string | null>(null);
+  const [kycSuccess, setKycSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OxxoResult | null>(null);
@@ -635,6 +654,84 @@ export default function CashLoad() {
       </header>
 
       <main className="flex-1 flex flex-col gap-4 px-4 py-6 max-w-sm mx-auto w-full">
+
+        {/* Identity verification card — collected at first wallet load, not registration */}
+        {telefono && !kycDone && !kycSuccess && (
+          <div style={{ background: "white", borderRadius: "20px", padding: "20px", border: "1.5px solid #E8F5EC", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <span style={{ fontSize: "22px" }}>🪪</span>
+              <div>
+                <p style={{ fontSize: "13px", fontWeight: 800, color: "#1F1F1F", margin: 0 }}>Verifica tu identidad</p>
+                <p style={{ fontSize: "11px", color: "#6B7280", margin: 0 }}>Sube tu límite mensual a $24,000 MXN — solo tu CURP</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="CURP (18 caracteres)"
+              value={kycCurp}
+              onChange={(e) => { setKycCurp(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 18)); setKycError(null); }}
+              style={{ width: "100%", padding: "11px 12px", borderRadius: "10px", border: "1.5px solid #E5E7EB", fontSize: "13px", letterSpacing: "0.08em", boxSizing: "border-box", marginBottom: "8px", fontFamily: "ui-monospace, monospace" }}
+            />
+            <input
+              type="text"
+              placeholder="Nombre completo"
+              value={kycName}
+              onChange={(e) => { setKycName(e.target.value); setKycError(null); }}
+              style={{ width: "100%", padding: "11px 12px", borderRadius: "10px", border: "1.5px solid #E5E7EB", fontSize: "13px", boxSizing: "border-box", marginBottom: "12px" }}
+            />
+            {kycError && <p style={{ fontSize: "12px", color: "#C0392B", marginBottom: "10px", margin: "0 0 10px" }}>{kycError}</p>}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={async () => {
+                  if (kycCurp.length !== 18) { setKycError("El CURP debe tener exactamente 18 caracteres."); return; }
+                  if (!kycName.trim() || kycName.trim().split(/\s+/).length < 2) { setKycError("Ingresa tu nombre completo (nombre y apellidos)."); return; }
+                  setKycSubmitting(true);
+                  setKycError(null);
+                  try {
+                    const tel = telefono.startsWith("+") ? telefono : `+52${telefono}`;
+                    const res = await fetch(`${window.location.origin}/api/kyc/submit`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ telefono: tel, curp: kycCurp, fullName: kycName.trim(), dob: dobFromCurp(kycCurp) }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                      try { localStorage.setItem("pagoya_kyc_v1", "1"); } catch {}
+                      setKycDone(true);
+                      setKycSuccess(true);
+                    } else {
+                      setKycError(data.error ?? "Error al verificar. Intenta de nuevo.");
+                    }
+                  } catch {
+                    setKycError("Error de conexión. Intenta de nuevo.");
+                  }
+                  setKycSubmitting(false);
+                }}
+                disabled={kycSubmitting}
+                style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "#1D9E75", border: "none", color: "white", fontSize: "13px", fontWeight: 700, cursor: kycSubmitting ? "default" : "pointer", opacity: kycSubmitting ? 0.7 : 1 }}
+              >
+                {kycSubmitting ? "Verificando..." : "Verificar →"}
+              </button>
+              <button
+                onClick={() => { try { localStorage.setItem("pagoya_kyc_v1", "1"); } catch {} setKycDone(true); }}
+                style={{ padding: "12px 16px", borderRadius: "10px", background: "transparent", border: "1px solid #E5E7EB", color: "#9CA3AF", fontSize: "12px", cursor: "pointer" }}
+              >
+                Ahora no
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* KYC success confirmation */}
+        {kycSuccess && (
+          <div style={{ background: "#F0FAF3", borderRadius: "16px", padding: "16px 20px", border: "1px solid #D4EDDA", display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "20px" }}>✅</span>
+            <div>
+              <p style={{ fontSize: "13px", fontWeight: 700, color: "#046C2C", margin: 0 }}>¡Identidad verificada!</p>
+              <p style={{ fontSize: "12px", color: "#1D9E75", margin: 0 }}>Límite mensual actualizado a $24,000 MXN.</p>
+            </div>
+          </div>
+        )}
 
         {/* Method selector tabs */}
         <div className="flex gap-1 p-1 rounded-2xl" style={{ background: "#ECECEC" }}>

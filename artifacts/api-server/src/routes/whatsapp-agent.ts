@@ -26,7 +26,7 @@ function mapSiprelError(error: string, serviceName: string): string {
   }
   // SIPREL error 2 — CFE / biller account not found
   if (e.includes("DESTINATION_UNAVAILABLE")) {
-    return `No encontramos esa cuenta en ${serviceName}. Verifica tu número de contrato e intenta de nuevo.`;
+    return `No encontramos esa cuenta en ${serviceName}. Verifica tu número de contrato. ¿Necesitas ayuda? Marca 071 (gratis).`;
   }
   // SIPREL error 1 — phone number rejected
   if (e.includes("INVALID_PHONE")) {

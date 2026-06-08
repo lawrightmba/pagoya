@@ -41,15 +41,11 @@ const COUNTRY_CODES = [
   { code: "+34",  flag: "🇪🇸", label: "España" },
 ];
 
-// ── CURP format: 4 letters + 6 digits + H/M + 2 state letters + 3 consonants + 1 alphanum + 1 digit
-const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
-
 type Screen = "form" | "otp" | "success";
 
 interface FieldErrors {
   name: string;
   phone: string;
-  curp: string;
   city: string;
   colonia: string;
 }
@@ -69,12 +65,6 @@ function validatePhone(localNum: string): string {
   return "";
 }
 
-function validateCurp(val: string): string {
-  if (!val.trim()) return "";
-  if (val.length < 18) return "La CURP debe tener 18 caracteres";
-  if (!CURP_REGEX.test(val)) return "Formato de CURP inválido — ejemplo: LOAM850101HDFPLN09";
-  return "";
-}
 
 function validateCity(val: string): string {
   if (!val) return "Por favor selecciona tu ciudad";
@@ -156,8 +146,6 @@ export default function Register() {
   const [name, setName] = useState("");
   const [countryCode, setCountryCode] = useState("+52");
   const [localNumber, setLocalNumber] = useState("");
-  const [curp, setCurp] = useState("");
-  const [showCurp, setShowCurp] = useState(false);
   const [city, setCity] = useState("");
   const [colonia, setColonia] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
@@ -166,7 +154,7 @@ export default function Register() {
 
   // ── Field-level errors ────────────────────────────────────────────────────
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
-    name: "", phone: "", curp: "", city: "", colonia: "",
+    name: "", phone: "", city: "", colonia: "",
   });
 
   // ── Screen state ──────────────────────────────────────────────────────────
@@ -242,7 +230,6 @@ export default function Register() {
 
   const handleNameBlur = () => setFieldError("name", validateName(name));
   const handlePhoneBlur = () => setFieldError("phone", validatePhone(localNumber));
-  const handleCurpBlur = () => setFieldError("curp", validateCurp(curp));
   const handleCityBlur = () => setFieldError("city", validateCity(city));
   const handleColoniaBlur = () => setFieldError("colonia", validateColonia(colonia));
 
@@ -250,7 +237,6 @@ export default function Register() {
   const buildPayload = () => ({
     name: name.trim(),
     phone: combinedPhone,
-    curp: curp.trim().toUpperCase(),
     city,
     colonia,
     ref_code: refCode ?? "",
@@ -265,7 +251,6 @@ export default function Register() {
     const errs: FieldErrors = {
       name: validateName(name),
       phone: validatePhone(localNumber),
-      curp: validateCurp(curp),
       city: validateCity(city),
       colonia: validateColonia(colonia),
     };
@@ -809,76 +794,6 @@ export default function Register() {
                   Te enviaremos un mensaje de bienvenida de Paula, tu asistente de pagos.
                 </p>
             }
-          </div>
-
-          {/* CURP — collapsed behind optional toggle */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowCurp(v => !v)}
-              style={{
-                background: "none",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: "10px",
-                padding: "11px 14px",
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                color: "rgba(255,255,255,0.55)",
-                fontSize: "13px",
-                fontFamily: "DM Sans, sans-serif",
-                textAlign: "left",
-              }}
-            >
-              <span>🪪 ¿Quieres verificar tu identidad? <span style={{ color: "rgba(255,255,255,0.32)" }}>(opcional)</span></span>
-              <span style={{ fontSize: "11px", transition: "transform 0.2s", display: "inline-block", transform: showCurp ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
-            </button>
-
-            {showCurp && (
-              <div style={{ marginTop: "10px" }}>
-                <label style={labelStyle}>
-                  CURP{" "}
-                  <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.32)", textTransform: "none", letterSpacing: 0 }}>
-                    (opcional)
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  autoComplete="off"
-                  placeholder="Ej: LOAM850101HDFPLN09"
-                  value={curp}
-                  onChange={(e) => { setCurp(e.target.value.toUpperCase()); setFieldError("curp", ""); }}
-                  maxLength={18}
-                  style={{
-                    ...inputStyle,
-                    letterSpacing: "0.06em",
-                    borderColor: fieldErrors.curp ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.12)",
-                  }}
-                  onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
-                  onBlur={(e) => {
-                    handleCurpBlur();
-                    if (!fieldErrors.curp) (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)";
-                  }}
-                />
-                {fieldErrors.curp
-                  ? <p style={fieldErrorStyle}>{fieldErrors.curp}</p>
-                  : <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
-                      Solo se usa para verificar tu identidad. No compartimos tu información.
-                    </p>
-                }
-                {!fieldErrors.curp && (
-                  <div style={{ marginTop: "6px" }}>
-                    <PaulaHint
-                      message="¿Dónde encuentro mi CURP? No tengo claro en qué documento aparece."
-                      label="¿Dónde encuentro mi CURP? (opcional)"
-                      variant="dark"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Recovery Email */}
