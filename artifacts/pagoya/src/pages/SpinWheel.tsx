@@ -245,7 +245,7 @@ export default function SpinWheel() {
             🎡 ¡GIRAR AHORA!
           </button>
           <p style={{ marginTop: "14px", fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>
-            Un giro gratuito por cuenta. El Gran Premio se sortea mensualmente.
+            Un giro gratuito por cuenta. El Gran Premio es un beneficio del Programa de Lealtad PagoYa.
           </p>
         </div>
       )}
@@ -335,10 +335,15 @@ function PrizeResult({ result, onContinue }: { result: SpinResult; onContinue: (
           {result.prize_label}
         </p>
         {isGrandPrize ? (
-          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", lineHeight: 1.5 }}>
-            Tienes una entrada al sorteo mensual de <strong style={{ color: "#F59E0B" }}>$2,000 MXN</strong>.
-            El ganador se anuncia el primer día del siguiente mes por WhatsApp.
-          </p>
+          <>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", lineHeight: 1.5 }}>
+              Redimiste una entrada al Gran Premio Mensual de <strong style={{ color: "#F59E0B" }}>$2,000 MXN</strong>.
+              El beneficiario se selecciona entre usuarios activos elegibles y se anuncia el 1ro del siguiente mes por WhatsApp.
+            </p>
+            <p style={{ marginTop: "12px", fontSize: "10px", color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>
+              Beneficio del Programa de Lealtad PagoYa. No constituye sorteo ni juego de azar sujeto a permiso SEGOB.
+            </p>
+          </>
         ) : isCashback ? (
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>
             El saldo fue acreditado directamente en tu monedero PagoYa.

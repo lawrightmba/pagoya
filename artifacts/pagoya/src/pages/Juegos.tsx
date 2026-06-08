@@ -414,15 +414,25 @@ function GrandPrizePanel({ prize, hasEntry, onSpin }: { prize: GrandPrize; hasEn
       <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: "16px", padding: "20px" }}>
         <p style={{ fontSize: "13px", fontWeight: 800, color: "#fff", marginBottom: "12px" }}>¿Cómo participar?</p>
         {[
-          ["🎡", "Gira la ruleta al registrarte — si cae en Gran Premio, tienes una entrada."],
-          ["🎟", "Una entrada por cuenta registrada por mes."],
-          ["📱", "El ganador se notifica por WhatsApp el 1ro del mes siguiente."],
+          ["🎡", "Gira la ruleta al registrarte — si obtienes Gran Premio, redimes una entrada con tus puntos de lealtad."],
+          ["🎟", "Una entrada por cuenta activa por mes. Sin costo adicional."],
+          ["📱", "El beneficiario se selecciona entre usuarios activos elegibles y se notifica por WhatsApp el 1ro del mes siguiente."],
         ].map(([icon, text]) => (
           <div key={text} style={{ display: "flex", gap: "10px", marginBottom: "10px", alignItems: "flex-start" }}>
             <span style={{ fontSize: "18px", flexShrink: 0 }}>{icon}</span>
             <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", margin: 0, lineHeight: 1.4 }}>{text}</p>
           </div>
         ))}
+      </div>
+
+      {/* Regulatory disclosure */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "16px" }}>
+        <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "8px" }}>
+          Aviso legal — Programa de lealtad
+        </p>
+        <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", lineHeight: 1.6, margin: 0 }}>
+          El Gran Premio Mensual es un beneficio exclusivo del Programa de Lealtad PagoYa. Las entradas se obtienen mediante la redención de puntos acumulados en la plataforma — no constituye sorteo, juego de azar ni concurso sujeto a permiso SEGOB. La selección del beneficiario se realiza entre usuarios activos con entradas válidas durante el periodo. Sin compra adicional requerida para participar. Consulta los Términos y Condiciones del Programa de Lealtad en pagoya.mx.
+        </p>
       </div>
 
       {!hasEntry && (
