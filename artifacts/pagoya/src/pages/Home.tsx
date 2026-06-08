@@ -244,6 +244,7 @@ export default function Home() {
   // ── PTI intro modal (first-time score intro) ──────────────────────────────
   const [showPTIIntro, setShowPTIIntro] = useState(false);
   const [ptiRefreshKey, setPtiRefreshKey] = useState(0);
+  const [ptiPendingCompute, setPtiPendingCompute] = useState(false);
 
   useEffect(() => {
     if (!storedPhone) return;
@@ -261,8 +262,9 @@ export default function Home() {
       .catch(() => {});
   }, [storedPhone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handlePTIIntroDismiss() {
+  function handlePTIIntroDismiss(computeSucceeded: boolean) {
     setShowPTIIntro(false);
+    setPtiPendingCompute(!computeSucceeded);
     setPtiRefreshKey(k => k + 1);
   }
 
@@ -568,7 +570,7 @@ export default function Home() {
             )}
             {storedPhone && (
               <div style={{ marginBottom: "20px" }}>
-                <PTIScoreCard telefono={storedPhone} refreshKey={ptiRefreshKey} />
+                <PTIScoreCard telefono={storedPhone} refreshKey={ptiRefreshKey} pendingCompute={ptiPendingCompute} />
               </div>
             )}
             <AutofillInput

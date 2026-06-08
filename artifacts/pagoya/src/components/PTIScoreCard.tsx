@@ -78,9 +78,10 @@ function ScoreRow({ icon, label, score, max, color }: ScoreRowProps) {
 interface Props {
   telefono: string;
   refreshKey?: number;
+  pendingCompute?: boolean;
 }
 
-export default function PTIScoreCard({ telefono, refreshKey = 0 }: Props) {
+export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute = false }: Props) {
   const [data, setData] = useState<PTIResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -180,6 +181,9 @@ export default function PTIScoreCard({ telefono, refreshKey = 0 }: Props) {
 
   // ── New user — no score yet ──────────────────────────────────────────────────
   if (!data || data.score == null) {
+    const nullMessage = pendingCompute
+      ? "Tu puntaje se está calculando. Regresa en unos minutos para verlo aquí."
+      : (data?.message ?? "Tu primer puntaje se calculará el próximo día 1 del mes.");
     return (
       <div style={{
         background: "#fff",
@@ -192,8 +196,18 @@ export default function PTIScoreCard({ telefono, refreshKey = 0 }: Props) {
           🛡️ Tu PagoYa Trust Index
         </p>
         <p style={{ fontSize: "0.82rem", color: "#6B7280", margin: 0 }}>
-          {data?.message ?? "Tu primer puntaje se calculará el próximo día 1 del mes."}
+          {nullMessage}
         </p>
+        {pendingCompute && (
+          <div style={{
+            marginTop: "10px",
+            height: 4,
+            borderRadius: 99,
+            background: "linear-gradient(90deg,#E5E7EB 25%,#1D9E75 50%,#E5E7EB 75%)",
+            backgroundSize: "200% 100%",
+            animation: "pti-shimmer 1.6s ease-in-out infinite",
+          }} />
+        )}
       </div>
     );
   }

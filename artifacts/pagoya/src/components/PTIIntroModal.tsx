@@ -1,8 +1,10 @@
 import { useState } from "react";
 
+const COMPUTE_TIMEOUT_MS = 8000;
+
 interface PTIIntroModalProps {
   telefono: string;
-  onDismiss: () => void;
+  onDismiss: (computeSucceeded: boolean) => void;
 }
 
 export default function PTIIntroModal({ telefono, onDismiss }: PTIIntroModalProps) {
@@ -10,19 +12,27 @@ export default function PTIIntroModal({ telefono, onDismiss }: PTIIntroModalProp
 
   async function handleSeeScore() {
     setLoading(true);
+    localStorage.setItem("pagoya_pti_intro_seen", "true");
+
+    let succeeded = false;
     try {
-      localStorage.setItem("pagoya_pti_intro_seen", "true");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), COMPUTE_TIMEOUT_MS);
+
       const base = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
-      await fetch(`${base}/api/pti/compute-now`, {
+      const res = await fetch(`${base}/api/pti/compute-now`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ telefono }),
-      }).catch(() => {});
-      // Brief pause so spinner feels intentional
-      await new Promise(r => setTimeout(r, 1200));
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      succeeded = res.ok;
+    } catch {
+      // AbortError (timeout) or network failure — succeeded stays false
     } finally {
       setLoading(false);
-      onDismiss();
+      onDismiss(succeeded);
     }
   }
 
