@@ -5,7 +5,7 @@ export type Lang = 'es' | 'en';
 export const translations = {
   es: {
     scene1: {
-      stat: '73M',
+      stat: '65M',
       sub: 'mexicanos',
       label: 'sin historial crediticio',
     },
@@ -49,7 +49,7 @@ export const translations = {
   },
   en: {
     scene1: {
-      stat: '73M',
+      stat: '65M',
       sub: 'Mexicans',
       label: 'with no credit history',
     },
