@@ -119,10 +119,11 @@ const GIFT_CARD_DENOMINATIONS: Record<string, GCDenomination[]> = {
     { serviceId: "uber_eats_300", amount: 300 },
   ],
   cinepolis: [
-    { serviceId: "cinepolis_60",  amount: 60,   label: "Infantil" },
-    { serviceId: "cinepolis_100", amount: 100,  label: "General" },
-    { serviceId: "cinepolis_140", amount: 140 },
-    { serviceId: "cinepolis_210", amount: 210,  label: "IMAX / 3D" },
+    { serviceId: "cinepolis_100", amount: 100,  label: "~1 boleto regular" },
+    { serviceId: "cinepolis_140", amount: 140,  label: "~1 boleto 3D" },
+    { serviceId: "cinepolis_165", amount: 165,  label: "~1 boleto IMAX" },
+    { serviceId: "cinepolis_210", amount: 210,  label: "~2 boletos regular" },
+    { serviceId: "cinepolis_280", amount: 280,  label: "~2 boletos 3D" },
   ],
   starbucks: [
     { serviceId: "starbucks_100", amount: 100 },
@@ -134,11 +135,14 @@ const GIFT_CARD_DENOMINATIONS: Record<string, GCDenomination[]> = {
     { serviceId: "liverpool_500",  amount: 500 },
     { serviceId: "liverpool_1000", amount: 1000 },
     { serviceId: "liverpool_2000", amount: 2000 },
+    { serviceId: "liverpool_3000", amount: 3000, label: "Electrónica / Moda" },
+    { serviceId: "liverpool_5000", amount: 5000, label: "Electrodomésticos / TV" },
   ],
   soriana: [
     { serviceId: "soriana_200",  amount: 200 },
     { serviceId: "soriana_500",  amount: 500 },
     { serviceId: "soriana_1000", amount: 1000 },
+    { serviceId: "soriana_2000", amount: 2000, label: "Despensa grande" },
   ],
 };
 

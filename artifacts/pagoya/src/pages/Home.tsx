@@ -65,10 +65,11 @@ const GIFT_CARD_GROUPS = [
         { serviceId: "hbo_max_279",      amount: 279 },
       ]},
       { id: "cinepolis",   emoji: "🎟️", name: "Cinépolis",   denominations: [
-        { serviceId: "cinepolis_60",     amount: 60 },
         { serviceId: "cinepolis_100",    amount: 100 },
         { serviceId: "cinepolis_140",    amount: 140 },
+        { serviceId: "cinepolis_165",    amount: 165 },
         { serviceId: "cinepolis_210",    amount: 210 },
+        { serviceId: "cinepolis_280",    amount: 280 },
       ]},
       { id: "gplay",       emoji: "🎮", name: "Google Play", denominations: [
         { serviceId: "google_play_50",   amount: 50 },
@@ -109,11 +110,14 @@ const GIFT_CARD_GROUPS = [
         { serviceId: "liverpool_500",    amount: 500 },
         { serviceId: "liverpool_1000",   amount: 1000 },
         { serviceId: "liverpool_2000",   amount: 2000 },
+        { serviceId: "liverpool_3000",   amount: 3000 },
+        { serviceId: "liverpool_5000",   amount: 5000 },
       ]},
       { id: "soriana",     emoji: "🛒", name: "Soriana",     denominations: [
         { serviceId: "soriana_200",      amount: 200 },
         { serviceId: "soriana_500",      amount: 500 },
         { serviceId: "soriana_1000",     amount: 1000 },
+        { serviceId: "soriana_2000",     amount: 2000 },
       ]},
       { id: "starbucks",   emoji: "☕", name: "Starbucks",   denominations: [
         { serviceId: "starbucks_100",    amount: 100 },
