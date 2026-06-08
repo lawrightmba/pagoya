@@ -28,7 +28,7 @@ export default function Slide01Cover() {
               marginBottom: "2.5vh"
             }}
           >
-            Acción Ventures — Presentación Pre-Semilla · Junio 2026
+            Antler — Presentación Pre-Semilla · Junio 2026
           </p>
           <h1
             style={{

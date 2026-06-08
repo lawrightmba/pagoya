@@ -9,17 +9,17 @@ export default function Slide06BusinessModel() {
         style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }}
       />
 
-      <div className="relative z-10 flex flex-col" style={{ padding: "2vh 8vw 2vh" }}>
-        <div style={{ marginBottom: "1vh" }}>
+      <div className="relative z-10 flex flex-col" style={{ padding: "1.8vh 8vw 1.5vh" }}>
+        <div style={{ marginBottom: "0.8vh" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.5vw",
+              fontSize: "1.4vw",
               fontWeight: 700,
               color: "#00C875",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              marginBottom: "0.7vh"
+              marginBottom: "0.5vh"
             }}
           >
             Modelo de Negocio e Ingresos
@@ -27,12 +27,12 @@ export default function Slide06BusinessModel() {
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "4.2vw",
+              fontSize: "3.8vw",
               fontWeight: 900,
               color: "#FFFFFF",
               letterSpacing: "-0.01em",
               lineHeight: 1,
-              marginBottom: "0.8vh"
+              marginBottom: "0.6vh"
             }}
           >
             Tarifa fija de $25 MXN por transacción.
@@ -41,21 +41,21 @@ export default function Slide06BusinessModel() {
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
 
-        <div className="flex gap-[3vw]" style={{ marginBottom: "1.5vh" }}>
+        <div className="flex gap-[3vw]" style={{ marginBottom: "1.2vh" }}>
           <div
             style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "0.8vw",
-              padding: "1.8vh 2.5vw",
-              flex: "0 0 20vw"
+              padding: "1.2vh 2vw",
+              flex: "0 0 18vw"
             }}
           >
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.2vh" }}>Por Transacción</p>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "6vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, marginBottom: "0.6vh" }}>$25</p>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF" }}>MXN fija</p>
-            <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)", margin: "1.5vh 0" }} />
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Facturas o tarjetas de regalo. Rieles directos — rentable desde la transacción 1.</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.8vh" }}>Por Transacción</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5.5vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, marginBottom: "0.4vh" }}>$25</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.8vw", fontWeight: 700, color: "#FFFFFF" }}>MXN fija</p>
+            <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)", margin: "1vh 0" }} />
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Facturas o tarjetas de regalo. Rieles directos — rentable desde la transacción 1.</p>
           </div>
 
           <div style={{ flex: 1 }}>

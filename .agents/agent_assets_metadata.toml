@@ -221,3 +221,9 @@ id = "AT4qJjwas42r0imUjmvzM"
 uri = "file://.local/outputs/PagoYa-Accion-Ventures-PreSemilla-2026.pdf"
 type = "pdf"
 title = "PagoYa — Acción Ventures Pre-Semilla 2026 (PDF)"
+
+[[outputs]]
+id = "ij6UFMo-sTmfT5x78X9Dn"
+uri = "file://.local/outputs/PagoYa---Antler-Pre-Seed-Pitch-Deck.pdf"
+type = "pdf"
+title = "PagoYa — Antler Pre-Seed Pitch Deck (PDF)"
