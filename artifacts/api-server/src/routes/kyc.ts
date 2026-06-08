@@ -39,6 +39,7 @@ router.get("/status/:telefono", async (req: Request, res: Response) => {
         kycCurp: usersTable.kycCurp,
         kycVerifiedAt: usersTable.kycVerifiedAt,
         kycSubmittedAt: usersTable.kycSubmittedAt,
+        kycDismissedAt: usersTable.kycDismissedAt,
       })
       .from(usersTable)
       .where(eq(usersTable.telefono, telefono))
@@ -48,6 +49,7 @@ router.get("/status/:telefono", async (req: Request, res: Response) => {
       res.json({
         kycLevel: 0,
         kycStatus: "none",
+        kycDismissed: false,
         monthlyLimitMxn: KYC_MONTHLY_LIMITS[0],
         nextLevelLimitMxn: KYC_MONTHLY_LIMITS[2],
       });
@@ -61,12 +63,42 @@ router.get("/status/:telefono", async (req: Request, res: Response) => {
       kycFullName: user.kycFullName,
       kycVerifiedAt: user.kycVerifiedAt,
       kycSubmittedAt: user.kycSubmittedAt,
+      kycDismissed: !!user.kycDismissedAt,
       monthlyLimitMxn: KYC_MONTHLY_LIMITS[level] ?? 6_000,
       nextLevelLimitMxn: KYC_MONTHLY_LIMITS[2],
     });
   } catch (err) {
     logger.error({ err, telefono }, "kyc: status lookup failed");
     res.status(500).json({ error: "Error al consultar estado KYC." });
+  }
+});
+
+// ── POST /api/kyc/dismiss ──────────────────────────────────────────────────────
+// Body: { telefono }
+// Records that the user dismissed the KYC prompt — server-side so it persists
+// across devices. The card will not be shown again for this phone number.
+router.post("/dismiss", async (req: Request, res: Response) => {
+  const { telefono } = req.body as { telefono?: string };
+  if (!telefono) {
+    res.status(400).json({ error: "Se requiere teléfono." });
+    return;
+  }
+
+  try {
+    await db
+      .insert(usersTable)
+      .values({ telefono })
+      .onConflictDoNothing();
+
+    await db
+      .update(usersTable)
+      .set({ kycDismissedAt: new Date() })
+      .where(eq(usersTable.telefono, telefono));
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err, telefono }, "kyc: dismiss failed");
+    res.status(500).json({ error: "Error al registrar preferencia." });
   }
 });
 

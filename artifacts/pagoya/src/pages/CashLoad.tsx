@@ -147,6 +147,8 @@ export default function CashLoad() {
   const [amount, setAmount] = useState("");
 
   // ── KYC / identity verification (collected at first wallet load) ──────────
+  // localStorage is a fast client-side cache; server is the source of truth.
+  // On mount (when telefono is known) we fetch /api/kyc/status to sync state.
   const [kycDone, setKycDone] = useState(() => {
     try { return localStorage.getItem("pagoya_kyc_v1") === "1"; } catch { return false; }
   });
@@ -155,6 +157,25 @@ export default function CashLoad() {
   const [kycSubmitting, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState<string | null>(null);
   const [kycSuccess, setKycSuccess] = useState(false);
+
+  // Sync KYC state from server on mount (phone-number-bound, not device-bound)
+  useEffect(() => {
+    const tel = telefono?.trim();
+    if (!tel || tel.length < 10) return;
+    if (kycDone) return; // already marked done locally — skip the round-trip
+    const fullTel = tel.startsWith("+") ? tel : `+52${tel}`;
+    fetch(`${window.location.origin}/api/kyc/status/${encodeURIComponent(fullTel)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const done = data.kycLevel >= 2 || data.kycDismissed === true;
+        if (done) {
+          try { localStorage.setItem("pagoya_kyc_v1", "1"); } catch {}
+          setKycDone(true);
+        }
+      })
+      .catch(() => {}); // silent — card just stays visible until next load
+  }, [telefono]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OxxoResult | null>(null);
@@ -713,7 +734,20 @@ export default function CashLoad() {
                 {kycSubmitting ? "Verificando..." : "Verificar →"}
               </button>
               <button
-                onClick={() => { try { localStorage.setItem("pagoya_kyc_v1", "1"); } catch {} setKycDone(true); }}
+                onClick={async () => {
+                  // Optimistic UI — hide card immediately
+                  try { localStorage.setItem("pagoya_kyc_v1", "1"); } catch {}
+                  setKycDone(true);
+                  // Persist dismiss server-side (phone-bound, survives device switches)
+                  const tel = telefono.startsWith("+") ? telefono : `+52${telefono}`;
+                  try {
+                    await fetch(`${window.location.origin}/api/kyc/dismiss`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ telefono: tel }),
+                    });
+                  } catch {}
+                }}
                 style={{ padding: "12px 16px", borderRadius: "10px", background: "transparent", border: "1px solid #E5E7EB", color: "#9CA3AF", fontSize: "12px", cursor: "pointer" }}
               >
                 Ahora no

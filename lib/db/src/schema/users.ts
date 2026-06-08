@@ -16,6 +16,7 @@ export const usersTable = pgTable("users", {
   kycStatus: text("kyc_status").notNull().default("none"),
   kycSubmittedAt: timestamp("kyc_submitted_at", { withTimezone: true }),
   kycVerifiedAt: timestamp("kyc_verified_at", { withTimezone: true }),
+  kycDismissedAt: timestamp("kyc_dismissed_at", { withTimezone: true }),
   kycProvider: text("kyc_provider"),
   kycProviderId: text("kyc_provider_id"),
   // ── Street team signup bonus ─────────────────────────────────────────────────
