@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVideoPlayer } from '@/lib/video';
+import { LangProvider, type Lang } from '@/lib/lang';
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
 import { Scene3 } from './video_scenes/Scene3';
@@ -28,15 +29,25 @@ const SCENE_START_SEC: Record<string, number> = (() => {
 
 const AUDIO_SEEK_EPSILON_SEC = 0.18;
 
+const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
+  problem: Scene1,
+  paula: Scene2,
+  pti: Scene3,
+  unlocks: Scene4,
+  traction: Scene5,
+};
+
 export default function VideoTemplate({
   durations = SCENE_DURATIONS,
   loop = true,
   muted = false,
+  lang = 'es',
   onSceneChange,
 }: {
   durations?: Record<string, number>;
   loop?: boolean;
   muted?: boolean;
+  lang?: Lang;
   onSceneChange?: (sceneKey: string) => void;
 } = {}) {
   const { currentScene, currentSceneKey } = useVideoPlayer({ durations, loop });
@@ -46,7 +57,7 @@ export default function VideoTemplate({
     onSceneChange?.(currentSceneKey);
   }, [currentSceneKey, onSceneChange]);
 
-  const baseSceneKey = currentSceneKey.replace(/_r[12]$/, '') as keyof typeof SCENE_DURATIONS;
+  const baseSceneKey = currentSceneKey.replace(/_r[12]$/, '');
   const sceneIndex = Object.keys(SCENE_DURATIONS).indexOf(baseSceneKey);
 
   useEffect(() => {
@@ -60,18 +71,10 @@ export default function VideoTemplate({
     audio.play().catch(() => {});
   }, [currentSceneKey, baseSceneKey, muted]);
 
-  const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
-    problem: Scene1,
-    paula: Scene2,
-    pti: Scene3,
-    unlocks: Scene4,
-    traction: Scene5,
-  };
-
   const SceneComponent = SCENE_COMPONENTS[baseSceneKey];
 
   return (
-    <>
+    <LangProvider lang={lang}>
       <div className="relative w-full h-screen overflow-hidden bg-[#0A1A0F]">
         {/* Persistent Background */}
         <div className="absolute inset-0">
@@ -89,7 +92,7 @@ export default function VideoTemplate({
           />
         </div>
 
-        {/* Persistent Mastercard Elements (Visible mainly in Beats 4 & 5) */}
+        {/* Mastercard glow orbs — appear in beats 4 & 5 */}
         <motion.div
           className="absolute w-[20vw] h-[20vw] rounded-full bg-[#EB001B] mix-blend-screen blur-3xl"
           animate={{
@@ -125,7 +128,7 @@ export default function VideoTemplate({
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
         />
 
-        {/* Scene Render */}
+        {/* Scene */}
         <AnimatePresence mode="popLayout">
           {SceneComponent && <SceneComponent key={currentSceneKey} />}
         </AnimatePresence>
@@ -138,6 +141,6 @@ export default function VideoTemplate({
         autoPlay
         muted={muted}
       />
-    </>
+    </LangProvider>
   );
 }

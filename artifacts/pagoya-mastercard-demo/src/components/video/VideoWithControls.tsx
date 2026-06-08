@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Repeat, Volume2, VolumeX, ChevronDown, ChevronUp } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
+import type { Lang } from '@/lib/lang';
 
 const PROGRESS_TICK_MS = 60;
 
@@ -10,12 +11,14 @@ interface ControlBarProps {
   collapsed: boolean;
   locked: boolean;
   muted: boolean;
+  lang: Lang;
   sceneKeys: string[];
   activeIndex: number;
   activeDuration: number;
   tick: number;
   onToggleLock: () => void;
   onToggleMuted: () => void;
+  onToggleLang: () => void;
   onJumpTo: (index: number) => void;
   onToggleCollapsed: () => void;
 }
@@ -75,12 +78,14 @@ function ControlBar({
   collapsed,
   locked,
   muted,
+  lang,
   sceneKeys,
   activeIndex,
   activeDuration,
   tick,
   onToggleLock,
   onToggleMuted,
+  onToggleLang,
   onJumpTo,
   onToggleCollapsed,
 }: ControlBarProps) {
@@ -93,6 +98,7 @@ function ControlBar({
       }`}
       aria-hidden={!visible}
     >
+      {/* Scene lock */}
       <button
         onClick={onToggleLock}
         className={`w-14 h-14 flex items-center justify-center transition-colors rounded-lg shrink-0 ${
@@ -107,6 +113,7 @@ function ControlBar({
         <Repeat className="w-8 h-8" />
       </button>
 
+      {/* Audio mute */}
       <button
         onClick={onToggleMuted}
         className={`w-14 h-14 flex items-center justify-center transition-colors rounded-lg shrink-0 ${
@@ -119,6 +126,16 @@ function ControlBar({
         aria-pressed={!muted}
       >
         {muted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
+      </button>
+
+      {/* Language toggle */}
+      <button
+        onClick={onToggleLang}
+        className="w-14 h-14 flex items-center justify-center transition-colors rounded-lg shrink-0 text-white/60 hover:text-white hover:bg-white/10 font-bold text-base tracking-wide"
+        title={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+        aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+      >
+        {lang === 'es' ? 'ES' : 'EN'}
       </button>
 
       <div className="w-px self-stretch bg-white/15" aria-hidden="true" />
@@ -165,6 +182,7 @@ export default function VideoWithControls() {
   } = useSceneControls(SCENE_DURATIONS);
 
   const [muted, setMuted] = useState(true);
+  const [lang, setLang] = useState<Lang>('es');
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
@@ -176,10 +194,13 @@ export default function VideoWithControls() {
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') setHovering(false);
   }, []);
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse') return;
-    if (collapsed) setTapPinned(true);
-  }, [collapsed]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === 'mouse') return;
+      if (collapsed) setTapPinned(true);
+    },
+    [collapsed],
+  );
   const handleToggleCollapsed = useCallback(() => {
     setCollapsed(c => {
       if (!c) { setHovering(false); setTapPinned(false); }
@@ -209,6 +230,7 @@ export default function VideoWithControls() {
         durations={durations}
         loop
         muted={muted}
+        lang={lang}
         onSceneChange={onSceneChange}
       />
       <div
@@ -225,12 +247,14 @@ export default function VideoWithControls() {
           collapsed={collapsed}
           locked={locked}
           muted={muted}
+          lang={lang}
           sceneKeys={sceneKeys}
           activeIndex={activeIndex}
           activeDuration={activeDuration}
           tick={tick}
           onToggleLock={toggleLock}
           onToggleMuted={() => setMuted(m => !m)}
+          onToggleLang={() => setLang(l => (l === 'es' ? 'en' : 'es'))}
           onJumpTo={jumpTo}
           onToggleCollapsed={handleToggleCollapsed}
         />
