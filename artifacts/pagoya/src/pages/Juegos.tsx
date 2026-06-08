@@ -149,7 +149,47 @@ export default function Juegos() {
         {/* ── TAB: Raspa y Gana ── */}
         {tab === "raspa" && (
           <>
-            {!telefono && <NoPhoneCard />}
+            {!telefono && (
+              <>
+                {/* Locked preview — teaser before the gate */}
+                <div style={{ textAlign: "center", position: "relative", marginBottom: "16px" }}>
+                  <div style={{
+                    background: "linear-gradient(135deg, #007A4A 0%, #00C875 100%)",
+                    borderRadius: "20px", padding: "36px 24px",
+                    boxShadow: "0 12px 40px rgba(0,200,117,0.3)",
+                    position: "relative", overflow: "hidden",
+                    filter: "blur(1.5px)", opacity: 0.65,
+                    pointerEvents: "none",
+                  }}>
+                    <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "100px", height: "100px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
+                    <p style={{ fontSize: "48px", marginBottom: "8px" }}>🎟️</p>
+                    <p style={{ fontSize: "22px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.05em" }}>TU TARJETA DE HOY</p>
+                    <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.75)", marginTop: "4px" }}>Raspa y descubre tu premio</p>
+                  </div>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: "8px",
+                  }}>
+                    <span style={{ fontSize: "34px" }}>🔒</span>
+                    <p style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", margin: 0 }}>Crea tu cuenta para jugar</p>
+                    <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", margin: 0 }}>Gratis · cada día</p>
+                  </div>
+                </div>
+                <a href="/register" style={{
+                  display: "block", padding: "16px",
+                  background: "#00C875", borderRadius: "14px",
+                  fontSize: "18px", fontWeight: 900, color: "#004F2D",
+                  textDecoration: "none", textAlign: "center",
+                  marginBottom: "16px",
+                  boxShadow: "0 6px 20px rgba(0,200,117,0.35)",
+                }}>
+                  🎲 CREAR CUENTA GRATIS
+                </a>
+                <HowItWorksCard />
+                <CreditScoreNote />
+              </>
+            )}
             {telefono && loadingCard && <Spinner />}
             {telefono && !loadingCard && cardState?.alreadyPlayed && !revealed && (
               <AlreadyPlayed reward={cardState.reward} playedAt={cardState.playedAt} />
@@ -163,8 +203,8 @@ export default function Juegos() {
                 allScratched={allScratched} showResult={showResult} isWin={!!isWin} reward={revealed.reward}
               />
             )}
-            <HowItWorksCard />
-            <CreditScoreNote />
+            {telefono && <HowItWorksCard />}
+            {telefono && <CreditScoreNote />}
           </>
         )}
 

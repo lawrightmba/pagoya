@@ -235,47 +235,81 @@ export default function WalletHistorial() {
 
         {/* Phone setup — shown only when no phone stored */}
         {!telefono && (
-          <div
-            className="bg-white rounded-3xl p-6"
-            style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "#F0FAF3" }}
-              >
-                <Wallet className="w-5 h-5" style={{ color: "#1D9E75" }} />
-              </div>
-              <div>
-                <h2 className="text-sm font-black text-[#1F1F1F]">¿Cuál es tu número?</h2>
-                <p className="text-xs text-gray-400">Para consultar tu historial</p>
-              </div>
-            </div>
+          <>
             <div
-              className="flex items-center rounded-2xl px-4 py-3 mb-4"
-              style={{ background: "#F7F7F7", border: "1.5px solid #E5E5E5" }}
+              className="bg-white rounded-3xl p-6"
+              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.07)", border: "1px solid #F0F0F0" }}
             >
-              <span className="text-sm text-gray-400 mr-2">🇲🇽 +52</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                placeholder="10 dígitos"
-                value={telefonoInput}
-                onChange={(e) => setTelefonoInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                onKeyDown={(e) => e.key === "Enter" && handleSetTelefono()}
-                className="flex-1 text-sm text-[#1F1F1F] outline-none bg-transparent"
-              />
+              <div className="flex items-center gap-3 mb-5">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "#F0FAF3" }}
+                >
+                  <Wallet className="w-5 h-5" style={{ color: "#1D9E75" }} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-[#1F1F1F]">¿Cuál es tu número?</h2>
+                  <p className="text-xs text-gray-400">Para consultar tu historial</p>
+                </div>
+              </div>
+              <div
+                className="flex items-center rounded-2xl px-4 py-3 mb-4"
+                style={{ background: "#F7F7F7", border: "1.5px solid #E5E5E5" }}
+              >
+                <span className="text-sm text-gray-400 mr-2">🇲🇽 +52</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="10 dígitos"
+                  value={telefonoInput}
+                  onChange={(e) => setTelefonoInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  onKeyDown={(e) => e.key === "Enter" && handleSetTelefono()}
+                  className="flex-1 text-sm text-[#1F1F1F] outline-none bg-transparent"
+                />
+              </div>
+              <button
+                onClick={handleSetTelefono}
+                disabled={telefonoInput.length < 10}
+                className="w-full py-3.5 rounded-2xl text-white text-sm font-bold transition-all active:scale-[0.97] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)" }}
+              >
+                Ver mi historial
+              </button>
             </div>
-            <button
-              onClick={handleSetTelefono}
-              disabled={telefonoInput.length < 10}
-              className="w-full py-3.5 rounded-2xl text-white text-sm font-bold transition-all active:scale-[0.97] disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)" }}
-            >
-              Ver mi historial
-            </button>
-          </div>
+
+            {/* ── "Lo que verás aquí" ghost preview ── */}
+            <div style={{ opacity: 0.45, pointerEvents: "none", userSelect: "none" }}>
+              <p className="text-xs font-bold text-gray-400 text-center uppercase tracking-widest mb-3">
+                Así se ve tu historial
+              </p>
+              {[
+                { icon: "⚡", label: "CFE Clásica", sub: "Pago de servicio · 15 jun", amount: "-$245.00 MXN", credit: false },
+                { icon: "🏪", label: "Carga OXXO", sub: "Recarga billetera · 12 jun", amount: "+$500.00 MXN", credit: true },
+                { icon: "📱", label: "Telcel Prepago", sub: "Pago de servicio · 10 jun", amount: "-$100.00 MXN", credit: false },
+              ].map((tx) => (
+                <div
+                  key={tx.label}
+                  className="bg-white rounded-2xl px-5 py-4 flex items-center gap-4 mb-2"
+                  style={{ border: "1px solid #F0F0F0" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-lg"
+                    style={{ background: "#F0FAF3" }}
+                  >
+                    {tx.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#1F1F1F] leading-tight">{tx.label}</p>
+                    <p className="text-xs text-gray-400">{tx.sub}</p>
+                  </div>
+                  <span className={`text-sm font-bold ${tx.credit ? "text-[#046C2C]" : "text-[#1F1F1F]"}`}>
+                    {tx.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Balance card */}

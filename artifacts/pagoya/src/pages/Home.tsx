@@ -446,6 +446,208 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
+            E-0. RASPA Y GANA TEASER
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "20px 24px 0", background: "linear-gradient(180deg, #008A52 0%, #FFFFFF 100%)" }}>
+          <button
+            onClick={() => navigate("/juegos")}
+            style={{
+              width: "100%", border: "none", cursor: "pointer", padding: 0,
+              background: "linear-gradient(135deg, #004F2D 0%, #007A4A 60%, #00C875 100%)",
+              borderRadius: "18px", overflow: "hidden",
+              boxShadow: "0 8px 28px rgba(0,79,45,0.35)",
+              display: "flex", alignItems: "center", gap: "16px",
+              padding: "18px 20px",
+              position: "relative",
+            }}
+          >
+            <div style={{ position: "absolute", top: "-12px", right: "-12px", width: "80px", height: "80px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
+            <span style={{ fontSize: "40px", flexShrink: 0 }}>🎟️</span>
+            <div style={{ textAlign: "left", flex: 1 }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>
+                Gratis · cada día
+              </p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "22px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "4px" }}>
+                Raspa y Gana
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>
+                Gana puntos y saldo MXN en segundos →
+              </p>
+            </div>
+            <div style={{ background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0 }}>
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>JUGAR</span>
+            </div>
+          </button>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
+            E. AUTOFILL INPUT
+        ══════════════════════════════════════════════════════ */}
+        <section style={{ padding: "28px 24px 28px", background: "#FFFFFF" }}>
+          <div style={{ maxWidth: "560px", margin: "0 auto" }}>
+            {storedPhone && (
+              <div style={{ marginBottom: "20px" }}>
+                <WalletBalanceWidget />
+              </div>
+            )}
+            <AutofillInput
+              phone={phone}
+              language={lang}
+              onAutofill={handleAutofill}
+            />
+
+            <div style={{ textAlign: "center", margin: "10px 0 4px" }}>
+              <PaulaHint
+                message="Hola Paula, ¿cómo funciona PagoYa? ¿Puedo usarlo sin tener cuenta bancaria?"
+                label="¿Tienes dudas? Pregúntale a Paula"
+              />
+            </div>
+
+            {/* ── SIGN-UP BONUS STRIP ── */}
+            <button
+              className="bonus-strip"
+              onClick={() => navigate("/register")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                padding: "12px 16px",
+                marginBottom: "10px",
+                background: "rgba(255,92,26,0.07)",
+                border: "1.5px solid rgba(255,92,26,0.30)",
+                borderRadius: "14px",
+                cursor: "pointer",
+                textAlign: "left",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
+                    {es
+                      ? "Abre tu billetera gratis · recibe $25 MXN"
+                      : "Open your wallet free · get $25 MXN"}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#6B9980", marginTop: "2px" }}>
+                    {es
+                      ? "Sin banco, sin trámites · se acredita al instante"
+                      : "No bank needed · credited instantly"}
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                flexShrink: 0,
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#FF5C1A",
+                whiteSpace: "nowrap",
+              }}>
+                {es ? "Abre tu cuenta →" : "Sign up →"}
+              </span>
+            </button>
+
+            {/* CTA button */}
+            <button
+              className="hero-cta-btn"
+              onClick={() => navigate("/pagar")}
+              style={{
+                width: "100%",
+                height: "52px",
+                borderRadius: "14px",
+                border: "none",
+                background: "#007A4A",
+                color: "white",
+                fontSize: "17px",
+                fontWeight: 700,
+                cursor: "pointer",
+                letterSpacing: "0.01em",
+                boxShadow: "0 4px 18px rgba(0,122,74,0.32)",
+                transition: "filter 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+            >
+              {es ? "Pagar ahora →" : "Pay now →"}
+            </button>
+
+            {/* Trust microcopy */}
+            <p style={{
+              marginTop: "5px",
+              marginBottom: 0,
+              fontSize: "11px",
+              color: "#6B9980",
+              textAlign: "center",
+              lineHeight: 1.4,
+            }}>
+              {es
+                ? "🔒 Pago seguro · Sin registro para tu primer pago · $25 MXN por transacción"
+                : "🔒 Secure payment · No signup for first payment · $25 MXN per transaction"}
+            </p>
+
+            {/* ── TRUST PILLS ── */}
+            <div style={{
+              marginTop: "14px",
+              display: "flex",
+              gap: "6px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}>
+              {(es
+                ? ["✓ Sin banco requerido", "✓ Sin app", "✓ Comprobante por WhatsApp"]
+                : ["✓ No bank needed", "✓ No app", "✓ WhatsApp receipt"]
+              ).map((t) => (
+                <span key={t} style={{
+                  fontSize: "11px",
+                  color: "#046C2C",
+                  background: "#F0FAF3",
+                  padding: "4px 10px",
+                  borderRadius: "999px",
+                  border: "1px solid #CBE9D9",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+
+            {/* ── TRUST BAR ── */}
+            <div style={{
+              marginTop: "20px",
+              padding: "12px 16px",
+              borderRadius: "14px",
+              background: "#F4FBF7",
+              border: "1px solid #CBE9D9",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "6px",
+            }}>
+              {[
+                { icon: "🔐", label: "Conekta" },
+                { icon: "🏪", label: "OXXO Pay" },
+                { icon: "🏦", label: "SPEI" },
+                { icon: "🇲🇽", label: "Banxico" },
+              ].map((item, i, arr) => (
+                <div key={item.label} style={{ display: "contents" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}>
+                    <span style={{ fontSize: "16px", lineHeight: 1 }}>{item.icon}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(13,38,24,0.55)", letterSpacing: "0.04em", textAlign: "center" }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ width: "1px", height: "28px", background: "rgba(0,0,0,0.10)", flexShrink: 0 }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════
             GIFT CARDS — Celebration section
         ══════════════════════════════════════════════════════ */}
         <section style={{
@@ -524,258 +726,40 @@ export default function Home() {
             >
               {es ? "Ver todas las gift cards →" : "See all gift cards →"}
             </button>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════════════════
-            E-0. RASPA Y GANA TEASER
-        ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "20px 24px 0", background: "linear-gradient(180deg, #008A52 0%, #FFFFFF 100%)" }}>
-          <button
-            onClick={() => navigate("/juegos")}
-            style={{
-              width: "100%", border: "none", cursor: "pointer", padding: 0,
-              background: "linear-gradient(135deg, #004F2D 0%, #007A4A 60%, #00C875 100%)",
-              borderRadius: "18px", overflow: "hidden",
-              boxShadow: "0 8px 28px rgba(0,79,45,0.35)",
-              display: "flex", alignItems: "center", gap: "16px",
-              padding: "18px 20px",
-              position: "relative",
-            }}
-          >
-            <div style={{ position: "absolute", top: "-12px", right: "-12px", width: "80px", height: "80px", background: "rgba(255,255,255,0.06)", borderRadius: "50%" }} />
-            <span style={{ fontSize: "40px", flexShrink: 0 }}>🎟️</span>
-            <div style={{ textAlign: "left", flex: 1 }}>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>
-                Gratis · cada día
-              </p>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "22px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "4px" }}>
-                Raspa y Gana
-              </p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>
-                Gana puntos y saldo MXN en segundos →
-              </p>
-            </div>
-            <div style={{ background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0 }}>
-              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>JUGAR</span>
-            </div>
-          </button>
-        </section>
-
-        {/* ══════════════════════════════════════════════════════
-            E. AUTOFILL INPUT
-        ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "28px 24px 28px", background: "#FFFFFF" }}>
-          <div style={{ maxWidth: "560px", margin: "0 auto" }}>
-            <AutofillInput
-              phone={phone}
-              language={lang}
-              onAutofill={handleAutofill}
-            />
-
-            <div style={{ textAlign: "center", margin: "10px 0 4px" }}>
-              <PaulaHint
-                message="Hola Paula, ¿cómo funciona PagoYa? ¿Puedo usarlo sin tener cuenta bancaria?"
-                label="¿Tienes dudas? Pregúntale a Paula"
-              />
-            </div>
-
-            {/* ── SIGN-UP BONUS STRIP ── */}
-            <button
-              className="bonus-strip"
-              onClick={() => navigate("/register")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-                padding: "12px 16px",
-                marginBottom: "10px",
-                background: "rgba(255,92,26,0.07)",
-                border: "1.5px solid rgba(255,92,26,0.30)",
-                borderRadius: "14px",
-                cursor: "pointer",
-                textAlign: "left",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
-                <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
-                    {es
-                      ? "Abre tu billetera gratis · recibe $25 MXN"
-                      : "Open your wallet free · get $25 MXN"}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#6B9980", marginTop: "2px" }}>
-                    {es
-                      ? "Sin banco, sin trámites · se acredita al instante"
-                      : "No bank needed · credited instantly"}
-                  </div>
-                </div>
-              </div>
-              <span style={{
-                flexShrink: 0,
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "#FF5C1A",
-                whiteSpace: "nowrap",
-              }}>
-                {es ? "Abre tu cuenta →" : "Sign up →"}
-              </span>
-            </button>
-
-            {/* CTA button — teal #1D9E75, unchanged */}
-            <button
-              className="hero-cta-btn"
-              onClick={() => navigate("/pagar")}
-              style={{
-                width: "100%",
-                height: "52px",
-                borderRadius: "14px",
-                border: "none",
-                background: "#007A4A",
-                color: "white",
-                fontSize: "17px",
-                fontWeight: 700,
-                cursor: "pointer",
-                letterSpacing: "0.01em",
-                boxShadow: "0 4px 18px rgba(0,122,74,0.32)",
-                transition: "filter 0.15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.08)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
-            >
-              {es ? "Pagar ahora →" : "Pay now →"}
-            </button>
-
-            {/* Trust microcopy */}
-            <p style={{
-              marginTop: "5px",
-              marginBottom: 0,
-              fontSize: "11px",
-              color: "#6B9980",
-              textAlign: "center",
-              lineHeight: 1.4,
-            }}>
-              {es
-                ? "🔒 Pago seguro · Sin registro para tu primer pago · $25 MXN por transacción"
-                : "🔒 Secure payment · No signup for first payment · $25 MXN per transaction"}
-            </p>
-
-            {/* ── SOCIAL PROOF ── */}
-            <div style={{
-              marginTop: "14px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              fontSize: "12px",
-              color: "rgba(13,38,24,0.55)",
-            }}>
-              <span style={{ color: "#007A4A", fontWeight: 700 }}>✓</span>
-              <span>
-                {es
-                  ? "Más de 200 usuarios en Puerto Vallarta y Guadalajara"
-                  : "200+ users in Puerto Vallarta & Guadalajara"}
-              </span>
-            </div>
-
-            {/* ── TRUST BAR ── */}
-            <div style={{
-              marginTop: "20px",
-              padding: "12px 16px",
-              borderRadius: "14px",
-              background: "#F4FBF7",
-              border: "1px solid #CBE9D9",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "6px",
-            }}>
-              {[
-                { icon: "🔐", label: "Conekta" },
-                { icon: "🏪", label: "OXXO Pay" },
-                { icon: "🏦", label: "SPEI" },
-                { icon: "🇲🇽", label: "Banxico" },
-              ].map((item, i, arr) => (
-                <div key={item.label} style={{ display: "contents" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}>
-                    <span style={{ fontSize: "16px", lineHeight: 1 }}>{item.icon}</span>
-                    <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(13,38,24,0.55)", letterSpacing: "0.04em", textAlign: "center" }}>
-                      {item.label}
-                    </span>
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div style={{ width: "1px", height: "28px", background: "rgba(0,0,0,0.10)", flexShrink: 0 }} />
-                  )}
-                </div>
-              ))}
-            </div>
 
             {/* ── RENT VERTICAL COMPACT CARD ── */}
             <div style={{
-              marginTop: "24px",
-              paddingTop: "20px",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              background: "#FFF5F0",
-              border: "1.5px solid rgba(255,92,26,0.30)",
-              borderLeft: "4px solid #FF5C1A",
+              marginTop: "16px",
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.28)",
               borderRadius: "14px",
               padding: "14px 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "12px",
-              position: "relative",
-              overflow: "hidden",
             }}>
-              <div style={{
-                position: "absolute", top: -30, right: -30,
-                width: 90, height: 90, borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(255,92,26,0.12) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{
-                  fontSize: "9px", fontWeight: 800,
-                  color: "#FF5C1A", letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  background: "rgba(255,92,26,0.12)",
-                  border: "1px solid rgba(255,92,26,0.25)",
-                  borderRadius: "999px",
-                  padding: "2px 8px",
-                  display: "inline-block",
-                  marginBottom: "5px",
-                }}>
-                  {es ? "También pagamos" : "Vertical"}
-                </span>
-                <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
-                  {es ? "¿Pagas renta?" : "Pay Rent"}{" "}
-                  <span style={{ color: "#FF5C1A" }}>🏠</span>
-                </p>
-              </div>
+              <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.3 }}>
+                {es ? "¿Pagas renta? 🏠" : "Pay Rent? 🏠"}
+              </p>
               <a
                 href="https://pagoseguromx.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
                   flexShrink: 0,
-                  background: "#FF5C1A",
-                  color: "white",
-                  fontSize: "13px",
+                  background: "rgba(255,255,255,0.22)",
+                  color: "#FFFFFF",
+                  fontSize: "12px",
                   fontWeight: 700,
-                  padding: "10px 16px",
+                  padding: "8px 14px",
                   borderRadius: "10px",
                   textDecoration: "none",
                   whiteSpace: "nowrap",
-                  boxShadow: "0 3px 10px rgba(255,92,26,0.35)",
-                  transition: "filter 0.15s",
+                  border: "1px solid rgba(255,255,255,0.35)",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = "brightness(1.1)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = ""; }}
               >
-                {es ? "Ir a PagoSeguro →" : "Go to PagoSeguro →"}
+                {es ? "PagoSeguro →" : "PagoSeguro →"}
               </a>
             </div>
           </div>
@@ -819,12 +803,11 @@ export default function Home() {
         <Divider />
 
         {/* ══════════════════════════════════════════════════════
-            WALLET
-            BEFORE bg: "#FFFFFF"  AFTER bg: "#0F2F50"
+            WALLET — push notification banner only
         ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
-            <WalletBalanceWidget />
+            {!storedPhone && <WalletBalanceWidget />}
 
             {/* ── Push notification opt-in banner ─────────────────── */}
             {showPushBanner && (
