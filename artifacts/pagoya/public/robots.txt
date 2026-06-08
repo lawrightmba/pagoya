@@ -29,6 +29,7 @@ Disallow: /rep-dashboard
 Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /command-center
+Disallow: /api/
 
 User-agent: Bingbot
 Allow: /
@@ -38,6 +39,7 @@ Disallow: /rep-dashboard
 Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /command-center
+Disallow: /api/
 
 # ── Global rule — allow all other crawlers, block internal/admin paths ────────
 User-agent: *
@@ -48,5 +50,6 @@ Disallow: /rep-dashboard
 Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /login
+Disallow: /api/
 
 Sitemap: https://pagoyamx.com/sitemap.xml
