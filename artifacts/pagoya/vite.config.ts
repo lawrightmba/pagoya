@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
@@ -32,6 +33,63 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    {
+      name: "static-landing-pages",
+      configureServer(server) {
+        const STATIC_PAGES = [
+          "pagar-cfe-monterrey",
+          "pagar-cfe-cdmx",
+          "pagar-agua-guadalajara",
+          "pagar-cfe-guadalajara",
+          "pagar-cfe-desde-usa",
+        ];
+        server.middlewares.use((req, res, next) => {
+          const pathname = (req.url ?? "").split("?")[0].replace(/\/$/, "");
+          const slug = pathname.replace(/^\//, "");
+          if (STATIC_PAGES.includes(slug)) {
+            const filePath = path.resolve(import.meta.dirname, "public", slug, "index.html");
+            try {
+              const html = fs.readFileSync(filePath, "utf-8");
+              res.setHeader("Content-Type", "text/html; charset=utf-8");
+              res.setHeader("Cache-Control", "public, max-age=3600");
+              res.statusCode = 200;
+              res.end(html);
+            } catch {
+              next();
+            }
+          } else {
+            next();
+          }
+        });
+      },
+      configurePreviewServer(server) {
+        const STATIC_PAGES = [
+          "pagar-cfe-monterrey",
+          "pagar-cfe-cdmx",
+          "pagar-agua-guadalajara",
+          "pagar-cfe-guadalajara",
+          "pagar-cfe-desde-usa",
+        ];
+        server.middlewares.use((req, res, next) => {
+          const pathname = (req.url ?? "").split("?")[0].replace(/\/$/, "");
+          const slug = pathname.replace(/^\//, "");
+          if (STATIC_PAGES.includes(slug)) {
+            const filePath = path.resolve(import.meta.dirname, "public", slug, "index.html");
+            try {
+              const html = fs.readFileSync(filePath, "utf-8");
+              res.setHeader("Content-Type", "text/html; charset=utf-8");
+              res.setHeader("Cache-Control", "public, max-age=3600");
+              res.statusCode = 200;
+              res.end(html);
+            } catch {
+              next();
+            }
+          } else {
+            next();
+          }
+        });
+      },
+    },
     {
       name: "static-cache-headers",
       configureServer(server) {
