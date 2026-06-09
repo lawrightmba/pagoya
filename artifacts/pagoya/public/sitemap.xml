@@ -184,6 +184,14 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- ── Diaspora ──────────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/pagar-cfe-desde-usa</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
   <!-- ── Legal ─────────────────────────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/terminos-y-condiciones</loc>
