@@ -56,6 +56,10 @@ import LandingCFESinBanco from "@/pages/LandingCFESinBanco";
 import LandingTelmexEfectivo from "@/pages/LandingTelmexEfectivo";
 import LandingRecargarSinTarjeta from "@/pages/LandingRecargarSinTarjeta";
 import LandingLuzSinBanco from "@/pages/LandingLuzSinBanco";
+import PagarCFEMonterrey from "@/pages/PagarCFEMonterrey";
+import PagarCFECdmx from "@/pages/PagarCFECdmx";
+import PagarAguaGuadalajara from "@/pages/PagarAguaGuadalajara";
+import PagarCFEDesdeUSA from "@/pages/PagarCFEDesdeUSA";
 import SpinWheel from "@/pages/SpinWheel";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
@@ -136,6 +140,10 @@ function Router() {
       <Route path="/pagar-telmex-en-linea-efectivo" component={LandingTelmexEfectivo} />
       <Route path="/recargar-saldo-sin-tarjeta" component={LandingRecargarSinTarjeta} />
       <Route path="/pagar-luz-sin-banco" component={LandingLuzSinBanco} />
+      <Route path="/pagar-cfe-monterrey" component={PagarCFEMonterrey} />
+      <Route path="/pagar-cfe-cdmx" component={PagarCFECdmx} />
+      <Route path="/pagar-agua-guadalajara" component={PagarAguaGuadalajara} />
+      <Route path="/pagar-cfe-desde-usa" component={PagarCFEDesdeUSA} />
       <Route path="/spin" component={SpinWheel} />
       <Route path="/ruleta" component={SpinWheel} />
       <Route path="/bienvenida" component={Bienvenida} />
