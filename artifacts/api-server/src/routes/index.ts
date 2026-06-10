@@ -40,7 +40,7 @@ import eventsRouter from "./events.js";
 import gamesRouter from "./games.js";
 import ptiRouter from "./pti.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
-import { sendWhatsApp } from "../lib/whatsapp.js";
+import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -97,7 +97,13 @@ router.post("/notifications/register-interest", async (req: Request, res: Respon
       `To create your free account reply *HOLA* and I'll guide you in 2 minutes. 🚀`;
 
   // Fire-and-forget — don't block the response on Twilio
-  sendWhatsApp(clean, message).catch((err) =>
+  // Use approved template for business-initiated sends; fall back to free-form
+  // within active session windows (e.g. sandbox / pre-Meta-verification).
+  const registerSid = templates.registerInterest();
+  const sendPromise = registerSid
+    ? sendWhatsAppTemplate(clean, registerSid)
+    : sendWhatsApp(clean, message);
+  sendPromise.catch((err) =>
     logger.error({ err, clean }, "register-interest: WhatsApp send failed"),
   );
 
