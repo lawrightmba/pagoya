@@ -94,6 +94,14 @@ export default function AdminDashboard() {
   const [kitError, setKitError] = useState("");
   const [kitResult, setKitResult] = useState<KitResult | null>(null);
 
+  const [creditPhone, setCreditPhone] = useState("");
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditNote, setCreditNote] = useState("");
+  const [creditToken, setCreditToken] = useState(() => localStorage.getItem("pagoya_admin_token") ?? "");
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [creditError, setCreditError] = useState("");
+  const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
+
   const loadWallet = useCallback(() => {
     setWalletLoading(true);
     fetch(`${window.location.origin}/api/wallet/admin/stats`)
@@ -165,6 +173,42 @@ export default function AdminDashboard() {
   const totalBillPayTx = reps.reduce((s, r) => s + r.billPayCount, 0);
   const totalBillPayMXN = reps.reduce((s, r) => s + parseFloat(r.billPayTotal), 0);
   const totalPending = reps.reduce((s, r) => s + parseFloat(r.billPayPending), 0);
+
+  async function handleCreditSubmit() {
+    setCreditError("");
+    setCreditResult(null);
+    const amount = parseFloat(creditAmount);
+    if (!creditPhone.trim()) { setCreditError("Ingresa el teléfono de destino."); return; }
+    if (!amount || amount <= 0) { setCreditError("Ingresa un monto válido."); return; }
+    if (!creditToken.trim()) { setCreditError("Ingresa el Admin Token."); return; }
+    setCreditLoading(true);
+    localStorage.setItem("pagoya_admin_token", creditToken.trim());
+    try {
+      const r = await fetch(`${window.location.origin}/api/wallet/admin/credit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": creditToken.trim(),
+        },
+        body: JSON.stringify({
+          phone: creditPhone.trim(),
+          amountMXN: amount,
+          note: creditNote.trim() || undefined,
+        }),
+      });
+      const data = await r.json() as { success?: boolean; phone?: string; credited?: number; newBalanceMXN?: number; transactionId?: string; error?: string };
+      if (!r.ok) { setCreditError(data.error ?? "Error al acreditar."); return; }
+      setCreditResult({ phone: data.phone!, credited: data.credited!, newBalanceMXN: data.newBalanceMXN!, transactionId: data.transactionId! });
+      setCreditPhone("");
+      setCreditAmount("");
+      setCreditNote("");
+      loadWallet();
+    } catch {
+      setCreditError("Error de red. Intenta de nuevo.");
+    } finally {
+      setCreditLoading(false);
+    }
+  }
 
   async function handleKitSubmit() {
     if (!kitName.trim() || !kitPhone.trim()) {
@@ -859,6 +903,208 @@ export default function AdminDashboard() {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Send Money to Wallet (Admin Credit) ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(0,200,117,0.18)",
+          borderRadius: 14,
+          overflow: "hidden",
+          marginBottom: 24,
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 16px 10px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <span style={{ fontSize: "1rem" }}>💸</span>
+            <div style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.52rem",
+              letterSpacing: "0.08em",
+              color: "#00C875",
+              textTransform: "uppercase",
+            }}>
+              Enviar Dinero · Admin Credit
+            </div>
+            <div style={{
+              marginLeft: "auto",
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "0.42rem",
+              color: "#5a7080",
+            }}>
+              USA → Mexico wallet · acreditación inmediata
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 16px 18px" }}>
+            {creditResult ? (
+              <div style={{
+                background: "rgba(0,200,117,0.10)",
+                border: "1px solid rgba(0,200,117,0.3)",
+                borderRadius: 10,
+                padding: "14px 16px",
+              }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#00C875", fontWeight: 700, marginBottom: 6 }}>
+                  ✓ Crédito Enviado
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.55rem", color: "#e8f0f7", marginBottom: 4 }}>
+                  {creditResult.phone} recibió <strong>${creditResult.credited.toFixed(2)} MXN</strong>
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#5a7080", marginBottom: 4 }}>
+                  Saldo nuevo: ${creditResult.newBalanceMXN.toFixed(2)} MXN
+                </div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#3a5060", marginBottom: 12 }}>
+                  TX: {creditResult.transactionId}
+                </div>
+                <button
+                  onClick={() => setCreditResult(null)}
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.5rem",
+                    color: "#00C875",
+                    background: "rgba(0,200,117,0.12)",
+                    border: "1px solid rgba(0,200,117,0.3)",
+                    borderRadius: 6,
+                    padding: "5px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Enviar otro
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      Teléfono destino (MX)
+                    </div>
+                    <input
+                      value={creditPhone}
+                      onChange={(e) => setCreditPhone(e.target.value)}
+                      placeholder="ej. 3221234567"
+                      style={{
+                        width: "100%",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        color: "#e8f0f7",
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.6rem",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      Monto (MXN)
+                    </div>
+                    <input
+                      value={creditAmount}
+                      onChange={(e) => setCreditAmount(e.target.value)}
+                      placeholder="ej. 500.00"
+                      type="number"
+                      min="1"
+                      max="50000"
+                      step="0.01"
+                      style={{
+                        width: "100%",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        color: "#e8f0f7",
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.6rem",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    Nota / Concepto (opcional)
+                  </div>
+                  <input
+                    value={creditNote}
+                    onChange={(e) => setCreditNote(e.target.value)}
+                    placeholder="ej. Mamá te manda dinero para tu CFE"
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      color: "#e8f0f7",
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.6rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    Admin Token
+                  </div>
+                  <input
+                    value={creditToken}
+                    onChange={(e) => setCreditToken(e.target.value)}
+                    placeholder="Token de acceso admin"
+                    type="password"
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      color: "#e8f0f7",
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.6rem",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {creditError && (
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#E21A0A" }}>
+                    {creditError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleCreditSubmit}
+                  disabled={creditLoading}
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    color: "#fff",
+                    background: creditLoading ? "rgba(0,200,117,0.4)" : "linear-gradient(135deg, #007A4A 0%, #00C875 100%)",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "11px 20px",
+                    cursor: creditLoading ? "not-allowed" : "pointer",
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    marginTop: 4,
+                  }}
+                >
+                  {creditLoading ? "Enviando…" : "💸 Enviar Dinero al Wallet"}
+                </button>
               </div>
             )}
           </div>

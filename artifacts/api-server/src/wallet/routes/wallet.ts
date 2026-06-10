@@ -740,5 +740,77 @@ router.post("/transfer", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/wallet/admin/credit
+// Manually credit a user's wallet. Requires X-Admin-Token header.
+// Body: { phone: string, amountMXN: number, note?: string }
+router.post("/admin/credit", async (req: Request, res: Response) => {
+  const expected = process.env.ADMIN_TOKEN;
+  const provided = (req.headers["x-admin-token"] as string | undefined) ?? req.query["token"];
+  if (!expected || provided !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { phone, amountMXN, note } = req.body as {
+    phone?: string;
+    amountMXN?: number;
+    note?: string;
+  };
+
+  if (!phone || typeof phone !== "string" || !phone.trim()) {
+    res.status(400).json({ error: "phone is required" });
+    return;
+  }
+  const amount = Number(amountMXN);
+  if (!amount || amount <= 0 || amount > 50000) {
+    res.status(400).json({ error: "amountMXN must be a positive number ≤ 50,000" });
+    return;
+  }
+
+  const telefono = phone.trim().replace(/\s+/g, "");
+  const description = note?.trim() || "Crédito manual — Admin";
+
+  try {
+    const wallet = await getOrCreateWallet(telefono);
+
+    const [tx] = await db
+      .insert(walletTransactionsTable)
+      .values({
+        walletId: wallet.id,
+        type: "admin_credit",
+        amountMxn: amount.toFixed(2),
+        status: "confirmed",
+        confirmedAt: new Date(),
+        description,
+      })
+      .returning();
+
+    await db
+      .update(walletsTable)
+      .set({
+        balanceMxn: drizzleSql`balance_mxn + ${amount.toFixed(2)}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(walletsTable.id, wallet.id));
+
+    const newBalance = await getBalance(telefono);
+
+    logger.info({ telefono, amount, txId: tx.id, note: description }, "admin: wallet credit");
+
+    res.status(200).json({
+      success: true,
+      phone: telefono,
+      credited: amount,
+      newBalanceMXN: newBalance,
+      transactionId: tx.id,
+      note: description,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al acreditar wallet.";
+    logger.error({ err, telefono, amount }, "admin: wallet credit failed");
+    res.status(500).json({ error: message });
+  }
+});
+
 export default router;
 
