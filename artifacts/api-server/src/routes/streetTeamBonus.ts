@@ -83,7 +83,19 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       return;
     }
 
-    // ── 2. Send OTP ────────────────────────────────────────────────────────
+    // ── 2a. Pre-create minimal user row so generateOTP can UPDATE it ──────────
+    // Full details (name, KYC, bonus) are written in verify-bonus-otp after success.
+    await db
+      .insert(usersTable)
+      .values({
+        telefono: phoneCleaned,
+        signupSource: refCodeResolved === "WEB" ? "web_organic" : "rep_referral",
+        signupRefCode: refCodeResolved,
+        signupBonusEligible: true,
+      })
+      .onConflictDoNothing();
+
+    // ── 2b. Send OTP ───────────────────────────────────────────────────────
     const otpResult = await generateOTP(phoneCleaned);
     if (!otpResult.success) {
       logger.error({ phone: phoneCleaned, error: otpResult.error }, "streetTeamBonus: OTP send failed");

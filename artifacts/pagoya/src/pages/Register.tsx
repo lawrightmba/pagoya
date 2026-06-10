@@ -617,6 +617,23 @@ export default function Register() {
               variant="dark"
             />
           </div>
+          <div style={{ textAlign: "center", marginTop: "24px" }}>
+            <button
+              onClick={() => { setScreen("form"); setDigits(Array(6).fill("")); setOtpError(""); }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "rgba(255,255,255,0.38)",
+                fontSize: "13px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                padding: "8px 16px",
+                minHeight: "44px",
+              }}
+            >
+              ← Cambiar número de teléfono
+            </button>
+          </div>
         </div>
       </div>
     );
