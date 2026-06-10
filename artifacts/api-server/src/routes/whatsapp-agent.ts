@@ -298,8 +298,15 @@ router.post("/", async (req: Request, res: Response) => {
       const greeting = firstName ? `¡Hola, ${firstName}!` : "¡Hola!";
       await sendWhatsApp(
         phoneKey,
-        `${greeting} 👋 Bienvenido/a a *PagoYa* — pagos y recargas desde WhatsApp, sin banco, sin filas.\n\n` +
-        `Para crear tu cuenta gratis, ¿me puedes decir tu *nombre completo*?`,
+        `${greeting} 👋 Bienvenido/a a *PagoYa*.\n\n` +
+        `Somos una empresa mexicana de tecnología financiera. Te permitimos hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde este chat de WhatsApp, sin necesidad de tener cuenta bancaria.\n\n` +
+        `🏦 *¿Cómo funciona tu dinero?*\n` +
+        `Tu saldo vive en una *Cartera Digital PagoYa*. Para cargarla, depositas en efectivo en cualquier OXXO del país usando un código que te damos. Ese saldo queda disponible al instante.\n\n` +
+        `🔒 *¿Es seguro?*\n` +
+        `Sí. Todos los movimientos de dinero viajan por *STP (Sistema de Transferencias y Pagos)*, la red oficial del *Banco de México* (Banxico). Es el mismo sistema que usan los bancos grandes como Banamex y BBVA — tus pagos quedan respaldados con folio oficial.\n\n` +
+        `📋 *¿Qué necesitas para registrarte?*\n` +
+        `Solo tu nombre. No pedimos RFC, no pedimos comprobante de domicilio, no pedimos cuenta bancaria.\n\n` +
+        `Para crear tu cuenta gratis ahora mismo, ¿me puedes decir tu *nombre completo*?`,
       );
       return;
     }
