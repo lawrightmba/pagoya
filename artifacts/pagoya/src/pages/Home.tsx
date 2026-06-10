@@ -1158,7 +1158,9 @@ export default function Home() {
                 background: "rgba(0,122,74,0.10)", border: "1px solid rgba(0,122,74,0.28)",
                 borderRadius: "16px", padding: "18px 20px", color: "#0D2618", fontSize: "15px", fontWeight: 600,
               }}>
-                ✅ {es ? "¡Listo! Te contactaremos por WhatsApp." : "Done! We'll reach out on WhatsApp."}
+                ✅ {es
+                  ? "¡Revisa tu WhatsApp ahora! Te enviamos un mensaje para completar tu registro."
+                  : "Check WhatsApp now! We sent you a message to complete your registration."}
               </div>
             ) : (
               <form onSubmit={handleNotifSubmit} style={{ display: "flex", gap: "10px", maxWidth: "380px", margin: "0 auto" }}>

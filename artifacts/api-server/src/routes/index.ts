@@ -40,6 +40,7 @@ import eventsRouter from "./events.js";
 import gamesRouter from "./games.js";
 import ptiRouter from "./pti.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
+import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -72,6 +73,37 @@ router.use("/pti", ptiRouter);
 
 console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
 console.log("✅ PTI routes ready at GET /api/pti/score and POST /api/pti/compute-now");
+
+// ─── Homepage "notify me" lead capture ───────────────────────────────────────
+// POST /api/notifications/register-interest
+// Sends an immediate WhatsApp message inviting the user to complete registration.
+router.post("/notifications/register-interest", async (req: Request, res: Response) => {
+  const { phone, language } = req.body as { phone?: string; language?: string };
+  const clean = (phone ?? "").replace(/\D/g, "").slice(-10);
+
+  if (clean.length !== 10) {
+    res.status(400).json({ error: "invalid_phone" });
+    return;
+  }
+
+  const es = language !== "en";
+
+  const message = es
+    ? `👋 ¡Hola! Guardamos tu número en *PagoYa*.\n\n` +
+      `Con PagoYa puedes pagar CFE, Telmex, recargas y más — sin banco, sin filas, desde WhatsApp.\n\n` +
+      `Para crear tu cuenta gratis responde *HOLA* y te guío en 2 minutos. 🚀`
+    : `👋 Hi! We saved your number in *PagoYa*.\n\n` +
+      `With PagoYa you can pay CFE, Telmex, top up your phone and more — no bank account needed, all from WhatsApp.\n\n` +
+      `To create your free account reply *HOLA* and I'll guide you in 2 minutes. 🚀`;
+
+  // Fire-and-forget — don't block the response on Twilio
+  sendWhatsApp(clean, message).catch((err) =>
+    logger.error({ err, clean }, "register-interest: WhatsApp send failed"),
+  );
+
+  logger.info({ clean }, "register-interest: outreach sent");
+  res.json({ success: true });
+});
 
 // ─── Reminder opt-out ─────────────────────────────────────────────────────────
 
