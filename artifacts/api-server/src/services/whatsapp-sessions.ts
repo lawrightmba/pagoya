@@ -13,6 +13,7 @@ export interface WhatsAppSession {
   profileName: string | null;
   lastActivity: number;
   pendingWithdrawal: PendingWithdrawalSession | null;
+  awaitingName?: boolean;
 }
 
 const sessions = new Map<string, WhatsAppSession>();

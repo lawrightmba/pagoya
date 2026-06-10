@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from "express";
+import { eq } from "drizzle-orm";
+import { db, usersTable, walletsTable, signupBonusConfigTable } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { getSession, saveSession, type PendingWithdrawalSession } from "../services/whatsapp-sessions.js";
 import {
@@ -8,7 +10,85 @@ import {
   deletePendingPayment,
   type PendingPaymentRow,
 } from "../services/pendingPaymentService.js";
+import { creditSignupBonus } from "../services/signupBonusService.js";
 import { logger } from "../lib/logger.js";
+
+// ── WhatsApp registration helpers ────────────────────────────────────────────
+
+async function isRegistered(phoneKey: string): Promise<boolean> {
+  const clean = phoneKey.replace(/\D/g, "").slice(-10);
+  const [row] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.telefono, clean))
+    .limit(1);
+  return !!row;
+}
+
+async function registerWhatsAppUser(
+  phoneKey: string,
+  name: string,
+): Promise<{ userId: number; bonusAmount: number }> {
+  const clean = phoneKey.replace(/\D/g, "").slice(-10);
+
+  // Upsert user
+  const [newUser] = await db
+    .insert(usersTable)
+    .values({
+      telefono: clean,
+      kycFullName: name.trim(),
+      signupBonusEligible: true,
+      signupRefCode: "WEB",
+      signupSource: "whatsapp_organic",
+    })
+    .onConflictDoNothing()
+    .returning({ id: usersTable.id });
+
+  let userId: number;
+  if (newUser) {
+    userId = newUser.id;
+  } else {
+    const [existing] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.telefono, clean))
+      .limit(1);
+    userId = existing!.id;
+  }
+
+  // Create wallet (idempotent)
+  await db.insert(walletsTable).values({ userId: clean }).onConflictDoNothing();
+
+  // Assign STP CLABE fire-and-forget
+  if (process.env.STP_ENABLED === "true") {
+    import("../services/stpService.js")
+      .then(({ assignClabeToUser }) => assignClabeToUser(clean, userId, { fullName: name.trim() }))
+      .catch((err) => logger.error({ err, clean }, "whatsapp-register: STP CLABE assignment failed"));
+  }
+
+  // Credit signup bonus (reads amount from config row id=1)
+  let bonusAmount = 0;
+  try {
+    const [config] = await db
+      .select({ isActive: signupBonusConfigTable.isActive, bonusAmount: signupBonusConfigTable.bonusAmount })
+      .from(signupBonusConfigTable)
+      .where(eq(signupBonusConfigTable.id, 1))
+      .limit(1);
+
+    if (config?.isActive) {
+      const creditAmount = parseFloat(config.bonusAmount ?? "0");
+      if (creditAmount > 0) {
+        const result = await creditSignupBonus(userId, "WEB", creditAmount);
+        if (result.success) bonusAmount = result.amount ?? creditAmount;
+      }
+    }
+  } catch (err) {
+    logger.error({ err, clean }, "whatsapp-register: bonus credit failed (non-fatal)");
+  }
+
+  logger.info({ userId, clean, bonusAmount }, "whatsapp-register: user created via WhatsApp");
+  return { userId, bonusAmount };
+}
 
 const router = Router();
 
@@ -170,6 +250,58 @@ router.post("/", async (req: Request, res: Response) => {
     // Save profileName on first real message if not yet stored
     if (!session.profileName && profileName) {
       saveSession(phoneKey, { profileName });
+    }
+
+    // ── New-user registration flow ───────────────────────────────────────────
+    // Step 2: we already asked for name — this message IS the name
+    if (session.awaitingName) {
+      const rawName = userMessage.trim();
+      if (rawName.length < 2 || rawName.length > 60 || /\d/.test(rawName)) {
+        await sendWhatsApp(phoneKey, "Por favor dime tu nombre completo (solo letras, sin números). ¿Cómo te llamas?");
+        return;
+      }
+      saveSession(phoneKey, { awaitingName: false });
+      try {
+        const { bonusAmount } = await registerWhatsAppUser(phoneKey, rawName);
+        const firstName = rawName.split(" ")[0];
+        const bonusLine = bonusAmount > 0
+          ? `\n\n🎁 *¡Bonus de bienvenida!* Acreditamos $${bonusAmount.toFixed(0)} MXN en tu cartera como regalo de inicio.`
+          : "";
+        await sendWhatsApp(
+          phoneKey,
+          `✅ *¡Listo, ${firstName}! Tu cuenta PagoYa está activa.*\n` +
+          `──────────────────\n` +
+          `📱 Número registrado: +52${phoneKey.slice(-10)}\n` +
+          `👤 Nombre: ${rawName}${bonusLine}\n` +
+          `──────────────────\n\n` +
+          `Con PagoYa puedes:\n` +
+          `💡 Pagar CFE, Telmex, agua, gas y más\n` +
+          `📱 Recargar cualquier celular\n` +
+          `🎮 Comprar gift cards (Netflix, Steam, etc.)\n` +
+          `🏦 Transferir a cualquier banco por SPEI\n\n` +
+          `Para cargar saldo escribe *SALDO* y te explico cómo.\n` +
+          `¿En qué te ayudo hoy?`,
+        );
+      } catch (err) {
+        logger.error({ err, phoneKey }, "whatsapp-agent: registration failed");
+        await sendWhatsApp(phoneKey, "Lo siento, tuve un problema al crear tu cuenta. Por favor intenta de nuevo en un momento.");
+        saveSession(phoneKey, { awaitingName: true });
+      }
+      return;
+    }
+
+    // Step 1: new phone number — not yet registered → ask for name
+    const registered = await isRegistered(phoneKey);
+    if (!registered) {
+      saveSession(phoneKey, { awaitingName: true });
+      const firstName = (profileName || "").split(" ")[0] || "";
+      const greeting = firstName ? `¡Hola, ${firstName}!` : "¡Hola!";
+      await sendWhatsApp(
+        phoneKey,
+        `${greeting} 👋 Bienvenido/a a *PagoYa* — pagos y recargas desde WhatsApp, sin banco, sin filas.\n\n` +
+        `Para crear tu cuenta gratis, ¿me puedes decir tu *nombre completo*?`,
+      );
+      return;
     }
 
     // ── Pending payment confirmation intercept (DB-backed, restart-safe) ─────
