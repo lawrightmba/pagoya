@@ -5,6 +5,7 @@ import {
   getOrCreateWallet,
   getBalance,
   creditWallet,
+  debitWallet,
   getRecentTransactions,
 } from "../services/wallet.js";
 import {
@@ -15,6 +16,7 @@ import {
   P2P_MIN_MXN,
 } from "../services/p2p.js";
 import { createOxxoOrder, createCardOrder, verifyConektaWebhookSignature, verifyCardWebhookSignature } from "../lib/conekta.js";
+import { enviaSPEI } from "../../services/stpService.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
@@ -737,6 +739,102 @@ router.post("/transfer", async (req: Request, res: Response) => {
     }
     logger.error({ err, senderTelefono, receiverTelefono, amount }, "p2p: transfer failed");
     res.status(500).json({ error: "Error al procesar la transferencia." });
+  }
+});
+
+// POST /api/wallet/withdraw
+// Debit a user's wallet and send an outbound SPEI transfer to any CLABE.
+// Called by the WhatsApp agent after user confirms a staged withdrawal.
+// Body: { telefono, destinationClabe, amountMXN, beneficiaryName, concept? }
+router.post("/withdraw", async (req: Request, res: Response) => {
+  const { telefono, destinationClabe, amountMXN, beneficiaryName, concept } = req.body as {
+    telefono?: string;
+    destinationClabe?: string;
+    amountMXN?: number;
+    beneficiaryName?: string;
+    concept?: string;
+  };
+
+  if (!telefono?.trim()) { res.status(400).json({ error: "telefono requerido" }); return; }
+  if (!destinationClabe || !/^\d{18}$/.test(destinationClabe.replace(/\s/g, ""))) {
+    res.status(400).json({ error: "CLABE inválida — debe tener exactamente 18 dígitos" }); return;
+  }
+  const amount = Number(amountMXN);
+  if (!amount || amount < 50) { res.status(400).json({ error: "Monto mínimo de retiro: $50 MXN" }); return; }
+  if (amount > 8000) { res.status(400).json({ error: "Monto máximo de retiro: $8,000 MXN por transacción" }); return; }
+
+  const cleanTel = telefono.trim();
+  const cleanClabe = destinationClabe.replace(/\s/g, "");
+
+  try {
+    const wallet = await getOrCreateWallet(cleanTel);
+    const currentBalance = parseFloat(wallet.balanceMxn ?? "0");
+
+    if (currentBalance < amount) {
+      res.status(400).json({
+        error: `Saldo insuficiente. Tienes $${currentBalance.toFixed(2)} MXN, necesitas $${amount.toFixed(2)} MXN.`,
+        code: "INSUFFICIENT_BALANCE",
+      });
+      return;
+    }
+
+    // Debit wallet first — atomic, with overdraft protection
+    const maskedClabe = `${"*".repeat(14)}${cleanClabe.slice(-4)}`;
+    const description = `Retiro SPEI → CLABE ${maskedClabe}`;
+    const txId = await debitWallet(wallet.id, amount, description, "spei_out");
+
+    // Send SPEI — if it fails, refund the wallet
+    let claveRastreo: string;
+    let stpId: number;
+    try {
+      const stpResult = await enviaSPEI({
+        destinationClabe: cleanClabe,
+        amountMXN: amount,
+        beneficiaryName: beneficiaryName ?? cleanTel,
+        concept: concept ?? `Retiro PagoYa ${cleanTel.slice(-4)}`,
+      });
+      claveRastreo = stpResult.claveRastreo;
+      stpId = stpResult.stpId;
+    } catch (stpErr: unknown) {
+      // STP failed — refund the wallet atomically
+      logger.error({ stpErr, cleanTel, amount }, "wallet: SPEI send failed — refunding wallet");
+      await db
+        .update(walletsTable)
+        .set({
+          balanceMxn: drizzleSql`balance_mxn + ${amount.toFixed(2)}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletsTable.id, wallet.id));
+      await db
+        .update(walletTransactionsTable)
+        .set({ status: "failed" })
+        .where(eq(walletTransactionsTable.id, txId));
+      const msg = stpErr instanceof Error ? stpErr.message : "Error al enviar SPEI";
+      res.status(502).json({ error: msg, code: "STP_FAILED", refunded: true });
+      return;
+    }
+
+    // Tag clave rastreo on the transaction
+    await db
+      .execute(drizzleSql`UPDATE wallet_transactions SET stp_clave_rastreo = ${claveRastreo} WHERE id = ${txId}`)
+      .catch(() => {});
+
+    const newBalance = await getBalance(cleanTel);
+    logger.info({ cleanTel, amount, claveRastreo, stpId, cleanClabe }, "wallet: SPEI withdrawal sent");
+
+    res.status(200).json({
+      success: true,
+      claveRastreo,
+      stpId,
+      amountMXN: amount,
+      destinationClabe: cleanClabe,
+      newBalanceMXN: newBalance,
+      transactionId: txId,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al procesar el retiro.";
+    logger.error({ err, cleanTel, amount }, "wallet: withdrawal failed");
+    res.status(500).json({ error: message });
   }
 });
 

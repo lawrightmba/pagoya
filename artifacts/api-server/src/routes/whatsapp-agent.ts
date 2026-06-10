@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-import { getSession, saveSession } from "../services/whatsapp-sessions.js";
+import { getSession, saveSession, type PendingWithdrawalSession } from "../services/whatsapp-sessions.js";
 import {
   createPendingPayment,
   getPendingPayment,
@@ -269,6 +269,98 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    // ── Pending withdrawal confirmation intercept (session-backed) ───────────
+    const pendingW = session.pendingWithdrawal;
+    if (pendingW && Date.now() < pendingW.expiresAt) {
+      const msgNorm = userMessage.trim();
+
+      if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
+        saveSession(phoneKey, { pendingWithdrawal: null });
+        await sendWhatsApp(phoneKey, "❌ Retiro cancelado. Tu saldo no fue afectado. ¿En qué más te puedo ayudar?");
+        return;
+      }
+
+      if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
+        saveSession(phoneKey, { pendingWithdrawal: null });
+        await sendWhatsApp(phoneKey, `⏳ Procesando tu retiro SPEI de $${pendingW.amountMXN.toFixed(2)} MXN...`);
+
+        const port = process.env.PORT ?? "3000";
+        try {
+          const resp = await fetch(`http://localhost:${port}/api/wallet/withdraw`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              telefono: pendingW.telefono,
+              destinationClabe: pendingW.destinationClabe,
+              amountMXN: pendingW.amountMXN,
+              beneficiaryName: pendingW.beneficiaryName,
+              concept: `Retiro PagoYa ${pendingW.telefono.slice(-4)}`,
+            }),
+          });
+
+          const data = (await resp.json()) as {
+            success?: boolean;
+            claveRastreo?: string;
+            newBalanceMXN?: number;
+            error?: string;
+            refunded?: boolean;
+          };
+
+          const nowMx = new Date().toLocaleString("es-MX", {
+            timeZone: "America/Mexico_City",
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit",
+          });
+
+          if (resp.ok && data.success) {
+            const maskedClabe = `${"*".repeat(14)}${pendingW.destinationClabe.slice(-4)}`;
+            await sendWhatsApp(
+              phoneKey,
+              `✅ *PagoYa | Retiro SPEI Enviado*\n` +
+              `──────────────────\n` +
+              `💰 Monto enviado: $${pendingW.amountMXN.toFixed(2)} MXN\n` +
+              `🏦 CLABE destino: ${maskedClabe}\n` +
+              `👤 Titular: ${pendingW.beneficiaryName}\n` +
+              `🔑 Clave rastreo: ${data.claveRastreo ?? "—"}\n` +
+              `📅 Fecha: ${nowMx}\n` +
+              `──────────────────\n` +
+              `Tu dinero está en camino por SPEI — llega en minutos.\n` +
+              `Saldo restante: $${(data.newBalanceMXN ?? 0).toFixed(2)} MXN\n\n` +
+              `Guarda este mensaje como comprobante.`,
+            );
+          } else {
+            const reason = data.refunded
+              ? "Tu saldo fue restaurado automáticamente."
+              : "Verifica tu saldo y vuelve a intentar.";
+            await sendWhatsApp(
+              phoneKey,
+              `❌ *PagoYa | Retiro No Procesado*\n` +
+              `──────────────────\n` +
+              `Monto: $${pendingW.amountMXN.toFixed(2)} MXN\n` +
+              `Estado: No completado\n` +
+              `──────────────────\n` +
+              `⚠️ ${reason}\n` +
+              `Causa: ${data.error ?? "Error técnico al enviar SPEI."}\n\n` +
+              `Escribe *AYUDA* para hablar con soporte.`,
+            );
+          }
+        } catch (err) {
+          logger.error({ err, phoneKey }, "whatsapp-agent: withdrawal execution failed");
+          await sendWhatsApp(phoneKey, "❌ Error de red al procesar el retiro. Tu saldo no fue afectado. Intenta de nuevo.");
+        }
+        return;
+      }
+
+      // Ambiguous — remind
+      await sendWhatsApp(phoneKey, "Por favor responde *SÍ* para confirmar el retiro o *NO* para cancelar.");
+      return;
+    }
+
+    // Clear expired pending withdrawal
+    if (pendingW && Date.now() >= pendingW.expiresAt) {
+      saveSession(phoneKey, { pendingWithdrawal: null });
+    }
+
     // ── Append user turn to history ──────────────────────────────────────────
     const updatedHistory = [
       ...session.conversationHistory,
@@ -291,7 +383,7 @@ router.post("/", async (req: Request, res: Response) => {
       throw new Error(`agent/chat returned ${agentRes.status}`);
     }
 
-    const { reply, pendingPayment } = (await agentRes.json()) as {
+    const { reply, pendingPayment, pendingWithdrawal } = (await agentRes.json()) as {
       reply: string;
       escalated: boolean;
       pendingPayment: {
@@ -304,6 +396,13 @@ router.post("/", async (req: Request, res: Response) => {
         walletBalance: number;
         paymentMethod: string;
       } | null;
+      pendingWithdrawal: {
+        telefono: string;
+        destinationClabe: string;
+        amountMXN: number;
+        beneficiaryName: string;
+        walletBalance: number;
+      } | null;
     };
 
     // ── Persist updated conversation history ─────────────────────────────────
@@ -315,7 +414,17 @@ router.post("/", async (req: Request, res: Response) => {
       conversationHistory: newHistory.slice(-20),
     });
 
-    if (pendingPayment) {
+    if (pendingWithdrawal) {
+      // Store pending withdrawal in session with 10-min TTL
+      const withdrawal: PendingWithdrawalSession = {
+        ...pendingWithdrawal,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      };
+      saveSession(phoneKey, { pendingWithdrawal: withdrawal });
+      // Send Paula's reply (contains the confirmText built by prepare_withdrawal)
+      await sendWhatsApp(phoneKey, reply);
+      logger.info({ phoneKey, amountMXN: pendingWithdrawal.amountMXN }, "whatsapp-agent: withdrawal staged");
+    } else if (pendingPayment) {
       // Persist pending payment to DB (awaiting_confirmation, 30-min TTL)
       await createPendingPayment(phoneKey, {
         serviceId:     pendingPayment.serviceId,

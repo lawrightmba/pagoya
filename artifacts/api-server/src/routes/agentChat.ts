@@ -26,6 +26,14 @@ export interface PendingPaymentStage {
   paymentMethod: string;
 }
 
+export interface PendingWithdrawalStage {
+  telefono: string;
+  destinationClabe: string;
+  amountMXN: number;
+  beneficiaryName: string;
+  walletBalance: number;
+}
+
 // ─── System prompt ─────────────────────────────────────────────────────────────
 function buildSystemPrompt(
   profileName?: string | null,
@@ -79,6 +87,8 @@ RECUPERACIÓN DE ERRORES (Gap 2): Cuando prepare_bill_payment devuelve un error 
 LENGUAJE SENCILLO — USUARIO TIPO DOÑA CARMEN (Gap 3): Habla como si le explicaras a tu abuela. Nunca uses: "procesar", "transacción", "validar", "referencia de pago" (di "número de cuenta"), "débito" (di "tarjeta"), "plataforma" (di "app"). Si el usuario escribe con faltas de ortografía o abreviaciones ("kiero pagar mi luuss", "k onda", "manda el cobro"), interprétalo con buena fe y confirma lo que entendiste antes de actuar: "Entendí que quieres pagar tu luz de CFE, ¿es correcto?" Si un mensaje es muy corto o ambiguo, no pidas más datos todavía — primero confirma el servicio que crees que quiere pagar.
 
 UMBRAL DE ESCALACIÓN (Gap 5): Usa escalate_to_support en cualquiera de estos casos: (1) el usuario reporta un problema que no puedes resolver (pago fallido sin reembolso, cuenta bloqueada, disputa); (2) el usuario ha preguntado lo mismo 3 veces o más y sigue confundido; (3) el usuario dice que pagó pero no le llegó el servicio o el PIN; (4) el usuario expresa frustración fuerte ("esto no sirve", "me robaron", "voy a reportarlos"). Al escalar, di: "Voy a pasarte con un agente de PagoYa que te puede ayudar mejor. Te contactarán por WhatsApp en unos minutos."
+
+RETIROS / TRANSFERENCIA A CUENTA BANCARIA (SPEI OUT): Cuando el usuario quiere retirar su saldo, transferir a su banco, o enviar dinero a una CLABE, usa prepare_withdrawal. Necesitas: CLABE destino (18 dígitos, el usuario la encuentra en su app bancaria o estado de cuenta), monto (mínimo $50, máximo $8,000 MXN), y nombre completo del titular de la cuenta destino. El retiro llega en minutos por SPEI — sistema oficial del Banco de México. Sin comisión adicional: solo se descuenta el monto exacto del saldo. Si el usuario no sabe su CLABE, dile: "La CLABE la encuentras en tu app bancaria → Datos de cuenta → CLABE interbancaria. Son 18 números."
 
 Responde siempre en el mismo idioma que el usuario. Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.`;
 }
@@ -171,6 +181,20 @@ const TOOLS = [
       required: ["serviceId", "referencia", "monto", "telefono"],
     },
   },
+  {
+    name: "prepare_withdrawal",
+    description: "Stages a SPEI cash-out withdrawal for user confirmation. Use when the user wants to send money to their bank account, withdraw their wallet balance, or transfer funds to a CLABE. Validates the CLABE and that the user has sufficient balance. Min $50 MXN, max $8,000 MXN.",
+    input_schema: {
+      type: "object",
+      properties: {
+        telefono: { type: "string", description: "User phone number with country code" },
+        destination_clabe: { type: "string", description: "18-digit CLABE of the destination bank account" },
+        amount_mxn: { type: "number", description: "Amount to withdraw in MXN (min $50, max $8,000)" },
+        beneficiary_name: { type: "string", description: "Full name of the account holder at the destination bank. Ask the user if not provided." },
+      },
+      required: ["telefono", "destination_clabe", "amount_mxn", "beneficiary_name"],
+    },
+  },
 ];
 
 // ─── Tool executor ─────────────────────────────────────────────────────────────
@@ -178,7 +202,7 @@ async function executeToolCall(
   name: string,
   input: Record<string, unknown>,
   resolvedTelefono: string | null,
-): Promise<{ result: unknown; pendingPayment?: PendingPaymentStage }> {
+): Promise<{ result: unknown; pendingPayment?: PendingPaymentStage; pendingWithdrawal?: PendingWithdrawalStage }> {
   const tel = ((input.telefono as string | undefined) ?? resolvedTelefono) || null;
 
   switch (name) {
@@ -367,6 +391,66 @@ async function executeToolCall(
       };
     }
 
+    case "prepare_withdrawal": {
+      const destClabe = (input.destination_clabe as string | undefined)?.replace(/\s/g, "") ?? "";
+      const amtMxn = Number(input.amount_mxn ?? 0);
+      const beneName = (input.beneficiary_name as string | undefined) ?? "";
+      const wTel = ((input.telefono as string | undefined) ?? resolvedTelefono ?? "").trim();
+      const cleanWTel = wTel.startsWith("+") ? wTel : `+${wTel}`;
+
+      if (!/^\d{18}$/.test(destClabe)) {
+        return { result: { error: "CLABE inválida — debe tener exactamente 18 dígitos numéricos." } };
+      }
+      if (amtMxn < 50) {
+        return { result: { error: "El monto mínimo de retiro es $50 MXN." } };
+      }
+      if (amtMxn > 8000) {
+        return { result: { error: "El monto máximo de retiro por transacción es $8,000 MXN." } };
+      }
+      if (!beneName.trim()) {
+        return { result: { error: "Se requiere el nombre completo del titular de la cuenta destino." } };
+      }
+
+      const [walletRow] = await db
+        .select({ balance_mxn: walletsTable.balanceMxn })
+        .from(walletsTable)
+        .where(eq(walletsTable.userId, cleanWTel))
+        .limit(1);
+
+      const wBalance = walletRow ? Number(walletRow.balance_mxn) : 0;
+
+      if (wBalance < amtMxn) {
+        return {
+          result: {
+            error: `Saldo insuficiente. Tienes $${wBalance.toFixed(2)} MXN pero quieres retirar $${amtMxn.toFixed(2)} MXN.`,
+          },
+        };
+      }
+
+      const maskedClabe = `${"*".repeat(14)}${destClabe.slice(-4)}`;
+      const confirmText =
+        `🏦 *Resumen de retiro*\n\n` +
+        `💰 Monto: $${amtMxn.toFixed(2)} MXN\n` +
+        `🏦 CLABE destino: ${maskedClabe}\n` +
+        `👤 Titular: ${beneName}\n` +
+        `💳 Comisión: Sin comisión ✅\n` +
+        `⏱️ Llega en: minutos (SPEI)\n\n` +
+        `Saldo actual: $${wBalance.toFixed(2)} MXN\n` +
+        `Saldo después del retiro: $${(wBalance - amtMxn).toFixed(2)} MXN\n\n` +
+        `Responde *SÍ* para confirmar o *NO* para cancelar.`;
+
+      return {
+        result: { ready: true, confirmText },
+        pendingWithdrawal: {
+          telefono: cleanWTel,
+          destinationClabe: destClabe,
+          amountMXN: amtMxn,
+          beneficiaryName: beneName,
+          walletBalance: wBalance,
+        },
+      };
+    }
+
     default:
       return { result: { error: `Unknown tool: ${name}` } };
   }
@@ -416,6 +500,7 @@ router.post("/", async (req: Request, res: Response) => {
     let escalated = false;
     let finalReply = "";
     let stagedPayment: PendingPaymentStage | undefined;
+    let stagedWithdrawal: PendingWithdrawalStage | undefined;
 
     for (let i = 0; i < 5; i++) {
       const response = await (anthropic.messages.create as (p: unknown) => Promise<{
@@ -438,9 +523,10 @@ router.post("/", async (req: Request, res: Response) => {
 
         const results = await Promise.all(
           toolBlocks.map(async (tb) => {
-            const { result, pendingPayment } = await executeToolCall(tb.name, tb.input, telefono ?? null);
+            const { result, pendingPayment, pendingWithdrawal } = await executeToolCall(tb.name, tb.input, telefono ?? null);
             if (tb.name === "escalate_to_support") escalated = true;
             if (pendingPayment) stagedPayment = pendingPayment;
+            if (pendingWithdrawal) stagedWithdrawal = pendingWithdrawal;
             return { id: tb.id, result };
           }),
         );
@@ -464,8 +550,8 @@ router.post("/", async (req: Request, res: Response) => {
       finalReply = "Lo sentimos, ocurrió un error. Intenta de nuevo.";
     }
 
-    logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment }, "agentChat: success");
-    res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null });
+    logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment, hasStagedWithdrawal: !!stagedWithdrawal }, "agentChat: success");
+    res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null, pendingWithdrawal: stagedWithdrawal ?? null });
   } catch (err) {
     logger.error({ err }, "agentChat: error");
     res.json({ reply: "Lo sentimos, ocurrió un error. Intenta de nuevo.", escalated: false, pendingPayment: null });

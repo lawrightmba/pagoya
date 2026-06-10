@@ -98,6 +98,7 @@ export async function debitWallet(
   walletId: string,
   amountMXN: number,
   description: string,
+  txType: string = "bill_pay",
 ): Promise<string> {
   let newTxId: string;
 
@@ -114,7 +115,7 @@ export async function debitWallet(
       .insert(walletTransactionsTable)
       .values({
         walletId,
-        type: "bill_pay",
+        type: txType,
         amountMxn: amountMXN.toFixed(2),
         status: "confirmed",
         description,

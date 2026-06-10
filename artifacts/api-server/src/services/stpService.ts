@@ -260,6 +260,93 @@ export async function checkStpAccount(clabe: string): Promise<{
   }
 }
 
+// ── enviaSPEI — outbound SPEI transfer (registraOrden) ───────────────────────
+// Sends money from PagoYa's STP master account to any external CLABE.
+// Returns the unique claveRastreo and STP's internal order ID.
+// In dev (STP_ENABLED !== "true") the SOAP call is skipped and a mock id returned.
+
+export async function enviaSPEI(params: {
+  destinationClabe: string;
+  amountMXN: number;
+  beneficiaryName: string;
+  concept: string;
+  referenciaNumerica?: number;
+}): Promise<{ claveRastreo: string; stpId: number }> {
+  const empresa = process.env.STP_EMPRESA;
+  const soapUrl = process.env.STP_SOAP_URL ?? "https://stpmex.com:7024/speiws/service";
+  const bankCode = process.env.STP_BANK_CODE ?? "646";
+
+  if (!empresa) throw new Error("STP_EMPRESA not configured — cannot send SPEI");
+
+  // Unique clave rastreo: PY + base-36 timestamp + 6 random chars, max 30
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const claveRastreo = `PY${ts}${rand}`.slice(0, 30);
+
+  const centavos = Math.round(params.amountMXN * 100);
+  const refNum = params.referenciaNumerica ?? (Math.floor(Math.random() * 999998) + 1);
+  const cleanClabe = params.destinationClabe.replace(/\D/g, "");
+  const safeName = (params.beneficiaryName || "USUARIO PAGOYA").slice(0, 40).toUpperCase();
+  const safeConcept = (params.concept || "Retiro PagoYa").slice(0, 40);
+
+  if (process.env.STP_ENABLED !== "true") {
+    logger.info({ claveRastreo, centavos, cleanClabe }, "stp: enviaSPEI — dev mode, SOAP skipped");
+    return { claveRastreo, stpId: 999999 };
+  }
+
+  const soapEnvelope = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:spei="http://www.stpmex.com/spei">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <spei:registraOrden>
+      <empresa>${empresa}</empresa>
+      <monto>${centavos}</monto>
+      <tipoPago>1</tipoPago>
+      <nombreBeneficiario>${safeName}</nombreBeneficiario>
+      <tipoCuentaBeneficiario>40</tipoCuentaBeneficiario>
+      <cuentaBeneficiario>${cleanClabe}</cuentaBeneficiario>
+      <rfcCurpBeneficiario>ND</rfcCurpBeneficiario>
+      <conceptoPago>${safeConcept}</conceptoPago>
+      <referenciaNumerica>${refNum}</referenciaNumerica>
+      <claveRastreo>${claveRastreo}</claveRastreo>
+      <institucionOperante>${bankCode}</institucionOperante>
+    </spei:registraOrden>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+  logger.info({ claveRastreo, centavos, cleanClabe, empresa }, "stp: calling registraOrden SOAP");
+
+  const response = await fetch(soapUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/xml;charset=UTF-8",
+      "SOAPAction": "registraOrden",
+    },
+    body: soapEnvelope,
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`STP registraOrden HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+  }
+
+  const idMatch = responseText.match(/<id>(-?\d+)<\/id>/);
+  const errorMatch = responseText.match(/<descripcionError>([^<]*)<\/descripcionError>/);
+  const stpId = idMatch ? parseInt(idMatch[1], 10) : null;
+
+  if (stpId === null || stpId <= 0) {
+    const reason = errorMatch?.[1] ?? "STP error desconocido";
+    throw new Error(`STP registraOrden rechazado: ${reason}`);
+  }
+
+  logger.info({ claveRastreo, stpId, centavos, cleanClabe }, "stp: enviaSPEI — registraOrden succeeded");
+  return { claveRastreo, stpId };
+}
+
 // ── Withdraw / deregister account ─────────────────────────────────────────────
 // Calls STP's "Withdrawal of Account" endpoint when a user closes their account.
 // Reference: stpmex.zendesk.com → SOFIPOS/WALLET → "Withdrawal of Account"

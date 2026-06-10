@@ -1,8 +1,18 @@
+export interface PendingWithdrawalSession {
+  telefono: string;
+  destinationClabe: string;
+  amountMXN: number;
+  beneficiaryName: string;
+  walletBalance: number;
+  expiresAt: number;
+}
+
 export interface WhatsAppSession {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   repCode: string | null;
   profileName: string | null;
   lastActivity: number;
+  pendingWithdrawal: PendingWithdrawalSession | null;
 }
 
 const sessions = new Map<string, WhatsAppSession>();
@@ -15,6 +25,7 @@ export function getSession(waId: string): WhatsAppSession {
     repCode: null,
     profileName: null,
     lastActivity: Date.now(),
+    pendingWithdrawal: null,
   };
   sessions.set(waId, fresh);
   return fresh;
