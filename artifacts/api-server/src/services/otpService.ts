@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
-import { sendWhatsApp } from "../lib/whatsapp.js";
+import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
 // ─── generateOTP ──────────────────────────────────────────────────────────────
@@ -26,10 +26,13 @@ export async function generateOTP(phone: string): Promise<{ success: boolean; er
       return { success: false, error: "user_not_found" };
     }
 
-    await sendWhatsApp(
-      phone,
-      `Tu código de verificación PagoYa es: ${code}. Válido por 5 minutos.`,
-    );
+    const otpSid = templates.otp();
+    if (otpSid) {
+      await sendWhatsAppTemplate(phone, otpSid, { "1": code });
+    } else {
+      // Fallback: free-form (works within 24h session window)
+      await sendWhatsApp(phone, `Tu código de verificación PagoYa es: ${code}. Válido por 5 minutos.`);
+    }
 
     logger.info({ phone }, "otpService.generateOTP: OTP sent");
     return { success: true };
