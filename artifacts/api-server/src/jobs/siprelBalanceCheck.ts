@@ -4,6 +4,8 @@ import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 
 const LOW_BALANCE_THRESHOLD = 2000;
+const ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // max one alert per 6 hours
+let lastAlertSentAt = 0;
 
 async function checkSiprelBalance(): Promise<void> {
   const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
@@ -19,24 +21,24 @@ async function checkSiprelBalance(): Promise<void> {
     logger.info({ tiempoAire, pagoServicios }, "siprelBalanceCheck: balance fetched");
 
     if (lowestBalance < LOW_BALANCE_THRESHOLD) {
+      const now = Date.now();
+      if (now - lastAlertSentAt < ALERT_COOLDOWN_MS) {
+        logger.info({ lowestBalance, nextAlertIn: Math.round((ALERT_COOLDOWN_MS - (now - lastAlertSentAt)) / 60000) + "min" },
+          "siprelBalanceCheck: low balance but cooldown active — skipping alert");
+        return;
+      }
+      lastAlertSentAt = now;
       const msg =
         `⚠️ Alerta PagoYa: Saldo SIPREL bajo — $${lowestBalance.toFixed(2)} MXN disponibles. ` +
         `Recarga necesaria para continuar procesando pagos.`;
       await sendWhatsApp(adminNumber, msg);
       logger.warn({ tiempoAire, pagoServicios }, "siprelBalanceCheck: low-balance alert sent");
+    } else {
+      // Reset cooldown when balance recovers so next dip alerts immediately
+      lastAlertSentAt = 0;
     }
   } catch (err) {
     logger.error({ err }, "siprelBalanceCheck: failed to fetch SIPREL balance");
-
-    const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
-    if (adminNumber) {
-      await sendWhatsApp(
-        adminNumber,
-        "🔴 PagoYa: No se pudo verificar el saldo de SIPREL. Revisar credenciales o conexión.",
-      ).catch((sendErr) =>
-        logger.error({ sendErr }, "siprelBalanceCheck: failed to send error alert"),
-      );
-    }
   }
 }
 

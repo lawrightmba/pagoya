@@ -17,10 +17,12 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
 
   let toFormatted: string;
   if (to.startsWith("whatsapp:")) {
-    // Still strip spaces from the number portion
     toFormatted = "whatsapp:+" + to.replace(/^whatsapp:\+?/, "").replace(/\D/g, "");
   } else {
-    toFormatted = "whatsapp:+" + to.replace(/\D/g, "");
+    const digits = to.replace(/\D/g, "");
+    // 10-digit Mexican numbers → prepend country code 52
+    const withCountry = digits.length === 10 ? `52${digits}` : digits;
+    toFormatted = `whatsapp:+${withCountry}`;
   }
 
   try {
