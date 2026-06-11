@@ -1,8 +1,8 @@
 import { useLocation } from "wouter";
-import { Home, Zap, Trophy, History, CreditCard } from "lucide-react";
+import { Home, Zap, CreditCard, Star, History } from "lucide-react";
 
 const BILL_PAY_PATHS = ["/servicios", "/pagar", "/revisar", "/tarjeta", "/exito"];
-const REWARDS_PATHS  = ["/puntos", "/points", "/juegos"];
+const PUNTOS_PATHS   = ["/puntos", "/points", "/juegos"];
 
 const TABS = [
   {
@@ -18,22 +18,22 @@ const TABS = [
     matchPaths: BILL_PAY_PATHS,
   },
   {
+    path: "/cargar",
+    icon: CreditCard,
+    label: "Cargar",
+    matchPaths: ["/cargar"],
+  },
+  {
     path: "/puntos",
-    icon: Trophy,
-    label: "Recompensas",
-    matchPaths: REWARDS_PATHS,
+    icon: Star,
+    label: "Puntos",
+    matchPaths: PUNTOS_PATHS,
   },
   {
     path: "/wallet/historial",
     icon: History,
     label: "Historial",
     matchPaths: ["/wallet/historial"],
-  },
-  {
-    path: "/cargar",
-    icon: CreditCard,
-    label: "Cargar",
-    matchPaths: ["/cargar"],
   },
 ];
 

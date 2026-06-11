@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTrackEvent } from "@/hooks/useTrackEvent";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
@@ -275,6 +275,94 @@ function FreshCard({ onPlay, playing }: { onPlay: () => void; playing: boolean }
   );
 }
 
+// ── Canvas-based scratch zone (S3.7) ─────────────────────────────────────────
+function ScratchZone({ zone, scratched, onScratch }: { zone: Prize; scratched: boolean; onScratch: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [touched, setTouched] = useState(false);
+  const isDrawing = useRef(false);
+
+  useEffect(() => {
+    if (scratched) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width) || 120;
+    const h = Math.round(rect.height) || 120;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#BDBDBD";
+    ctx.fillRect(0, 0, w, h);
+    for (let x = 0; x < w; x += 6) {
+      for (let y = 0; y < h; y += 6) {
+        if ((x + y) % 12 === 0) {
+          ctx.fillStyle = "rgba(255,255,255,0.22)";
+          ctx.fillRect(x, y, 3, 3);
+        }
+      }
+    }
+  }, [scratched]);
+
+  const scratch = useCallback((clientX: number, clientY: number) => {
+    if (scratched) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.fill();
+    setTouched(true);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let cleared = 0;
+    for (let j = 3; j < data.length; j += 4) {
+      if (data[j] === 0) cleared++;
+    }
+    if (cleared / (canvas.width * canvas.height) > 0.60) onScratch();
+  }, [scratched, onScratch]);
+
+  return (
+    <div style={{
+      aspectRatio: "1", borderRadius: "14px", position: "relative", overflow: "hidden",
+      background: scratched
+        ? (zone.type === "nothing" ? "rgba(255,255,255,0.06)" : "rgba(0,200,117,0.15)")
+        : "rgba(255,255,255,0.12)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px",
+    }}>
+      {/* Prize content — visible under canvas or after reveal */}
+      <span style={{ fontSize: "28px" }}>{EMOJI_MAP[zone.type] ?? "🎁"}</span>
+      <span style={{ fontSize: "10px", fontWeight: 700, textAlign: "center",
+        color: zone.type === "nothing" ? "rgba(255,255,255,0.35)" : "#00C875" }}>
+        {zone.label}
+      </span>
+
+      {/* Canvas scratch overlay */}
+      {!scratched && (
+        <>
+          <canvas
+            ref={canvasRef}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", touchAction: "none", cursor: "crosshair", borderRadius: "14px" }}
+            onPointerDown={(e) => { isDrawing.current = true; (e.target as HTMLElement).setPointerCapture(e.pointerId); scratch(e.clientX, e.clientY); }}
+            onPointerMove={(e) => { if (isDrawing.current) scratch(e.clientX, e.clientY); }}
+            onPointerUp={() => { isDrawing.current = false; }}
+            onPointerLeave={() => { isDrawing.current = false; }}
+          />
+          {!touched && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 1 }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(0,0,0,0.6)", background: "rgba(255,255,255,0.42)", padding: "5px 10px", borderRadius: "8px" }}>
+                Raspa aquí 👆
+              </span>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function ScratchCard({ zones, scratched, onScratch, allScratched, showResult, isWin, reward }: {
   zones: Prize[]; scratched: boolean[]; onScratch: (i: number) => void;
   allScratched: boolean; showResult: boolean; isWin: boolean; reward: Prize;
@@ -282,24 +370,11 @@ function ScratchCard({ zones, scratched, onScratch, allScratched, showResult, is
   return (
     <div>
       <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: "20px" }}>
-        {allScratched ? "¡Tarjeta completa!" : "Toca cada zona para raspar"}
+        {allScratched ? "¡Tarjeta completa!" : "Raspa cada zona para revelar"}
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "24px" }}>
         {zones.map((zone, i) => (
-          <button key={i} onClick={() => onScratch(i)}
-            style={{ aspectRatio: "1", borderRadius: "14px", border: "none", cursor: scratched[i] ? "default" : "pointer", background: scratched[i] ? (zone.type === "nothing" ? "rgba(255,255,255,0.06)" : "rgba(0,200,117,0.15)") : "rgba(255,255,255,0.12)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", position: "relative", overflow: "hidden" }}>
-            {!scratched[i] && (
-              <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 2px, transparent 2px, transparent 8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "28px" }}>❓</span>
-              </div>
-            )}
-            {scratched[i] && (
-              <>
-                <span style={{ fontSize: "28px" }}>{EMOJI_MAP[zone.type] ?? "🎁"}</span>
-                <span style={{ fontSize: "10px", fontWeight: 700, color: zone.type === "nothing" ? "rgba(255,255,255,0.35)" : "#00C875", textAlign: "center" }}>{zone.label}</span>
-              </>
-            )}
-          </button>
+          <ScratchZone key={i} zone={zone} scratched={scratched[i]} onScratch={() => onScratch(i)} />
         ))}
       </div>
       {showResult && (

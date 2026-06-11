@@ -831,8 +831,8 @@ export default function Register() {
               onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "#1D9E75"; }}
               onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
             />
-            <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
-              Para recuperar tu cuenta si pierdes acceso a tu número.
+            <p style={{ margin: "5px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.38)", lineHeight: 1.4 }}>
+              🔒 Tu rescate digital — recupéralo si cambias de número o pierdes tu teléfono.
             </p>
           </div>
 

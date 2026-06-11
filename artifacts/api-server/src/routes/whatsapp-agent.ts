@@ -84,38 +84,41 @@ const m = {
     );
   },
 
-  newUserGreeting: (lang: Lang, firstName: string) => {
+  // Returns [msg1, msg2] — send msg2 with a 2.5s typing pause after msg1
+  newUserGreeting: (lang: Lang, firstName: string): [string, string] => {
     const greet = firstName
       ? (lang === "en" ? `Hello, ${firstName}!` : `¡Hola, ${firstName}!`)
       : (lang === "en" ? "Hello!" : "¡Hola!");
     if (lang === "en") {
-      return (
+      return [
         `${greet} 👋 Welcome to *PagoYa*!\n\n` +
-        `I'm *Paula*, your personal assistant for PagoYa. You can ask me anything — I'm here to help! For example, you can say:\n` +
-        `_"Paula, I need to pay my CFE electricity bill"_ — and I'll take care of it right here in this chat. You can also find me on our website at *pagoyamx.com*.\n\n` +
+        `I'm *Paula*, your personal payments assistant. You can ask me anything — I'm here to help! For example:\n` +
+        `_"Paula, I need to pay my CFE electricity bill"_ — and I'll handle it right here in this chat.\n\n` +
         `PagoYa lets you make *bill payments, mobile top-ups, gift cards, and bank transfers* — all from WhatsApp, without needing a bank account.\n\n` +
         `🏦 *How does your money work?*\n` +
-        `Your balance lives in a *PagoYa Digital Wallet*. To fund it, you deposit cash at any OXXO store nationwide using a code we give you. The balance is available instantly.\n\n` +
+        `Your balance lives in a *PagoYa Digital Wallet*. To fund it, deposit cash at any OXXO store nationwide using a code we give you — available instantly.`,
+
         `🔒 *Is it safe?*\n` +
-        `Yes. All money movements travel through *STP (Sistema de Transferencias y Pagos)*, the official network of the *Bank of Mexico (Banxico)*. It's the same system used by Banamex and BBVA — your payments are backed by an official transaction ID.\n\n` +
+        `Yes. Every payment travels through *STP (Sistema de Transferencias y Pagos)*, the official network of the *Bank of Mexico (Banxico)*. It's the same system used by Banamex and BBVA — your payments carry an official folio ID.\n\n` +
         `📋 *What do you need to register?*\n` +
         `Just your name. No tax ID, no proof of address, no bank account required.\n\n` +
-        `To create your free account right now, could you tell me your *full name*?`
-      );
+        `To create your free account right now, could you tell me your *full name*?`,
+      ];
     }
-    return (
+    return [
       `${greet} 👋 ¡Bienvenido/a a *PagoYa*!\n\n` +
-      `Soy *Paula*, tu asistente personal de PagoYa. Puedes preguntarme lo que quieras — ¡estoy aquí para ayudarte! Por ejemplo, puedes decirme:\n` +
-      `_"Paula, necesito pagar mi recibo de CFE"_ — y lo resolvemos aquí mismo en este chat. También puedes encontrarme en nuestro sitio web *pagoyamx.com*.\n\n` +
-      `PagoYa te permite hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde WhatsApp, sin necesidad de tener cuenta bancaria.\n\n` +
+      `Soy *Paula*, tu asistente personal de pagos. Puedes preguntarme lo que quieras — ¡estoy aquí para ayudarte! Por ejemplo:\n` +
+      `_"Paula, necesito pagar mi recibo de CFE"_ — y lo resolvemos aquí mismo en este chat.\n\n` +
+      `PagoYa te permite hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde WhatsApp, sin necesidad de cuenta bancaria.\n\n` +
       `🏦 *¿Cómo funciona tu dinero?*\n` +
-      `Tu saldo vive en una *Cartera Digital PagoYa*. Para cargarla, depositas en efectivo en cualquier OXXO del país usando un código que te damos. Ese saldo queda disponible al instante.\n\n` +
+      `Tu saldo vive en una *Cartera Digital PagoYa*. Para cargarla, depositas en efectivo en cualquier OXXO del país usando un código que te damos — disponible al instante.`,
+
       `🔒 *¿Es seguro?*\n` +
-      `Sí. Todos los movimientos de dinero viajan por *STP (Sistema de Transferencias y Pagos)*, la red oficial del *Banco de México* (Banxico). Es el mismo sistema que usan los bancos grandes como Banamex y BBVA — tus pagos quedan respaldados con folio oficial.\n\n` +
+      `Sí. Todos los movimientos de dinero viajan por *STP (Sistema de Transferencias y Pagos)*, la red oficial del *Banco de México* (Banxico). Es el mismo sistema que usan Banamex y BBVA — tus pagos quedan respaldados con folio oficial.\n\n` +
       `📋 *¿Qué necesitas para registrarte?*\n` +
       `Solo tu nombre. No pedimos RFC, no pedimos comprobante de domicilio, no pedimos cuenta bancaria.\n\n` +
-      `Para crear tu cuenta gratis ahora mismo, ¿me puedes decir tu *nombre completo*?`
-    );
+      `Para crear tu cuenta gratis ahora mismo, ¿me puedes decir tu *nombre completo*?`,
+    ];
   },
 
   repGreeting: (lang: Lang, firstName: string) => {
@@ -622,7 +625,10 @@ router.post("/", async (req: Request, res: Response) => {
     if (!registered) {
       saveSession(phoneKey, { awaitingName: true });
       const firstName = (profileName || "").split(" ")[0] || "";
-      await sendWhatsApp(phoneKey, m.newUserGreeting(lang, firstName));
+      const [greet1, greet2] = m.newUserGreeting(lang, firstName);
+      await sendWhatsApp(phoneKey, greet1);
+      await new Promise(r => setTimeout(r, 2500));
+      await sendWhatsApp(phoneKey, greet2);
       return;
     }
 

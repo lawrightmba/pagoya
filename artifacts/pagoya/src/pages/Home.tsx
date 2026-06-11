@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import { usePayment } from "@/context/PaymentContext";
@@ -10,6 +10,9 @@ import BillerTicker from "@/components/BillerTicker";
 import PaulaHint from "@/components/PaulaHint";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useTrackEvent, trackEvent } from "@/hooks/useTrackEvent";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import BonusBanner from "@/components/BonusBanner";
+import GiftCardSection from "@/components/GiftCardSection";
 
 // ─── Language helpers ──────────────────────────────────────────────────────────
 
@@ -36,100 +39,7 @@ const QUICK_ACCESS = [
   { id: "netflix",  icon: "🎬", name: "Netflix",   color: "#D4145A" },
 ];
 
-// ─── Gift card catalog ────────────────────────────────────────────────────────
-
-// Gift cards grouped by purchase intent / psychological trigger
-const GIFT_CARD_GROUPS = [
-  {
-    id: "entretenimiento",
-    labelEs: "Entretenimiento", labelEn: "Entertainment", emoji: "🎬",
-    brands: [
-      { id: "netflix",     emoji: "🎬", name: "Netflix",     denominations: [
-        { serviceId: "netflix_100",      amount: 100 },
-        { serviceId: "netflix_300",      amount: 300 },
-        { serviceId: "netflix_500",      amount: 500 },
-        { serviceId: "netflix_700",      amount: 700 },
-      ]},
-      { id: "spotify",     emoji: "🎵", name: "Spotify",     denominations: [
-        { serviceId: "spotify_79",       amount: 79 },
-        { serviceId: "spotify_99",       amount: 99 },
-        { serviceId: "spotify_149",      amount: 149 },
-        { serviceId: "spotify_199",      amount: 199 },
-      ]},
-      { id: "disney_plus", emoji: "🏰", name: "Disney+",     denominations: [
-        { serviceId: "disney_99",        amount: 99 },
-        { serviceId: "disney_139",       amount: 139 },
-        { serviceId: "disney_279",       amount: 279 },
-      ]},
-      { id: "hbo_max",     emoji: "🎭", name: "Max (HBO)",   denominations: [
-        { serviceId: "hbo_max_169",      amount: 169 },
-        { serviceId: "hbo_max_219",      amount: 219 },
-        { serviceId: "hbo_max_279",      amount: 279 },
-      ]},
-      { id: "cinepolis",   emoji: "🎟️", name: "Cinépolis",   denominations: [
-        { serviceId: "cinepolis_100",    amount: 100 },
-        { serviceId: "cinepolis_140",    amount: 140 },
-        { serviceId: "cinepolis_165",    amount: 165 },
-        { serviceId: "cinepolis_210",    amount: 210 },
-        { serviceId: "cinepolis_280",    amount: 280 },
-      ]},
-      { id: "gplay",       emoji: "🎮", name: "Google Play", denominations: [
-        { serviceId: "google_play_50",   amount: 50 },
-        { serviceId: "google_play_100",  amount: 100 },
-        { serviceId: "google_play_200",  amount: 200 },
-        { serviceId: "google_play_500",  amount: 500 },
-      ]},
-    ],
-  },
-  {
-    id: "conveniencia",
-    labelEs: "Conveniencia", labelEn: "On-the-go", emoji: "🚀",
-    brands: [
-      { id: "uber",        emoji: "🚗", name: "Uber",        denominations: [
-        { serviceId: "uber_100",         amount: 100 },
-        { serviceId: "uber_200",         amount: 200 },
-        { serviceId: "uber_300",         amount: 300 },
-        { serviceId: "uber_500",         amount: 500 },
-      ]},
-      { id: "uber_eats",   emoji: "🍔", name: "Uber Eats",   denominations: [
-        { serviceId: "uber_eats_100",    amount: 100 },
-        { serviceId: "uber_eats_200",    amount: 200 },
-        { serviceId: "uber_eats_300",    amount: 300 },
-      ]},
-      { id: "amazon",      emoji: "📦", name: "Amazon",      denominations: [
-        { serviceId: "amazon_100",       amount: 100 },
-        { serviceId: "amazon_200",       amount: 200 },
-        { serviceId: "amazon_500",       amount: 500 },
-        { serviceId: "amazon_1000",      amount: 1000 },
-      ]},
-    ],
-  },
-  {
-    id: "tiendas",
-    labelEs: "Tiendas", labelEn: "Retail", emoji: "🛍️",
-    brands: [
-      { id: "liverpool",   emoji: "🛍️", name: "Liverpool",   denominations: [
-        { serviceId: "liverpool_500",    amount: 500 },
-        { serviceId: "liverpool_1000",   amount: 1000 },
-        { serviceId: "liverpool_2000",   amount: 2000 },
-        { serviceId: "liverpool_3000",   amount: 3000 },
-        { serviceId: "liverpool_5000",   amount: 5000 },
-      ]},
-      { id: "soriana",     emoji: "🛒", name: "Soriana",     denominations: [
-        { serviceId: "soriana_200",      amount: 200 },
-        { serviceId: "soriana_500",      amount: 500 },
-        { serviceId: "soriana_1000",     amount: 1000 },
-        { serviceId: "soriana_2000",     amount: 2000 },
-      ]},
-      { id: "starbucks",   emoji: "☕", name: "Starbucks",   denominations: [
-        { serviceId: "starbucks_100",    amount: 100 },
-        { serviceId: "starbucks_200",    amount: 200 },
-        { serviceId: "starbucks_300",    amount: 300 },
-        { serviceId: "starbucks_500",    amount: 500 },
-      ]},
-    ],
-  },
-];
+// Gift card catalog moved to GiftCardSection component
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -137,26 +47,7 @@ function Divider() {
   return <div style={{ height: "1px", background: "rgba(0,0,0,0.07)", margin: "0 20px" }} />;
 }
 
-function StepRow({ number, icon, es, en, lang }: { number: number; icon: string; es: string; en: string; lang: "es" | "en" }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-      <div style={{
-        width: "30px", height: "30px", borderRadius: "50%", flexShrink: 0,
-        background: "#007A4A", color: "white",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "13px", fontWeight: 800,
-      }}>
-        {number}
-      </div>
-      <div>
-        <span style={{ fontSize: "18px", marginRight: "6px" }}>{icon}</span>
-        <span style={{ fontSize: "14px", color: "#0D2618", fontWeight: 500 }}>
-          {lang === "es" ? es : en}
-        </span>
-      </div>
-    </div>
-  );
-}
+// StepRow moved to HowItWorksSection component
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
@@ -168,16 +59,13 @@ export default function Home() {
   const [notifPhone, setNotifPhone] = useState("");
   const [notifSent, setNotifSent]   = useState(false);
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
-  const [bonusBannerDismissed, setBonusBannerDismissed] = useState<boolean>(() => {
-    // Session-scoped: dismissing the banner only lasts until the tab is closed
-    try { return sessionStorage.getItem("bonus_banner_v1") === "1"; } catch { return false; }
-  });
 
-  function dismissBonusBanner(e: React.MouseEvent) {
-    e.stopPropagation();
-    try { sessionStorage.setItem("bonus_banner_v1", "1"); } catch { /* ignore */ }
-    setBonusBannerDismissed(true);
-  }
+  // Grand Prize teaser (S3.4)
+  const [grandPrize, setGrandPrize]       = useState<{ prize_amount: number; total_entries: number } | null>(null);
+
+  // PWA install prompt (S3.6)
+  const deferredPrompt = useRef<Event & { prompt: () => void } | null>(null);
+  const [showPwaSheet, setShowPwaSheet]   = useState(false);
 
   // Handle WhatsApp deep-link pre-fill: ?pagar=CFE&service=cfe&tel=521234567890
   useEffect(() => {
@@ -270,6 +158,32 @@ export default function Home() {
   }
 
   useEffect(() => { setLangPref(lang); }, [lang]);
+
+  // ── Grand Prize teaser fetch (S3.4) ───────────────────────────────────────
+  useEffect(() => {
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/games/grand-prize`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.prize_amount > 0) setGrandPrize(d); })
+      .catch(() => {});
+  }, []);
+
+  // ── PWA install prompt (S3.6) ─────────────────────────────────────────────
+  useEffect(() => {
+    if (localStorage.getItem("pwa_prompt_dismissed") === "1") return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e as Event & { prompt: () => void };
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    const timer = setTimeout(() => {
+      if (deferredPrompt.current) setShowPwaSheet(true);
+    }, 30000);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      clearTimeout(timer);
+    };
+  }, []);
 
   function handleAutofill(result: {
     biller_id: string; biller_name: string;
@@ -521,35 +435,44 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
+            D-0. GRAND PRIZE TEASER (S3.4)
+        ══════════════════════════════════════════════════════ */}
+        {grandPrize && (
+          <section style={{ padding: "12px 20px 0", background: "#008A52" }}>
+            <button
+              onClick={() => navigate("/juegos?tab=premio")}
+              style={{
+                width: "100%", display: "flex", alignItems: "center",
+                gap: "14px", padding: "16px 18px",
+                background: "#004F2D", border: "none",
+                borderRadius: "16px", cursor: "pointer",
+                boxShadow: "0 4px 18px rgba(0,0,0,0.28)",
+                textAlign: "left",
+              }}
+            >
+              <span style={{ fontSize: "28px", flexShrink: 0 }}>🏆</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px" }}>
+                  {es ? "Premio Mayor del Mes" : "Monthly Grand Prize"}
+                </p>
+                <p style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#FF9A3C", lineHeight: 1.1 }}>
+                  ${grandPrize.prize_amount.toLocaleString("es-MX")} MXN
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.50)" }}>
+                  {grandPrize.total_entries.toLocaleString("es-MX")} {es ? "participantes" : "entries"}
+                </p>
+              </div>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#6EF5B0", flexShrink: 0, whiteSpace: "nowrap" }}>
+                {es ? "Ver sorteo →" : "View draw →"}
+              </span>
+            </button>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
             D. 3-STEP HOW TO USE
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "28px 24px 28px", background: "#F4FBF7" }}>
-          <div
-            className="hero-steps"
-            style={{
-              maxWidth: "600px",
-              margin: "0 auto",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <StepRow number={1} icon="✍️"
-              es="Escribe qué quieres pagar"
-              en="Type what you want to pay"
-              lang={lang}
-            />
-            <StepRow number={2} icon="🤖"
-              es="Nuestra IA llena el formulario"
-              en="Our AI fills the form"
-              lang={lang}
-            />
-            <StepRow number={3} icon="✅"
-              es="Confirma y listo en 2 min"
-              en="Confirm and done in 2 min"
-              lang={lang}
-            />
-          </div>
-        </section>
+        <HowItWorksSection lang={lang} />
 
         {/* ══════════════════════════════════════════════════════
             E-0. RASPA Y GANA TEASER
@@ -687,49 +610,7 @@ export default function Home() {
             </div>
 
             {/* ── SIGN-UP BONUS STRIP ── */}
-            <button
-              className="bonus-strip"
-              onClick={() => navigate("/register")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-                padding: "12px 16px",
-                marginBottom: "10px",
-                background: "rgba(255,92,26,0.07)",
-                border: "1.5px solid rgba(255,92,26,0.30)",
-                borderRadius: "14px",
-                cursor: "pointer",
-                textAlign: "left",
-                gap: "10px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
-                <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
-                    {es
-                      ? "Abre tu billetera gratis · recibe $25 MXN"
-                      : "Open your wallet free · get $25 MXN"}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#6B9980", marginTop: "2px" }}>
-                    {es
-                      ? "Sin banco, sin trámites · se acredita al instante"
-                      : "No bank needed · credited instantly"}
-                  </div>
-                </div>
-              </div>
-              <span style={{
-                flexShrink: 0,
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "#FF5C1A",
-                whiteSpace: "nowrap",
-              }}>
-                {es ? "Abre tu cuenta →" : "Sign up →"}
-              </span>
-            </button>
+            <BonusBanner lang={lang} onNavigateRegister={() => navigate("/register")} />
 
             {/* CTA button */}
             <button
@@ -832,137 +713,13 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
-            GIFT CARDS — Celebration section
+            GIFT CARDS — extracted to GiftCardSection component
         ══════════════════════════════════════════════════════ */}
-        <section style={{
-          background: "linear-gradient(135deg, #FF5C1A 0%, #FF9A3C 32%, #00C875 68%, #007A4A 100%)",
-          padding: "28px 20px",
-          position: "relative",
-          overflow: "hidden",
-        }}>
-          <div style={{ position: "absolute", top: -50, right: -50, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: -40, left: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
-
-          <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-              <span style={{ fontSize: "26px" }}>🎁</span>
-              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em" }}>
-                {es ? "Gift Cards Digitales" : "Digital Gift Cards"}
-              </h2>
-            </div>
-            <p style={{ margin: "0 0 18px", fontSize: "13px", color: "rgba(255,255,255,0.82)", lineHeight: 1.4 }}>
-              {es ? "Compra al instante · PIN llega por WhatsApp 📲" : "Buy instantly · PIN sent on WhatsApp 📲"}
-            </p>
-
-            <style>{`.gc-scroll::-webkit-scrollbar{display:none}`}</style>
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              {GIFT_CARD_GROUPS.map((group) => (
-                <div key={group.id}>
-                  {/* Group label */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "13px" }}>{group.emoji}</span>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.70)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                      {es ? group.labelEs : group.labelEn}
-                    </span>
-                    <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.18)", marginLeft: "4px" }} />
-                  </div>
-                  {/* Brand cards — horizontal scroll */}
-                  <div className="gc-scroll" style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "4px" }}>
-                    {group.brands.map((brand) => (
-                      <div key={brand.id} style={{
-                        flexShrink: 0,
-                        background: "rgba(255,255,255,0.15)",
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid rgba(255,255,255,0.28)",
-                        borderRadius: "16px",
-                        padding: "14px 14px 12px",
-                        minWidth: "140px",
-                      }}>
-                        <div style={{ fontSize: "24px", marginBottom: "5px", lineHeight: 1 }}>{brand.emoji}</div>
-                        <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "13px", marginBottom: "10px", lineHeight: 1.2 }}>{brand.name}</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                          {brand.denominations.map((d) => (
-                            <button
-                              key={d.serviceId}
-                              onClick={() => handleGiftCard(d.serviceId, brand.name, d.amount)}
-                              style={{
-                                background: "rgba(255,255,255,0.22)",
-                                border: "1px solid rgba(255,255,255,0.40)",
-                                borderRadius: "999px",
-                                padding: "4px 9px",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                color: "#FFFFFF",
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                transition: "background 0.15s",
-                              }}
-                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.36)"; }}
-                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
-                            >
-                              ${d.amount >= 1000 ? `${d.amount / 1000}K` : d.amount}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => navigate("/servicios?categoria=Gift+Cards")}
-              style={{
-                marginTop: "16px", width: "100%", padding: "12px",
-                borderRadius: "12px", border: "1.5px solid rgba(255,255,255,0.42)",
-                background: "rgba(255,255,255,0.14)", color: "#FFFFFF",
-                fontSize: "14px", fontWeight: 700, cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.14)"; }}
-            >
-              {es ? "Ver todas las gift cards →" : "See all gift cards →"}
-            </button>
-
-            {/* ── RENT VERTICAL COMPACT CARD ── */}
-            <div style={{
-              marginTop: "16px",
-              background: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.28)",
-              borderRadius: "14px",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-            }}>
-              <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.3 }}>
-                {es ? "¿Pagas renta? 🏠" : "Pay Rent? 🏠"}
-              </p>
-              <a
-                href="https://pagoseguromx.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flexShrink: 0,
-                  background: "rgba(255,255,255,0.22)",
-                  color: "#FFFFFF",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  padding: "8px 14px",
-                  borderRadius: "10px",
-                  textDecoration: "none",
-                  whiteSpace: "nowrap",
-                  border: "1px solid rgba(255,255,255,0.35)",
-                }}
-              >
-                {es ? "PagoSeguro →" : "PagoSeguro →"}
-              </a>
-            </div>
-          </div>
-        </section>
+        <GiftCardSection
+          lang={lang}
+          onGiftCard={handleGiftCard}
+          onNavigateAll={() => navigate("/servicios?categoria=Gift+Cards")}
+        />
 
         <Divider />
 
@@ -1238,6 +995,70 @@ export default function Home() {
           <a href="mailto:soporte@pagoyamx.com" style={{ color: "#6A9F82", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>
       </footer>
+
+      {/* ── PWA install prompt bottom sheet (S3.6) ──────────────────────────── */}
+      {showPwaSheet && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex", alignItems: "flex-end",
+        }}
+          onClick={() => setShowPwaSheet(false)}
+        >
+          <div
+            style={{
+              width: "100%", background: "#FFFFFF",
+              borderRadius: "24px 24px 0 0",
+              padding: "28px 24px 40px",
+              boxShadow: "0 -8px 40px rgba(0,0,0,0.20)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "14px" }}>
+              <span style={{ fontSize: "36px" }}>📲</span>
+              <div>
+                <p style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: "#0D2618" }}>
+                  {es ? "Instala PagoYa en tu celular" : "Install PagoYa on your phone"}
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#6B9980", lineHeight: 1.4 }}>
+                  {es ? "Acceso rápido sin abrir el navegador" : "Quick access without opening the browser"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (deferredPrompt.current) deferredPrompt.current.prompt();
+                setShowPwaSheet(false);
+              }}
+              style={{
+                width: "100%", padding: "16px",
+                background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",
+                border: "none", borderRadius: "14px",
+                color: "#FFFFFF", fontSize: "16px", fontWeight: 800,
+                cursor: "pointer", marginBottom: "10px",
+                boxShadow: "0 4px 16px rgba(4,108,44,0.32)",
+                fontFamily: "inherit",
+              }}
+            >
+              {es ? "Instalar gratis" : "Install free"}
+            </button>
+            <button
+              onClick={() => {
+                try { localStorage.setItem("pwa_prompt_dismissed", "1"); } catch { /* ignore */ }
+                setShowPwaSheet(false);
+              }}
+              style={{
+                width: "100%", padding: "14px",
+                background: "transparent", border: "none",
+                color: "#9CA3AF", fontSize: "14px", fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              {es ? "Ahora no" : "Not now"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

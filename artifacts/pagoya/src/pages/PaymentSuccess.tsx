@@ -1,8 +1,92 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle, Share2, Plus, AlertCircle, MessageCircle } from "lucide-react";
+import { CheckCircle, Share2, Plus, AlertCircle, MessageCircle, Download } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
+// Stripe active — do not remove (used in CardEntry.tsx)
 const logoUrl = "/pagoya-logo.png";
+
+const PLATFORM_FEE = 25;
+
+function downloadPDF(
+  empresa: string,
+  referencia: string,
+  monto: string,
+  transactionDate: string,
+  transactionId: string,
+) {
+  import("jspdf").then(({ jsPDF }) => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const W = 210;
+    const green = "#004F2D";
+    const gray = "#6B7280";
+
+    // Header bar
+    doc.setFillColor(0, 79, 45);
+    doc.rect(0, 0, W, 28, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text("PagoYa  |  Comprobante Oficial", 14, 18);
+
+    // Title
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text("pagoyamx.com", W - 14, 18, { align: "right" });
+
+    // Separator
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 36, W - 14, 36);
+
+    // Body rows
+    const rows: [string, string][] = [
+      ["Servicio", empresa],
+      ["Referencia", referencia],
+      ["Monto", `$${parseFloat(monto).toFixed(2)} MXN`],
+      ["Comisión", `$${PLATFORM_FEE.toFixed(2)} MXN`],
+      ["Total", `$${(parseFloat(monto) + PLATFORM_FEE).toFixed(2)} MXN`],
+      ["Fecha", transactionDate || new Date().toLocaleString("es-MX")],
+      ["ID de transacción", transactionId],
+    ];
+
+    let y = 46;
+    rows.forEach(([label, value], i) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      doc.text(label.toUpperCase(), 14, y);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(i === 4 ? 0 : 31, i === 4 ? 79 : 31, i === 4 ? 45 : 31);
+      if (i === 4) { // Total — highlight green
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 79, 45);
+      }
+      doc.text(value, 14, y + 6);
+
+      doc.setDrawColor(240, 240, 240);
+      doc.line(14, y + 11, W - 14, y + 11);
+      y += 17;
+    });
+
+    // Footer
+    const fy = y + 12;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(0, fy - 6, W, 32, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text("Pago procesado a través de STP/SIPREL", 14, fy + 4);
+    doc.text("Red oficial del Banco de México (Banxico)", 14, fy + 10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 79, 45);
+    doc.text("pagoyamx.com", 14, fy + 18);
+
+    const filename = `comprobante-pagoya-${transactionId || Date.now()}.pdf`;
+    doc.save(filename);
+  });
+}
 
 export default function PaymentSuccess() {
   const [, navigate] = useLocation();
@@ -75,6 +159,8 @@ export default function PaymentSuccess() {
     );
   }
 
+  const totalMonto = parseFloat(paymentData.monto) + PLATFORM_FEE;
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
       {/* Header */}
@@ -90,15 +176,10 @@ export default function PaymentSuccess() {
 
           {/* Success hero */}
           <div className="flex flex-col items-center text-center pt-2 pb-4">
-            {/* Pulse ring + icon */}
             <div className="relative flex items-center justify-center mb-6">
               <div
                 className="absolute rounded-full animate-ping"
-                style={{
-                  width: 96, height: 96,
-                  background: "rgba(57,169,53,0.18)",
-                  animationDuration: "1.8s",
-                }}
+                style={{ width: 96, height: 96, background: "rgba(57,169,53,0.18)", animationDuration: "1.8s" }}
               />
               <div
                 className="w-24 h-24 rounded-full flex items-center justify-center relative z-10"
@@ -110,7 +191,6 @@ export default function PaymentSuccess() {
                 <CheckCircle className="w-12 h-12 text-white" strokeWidth={2} />
               </div>
             </div>
-
             <h1 className="text-3xl font-black text-[#1F1F1F] mb-1">¡Pago realizado!</h1>
             <p className="text-sm text-gray-500">Tu transacción fue exitosa ✅</p>
           </div>
@@ -122,10 +202,7 @@ export default function PaymentSuccess() {
           >
             <div className="flex items-center justify-between mb-5 pb-4" style={{ borderBottom: "1px solid #F3F3F3" }}>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Detalles del pago</p>
-              <span
-                className="px-3 py-1.5 rounded-full text-xs font-bold"
-                style={{ background: "#F0FAF3", color: "#046C2C" }}
-              >
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold" style={{ background: "#F0FAF3", color: "#046C2C" }}>
                 ✓ Pagado
               </span>
             </div>
@@ -149,9 +226,21 @@ export default function PaymentSuccess() {
               <Row label="Referencia" value={paymentData.referencia} mono />
               <Row label="Fecha y hora" value={transactionDate} />
               <Row label="ID de transacción" value={transactionId} mono muted />
-              <div style={{ paddingTop: "4px" }}>
-                <p style={{ margin: 0, fontSize: "11px", color: "#9CA3AF", fontFamily: "monospace", lineHeight: 1.5 }}>
-                  Procesado vía STP/SPEI · Red oficial del Banco de México
+
+              {/* Trust statement (S2.2) */}
+              <div style={{
+                marginTop: "4px",
+                padding: "10px 12px",
+                background: "#F4FBF7",
+                borderRadius: "10px",
+                border: "1px solid #CBE9D9",
+              }}>
+                <p style={{ margin: 0, fontSize: "11px", color: "#046C2C", fontWeight: 700, marginBottom: "3px" }}>
+                  🔐 Pago oficial verificado
+                </p>
+                <p style={{ margin: 0, fontSize: "10.5px", color: "#6B9980", lineHeight: 1.5 }}>
+                  Procesado vía <strong>STP/SIPREL</strong> — Red oficial del Banco de México (Banxico).
+                  El mismo sistema que usan Banamex y BBVA. Folio ID: <span style={{ fontFamily: "monospace" }}>{transactionId || "—"}</span>
                 </p>
               </div>
             </div>
@@ -189,20 +278,10 @@ export default function PaymentSuccess() {
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("pagoya:openChat"))}
               style={{
-                background: "#1D9E75",
-                border: "none",
-                borderRadius: 10,
-                padding: "8px 14px",
-                color: "#FFFFFF",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                fontFamily: "inherit",
-                minHeight: 36,
+                background: "#1D9E75", border: "none", borderRadius: 10,
+                padding: "8px 14px", color: "#FFFFFF", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center",
+                gap: 5, fontFamily: "inherit", minHeight: 36,
               }}
             >
               <MessageCircle size={13} />
@@ -210,18 +289,48 @@ export default function PaymentSuccess() {
             </button>
           </div>
 
+          {/* Total summary */}
+          {!isNaN(totalMonto) && (
+            <div style={{
+              background: "#004F2D",
+              borderRadius: "14px",
+              padding: "14px 18px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>
+                  Monto + comisión ($25 MXN)
+                </p>
+                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.45)" }}>
+                  Total cobrado
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: "22px", fontWeight: 900, color: "#6EF5B0" }}>
+                ${totalMonto.toFixed(2)} MXN
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-3 pt-1">
             <button
               onClick={handleWhatsApp}
               className="w-full py-5 px-8 rounded-full text-white text-base font-bold transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] flex items-center justify-center gap-2"
-              style={{
-                background: "#25D366",
-                boxShadow: "0 6px 20px rgba(37,211,102,0.40)",
-              }}
+              style={{ background: "#25D366", boxShadow: "0 6px 20px rgba(37,211,102,0.40)" }}
             >
               <Share2 className="w-5 h-5" />
               Compartir por WhatsApp
+            </button>
+
+            {/* PDF receipt download (S3.5) */}
+            <button
+              onClick={() => downloadPDF(paymentData.empresa, paymentData.referencia, paymentData.monto, transactionDate, transactionId)}
+              className="w-full py-4 px-8 rounded-full text-[#046C2C] text-base font-bold border-2 border-[#046C2C] bg-white transition-all duration-150 active:scale-[0.97] hover:bg-[#F0FAF3] flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Descargar comprobante PDF
             </button>
 
             <button
