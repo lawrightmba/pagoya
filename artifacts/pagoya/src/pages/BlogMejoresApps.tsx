@@ -40,9 +40,9 @@ export default function BlogMejoresApps() {
       name: "PagoYa",
       tag: "Mejor para sin banco",
       tagColor: "#1D9E75",
-      pros: ["Carga saldo con efectivo en OXXO", "Sin cuenta bancaria requerida", "Paga en menos de 2 minutos", "Comprobante digital inmediato", "$15 MXN tarifa plana"],
+      pros: ["Carga saldo con efectivo en OXXO", "Sin cuenta bancaria requerida", "Paga en menos de 2 minutos", "Comprobante digital inmediato", "$25 MXN tarifa plana"],
       cons: ["Tarifa por transacción", "Requiere celular con internet"],
-      commission: "$15 MXN fija",
+      commission: "$25 MXN fija",
       services: "CFE, Telmex, Izzi, Agua, Predial, Gas, Sky, Totalplay, Telcel, AT&T y más",
       bankRequired: false,
     },
@@ -196,7 +196,7 @@ export default function BlogMejoresApps() {
               </tr>
             </thead>
             <tbody>
-              <tr><td><strong>PagoYa</strong></td><td style={{ color: "#1D9E75" }}>✓</td><td style={{ color: "#CBD5E1" }}>$15 MXN</td><td style={{ color: "#1D9E75" }}>Inmediato</td><td style={{ color: "#1D9E75" }}>✓ Digital</td></tr>
+              <tr><td><strong>PagoYa</strong></td><td style={{ color: "#1D9E75" }}>✓</td><td style={{ color: "#CBD5E1" }}>$25 MXN</td><td style={{ color: "#1D9E75" }}>Inmediato</td><td style={{ color: "#1D9E75" }}>✓ Digital</td></tr>
               <tr><td>Mercado Pago</td><td style={{ color: "#1D9E75" }}>✓</td><td style={{ color: "#CBD5E1" }}>Variable</td><td style={{ color: "#1D9E75" }}>Inmediato</td><td style={{ color: "#1D9E75" }}>✓ Digital</td></tr>
               <tr><td>BBVA App</td><td style={{ color: "#ef4444" }}>✗</td><td style={{ color: "#1D9E75" }}>$0</td><td style={{ color: "#1D9E75" }}>Inmediato</td><td style={{ color: "#1D9E75" }}>✓ Digital</td></tr>
               <tr><td>OXXO Pay</td><td style={{ color: "#1D9E75" }}>✓</td><td style={{ color: "#CBD5E1" }}>$12–15 MXN</td><td style={{ color: "#fbbf24" }}>24–48 hrs</td><td style={{ color: "#fbbf24" }}>✓ Papel</td></tr>

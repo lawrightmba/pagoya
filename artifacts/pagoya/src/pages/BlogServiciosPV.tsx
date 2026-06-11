@@ -36,11 +36,11 @@ export default function BlogServiciosPV() {
   };
 
   const services = [
-    { name: "CFE (Luz)", provider: "CFE — Comisión Federal de Electricidad", data: "Número de servicio CFE (en el recibo)", where: "PagoYa, OXXO, 7-Eleven, portal CFE", time: "Inmediato a 24 hrs", cost: "$15 MXN con PagoYa" },
-    { name: "Agua", provider: "SEAPAL Vallarta", data: "Número de contrato SEAPAL", where: "PagoYa, portal SEAPAL, OXXO", time: "1–48 horas", cost: "$15 MXN con PagoYa" },
-    { name: "Gas LP", provider: "Tomza, Zeta Gas, Gas Express u otro", data: "Número de cliente", where: "PagoYa, teléfono, portal del proveedor", time: "Inmediato", cost: "$15 MXN con PagoYa" },
-    { name: "Internet / Cable", provider: "Telmex, Izzi, Totalplay, Sky", data: "Número de cuenta del servicio", where: "PagoYa, OXXO, portales de cada empresa", time: "1–24 horas", cost: "$15 MXN con PagoYa" },
-    { name: "Predial", provider: "Tesorería Municipal de Puerto Vallarta", data: "Clave catastral", where: "PagoYa, portal municipal, tesorería", time: "24–72 horas", cost: "$15 MXN con PagoYa" },
+    { name: "CFE (Luz)", provider: "CFE — Comisión Federal de Electricidad", data: "Número de servicio CFE (en el recibo)", where: "PagoYa, OXXO, 7-Eleven, portal CFE", time: "Inmediato a 24 hrs", cost: "$25 MXN con PagoYa" },
+    { name: "Agua", provider: "SEAPAL Vallarta", data: "Número de contrato SEAPAL", where: "PagoYa, portal SEAPAL, OXXO", time: "1–48 horas", cost: "$25 MXN con PagoYa" },
+    { name: "Gas LP", provider: "Tomza, Zeta Gas, Gas Express u otro", data: "Número de cliente", where: "PagoYa, teléfono, portal del proveedor", time: "Inmediato", cost: "$25 MXN con PagoYa" },
+    { name: "Internet / Cable", provider: "Telmex, Izzi, Totalplay, Sky", data: "Número de cuenta del servicio", where: "PagoYa, OXXO, portales de cada empresa", time: "1–24 horas", cost: "$25 MXN con PagoYa" },
+    { name: "Predial", provider: "Tesorería Municipal de Puerto Vallarta", data: "Clave catastral", where: "PagoYa, portal municipal, tesorería", time: "24–72 horas", cost: "$25 MXN con PagoYa" },
   ];
 
   return (

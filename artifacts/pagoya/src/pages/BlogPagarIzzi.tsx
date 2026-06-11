@@ -32,7 +32,7 @@ export default function BlogPagarIzzi() {
       { "@type": "Question", "name": "¿Puedo pagar Izzi sin tarjeta de crédito o débito?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Puedes pagar tu recibo Izzi en efectivo en OXXO, o usar una billetera digital como PagoYa que se carga con efectivo. No necesitas tarjeta ni cuenta bancaria." } },
       { "@type": "Question", "name": "¿Cuánto tarda en aplicarse el pago de Izzi?", "acceptedAnswer": { "@type": "Answer", "text": "Los pagos procesados a través de PagoYa o OXXO se aplican en 24 a 48 horas hábiles en el sistema de Izzi. En casos urgentes, llama a Izzi para confirmar la aplicación manual." } },
       { "@type": "Question", "name": "¿Qué datos necesito para pagar Izzi?", "acceptedAnswer": { "@type": "Answer", "text": "Necesitas el número de cuenta Izzi (aparece en tu recibo mensual o en la app de Izzi). Con ese número puedes realizar el pago en cualquier punto autorizado." } },
-      { "@type": "Question", "name": "¿Cuánto cobra PagoYa por pagar Izzi?", "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra $15 MXN por transacción, sin importar el monto del recibo. Es una tarifa fija y transparente." } }
+      { "@type": "Question", "name": "¿Cuánto cobra PagoYa por pagar Izzi?", "acceptedAnswer": { "@type": "Answer", "text": "PagoYa cobra $25 MXN por transacción, sin importar el monto del recibo. Es una tarifa fija y transparente." } }
     ]
   };
 
@@ -117,7 +117,7 @@ export default function BlogPagarIzzi() {
           <table className="izzi-table">
             <thead><tr><th>Método</th><th>Costo extra</th><th>Tiempo de aplicación</th><th>¿Sin banco?</th></tr></thead>
             <tbody>
-              <tr><td><strong>PagoYa</strong> (desde celular)</td><td style={{ color: "#1D9E75" }}>$15 MXN</td><td style={{ color: "#CBD5E1" }}>1–24 horas</td><td style={{ color: "#1D9E75" }}>✓ Sí</td></tr>
+              <tr><td><strong>PagoYa</strong> (desde celular)</td><td style={{ color: "#1D9E75" }}>$25 MXN</td><td style={{ color: "#CBD5E1" }}>1–24 horas</td><td style={{ color: "#1D9E75" }}>✓ Sí</td></tr>
               <tr><td>OXXO (en tienda)</td><td style={{ color: "#CBD5E1" }}>$12–15 MXN</td><td style={{ color: "#CBD5E1" }}>24–48 horas</td><td style={{ color: "#1D9E75" }}>✓ Sí</td></tr>
               <tr><td>7-Eleven</td><td style={{ color: "#CBD5E1" }}>$10–15 MXN</td><td style={{ color: "#CBD5E1" }}>24–48 horas</td><td style={{ color: "#1D9E75" }}>✓ Sí</td></tr>
               <tr><td>Pago en tienda Izzi</td><td style={{ color: "#1D9E75" }}>Sin costo</td><td style={{ color: "#CBD5E1" }}>Inmediato</td><td style={{ color: "#1D9E75" }}>✓ Sí</td></tr>
@@ -154,7 +154,7 @@ export default function BlogPagarIzzi() {
           ["¿Puedo pagar Izzi sin tarjeta de crédito o débito?", "Sí. PagoYa te permite cargar tu billetera con efectivo en OXXO y luego pagar Izzi desde tu celular. Sin tarjeta, sin banco."],
           ["¿Cuánto tarda en aplicarse el pago de Izzi?", "Con PagoYa el pago se procesa en 1 a 24 horas. En OXXO o tiendas de conveniencia puede tardar 24 a 48 horas hábiles."],
           ["¿Qué datos necesito para pagar Izzi?", "Solo tu número de cuenta Izzi, que aparece en tu recibo mensual o en la app de Izzi."],
-          ["¿Cuánto cobra PagoYa por pagar Izzi?", "La tarifa fija es de $15 MXN por transacción, sin importar el monto del recibo."],
+          ["¿Cuánto cobra PagoYa por pagar Izzi?", "La tarifa fija es de $25 MXN por transacción, sin importar el monto del recibo."],
         ].map(([q, a]) => (
           <div key={q} style={{ marginBottom: "16px", background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "16px 20px", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ color: "#e2e8f0", fontWeight: 700, marginBottom: "8px", fontSize: "15px" }}>{q}</div>

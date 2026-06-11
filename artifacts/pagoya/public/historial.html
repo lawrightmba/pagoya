@@ -347,7 +347,7 @@
   }
 
   function formatMXN(amount, fee) {
-    const total = (parseFloat(amount || "0") + parseFloat(fee || "15")).toFixed(2);
+    const total = (parseFloat(amount || "0") + parseFloat(fee || "25")).toFixed(2);
     return "$" + Number(total).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN";
   }
 

@@ -327,7 +327,7 @@
     <div class="section">
       <div class="section-title">02 · Platform Revenue</div>
       <div class="panel panel-teal">
-        <div class="panel-header">Fee $15.00 MXN / transaction · GET /api/bills/admin/revenue</div>
+        <div class="panel-header">Fee $25.00 MXN / transaction · GET /api/bills/admin/revenue</div>
         <div class="card-grid card-grid-4" id="revenueGrid">
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:40px;height:10px;margin:0 auto;">&nbsp;</div></div>
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:50px;height:10px;margin:0 auto;">&nbsp;</div></div>
@@ -335,7 +335,7 @@
           <div class="stat-card"><div class="stat-value skel" style="width:70px;height:22px;margin:0 auto 4px;">&nbsp;</div><div class="stat-label skel" style="width:60px;height:10px;margin:0 auto;">&nbsp;</div></div>
         </div>
         <div class="pill-row">
-          <span class="pill">Fee per transaction: $15.00 MXN</span>
+          <span class="pill">Fee per transaction: $25.00 MXN</span>
           <span class="pill">Net margin per transaction: $3.00 MXN</span>
         </div>
       </div>
@@ -543,7 +543,7 @@
                             : p.status === 'pending'   ? 'badge-pending'
                             : 'badge-failed';
           const folio = p.taecelFolio || p.confirmationCode || '—';
-          const fee = p.platformFeeMxn ? fmt(p.platformFeeMxn) : '$15.00';
+          const fee = p.platformFeeMxn ? fmt(p.platformFeeMxn) : '$25.00';
           return `<tr>
             <td>${fmtDate(p.createdAt)}</td>
             <td>${p.serviceName || p.serviceId}</td>
