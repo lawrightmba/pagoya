@@ -39,6 +39,7 @@ function buildSystemPrompt(
   profileName?: string | null,
   ptiTier?: string | null,
   ptiScore?: number | null,
+  lang?: "es" | "en" | null,
 ): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
 
@@ -56,6 +57,10 @@ function buildSystemPrompt(
       ptiContext = ` Este usuario está en nivel *Bronce* con ${ptiScore} puntos de confianza — está comenzando su camino. Usa un tono especialmente cálido, paciente y alentador. Celebra cada acción que tome.`;
     }
   }
+
+  const langInstruction = lang === "en"
+    ? " IMPORTANT: This user's preferred language is ENGLISH. You MUST respond exclusively in English for the entire conversation. Do not switch to Spanish even if the user writes something in Spanish."
+    : " Responde siempre en español mexicano natural, a menos que el usuario te escriba en otro idioma.";
 
   return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario.${greeting}${ptiContext} Eres conversacional, empática y directa. Hablas en español mexicano natural.
 
@@ -90,7 +95,7 @@ UMBRAL DE ESCALACIÓN (Gap 5): Usa escalate_to_support en cualquiera de estos ca
 
 RETIROS / TRANSFERENCIA A CUENTA BANCARIA (SPEI OUT): Cuando el usuario quiere retirar su saldo, transferir a su banco, o enviar dinero a una CLABE, usa prepare_withdrawal. Necesitas: CLABE destino (18 dígitos, el usuario la encuentra en su app bancaria o estado de cuenta), monto (mínimo $50, máximo $8,000 MXN), y nombre completo del titular de la cuenta destino. El retiro llega en minutos por SPEI — sistema oficial del Banco de México. Sin comisión adicional: solo se descuenta el monto exacto del saldo. Si el usuario no sabe su CLABE, dile: "La CLABE la encuentras en tu app bancaria → Datos de cuenta → CLABE interbancaria. Son 18 números."
 
-Responde siempre en el mismo idioma que el usuario. Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.`;
+Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}`;
 }
 
 // ─── Tool definitions ──────────────────────────────────────────────────────────
@@ -463,11 +468,13 @@ router.post("/", async (req: Request, res: Response) => {
     telefono,
     history = [],
     profileName,
+    lang,
   } = req.body as {
     message?: string;
     telefono?: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
     profileName?: string | null;
+    lang?: "es" | "en" | null;
   };
 
   if (!message || message.trim().length === 0) {
@@ -509,7 +516,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName, ptiTier, ptiScore),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang),
         tools: TOOLS,
         messages,
       });

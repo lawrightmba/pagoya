@@ -14,6 +14,7 @@ export interface WhatsAppSession {
   lastActivity: number;
   pendingWithdrawal: PendingWithdrawalSession | null;
   awaitingName?: boolean;
+  lang: "es" | "en";
 }
 
 const sessions = new Map<string, WhatsAppSession>();
@@ -27,6 +28,7 @@ export function getSession(waId: string): WhatsAppSession {
     profileName: null,
     lastActivity: Date.now(),
     pendingWithdrawal: null,
+    lang: "es",
   };
   sessions.set(waId, fresh);
   return fresh;
