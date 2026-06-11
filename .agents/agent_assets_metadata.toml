@@ -281,3 +281,9 @@ id = "YZlgGGAEUNY9pt7INc3B0"
 uri = "file://.local/outputs/PagoYa-Pitch-Deck-June-11-2026.pdf"
 type = "pdf"
 title = "PagoYa Pitch Deck — June 11 2026 (PDF)"
+
+[[outputs]]
+id = "xUuA4pZhI_E6qWBWzgLFZ"
+uri = "file://.local/outputs/PagoYa-Pitch-Deck-June-11-2026-EN.pdf"
+type = "pdf"
+title = "PagoYa Pitch Deck June 11 2026 EN (PDF)"

@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide03Solution() {
   return (
     <div
@@ -28,7 +31,7 @@ export default function Slide03Solution() {
             marginBottom: "1.8vh"
           }}
         >
-          La Solución
+          {es ? "La Solución" : "The Solution"}
         </p>
         <h2
           style={{
@@ -41,8 +44,9 @@ export default function Slide03Solution() {
             marginBottom: "1.5vh"
           }}
         >
-          Una billetera. Todas las facturas.
-          Todas las tarjetas de regalo. Desde tu teléfono.
+          {es
+            ? "Una billetera. Todas las facturas.\nTodas las tarjetas de regalo. Desde tu teléfono."
+            : "One wallet. Every bill.\nEvery gift card. From your phone."}
         </h2>
         <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3.5vh" }} />
 
@@ -52,10 +56,12 @@ export default function Slide03Solution() {
               <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>01</span>
               <div>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
-                  Carga una vez en OXXO, con tarjeta o débito bancario
+                  {es ? "Carga una vez en OXXO, con tarjeta o débito bancario" : "Load once at OXXO, by card, or bank debit"}
                 </p>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  22,000 ubicaciones OXXO · Tarjeta Stripe · Débito bancario Belvo — acreditado en tiempo real
+                  {es
+                    ? "22,000 ubicaciones OXXO · Tarjeta Stripe · Débito bancario Belvo — acreditado en tiempo real"
+                    : "22,000 OXXO locations · Stripe card · Belvo bank debit — credited in real time"}
                 </p>
               </div>
             </div>
@@ -63,7 +69,7 @@ export default function Slide03Solution() {
               <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>02</span>
               <div>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
-                  Paga cualquier servicio desde tu teléfono
+                  {es ? "Paga cualquier servicio desde tu teléfono" : "Pay any utility from your phone"}
                 </p>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
                   CFE, Telmex, Izzi, TotalPlay, Gas Natural, Telcel, Sky, Megacable, Dish, AT&T
@@ -74,10 +80,12 @@ export default function Slide03Solution() {
               <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>03</span>
               <div>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
-                  Compra tarjetas de regalo y paga suscripciones
+                  {es ? "Compra tarjetas de regalo y paga suscripciones" : "Buy gift cards and pay subscriptions"}
                 </p>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  Netflix, Amazon, Google Play, Spotify — paga mensualidades o envía como regalo. Primera compra Netflix junio 2026
+                  {es
+                    ? "Netflix, Amazon, Google Play, Spotify — paga mensualidades o envía como regalo. Primera compra Netflix junio 2026"
+                    : "Netflix, Amazon, Google Play, Spotify — pay monthly or send as a gift. First Netflix purchase June 2026"}
                 </p>
               </div>
             </div>
@@ -85,10 +93,12 @@ export default function Slide03Solution() {
               <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 900, color: "#00C875", lineHeight: 1, minWidth: "3vw" }}>04</span>
               <div>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.3vh" }}>
-                  Confirmado por WhatsApp · Paula
+                  {es ? "Confirmado por WhatsApp · Paula" : "Confirmed via WhatsApp · Paula"}
                 </p>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  Recibo instantáneo, registro permanente, recordatorios de vencimiento — sin descarga de app
+                  {es
+                    ? "Recibo instantáneo, registro permanente, recordatorios de vencimiento — sin descarga de app"
+                    : "Instant receipt, permanent record, due-date reminders — no app download"}
                 </p>
               </div>
             </div>
@@ -108,14 +118,20 @@ export default function Slide03Solution() {
             }}
           >
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "8vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, letterSpacing: "-0.02em" }}>$25</p>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1 }}>Tarifa fija MXN</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1 }}>
+              {es ? "Tarifa fija MXN" : "MXN flat fee"}
+            </p>
             <div style={{ width: "3vw", height: "0.35vh", background: "#00C875" }} />
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
-              Cualquier servicio. Cualquier monto. Facturas o tarjetas de regalo.
+              {es
+                ? "Cualquier servicio. Cualquier monto. Facturas o tarjetas de regalo."
+                : "Any service. Any amount. Bills or gift cards."}
             </p>
             <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)" }} />
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "#00C875", fontWeight: 600, lineHeight: 1.4 }}>
-              Rentable desde $25 en el lanzamiento — sin precios de pérdida.
+              {es
+                ? "Rentable desde $25 en el lanzamiento — sin precios de pérdida."
+                : "Profitable from $25 at launch — no loss-leader pricing."}
             </p>
           </div>
         </div>

@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide04Market() {
   return (
     <div
@@ -22,7 +25,7 @@ export default function Slide04Market() {
               marginBottom: "1.2vh"
             }}
           >
-            Lo Que Está Activo Ahora
+            {es ? "Lo Que Está Activo Ahora" : "What's Live Right Now"}
           </p>
           <h2
             style={{
@@ -35,8 +38,7 @@ export default function Slide04Market() {
               marginBottom: "1.5vh"
             }}
           >
-            No lo presentamos.
-            Lo construimos.
+            {es ? "No lo presentamos.\nLo construimos." : "We didn't pitch it.\nWe built it."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
@@ -45,50 +47,78 @@ export default function Slide04Market() {
           <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>Pagos con tarjeta Stripe</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Activo desde el 31 de mayo de 2026</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                {es ? "Pagos con tarjeta Stripe" : "Stripe card payments"}
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "Activo desde el 31 de mayo de 2026" : "Live since May 31, 2026"}
+              </p>
             </div>
           </div>
           <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>Red de pagos SIPREL</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>10+ proveedores — CFE, Telmex, Sky, Izzi, Telcel…</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                {es ? "Red de pagos SIPREL" : "SIPREL payment network"}
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "10+ proveedores — CFE, Telmex, Sky, Izzi, Telcel…" : "10+ providers — CFE, Telmex, Sky, Izzi, Telcel…"}
+              </p>
             </div>
           </div>
           <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>Conekta / OXXO cash-in</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>22,000 ubicaciones de depósito activas en todo el país</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                Conekta / OXXO cash-in
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "22,000 ubicaciones de depósito activas en todo el país" : "22,000 active deposit locations nationwide"}
+              </p>
             </div>
           </div>
           <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>Banca abierta Belvo</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Débito bancario directo y vinculación de cuentas</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                {es ? "Banca abierta Belvo" : "Belvo open banking"}
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "Débito bancario directo y vinculación de cuentas" : "Direct bank debit and account linking"}
+              </p>
             </div>
           </div>
           <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>Tarjetas de regalo: Netflix · Amazon · Google Play · Spotify</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Primera tarjeta de regalo Netflix procesada junio 2026</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                {es
+                  ? "Tarjetas de regalo: Netflix · Amazon · Google Play · Spotify"
+                  : "Gift cards: Netflix · Amazon · Google Play · Spotify"}
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "Primera tarjeta de regalo Netflix procesada junio 2026" : "First Netflix gift card processed June 2026"}
+              </p>
             </div>
           </div>
           <div style={{ background: "rgba(255,92,26,0.07)", border: "1px solid rgba(255,92,26,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🔜</span>
             <div>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>STP / SPEI transferencia interbancaria</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Documentos corporativos enviados, credenciales solicitadas</p>
+              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
+                {es ? "STP / SPEI transferencia interbancaria" : "STP / SPEI interbank transfer"}
+              </p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                {es ? "Documentos corporativos enviados, credenciales solicitadas" : "Corporate docs submitted, credentials requested"}
+              </p>
             </div>
           </div>
         </div>
 
         <div style={{ background: "rgba(0,200,117,0.1)", borderLeft: "0.4vw solid #00C875", padding: "2vh 2.5vw", borderRadius: "0 0.6vw 0.6vw 0" }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
-            Usuarios beta registrados · Equipo en campo en colonias de Puerto Vallarta · Indexado en Google Search Console
+            {es
+              ? "Usuarios beta registrados · Equipo en campo en colonias de Puerto Vallarta · Indexado en Google Search Console"
+              : "Beta users registered · Field team active in Puerto Vallarta neighborhoods · Indexed in Google Search Console"}
           </p>
         </div>
       </div>

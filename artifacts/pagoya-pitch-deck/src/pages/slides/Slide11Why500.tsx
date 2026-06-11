@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide11Why500() {
   return (
     <div
@@ -12,10 +15,12 @@ export default function Slide11Why500() {
       <div className="relative z-10 flex flex-col" style={{ padding: "2.5vh 8vw 2vh" }}>
         <div style={{ marginBottom: "1.5vh" }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-            Panorama Competitivo
+            {es ? "Panorama Competitivo" : "Competitive Landscape"}
           </p>
           <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.7vh" }}>
-            Por qué las opciones existentes fallan a nuestro usuario
+            {es
+              ? "Por qué las opciones existentes fallan a nuestro usuario"
+              : "Why existing options fail our user"}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#FF5C1A" }} />
         </div>
@@ -48,55 +53,55 @@ export default function Slide11Why500() {
           </div>
 
           <div style={{ background: "rgba(255,255,255,0.03)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Tarifa fija</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{es ? "Tarifa fija" : "Flat fee"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Por servicio</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Por servicio" : "Per service"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Variable</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Variable" : "Variable"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Variable</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Variable" : "Variable"}</p>
           </div>
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>$25 MXN</p>
           </div>
 
           <div style={{ background: "rgba(255,255,255,0.03)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Sin descarga de app</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{es ? "Sin descarga de app" : "No app download"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>N/A</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Requerida</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Requerida" : "Required"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Requerida</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Requerida" : "Required"}</p>
           </div>
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>No requerida</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>{es ? "No requerida" : "Not required"}</p>
           </div>
 
           <div style={{ background: "rgba(255,255,255,0.03)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Tarjetas de regalo</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{es ? "Tarjetas de regalo" : "Gift cards"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "No" : "No"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Limitadas</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Limitadas" : "Limited"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "No" : "No"}</p>
           </div>
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>Sí — activas</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>{es ? "Sí — activas" : "Yes — live"}</p>
           </div>
 
           <div style={{ background: "rgba(255,255,255,0.03)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Activación en campo</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{es ? "Activación en campo" : "Field activation"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
@@ -108,28 +113,29 @@ export default function Slide11Why500() {
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
           </div>
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>Sí</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>{es ? "Sí" : "Yes"}</p>
           </div>
 
           <div style={{ background: "rgba(255,255,255,0.03)", padding: "1.1vh 1.8vw" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Agente IA en WhatsApp</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{es ? "Agente IA en WhatsApp" : "WhatsApp AI agent"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>Solo bot</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>{es ? "Solo bot" : "Bot only"}</p>
           </div>
           <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.4)" }}>No</p>
           </div>
           <div style={{ background: "rgba(0,200,117,0.07)", padding: "1.1vh 1.5vw", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>Sí — Paula</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875", fontWeight: 700 }}>Yes — Paula</p>
           </div>
 
-          {/* NEW ROW: Trust Score / Financial Identity */}
           <div style={{ background: "rgba(255,92,26,0.06)", padding: "1.1vh 1.8vw", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>Trust Score / identidad financiera</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
+              {es ? "Trust Score / identidad financiera" : "Trust Score / financial identity"}
+            </p>
           </div>
           <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.1vh 1.5vw", borderTop: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.3)" }}>No</p>
@@ -141,16 +147,15 @@ export default function Slide11Why500() {
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.3)" }}>No</p>
           </div>
           <div style={{ background: "rgba(255,92,26,0.12)", padding: "1.1vh 1.5vw", borderTop: "1px solid rgba(255,92,26,0.2)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#FF5C1A", fontWeight: 700 }}>✅ Único</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#FF5C1A", fontWeight: 700 }}>✅ {es ? "Único" : "Unique"}</p>
           </div>
         </div>
 
         <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
-          PagoYa es la única billetera construida para
-          <span style={{ color: "#00C875", fontWeight: 700 }}> usuarios que prefieren efectivo</span> —
-          y la única que convierte esos pagos en
-          <span style={{ color: "#FF5C1A", fontWeight: 700 }}> identidad financiera portable</span>.
-          Esa última fila no la puede copiar ningún competidor en 18 meses.
+          {es
+            ? <>PagoYa es la única billetera construida para<span style={{ color: "#00C875", fontWeight: 700 }}> usuarios que prefieren efectivo</span> — y la única que convierte esos pagos en<span style={{ color: "#FF5C1A", fontWeight: 700 }}> identidad financiera portable</span>. Esa última fila no la puede copiar ningún competidor en 18 meses.</>
+            : <>PagoYa is the only wallet built for<span style={{ color: "#00C875", fontWeight: 700 }}> cash-preferring users</span> — and the only one that converts those payments into<span style={{ color: "#FF5C1A", fontWeight: 700 }}> portable financial identity</span>. No competitor can copy that last row in 18 months.</>
+          }
         </p>
       </div>
     </div>

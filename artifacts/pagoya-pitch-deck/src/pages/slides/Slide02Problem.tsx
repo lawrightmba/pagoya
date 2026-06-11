@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide02Problem() {
   return (
     <div
@@ -28,7 +31,7 @@ export default function Slide02Problem() {
             marginBottom: "1.8vh"
           }}
         >
-          El Problema
+          {es ? "El Problema" : "The Problem"}
         </p>
         <h2
           style={{
@@ -42,8 +45,9 @@ export default function Slide02Problem() {
             textWrap: "balance"
           }}
         >
-          65 millones de adultos no bancarizados
-          pagan facturas en tiendas de conveniencia.
+          {es
+            ? "65 millones de adultos no bancarizados pagan facturas en tiendas de conveniencia."
+            : "65 million unbanked adults pay their bills at convenience stores."}
         </h2>
         <div style={{ width: "6vw", height: "0.4vh", background: "#FF5C1A", marginBottom: "4vh" }} />
 
@@ -56,7 +60,9 @@ export default function Slide02Problem() {
             marginBottom: "3.5vh"
           }}
         >
-          $14–20 MXN por servicio, por viaje, cada mes — haciendo fila, solo efectivo, sin registro digital.
+          {es
+            ? "$14–20 MXN por servicio, por viaje, cada mes — haciendo fila, solo efectivo, sin registro digital."
+            : "$14–20 MXN per service, per trip, every month — waiting in line, cash only, no digital record."}
         </p>
 
         <div className="grid grid-cols-2 gap-x-[5vw] gap-y-[2.8vh]" style={{ maxWidth: "80vw" }}>
@@ -64,10 +70,12 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                $60–80 MXN/mes
+                $60–80 MXN/{es ? "mes" : "mo"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                en comisiones por hogar típico (CFE + Telmex + 2 recargas)
+                {es
+                  ? "en comisiones por hogar típico (CFE + Telmex + 2 recargas)"
+                  : "in fees for a typical household (CFE + Telmex + 2 top-ups)"}
               </p>
             </div>
           </div>
@@ -75,10 +83,12 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                20–35 minutos
+                20–35 {es ? "minutos" : "minutes"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                por visita a tienda incluyendo traslado y tiempo de espera
+                {es
+                  ? "por visita a tienda incluyendo traslado y tiempo de espera"
+                  : "per store visit including travel and wait time"}
               </p>
             </div>
           </div>
@@ -89,7 +99,9 @@ export default function Slide02Problem() {
                 $400–600 MXN
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                comisión de reconexión CFE si se atrasa el pago
+                {es
+                  ? "comisión de reconexión CFE si se atrasa el pago"
+                  : "CFE reconnection fee if the payment is late"}
               </p>
             </div>
           </div>
@@ -97,10 +109,12 @@ export default function Slide02Problem() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.8vh", background: "#FF5C1A", marginTop: "0.4vh" }} />
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.6vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                Sin registro digital
+                {es ? "Sin registro digital" : "No digital record"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.8vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                sin historial de pagos, sin huella crediticia, sin recibos — invisibles financieramente
+                {es
+                  ? "sin historial de pagos, sin huella crediticia, sin recibos — invisibles financieramente"
+                  : "no payment history, no credit footprint, no receipts — financially invisible"}
               </p>
             </div>
           </div>

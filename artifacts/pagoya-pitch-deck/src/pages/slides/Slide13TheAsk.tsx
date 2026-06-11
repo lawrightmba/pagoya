@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide13TheAsk() {
   return (
     <div
@@ -22,7 +25,7 @@ export default function Slide13TheAsk() {
               marginBottom: "1.8vh"
             }}
           >
-            La Inversión
+            {es ? "La Inversión" : "The Investment"}
           </p>
           <h2
             style={{
@@ -35,10 +38,12 @@ export default function Slide13TheAsk() {
               marginBottom: "1.5vh"
             }}
           >
-            Pre-semilla: $250K–$750K USD
+            {es ? "Pre-semilla: $250K–$750K USD" : "Pre-Seed: $250K–$750K USD"}
           </h2>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.55)", marginBottom: "1.5vh" }}>
-            SAFE · 18 meses de operación · Meta: 2,500 billeteras activas · Actualmente en: Founder Institute Austin Verano 2026
+            {es
+              ? "SAFE · 18 meses de operación · Meta: 2,500 billeteras activas · Actualmente en: Founder Institute Austin Verano 2026"
+              : "SAFE · 18-month runway · Target: 2,500 active wallets · Currently in: Founder Institute Austin Summer 2026"}
           </p>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "4vh" }} />
         </div>
@@ -47,26 +52,50 @@ export default function Slide13TheAsk() {
           <div style={{ background: "rgba(0,200,117,0.1)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.8vw", padding: "2.5vh 2vw" }}>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5.5vw", fontWeight: 900, color: "#00C875", lineHeight: 0.9, marginBottom: "1vh" }}>40%</p>
             <div style={{ width: "2.5vw", height: "0.3vh", background: "#00C875", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>Tecnología</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Integración STP/SPEI · WhatsApp Business API · Fortalecimiento de plataforma</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>
+              {es ? "Tecnología" : "Technology"}
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+              {es
+                ? "Integración STP/SPEI · WhatsApp Business API · Fortalecimiento de plataforma"
+                : "STP/SPEI integration · WhatsApp Business API · Platform hardening"}
+            </p>
           </div>
           <div style={{ background: "rgba(255,92,26,0.1)", border: "1px solid rgba(255,92,26,0.25)", borderRadius: "0.8vw", padding: "2.5vh 2vw" }}>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5.5vw", fontWeight: 900, color: "#FF5C1A", lineHeight: 0.9, marginBottom: "1vh" }}>30%</p>
             <div style={{ width: "2.5vw", height: "0.3vh", background: "#FF5C1A", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>Crecimiento</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Expansión de red de representantes a 3 ciudades · Primeras 2,500 billeteras activas</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>
+              {es ? "Crecimiento" : "Growth"}
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+              {es
+                ? "Expansión de red de representantes a 3 ciudades · Primeras 2,500 billeteras activas"
+                : "Rep network expansion to 3 cities · First 2,500 active wallets"}
+            </p>
           </div>
           <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "2.5vh 2vw" }}>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5.5vw", fontWeight: 900, color: "rgba(255,255,255,0.7)", lineHeight: 0.9, marginBottom: "1vh" }}>20%</p>
             <div style={{ width: "2.5vw", height: "0.3vh", background: "rgba(255,255,255,0.7)", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>Regulatorio</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Preparación licencia CNBV SOFOM · Infraestructura legal</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>
+              {es ? "Regulatorio" : "Regulatory"}
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+              {es
+                ? "Preparación licencia CNBV SOFOM · Infraestructura legal"
+                : "CNBV SOFOM license preparation · Legal infrastructure"}
+            </p>
           </div>
           <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "2.5vh 2vw" }}>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5.5vw", fontWeight: 900, color: "rgba(255,255,255,0.7)", lineHeight: 0.9, marginBottom: "1vh" }}>10%</p>
             <div style={{ width: "2.5vw", height: "0.3vh", background: "rgba(255,255,255,0.7)", marginBottom: "1.2vh" }} />
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>Operaciones</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Equipo · Cumplimiento · Infraestructura de soporte al cliente</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.6vh" }}>
+              {es ? "Operaciones" : "Operations"}
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+              {es
+                ? "Equipo · Cumplimiento · Infraestructura de soporte al cliente"
+                : "Team · Compliance · Customer support infrastructure"}
+            </p>
           </div>
         </div>
 
@@ -80,7 +109,9 @@ export default function Slide13TheAsk() {
             }}
           >
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.75vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
-              5 rieles activos · Tarjetas de regalo activas · Equipo en campo · Founder Institute Austin Verano 2026
+              {es
+                ? "5 rieles activos · Tarjetas de regalo activas · Equipo en campo · Founder Institute Austin Verano 2026"
+                : "5 live rails · Gift cards live · Field team deployed · Founder Institute Austin Summer 2026"}
             </p>
           </div>
           <div className="flex flex-col items-end gap-[0.5vh]">

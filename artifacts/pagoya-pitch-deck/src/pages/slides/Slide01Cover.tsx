@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 const base = import.meta.env.BASE_URL;
 
 export default function Slide01Cover() {
@@ -28,7 +31,7 @@ export default function Slide01Cover() {
               marginBottom: "2.5vh"
             }}
           >
-            Presentación Pre-Semilla · Junio 2026
+            {es ? "Presentación Pre-Semilla · Junio 2026" : "Pre-Seed Presentation · June 2026"}
           </p>
           <h1
             style={{
@@ -42,16 +45,11 @@ export default function Slide01Cover() {
               whiteSpace: "pre-line"
             }}
           >
-            {"Identidad financiera\npara los 65 millones\ninvisibles de México."}
+            {es
+              ? "Identidad financiera\npara los 65 millones\ninvisibles de México."
+              : "Financial identity\nfor Mexico's 65 million\nunbanked."}
           </h1>
-          <div
-            style={{
-              width: "8vw",
-              height: "0.5vh",
-              background: "#FF5C1A",
-              marginBottom: "3vh"
-            }}
-          />
+          <div style={{ width: "8vw", height: "0.5vh", background: "#FF5C1A", marginBottom: "3vh" }} />
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
@@ -63,8 +61,9 @@ export default function Slide01Cover() {
               marginBottom: "1.2vh"
             }}
           >
-            Paula paga tus facturas, construye tu Trust Score y te da acceso a crédito —
-            sin cuenta bancaria, en dos minutos, desde WhatsApp.
+            {es
+              ? "Paula paga tus facturas, construye tu Trust Score y te da acceso a crédito — sin cuenta bancaria, en dos minutos, desde WhatsApp."
+              : "Paula pays your bills, builds your Trust Score, and unlocks credit access — no bank account, in two minutes, via WhatsApp."}
           </p>
           <p
             style={{
@@ -75,54 +74,22 @@ export default function Slide01Cover() {
               lineHeight: 1.4
             }}
           >
-            $25 MXN tarifa fija · Sin descarga de app · Rentable desde la transacción 1
+            {es
+              ? "$25 MXN tarifa fija · Sin descarga de app · Rentable desde la transacción 1"
+              : "$25 MXN flat fee · No app download · Profitable from transaction 1"}
           </p>
         </div>
 
         <div className="flex items-center gap-[3vw]">
-          <span
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.6vw",
-              color: "rgba(255,255,255,0.5)"
-            }}
-          >
+          <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.5)" }}>
             pagoyamx.com
           </span>
-          <span
-            style={{
-              width: "0.35vw",
-              height: "0.35vw",
-              borderRadius: "50%",
-              background: "#00C875",
-              display: "inline-block"
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.6vw",
-              color: "rgba(255,255,255,0.5)"
-            }}
-          >
+          <span style={{ width: "0.35vw", height: "0.35vw", borderRadius: "50%", background: "#00C875", display: "inline-block" }} />
+          <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.5)" }}>
             lloyd@pagoyamx.com
           </span>
-          <span
-            style={{
-              width: "0.35vw",
-              height: "0.35vw",
-              borderRadius: "50%",
-              background: "#00C875",
-              display: "inline-block"
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.6vw",
-              color: "rgba(255,255,255,0.5)"
-            }}
-          >
+          <span style={{ width: "0.35vw", height: "0.35vw", borderRadius: "50%", background: "#00C875", display: "inline-block" }} />
+          <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.5)" }}>
             Founder Institute Austin · Summer 2026
           </span>
         </div>
@@ -130,11 +97,7 @@ export default function Slide01Cover() {
 
       <div
         className="absolute right-0 top-0 bottom-0"
-        style={{
-          width: "0.4vw",
-          background: "linear-gradient(180deg, #00C875 0%, transparent 100%)",
-          opacity: 0.7
-        }}
+        style={{ width: "0.4vw", background: "linear-gradient(180deg, #00C875 0%, transparent 100%)", opacity: 0.7 }}
       />
     </div>
   );

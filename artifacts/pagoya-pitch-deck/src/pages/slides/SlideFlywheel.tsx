@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function SlideFlywheel() {
   return (
     <div
@@ -11,23 +14,20 @@ export default function SlideFlywheel() {
 
       <div className="relative z-10 flex flex-col h-full" style={{ padding: "4vh 8vw 3.5vh" }}>
 
-        {/* Header */}
         <div style={{ marginBottom: "2.5vh", flexShrink: 0 }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
-            El Efecto Compuesto
+            {es ? "El Efecto Compuesto" : "The Compounding Effect"}
           </p>
           <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4.8vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 0.95 }}>
-            Un volante de inercia que se acelera solo.
+            {es ? "Un volante de inercia que se acelera solo." : "A flywheel that accelerates itself."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginTop: "1.2vh" }} />
         </div>
 
         <div className="flex gap-[3vw]" style={{ flex: 1, minHeight: 0 }}>
 
-          {/* Flywheel diagram — left */}
           <div style={{ width: "44%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
 
-            {/* Outer ring */}
             <div style={{
               width: "38vw", height: "38vw",
               maxWidth: "62vh", maxHeight: "62vh",
@@ -36,7 +36,6 @@ export default function SlideFlywheel() {
               position: "absolute",
             }} />
 
-            {/* Rotation arrow hints */}
             {[0, 60, 120, 180, 240, 300].map(deg => (
               <div key={deg} style={{
                 position: "absolute",
@@ -49,7 +48,6 @@ export default function SlideFlywheel() {
               }}>↻</div>
             ))}
 
-            {/* Center hub */}
             <div style={{
               width: "11vw", height: "11vw",
               maxWidth: "17vh", maxHeight: "17vh",
@@ -66,16 +64,24 @@ export default function SlideFlywheel() {
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.2 }}>Trust Score<br />Engine</p>
             </div>
 
-            {/* 5 flywheel nodes */}
-            {[
-              { angle: -90, label: "Pagos de\nservicios", emoji: "💳", color: "#00C875" },
-              { angle: -18, label: "Datos de\ncomportamiento", emoji: "🧠", color: "#00C875" },
-              { angle: 54, label: "Trust Score\ncreció", emoji: "📈", color: "#FF5C1A" },
-              { angle: 126, label: "Productos\nfinancieros", emoji: "🏦", color: "#FF5C1A" },
-              { angle: 198, label: "Mayor\nengagement", emoji: "🔄", color: "#00C875" },
-            ].map(({ angle, label, emoji, color }) => {
+            {(es
+              ? [
+                  { angle: -90, label: "Pagos de\nservicios", emoji: "💳", color: "#00C875" },
+                  { angle: -18, label: "Datos de\ncomportamiento", emoji: "🧠", color: "#00C875" },
+                  { angle: 54, label: "Trust Score\ncreció", emoji: "📈", color: "#FF5C1A" },
+                  { angle: 126, label: "Productos\nfinancieros", emoji: "🏦", color: "#FF5C1A" },
+                  { angle: 198, label: "Mayor\nengagement", emoji: "🔄", color: "#00C875" },
+                ]
+              : [
+                  { angle: -90, label: "Service\npayments", emoji: "💳", color: "#00C875" },
+                  { angle: -18, label: "Behavioral\ndata", emoji: "🧠", color: "#00C875" },
+                  { angle: 54, label: "Trust Score\ngrows", emoji: "📈", color: "#FF5C1A" },
+                  { angle: 126, label: "Financial\nproducts", emoji: "🏦", color: "#FF5C1A" },
+                  { angle: 198, label: "Higher\nengagement", emoji: "🔄", color: "#00C875" },
+                ]
+            ).map(({ angle, label, emoji, color }) => {
               const rad = (angle * Math.PI) / 180;
-              const r = 41; // % of container
+              const r = 41;
               const cx = 50 + r * Math.cos(rad);
               const cy = 50 + r * Math.sin(rad);
               return (
@@ -99,14 +105,12 @@ export default function SlideFlywheel() {
             })}
           </div>
 
-          {/* Right side — two columns of accelerants */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "1.5vh" }}>
 
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-              Aceleradores del volante
+              {es ? "Aceleradores del volante" : "Flywheel accelerants"}
             </p>
 
-            {/* Loyalty / gamification block */}
             <div style={{
               background: "linear-gradient(135deg, rgba(255,92,26,0.1) 0%, rgba(255,92,26,0.04) 100%)",
               border: "1px solid rgba(255,92,26,0.3)",
@@ -114,16 +118,24 @@ export default function SlideFlywheel() {
               padding: "1.8vh 2vw",
             }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.1vh" }}>
-                🎮 Capa de lealtad y gamificación
+                {es ? "🎮 Capa de lealtad y gamificación" : "🎮 Loyalty & gamification layer"}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8vh 2vw" }}>
-                {[
-                  ["🎡", "Ruleta de bienvenida", "Giro gratis al registrarse — premia desde el día 1"],
-                  ["🎯", "Misiones progresivas", "8 misiones activas: Power Payer, Mes Constante, Multi-Servicio"],
-                  ["🔥", "Bonus semanal", "+15/+30/+50 pts en pagos #3, #5, #10 de la semana"],
-                  ["🏆", "Gran Premio mensual", "$2,000 MXN en sorteo — cada usuario es un participante"],
-                ].map(([emoji, title, desc]) => (
-                  <div key={title} className="flex items-start gap-[0.7vw]">
+                {(es
+                  ? [
+                      ["🎡", "Ruleta de bienvenida", "Giro gratis al registrarse — premia desde el día 1"],
+                      ["🎯", "Misiones progresivas", "8 misiones activas: Power Payer, Mes Constante, Multi-Servicio"],
+                      ["🔥", "Bonus semanal", "+15/+30/+50 pts en pagos #3, #5, #10 de la semana"],
+                      ["🏆", "Gran Premio mensual", "$2,000 MXN en sorteo — cada usuario es un participante"],
+                    ]
+                  : [
+                      ["🎡", "Welcome spin", "Free spin on sign-up — rewards from day 1"],
+                      ["🎯", "Progressive missions", "8 active missions: Power Payer, Consistent Month, Multi-Service"],
+                      ["🔥", "Weekly bonus", "+15/+30/+50 pts on payments #3, #5, #10 of the week"],
+                      ["🏆", "Monthly grand prize", "$2,000 MXN raffle — every user is a participant"],
+                    ]
+                ).map(([emoji, title, desc]) => (
+                  <div key={title as string} className="flex items-start gap-[0.7vw]">
                     <span style={{ fontSize: "1.4vw", flexShrink: 0 }}>{emoji}</span>
                     <div>
                       <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.1vh" }}>{title}</p>
@@ -134,7 +146,6 @@ export default function SlideFlywheel() {
               </div>
             </div>
 
-            {/* Switching costs block */}
             <div style={{
               background: "rgba(0,200,117,0.07)",
               border: "1px solid rgba(0,200,117,0.2)",
@@ -142,14 +153,21 @@ export default function SlideFlywheel() {
               padding: "1.6vh 2vw",
             }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1vh" }}>
-                🔒 Costos de cambio — por qué se quedan
+                {es ? "🔒 Costos de cambio — por qué se quedan" : "🔒 Switching costs — why they stay"}
               </p>
               <div className="flex gap-[2vw]">
-                {[
-                  { label: "90 días", desc: "Trust Score construido — abandonarlo = empezar desde cero" },
-                  { label: "Puntos acumulados", desc: "Canjeable por descuentos — se pierden al salir" },
-                  { label: "Paula me conoce", desc: "Mis facturas, vencimientos, historial. Ningún competidor lo tiene." },
-                ].map(({ label, desc }) => (
+                {(es
+                  ? [
+                      { label: "90 días", desc: "Trust Score construido — abandonarlo = empezar desde cero" },
+                      { label: "Puntos acumulados", desc: "Canjeable por descuentos — se pierden al salir" },
+                      { label: "Paula me conoce", desc: "Mis facturas, vencimientos, historial. Ningún competidor lo tiene." },
+                    ]
+                  : [
+                      { label: "90 days", desc: "Trust Score built — abandoning it means starting from zero" },
+                      { label: "Accumulated points", desc: "Redeemable for discounts — lost on exit" },
+                      { label: "Paula knows me", desc: "My bills, due dates, history. No competitor has this." },
+                    ]
+                ).map(({ label, desc }) => (
                   <div key={label} style={{ flex: 1, borderLeft: "0.25vw solid rgba(0,200,117,0.3)", paddingLeft: "0.8vw" }}>
                     <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.7vw", fontWeight: 800, color: "#00C875", lineHeight: 1, marginBottom: "0.3vh" }}>{label}</p>
                     <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.35 }}>{desc}</p>
@@ -158,17 +176,23 @@ export default function SlideFlywheel() {
               </div>
             </div>
 
-            {/* The result */}
             <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.6vh 2vw" }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.9vh" }}>
-                El resultado después de 12 meses
+                {es ? "El resultado después de 12 meses" : "The result after 12 months"}
               </p>
               <div className="flex gap-[3vw]">
-                {[
-                  { stat: "< $0", label: "CAC neto efectivo", sub: "Rep activa 1 usuario · P2P activa 3–5 más" },
-                  { stat: "85%+", label: "Retención a 90 días", sub: "Trust Score crea lock-in natural" },
-                  { stat: "5×", label: "Transacciones/mes", sub: "Frecuencia objetivo por billetera activa" },
-                ].map(({ stat, label, sub }) => (
+                {(es
+                  ? [
+                      { stat: "< $0", label: "CAC neto efectivo", sub: "Rep activa 1 usuario · P2P activa 3–5 más" },
+                      { stat: "85%+", label: "Retención a 90 días", sub: "Trust Score crea lock-in natural" },
+                      { stat: "5×", label: "Transacciones/mes", sub: "Frecuencia objetivo por billetera activa" },
+                    ]
+                  : [
+                      { stat: "< $0", label: "Net effective CAC", sub: "Rep activates 1 user · P2P activates 3–5 more" },
+                      { stat: "85%+", label: "90-day retention", sub: "Trust Score creates natural lock-in" },
+                      { stat: "5×", label: "Transactions/month", sub: "Target frequency per active wallet" },
+                    ]
+                ).map(({ stat, label, sub }) => (
                   <div key={label} style={{ textAlign: "center" }}>
                     <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3.5vw", fontWeight: 900, color: "#00C875", lineHeight: 1, marginBottom: "0.2vh" }}>{stat}</p>
                     <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{label}</p>

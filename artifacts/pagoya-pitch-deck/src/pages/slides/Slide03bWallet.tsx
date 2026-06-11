@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide03bWallet() {
   return (
     <div
@@ -13,10 +16,10 @@ export default function Slide03bWallet() {
 
         <div style={{ marginBottom: "2.2vh" }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
-            La Billetera PagoYa
+            {es ? "La Billetera PagoYa" : "The PagoYa Wallet"}
           </p>
           <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4.8vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 0.95, letterSpacing: "-0.01em" }}>
-            Carga una vez. Paga todo.
+            {es ? "Carga una vez. Paga todo." : "Load once. Pay everything."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginTop: "1.2vh" }} />
         </div>
@@ -25,35 +28,49 @@ export default function Slide03bWallet() {
 
           <div style={{ width: "28%", display: "flex", flexDirection: "column" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.2vh", flexShrink: 0 }}>
-              Agrega dinero vía
+              {es ? "Agrega dinero vía" : "Add money via"}
             </p>
             <div className="flex flex-col gap-[1.8vh]" style={{ flex: 1 }}>
               <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.8vh 1.4vw", display: "flex", alignItems: "center", gap: "1.2vw", flex: 1 }}>
                 <span style={{ fontSize: "2.2vw", flexShrink: 0 }}>🏪</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>Depósito OXXO</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>22,000 ubicaciones en todo el país</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>
+                    {es ? "Depósito OXXO" : "OXXO deposit"}
+                  </p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                    {es ? "22,000 ubicaciones en todo el país" : "22,000 locations nationwide"}
+                  </p>
                 </div>
               </div>
               <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.8vh 1.4vw", display: "flex", alignItems: "center", gap: "1.2vw", flex: 1 }}>
                 <span style={{ fontSize: "2.2vw", flexShrink: 0 }}>💳</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>Tarjeta débito / crédito</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>Visa, Mastercard vía Stripe</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>
+                    {es ? "Tarjeta débito / crédito" : "Debit / credit card"}
+                  </p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                    Visa, Mastercard {es ? "vía Stripe" : "via Stripe"}
+                  </p>
                 </div>
               </div>
               <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.8vh 1.4vw", display: "flex", alignItems: "center", gap: "1.2vw", flex: 1 }}>
                 <span style={{ fontSize: "2.2vw", flexShrink: 0 }}>🏦</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>Débito bancario</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>Directo de tu cuenta vía Belvo</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>
+                    {es ? "Débito bancario" : "Bank debit"}
+                  </p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                    {es ? "Directo de tu cuenta vía Belvo" : "Direct from your account via Belvo"}
+                  </p>
                 </div>
               </div>
               <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.8vh 1.4vw", display: "flex", alignItems: "center", gap: "1.2vw", flex: 1 }}>
                 <span style={{ fontSize: "2.2vw", flexShrink: 0 }}>⚡</span>
                 <div>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.15 }}>STP / SPEI</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>Interbancario instantáneo — en proceso</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                    {es ? "Interbancario instantáneo — en proceso" : "Instant interbank transfer — in progress"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -63,16 +80,16 @@ export default function Slide03bWallet() {
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.2vh", flexShrink: 0 }}>
-              Paga cualquier cosa
+              {es ? "Paga cualquier cosa" : "Pay anything"}
             </p>
             <div className="flex flex-col gap-[1.8vh]" style={{ flex: 1 }}>
 
               <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.3)", borderRadius: "0.8vw", padding: "2vh 1.8vw", flex: 1 }}>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1vh" }}>
-                  ⚡ Recibos de servicios
+                  {es ? "⚡ Recibos de servicios" : "⚡ Utility bills"}
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6vh 1.8vw" }}>
-                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· CFE (electricidad)</span>
+                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· CFE {es ? "(electricidad)" : "(electricity)"}</span>
                   <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· Telmex</span>
                   <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· Izzi</span>
                   <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· TotalPlay</span>
@@ -87,7 +104,7 @@ export default function Slide03bWallet() {
 
               <div style={{ background: "rgba(255,92,26,0.08)", border: "1px solid rgba(255,92,26,0.3)", borderRadius: "0.8vw", padding: "2vh 1.8vw", flex: 1 }}>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1vh" }}>
-                  🎁 Tarjetas de regalo y suscripciones
+                  {es ? "🎁 Tarjetas de regalo y suscripciones" : "🎁 Gift cards & subscriptions"}
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6vh 1.8vw" }}>
                   <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FFFFFF" }}>· Netflix</span>
@@ -103,18 +120,22 @@ export default function Slide03bWallet() {
               <div style={{ display: "flex", gap: "2vw", flex: 1 }}>
                 <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "0.8vw", padding: "1.8vh 1.5vw" }}>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.7vh" }}>
-                    👥 Transferencias P2P <span style={{ color: "#FF5C1A" }}>· próximamente</span>
+                    👥 {es ? "Transferencias P2P" : "P2P Transfers"} <span style={{ color: "#FF5C1A" }}>· {es ? "próximamente" : "coming soon"}</span>
                   </p>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>
-                    Divide gastos, envía saldo, págense entre sí por WhatsApp
+                    {es
+                      ? "Divide gastos, envía saldo, págense entre sí por WhatsApp"
+                      : "Split expenses, send balance, pay each other via WhatsApp"}
                   </p>
                 </div>
                 <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "0.8vw", padding: "1.8vh 1.5vw" }}>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.7vh" }}>
-                    📈 Historial crediticio <span style={{ color: "#FF5C1A" }}>· próximamente</span>
+                    📈 {es ? "Historial crediticio" : "Credit history"} <span style={{ color: "#FF5C1A" }}>· {es ? "próximamente" : "coming soon"}</span>
                   </p>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>
-                    El historial de pagos habilita BNPL, microcréditos y seguros
+                    {es
+                      ? "El historial de pagos habilita BNPL, microcréditos y seguros"
+                      : "Payment history unlocks BNPL, micro-loans, and insurance"}
                   </p>
                 </div>
               </div>

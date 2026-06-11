@@ -1,3 +1,6 @@
+import { LANG } from "@/lang";
+const es = LANG === "es";
+
 export default function Slide03Paula() {
   return (
     <div
@@ -23,7 +26,7 @@ export default function Slide03Paula() {
                 textTransform: "uppercase"
               }}
             >
-              Conoce a Paula
+              {es ? "Conoce a Paula" : "Meet Paula"}
             </p>
             <div
               style={{
@@ -37,7 +40,9 @@ export default function Slide03Paula() {
               }}
             >
               <span style={{ fontSize: "1.1vw" }}>🤖</span>
-              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>Agente con IA</span>
+              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {es ? "Agente con IA" : "AI Agent"}
+              </span>
             </div>
           </div>
           <h2
@@ -51,8 +56,7 @@ export default function Slide03Paula() {
               marginBottom: "1.5vh"
             }}
           >
-            No es un chatbot.
-            Es un agente que actúa.
+            {es ? "No es un chatbot.\nEs un agente que actúa." : "Not a chatbot.\nAn agent that acts."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
 
@@ -60,29 +64,53 @@ export default function Slide03Paula() {
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🧠</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>Entiende lenguaje natural</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Sin menús, sin formularios, sin app. Di "Paga mi CFE" o "Dame Netflix" — Paula resuelve el resto</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Entiende lenguaje natural" : "Understands natural language"}
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es
+                    ? 'Sin menús, sin formularios, sin app. Di "Paga mi CFE" o "Dame Netflix" — Paula resuelve el resto'
+                    : 'No menus, no forms, no app. Say "Pay my CFE" or "Get me Netflix" — Paula handles the rest'}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>⚡</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>Razona y actúa de forma autónoma</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Consulta la factura, verifica tu saldo, confirma el monto, ejecuta el pago — un mensaje</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Razona y actúa de forma autónoma" : "Reasons and acts autonomously"}
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es
+                    ? "Consulta la factura, verifica tu saldo, confirma el monto, ejecuta el pago — un mensaje"
+                    : "Looks up the bill, checks your balance, confirms the amount, executes the payment — one message"}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🔮</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>Memoria persistente entre conversaciones</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Recuerda cada factura, vencimiento y pago. Construye identidad financiera para personas sin cuenta bancaria</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Memoria persistente entre conversaciones" : "Persistent memory across conversations"}
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es
+                    ? "Recuerda cada factura, vencimiento y pago. Construye identidad financiera para personas sin cuenta bancaria"
+                    : "Remembers every bill, due date, and payment. Builds financial identity for people without a bank account"}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>📡</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>Proactiva — avisa antes de los cortes</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>Paula te escribe 3 días antes de tu vencimiento. Tú no tienes que recordarlo. Ella sí.</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Proactiva — avisa antes de los cortes" : "Proactive — alerts before cutoffs"}
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es
+                    ? "Paula te escribe 3 días antes de tu vencimiento. Tú no tienes que recordarlo. Ella sí."
+                    : "Paula messages you 3 days before your due date. You don't have to remember it. She does."}
+                </p>
               </div>
             </div>
           </div>
@@ -126,7 +154,7 @@ export default function Slide03Paula() {
               </div>
               <div>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>Paula · PagoYa</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.75)", lineHeight: 1 }}>en línea</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.75)", lineHeight: 1 }}>{es ? "en línea" : "online"}</p>
               </div>
             </div>
 
@@ -143,36 +171,58 @@ export default function Slide03Paula() {
             >
               <div style={{ alignSelf: "flex-start", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,200,117,0.18)", border: "1px solid rgba(0,200,117,0.5)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
-                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>✦ Paula te avisa de forma proactiva</span>
+                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
+                    {es ? "✦ Paula te avisa de forma proactiva" : "✦ Paula proactively alerts you"}
+                  </span>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>{"⚠️ Aviso — tu recibo CFE ($380 MXN) vence en 3 días.\n\n¿Lo pago ahora de tu saldo? Tienes $520 MXN disponibles."}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
+                    {es
+                      ? "⚠️ Aviso — tu recibo CFE ($380 MXN) vence en 3 días.\n\n¿Lo pago ahora de tu saldo? Tienes $520 MXN disponibles."
+                      : "⚠️ Heads up — your CFE bill ($380 MXN) is due in 3 days.\n\nShall I pay it now from your balance? You have $520 MXN available."}
+                  </p>
                 </div>
               </div>
               <div style={{ alignSelf: "flex-end", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ background: "#DCF8C6", borderRadius: "1.2vw 0.3vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45 }}>Sí, págalo</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45 }}>
+                    {es ? "Sí, págalo" : "Yes, pay it"}
+                  </p>
                 </div>
               </div>
               <div style={{ alignSelf: "flex-start", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,200,117,0.18)", border: "1px solid rgba(0,200,117,0.5)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
-                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>✦ Paula razona, verifica y ejecuta</span>
+                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
+                    {es ? "✦ Paula razona, verifica y ejecuta" : "✦ Paula reasons, verifies and executes"}
+                  </span>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>{"Verificando saldo… ✓\nVerificando cuenta CFE… ✓\nProcesando vía SIPREL… ✓\n\n✅ Listo. CFE pagado.\n📄 Recibo #CFE-2026-0604-8821 · $380 MXN + $25 cuota"}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
+                    {es
+                      ? "Verificando saldo… ✓\nVerificando cuenta CFE… ✓\nProcesando vía SIPREL… ✓\n\n✅ Listo. CFE pagado.\n📄 Recibo #CFE-2026-0604-8821 · $380 MXN + $25 cuota"
+                      : "Checking balance… ✓\nVerifying CFE account… ✓\nProcessing via SIPREL… ✓\n\n✅ Done. CFE paid.\n📄 Receipt #CFE-2026-0604-8821 · $380 MXN + $25 fee"}
+                  </p>
                 </div>
               </div>
               <div style={{ alignSelf: "flex-end", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ background: "#DCF8C6", borderRadius: "1.2vw 0.3vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45 }}>También tráeme Netflix</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45 }}>
+                    {es ? "También tráeme Netflix" : "Also get me Netflix"}
+                  </p>
                 </div>
               </div>
               <div style={{ alignSelf: "flex-start", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,200,117,0.18)", border: "1px solid rgba(0,200,117,0.5)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
-                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>✦ Paula recuerda tu historial</span>
+                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
+                    {es ? "✦ Paula recuerda tu historial" : "✦ Paula remembers your history"}
+                  </span>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>{"Listo 🎬 El mes pasado compraste Netflix por $99 MXN.\n\n¿Misma tarjeta? ¿O lo envías como regalo esta vez?"}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
+                    {es
+                      ? "Listo 🎬 El mes pasado compraste Netflix por $99 MXN.\n\n¿Misma tarjeta? ¿O lo envías como regalo esta vez?"
+                      : "Done 🎬 Last month you bought Netflix for $99 MXN.\n\nSame card? Or are you sending it as a gift this time?"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -188,7 +238,9 @@ export default function Slide03Paula() {
               }}
             >
               <div style={{ flex: 1, background: "#FFFFFF", borderRadius: "2vw", padding: "1vh 1.5vw" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#AAA" }}>Escribe un mensaje…</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#AAA" }}>
+                  {es ? "Escribe un mensaje…" : "Type a message…"}
+                </p>
               </div>
               <div style={{ width: "3.5vh", height: "3.5vh", borderRadius: "50%", background: "#075E54", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: "1.4vh" }}>➤</span>
