@@ -926,7 +926,7 @@ export default function Register() {
             }}
             onTouchEnd={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; }}
           >
-            {submitting ? "Registrando…" : "Registrarme / Sign Me Up"}
+            {submitting ? "Registrando…" : "Crear mi cuenta gratis + $150 MXN"}
           </button>
         </form>
 

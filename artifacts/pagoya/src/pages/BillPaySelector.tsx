@@ -417,6 +417,24 @@ export default function BillPaySelector() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
 
+  // Bonus-wallet indicator: show banner if user has wallet balance but no completed payments yet
+  const [showBonusBanner, setShowBonusBanner] = useState(false);
+  useEffect(() => {
+    const phone = (() => { try { return localStorage.getItem("pagoya_telefono") || localStorage.getItem("pagoya_phone") || ""; } catch { return ""; } })();
+    if (!phone) return;
+    const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+    Promise.all([
+      fetch(`${BASE}/api/wallet/balance?telefono=${encodeURIComponent(phone)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=1`).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([bal, hist]) => {
+      const balance = bal?.balance ?? bal?.balanceMXN ?? 0;
+      const hasCompletedPayment = Array.isArray(hist) && hist.some((r: { status: string }) =>
+        r.status === "completed" || r.status === "confirmed" || r.status === "confirmado" || r.status === "success"
+      );
+      if (balance > 0 && !hasCompletedPayment) setShowBonusBanner(true);
+    });
+  }, []);
+
   // Recently-paid services (H6)
   const [recentServices, setRecentServices] = useState<{ name: string; emoji: string; id: string }[]>([]);
   useEffect(() => {
@@ -574,6 +592,31 @@ export default function BillPaySelector() {
         {/* ── STEP 1: SERVICE SELECTION ──────────────────────────────── */}
         {step === "select" && (
           <main className="flex-1 flex flex-col">
+            {/* ── Bonus wallet indicator ────────────────────────────────── */}
+            {showBonusBanner && (
+              <div className="px-4 pt-4 max-w-sm mx-auto w-full">
+                <div style={{
+                  background: "linear-gradient(135deg, #004F2D 0%, #046C2C 100%)",
+                  borderRadius: "14px",
+                  padding: "14px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  border: "1px solid rgba(110,245,176,0.20)",
+                }}>
+                  <span style={{ fontSize: "24px", flexShrink: 0 }}>💰</span>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
+                      Tienes $150 MXN de bienvenida — úsalos en tu primer pago
+                    </p>
+                    <p style={{ margin: "3px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.65)", lineHeight: 1.3 }}>
+                      Sin necesidad de ir al OXXO primero
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── Recently paid chips (H6) ──────────────────────────────── */}
             {recentServices.length > 0 && (
               <div className="px-4 pt-4 pb-1 max-w-sm mx-auto w-full">

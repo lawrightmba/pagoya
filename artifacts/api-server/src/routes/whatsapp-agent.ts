@@ -49,8 +49,8 @@ const m = {
   registrationSuccess: (lang: Lang, firstName: string, phoneKey: string, rawName: string, bonusAmount: number) => {
     const bonusLine = bonusAmount > 0
       ? (lang === "en"
-        ? `\n\n🎁 *Welcome bonus!* We've credited $${bonusAmount.toFixed(0)} MXN to your wallet as a gift.`
-        : `\n\n🎁 *¡Bonus de bienvenida!* Acreditamos $${bonusAmount.toFixed(0)} MXN en tu cartera como regalo de inicio.`)
+        ? `\n\n🎁 *Welcome bonus!* We loaded *$${bonusAmount.toFixed(0)} MXN* into your wallet as a welcome gift.\nYou can use it right now to pay CFE, Telmex, top up your phone, or any service — no OXXO visit required first.`
+        : `\n\n🎁 *¡Bonus de bienvenida!* Cargamos *$${bonusAmount.toFixed(0)} MXN* en tu billetera como regalo de bienvenida.\nPuedes usarlos *ahora mismo* para pagar tu CFE, Telmex, recargar tu celular, o cualquier servicio — sin necesidad de ir al OXXO primero.`)
       : "";
     if (lang === "en") {
       return (
@@ -586,6 +586,22 @@ router.post("/", async (req: Request, res: Response) => {
         await sendWhatsApp(phoneKey, m.repGreeting(lang, firstName));
         return;
       }
+    }
+
+    // ── OXXO load complaint detection ─────────────────────────────────────────
+    const OXXO_COMPLAINT_RE = /pagu[eé]\s+(en\s+)?oxxo|oxxo.*(no|no\s+se).*(aparece|carg|llega|actualiz|reflej)|cargué.*oxxo|deposité.*oxxo|ticket.*oxxo|saldo.*oxxo|oxxo.*saldo|no.*aparece.*saldo/i;
+    if (OXXO_COMPLAINT_RE.test(userMessage)) {
+      const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
+      if (adminNumber) {
+        sendWhatsApp(adminNumber,
+          `🔴 *OXXO Load Complaint*\nPhone: +${phoneKey}\nMessage: "${userMessage.slice(0, 200)}"\nTime: ${new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" })}`
+        ).catch(() => {});
+      }
+      const reply = lang === "en"
+        ? `Thanks for reaching out! 🙏\n\nOXXO deposits usually update in *5–15 minutes*. If your balance still hasn't appeared:\n\n1️⃣ Check your OXXO receipt — confirm the reference number matches your PagoYa account\n2️⃣ Send a *photo of your receipt* here — our team will manually verify your deposit within *1 hour*\n\nWe've already alerted our support team to look out for your transaction. You're not alone! 💪`
+        : `¡Gracias por avisarnos! 🙏\n\nLos depósitos en OXXO normalmente se reflejan en *5–15 minutos*. Si tu saldo todavía no aparece:\n\n1️⃣ Revisa tu ticket de OXXO y confirma que la referencia corresponda a tu cuenta PagoYa\n2️⃣ Mándanos *foto de tu ticket* aquí — nuestro equipo verificará tu depósito manualmente en *1 hora*\n\nYa alertamos a nuestro equipo de soporte para buscar tu transacción. ¡Estamos contigo! 💪`;
+      await sendWhatsApp(phoneKey, reply);
+      return;
     }
 
     // Save profileName on first real message if not yet stored

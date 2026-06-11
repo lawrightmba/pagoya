@@ -237,6 +237,20 @@ router.post("/sync", (_req: Request, res: Response) => {
   });
 });
 
+// GET /api/stats — public platform stats, no auth required
+router.get("/stats", async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(
+      drizzleSql`SELECT COUNT(*)::int AS total FROM bill_payments WHERE status IN ('confirmed', 'completed', 'confirmado', 'success')`
+    );
+    const total = parseInt(String((result.rows[0] as Record<string, unknown>)?.total ?? "0"), 10);
+    res.set("Cache-Control", "public, max-age=60");
+    res.json({ payments_completed: total });
+  } catch {
+    res.json({ payments_completed: 0 });
+  }
+});
+
 // ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
 router.all(/^\/admin/, adminAuth);
 

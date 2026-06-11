@@ -6,6 +6,7 @@ import {
   walletTransactionsTable,
   repVelocityFlagsTable,
   signupBonusConfigTable,
+  bonusFraudFlagsTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 
@@ -144,6 +145,10 @@ export async function creditSignupBonus(
 
     if (user.signupBonusClaimed) {
       logger.info({ userId }, "signupBonusService.creditSignupBonus: already claimed");
+      db.insert(bonusFraudFlagsTable).values({
+        telefono: user.telefono,
+        reason: "duplicate_phone",
+      }).catch(() => {});
       return { success: false, reason: "already_claimed" };
     }
 
@@ -166,9 +171,7 @@ export async function creditSignupBonus(
       type: "SIGNUP_BONUS",
       amountMxn: String(amount),
       status: "completed",
-      description: isWebSignup
-        ? "Bono de bienvenida — registro web"
-        : `Bono de bienvenida — ref: ${repCode}`,
+      description: "Bono de bienvenida PagoYa — úsalo en tu primer pago",
     });
 
     // Mark bonus as claimed on user record

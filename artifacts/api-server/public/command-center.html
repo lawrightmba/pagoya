@@ -1972,13 +1972,13 @@ const CHECKLIST = [
   { phase:0, id:'p0-17', title:'Street team rep QR code generation and rep dashboard recruitment section' },
   { phase:0, id:'p0-18', title:'Rep referral attribution and commission tracking ($5 MXN per payment, 7-day hold)' },
   { phase:0, id:'p0-19', title:'Fraud velocity detection on rep signups' },
-  { phase:0, id:'p0-20', title:'Signup wallet bonus / user incentive flow ($25–$50 MXN welcome credit on registration)' },
+  { phase:0, id:'p0-20', title:'Signup wallet bonus: $150 MXN credited on registration — no OXXO load required' },
   { phase:0, id:'p0-21', title:'International phone number support on registration (10 countries, E.164 format, default +52 🇲🇽)' },
   { phase:0, id:'p0-22', title:'Admin bonus campaign controls' },
   { phase:0, id:'p0-23', title:'Founder bio page live at /lloyd — animated hero, 4 stat tiles, PagoYa + PagoSeguro venture cards, experience, education, social links' },
   { phase:0, id:'p0-24', title:'Web sign-up bonus — ref_code optional, organic web registrations tagged "WEB", rep velocity check bypassed for web source' },
   { phase:0, id:'p0-25', title:'signup_source DB field — tracks "web_organic" vs "rep_referral" on all new user records' },
-  { phase:0, id:'p0-26', title:'Home page coral bonus strip — "Abre tu billetera gratis · recibe $25 MXN", social proof line, sharper copy, pulsing coral glow CTA' },
+  { phase:0, id:'p0-26', title:'Home page coral bonus strip — "Regístrate gratis → recibe $150 MXN → paga tu primer servicio", live payment counter, pulsing coral glow CTA' },
   { phase:0, id:'p0-27', title:'Post-registration WhatsApp nudge — 10-min delayed message after OTP verification, skips if already transacted, nudge_sent_at DB column, admin/users endpoint, debug route' },
   { phase:0, id:'p0-28', title:'Paula WhatsApp payment initiation — "paga mi CFE" triggers prepare_bill_payment tool, stages amount+reference, 2FA confirm/cancel intercept in whatsapp-agent, 5-min pending TTL, executes via wallet' },
   { phase:0, id:'p0-29', title:'PWA push notifications — VAPID keys, service worker (sw.js), manifest.json, push_subscriptions table, /api/push/subscribe+unsubscribe+vapid-public-key, usePushNotifications hook, Home banner, fires on bill payment confirmed' },
@@ -2416,7 +2416,7 @@ async function uuLoad() {
         <td>${u.name || '<span style="color:#374151">—</span>'}</td>
         <td>${srcBadge(u.signup_source)}</td>
         <td style="font-family:monospace;font-size:11px;color:#9ca3af">${u.signup_ref_code || '—'}</td>
-        <td class="${u.signup_bonus_claimed ? 'uu-bonus-yes' : 'uu-bonus-no'}">${u.signup_bonus_claimed ? '✓ $25' : '—'}</td>
+        <td class="${u.signup_bonus_claimed ? 'uu-bonus-yes' : 'uu-bonus-no'}">${u.signup_bonus_claimed ? '✓ $150' : '—'}</td>
         <td style="color:${u.welcome_shown ? '#1D9E75' : '#374151'};font-weight:${u.welcome_shown ? '700' : '400'}">${u.welcome_shown ? '✓' : '—'}</td>
         <td class="${u.nudge_sent_at ? 'uu-nudge-yes' : 'uu-nudge-no'}">${u.nudge_sent_at ? '✓ ' + fmt(u.nudge_sent_at) : '—'}</td>
         <td style="color:#6b7280;font-size:11px">${fmt(u.created_at)}</td>

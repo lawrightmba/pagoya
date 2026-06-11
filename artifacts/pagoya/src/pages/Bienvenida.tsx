@@ -23,10 +23,6 @@ export default function Bienvenida() {
   const [waNumber, setWaNumber]       = useState<string | null>(null);
   const [marking, setMarking]         = useState(false);
 
-  // Replace history entry so back button skips this screen
-  useEffect(() => {
-    window.history.replaceState(null, "", window.location.href);
-  }, []);
 
   // Guard: if no phone in storage, or welcome_shown already true → go home
   useEffect(() => {
@@ -237,55 +233,57 @@ export default function Bienvenida() {
         {/* ── ZONE 3: CTAs ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
-          {/* Primary CTA */}
+          {/* Primary CTA — direct to bill payment */}
           <button
             onClick={() => markShownAndGo("/pagar")}
             disabled={marking}
             style={{
               width: "100%",
               padding: "17px 20px",
-              background: marking ? "rgba(216,90,48,0.5)" : "#D85A30",
+              background: marking ? "rgba(29,158,117,0.5)" : "#1D9E75",
               border: "none",
               borderRadius: "16px",
               color: "#FFFFFF",
               fontSize: "16px",
               fontWeight: 800,
               cursor: marking ? "not-allowed" : "pointer",
-              boxShadow: "0 6px 20px rgba(216,90,48,0.40)",
+              boxShadow: "0 6px 20px rgba(29,158,117,0.40)",
               letterSpacing: "-0.01em",
               fontFamily: "inherit",
               transition: "background 0.15s, transform 0.1s",
             }}
           >
-            Paga tu primera cuenta →
+            ⚡ Paga tu CFE ahora →
           </button>
 
-          {/* Biller chips 2×2 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            {BILLER_CHIPS.map(({ label, servicio, emoji }) => (
-              <button
-                key={servicio}
-                onClick={() => markShownAndGo(`/pagar?servicio=${encodeURIComponent(servicio)}`)}
-                disabled={marking}
-                style={{
-                  padding: "14px 10px",
-                  background: "transparent",
-                  border: "1.5px solid #1D9E75",
-                  borderRadius: "14px",
-                  color: "#1D9E75",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  transition: "background 0.15s",
-                }}
-              >
-                {emoji} {label}
-              </button>
+          {/* Secondary CTA — wallet */}
+          <button
+            onClick={() => markShownAndGo("/")}
+            disabled={marking}
+            style={{
+              width: "100%",
+              padding: "15px 20px",
+              background: "transparent",
+              border: "1.5px solid rgba(255,255,255,0.25)",
+              borderRadius: "16px",
+              color: "rgba(255,255,255,0.80)",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: marking ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "border-color 0.15s",
+            }}
+          >
+            📱 Ver mi billetera
+          </button>
+
+          {/* Trust checklist */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "4px 0" }}>
+            {["Sin necesidad de ir al OXXO", "Tu saldo está listo ahora", "Comprobante oficial al instante"].map((line) => (
+              <div key={line} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "rgba(255,255,255,0.70)", fontWeight: 600 }}>
+                <span style={{ color: "#1D9E75", fontWeight: 900, fontSize: "15px" }}>✓</span>
+                {line}
+              </div>
             ))}
           </div>
 

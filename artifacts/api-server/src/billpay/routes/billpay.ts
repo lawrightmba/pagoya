@@ -266,6 +266,33 @@ router.post("/pay", async (req: Request, res: Response) => {
       )
       .catch(() => {});
 
+    // ── Non-blocking: alert if SIPREL failure rate >10% in last hour ───────────
+    const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
+    if (adminNumber) {
+      db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'fallido') AS failures,
+          COUNT(*) AS total
+        FROM bill_payments
+        WHERE created_at >= NOW() - INTERVAL '1 hour'
+      `).then((r) => {
+        const row = r.rows[0] as { failures: string; total: string } | undefined;
+        const failures = parseInt(row?.failures ?? "0", 10);
+        const total = parseInt(row?.total ?? "0", 10);
+        if (total >= 5 && failures / total >= 0.10) {
+          import("../../lib/whatsapp.js")
+            .then(({ sendWhatsApp }) => sendWhatsApp(
+              adminNumber,
+              `⚠️ *PagoYa | Alta tasa de fallos SIPREL*\n` +
+              `Última hora: ${failures}/${total} pagos fallidos (${Math.round(failures / total * 100)}%)\n` +
+              `Servicio: ${serviceId}\n` +
+              `${new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" })}`
+            ))
+            .catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     res.status(502).json({ error: "Tu pago no se procesó. Tu saldo no fue afectado." });
     return;
   }

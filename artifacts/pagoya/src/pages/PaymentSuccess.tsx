@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle, Share2, Plus, AlertCircle, MessageCircle, Download } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
@@ -91,6 +91,28 @@ function downloadPDF(
 export default function PaymentSuccess() {
   const [, navigate] = useLocation();
   const { paymentData, transactionId, transactionDate, resetPayment } = usePayment();
+  const [isFirstPayment, setIsFirstPayment] = useState(false);
+
+  // ── Detect first-ever completed payment ───────────────────────────────────
+  useEffect(() => {
+    if (!paymentData.empresa) return;
+    const phone = (() => {
+      try { return localStorage.getItem("pagoya_telefono") || localStorage.getItem("pagoya_phone") || ""; }
+      catch { return ""; }
+    })();
+    if (!phone) return;
+    const BASE = (window as Window & { BASE_URL?: string }).BASE_URL ?? "";
+    fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=2`)
+      .then(r => r.ok ? r.json() : null)
+      .then((rows: null | Array<{ status: string }>) => {
+        if (!rows) return;
+        const completed = rows.filter(r =>
+          r.status === "completed" || r.status === "confirmed" || r.status === "confirmado" || r.status === "success"
+        );
+        if (completed.length === 1) setIsFirstPayment(true);
+      })
+      .catch(() => {});
+  }, [paymentData.empresa]);
 
   // ── Auto-open Paula chat 4s after payment success ─────────────────────────
   useEffect(() => {
@@ -173,6 +195,49 @@ export default function PaymentSuccess() {
 
       <main className="flex-1 px-5 py-8">
         <div className="max-w-sm mx-auto flex flex-col gap-5">
+
+          {/* ── First-payment celebration banner ───────────────────────── */}
+          {isFirstPayment && (
+            <div style={{
+              background: "linear-gradient(135deg, #004F2D 0%, #046C2C 100%)",
+              borderRadius: "20px",
+              padding: "20px 20px 18px",
+              border: "1px solid rgba(110,245,176,0.25)",
+              boxShadow: "0 4px 20px rgba(0,79,45,0.30)",
+            }}>
+              <div style={{ fontSize: "28px", marginBottom: "8px", textAlign: "center" }}>🎊</div>
+              <p style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 900, color: "#FFFFFF", textAlign: "center" }}>
+                ¡Completaste tu primer pago con PagoYa!
+              </p>
+              <p style={{ margin: "0 0 16px", fontSize: "13px", color: "rgba(255,255,255,0.72)", textAlign: "center", lineHeight: 1.45 }}>
+                Así de fácil. Sin banco, sin tarjeta, sin filas.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <button
+                  onClick={() => navigate("/cargar")}
+                  style={{
+                    width: "100%", padding: "13px 16px",
+                    background: "#6EF5B0", border: "none", borderRadius: "12px",
+                    color: "#004F2D", fontSize: "14px", fontWeight: 800,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Cargar más saldo en OXXO →
+                </button>
+                <button
+                  onClick={handleWhatsApp}
+                  style={{
+                    width: "100%", padding: "11px 16px",
+                    background: "transparent", border: "1px solid rgba(110,245,176,0.35)", borderRadius: "12px",
+                    color: "rgba(255,255,255,0.80)", fontSize: "13px", fontWeight: 700,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Compartir por WhatsApp →
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Success hero */}
           <div className="flex flex-col items-center text-center pt-2 pb-4">

@@ -1,0 +1,136 @@
+PagoYa — $150 MXN Signup Bonus + No-Load-Required First Transaction
+Please implement all of the following in one pass. This is a high-impact activation change — execute carefully and test each piece before moving to the next. Commit when complete.
+
+1. Update Signup Bonus Config
+In the database, update the signup bonus amount:
+sqlUPDATE signup_bonus_config 
+SET bonus_amount = 150.00, 
+    updated_at = NOW() 
+WHERE id = 1;
+Confirm the row reads:
+id=1 | is_active=TRUE | bonus_amount=150.00
+In src/pages/Home.tsx and src/components/BonusBanner.tsx, update all copy references from $25 MXN to $150 MXN where they refer to the signup bonus specifically. Do not change fee references.
+In src/pages/Register.tsx, update the registration CTA button copy to:
+ES: "Crear mi cuenta gratis + $150 MXN"
+EN: "Create my free account + $150 MXN"
+In src/pages/Bienvenida.tsx, update the welcome message to reflect $150 MXN bonus credited.
+
+2. Bonus Credit Logic — Fire on Registration, Not on First Load
+Currently the signup bonus fires on first OXXO load. Change it to fire immediately on successful OTP verification / account creation.
+Find the signup bonus service (likely api-server/src/routes/ or src/services/signupBonusService.ts). Identify where the bonus is currently triggered.
+Move the bonus credit call so it fires in the registration completion handler — immediately after the user's wallet is created and OTP is verified — rather than waiting for a wallet load event.
+The bonus credit transaction should be type bonus_credit with amount 150.00 and a note: "Bono de bienvenida PagoYa — úsalo en tu primer pago".
+After the credit, set signup_bonus_claimed = true on the user record.
+
+3. New Onboarding Flow — "Paga Ahora Sin Cargar"
+The goal: a new user can complete a real bill payment using only their $150 MXN bonus — no OXXO load required.
+3a. Bienvenida screen redesign
+Redesign src/pages/Bienvenida.tsx to make the primary CTA a direct path to bill payment:
+┌─────────────────────────────────────┐
+│  🎉 ¡Bienvenido/a, [nombre]!        │
+│                                     │
+│  Tu billetera tiene                 │
+│  $150.00 MXN listos para usar       │
+│                                     │
+│  [ ⚡ Paga tu CFE ahora → ]         │  ← PRIMARY (Forest Green, full width)
+│                                     │
+│  [ 📱 Ver mi billetera ]            │  ← SECONDARY (outline)
+│  [ 💬 Abrir WhatsApp con Paula ]    │  ← TERTIARY (text link)
+│                                     │
+│  ✓ Sin necesidad de ir al OXXO     │
+│  ✓ Tu saldo está listo ahora       │
+│  ✓ Comprobante oficial al instante │
+└─────────────────────────────────────┘
+Primary CTA navigates to /servicios. Remove the window.history.replaceState back-button block — let users navigate freely from this screen.
+3b. Add a "bonus wallet" indicator in BillPaySelector
+In src/pages/BillPaySelector.tsx, when the user has a balance funded only by bonus credit (no real OXXO/card loads), show a banner at the top:
+💰 Tienes $150 MXN de bienvenida — úsalos en tu primer pago
+   Sin necesidad de ir al OXXO primero
+Hide this banner once the user has made their first completed payment.
+3c. PaymentReview — bonus balance flow
+In src/pages/PaymentReview.tsx, when the user's wallet balance covers the full payment amount (monto + $25 MXN fee) and their balance is funded only by bonus credit, show a special confirmation message:
+✓ Pago cubierto por tu bono de bienvenida
+  $[monto] servicio + $25.00 comisión = $[total] MXN
+  Saldo restante después del pago: $[remainder] MXN
+Style this in Forest Green with a gift icon. This replaces the standard wallet balance display for bonus-only users.
+3d. PaymentSuccess — first payment celebration
+In src/pages/PaymentSuccess.tsx, detect if this is the user's first completed payment (query bill_payments WHERE user_id = X AND status = 'completed' count = 1 after this payment).
+If it is the first payment, add a celebration banner above the standard success UI:
+🎊 ¡Completaste tu primer pago con PagoYa!
+   Así de fácil. Sin banco, sin tarjeta, sin filas.
+   
+   [ Cargar más saldo en OXXO → ]   ← navigates to /cargar
+   [ Compartir por WhatsApp → ]      ← existing share button
+This is the moment to convert a bonus user into a real funded user. The CTA to load OXXO fires at peak trust — right after their first successful payment.
+
+4. Paula WhatsApp — Update Bonus Amount
+In api-server/src/routes/whatsapp-agent.ts, search for all references to $25 MXN or 25 MXN in the context of the signup bonus or welcome message. Update to $150 MXN.
+The new user greeting should include:
+"Cargamos *$150 MXN* en tu billetera como regalo de bienvenida. 
+Puedes usarlos ahora mismo para pagar tu CFE, Telmex, recargar 
+tu celular, o cualquier servicio — sin necesidad de ir al OXXO primero."
+
+5. Fraud Guard — Bonus Velocity Check
+The $150 MXN bonus is a meaningful cash-equivalent. Add an explicit velocity check at the registration endpoint:
+typescript// Before crediting bonus, check:
+// 1. Has this phone number ever received a bonus? (signup_bonus_claimed on any user with this telefono)
+// 2. Has this IP registered more than 2 accounts in the last 24 hours?
+// 3. Has this device fingerprint (user-agent hash) registered more than 2 accounts in 24 hours?
+
+const existingBonus = await db.query.users.findFirst({
+  where: (u, { eq, and }) => and(
+    eq(u.telefono, telefono),
+    eq(u.signup_bonus_claimed, true)
+  )
+});
+
+if (existingBonus) {
+  // Register the account but do NOT credit the bonus
+  // Log the attempt to a bonus_fraud_flags table
+  logger.warn({ telefono }, 'signup-bonus: duplicate phone — bonus suppressed');
+  return; // skip bonus credit
+}
+Create a bonus_fraud_flags table in shared/schema.ts if it doesn't exist:
+typescriptexport const bonusFraudFlags = pgTable("bonus_fraud_flags", {
+  id: serial("id").primaryKey(),
+  telefono: text("telefono").notNull(),
+  reason: text("reason").notNull(), // 'duplicate_phone' | 'ip_velocity' | 'device_velocity'
+  ip_address: text("ip_address"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+Run migration after adding.
+
+6. Update All Marketing Copy
+Search for $25 MXN bonus references (not fee references) in:
+
+public/pagar-cfe.html
+public/recargas.html
+public/guia-pagar-servicios-sin-cuenta-bancaria.html
+Any landing page TSX that mentions the signup bonus amount
+
+Update bonus references from $25 MXN → $150 MXN. Leave all $25 MXN fee/commission references untouched.
+
+7. Command Center — Update Bonus Config Display
+In public/pagoya-admin.html and public/command-center.html, update any hardcoded references to the $25 MXN signup bonus amount to $150 MXN.
+Update the checklist item:
+'Signup wallet bonus / user incentive flow ($25–$50 MXN welcome credit)'
+→
+'Signup wallet bonus: $150 MXN credited on registration — no OXXO load required'
+
+8. Smoke Test Checklist
+After all changes, run through this sequence manually:
+1. Register a new test phone number
+2. Complete OTP verification
+3. Confirm wallet balance = $150.00 MXN immediately (no OXXO load)
+4. Confirm Bienvenida screen shows $150 MXN and primary CTA is "Paga tu CFE ahora"
+5. Navigate to /servicios — confirm bonus banner is visible
+6. Select CFE → enter a test reference number → proceed to PaymentReview
+7. Confirm PaymentReview shows "Pago cubierto por tu bono de bienvenida"
+8. Confirm the $25 MXN fee is correctly deducted (total = monto + 25)
+9. Complete payment — confirm PaymentSuccess shows first-payment celebration
+10. Confirm "Cargar más saldo en OXXO →" CTA is visible on success screen
+11. Register the SAME phone number again — confirm bonus is NOT credited twice
+12. Check bonus_fraud_flags table — confirm duplicate attempt was logged
+Save smoke test results to a comment in the commit.
+
+Commit with message: feat: $150 MXN signup bonus on registration + no-load-required first transaction flow

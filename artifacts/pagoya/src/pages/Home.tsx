@@ -63,6 +63,9 @@ export default function Home() {
   // Grand Prize teaser (S3.4)
   const [grandPrize, setGrandPrize]       = useState<{ prize_amount: number; total_entries: number } | null>(null);
 
+  // Live payment counter — fetched from public /api/stats
+  const [paymentCount, setPaymentCount]   = useState<number>(0);
+
   // PWA install prompt (S3.6)
   const deferredPrompt = useRef<Event & { prompt: () => void } | null>(null);
   const [showPwaSheet, setShowPwaSheet]   = useState(false);
@@ -165,6 +168,19 @@ export default function Home() {
     fetch(`${base}/api/games/grand-prize`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && d.prize_amount > 0) setGrandPrize(d); })
+      .catch(() => {});
+  }, []);
+
+  // ── Live payment counter ──────────────────────────────────────────────────
+  useEffect(() => {
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { payments_completed?: number } | null) => {
+        if (d && typeof d.payments_completed === "number" && d.payments_completed > 0) {
+          setPaymentCount(d.payments_completed);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -421,8 +437,29 @@ export default function Home() {
             onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.30)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.18)"; }}
           >
-            🎁&nbsp;{es ? "$25 MXN de bienvenida al registrarte gratis" : "$25 MXN welcome bonus — sign up free"}
+            🎁&nbsp;{es ? "$150 MXN de bienvenida al registrarte gratis" : "$150 MXN welcome bonus — sign up free"}
           </button>
+
+          {/* ── Live payment counter social proof ─────────────────────── */}
+          {paymentCount > 0 && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "rgba(255,255,255,0.10)",
+              borderRadius: "999px",
+              padding: "5px 14px",
+              marginBottom: "20px",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.82)",
+            }}>
+              <span style={{ color: "#6EF5B0", fontSize: "13px" }}>✓</span>
+              {es
+                ? `${paymentCount.toLocaleString("es-MX")} pagos completados`
+                : `${paymentCount.toLocaleString("en-US")} bills paid`}
+            </div>
+          )}
         </section>
 
         {/* ══════════════════════════════════════════════════════

@@ -8,14 +8,14 @@ interface BonusBannerProps {
 export default function BonusBanner({ lang, onNavigateRegister }: BonusBannerProps) {
   const es = lang === "es";
   const [dismissed, setDismissed] = useState<boolean>(() => {
-    try { return sessionStorage.getItem("bonus_banner_v1") === "1"; } catch { return false; }
+    try { return sessionStorage.getItem("bonus_banner_v2") === "1"; } catch { return false; }
   });
 
   if (dismissed) return null;
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
-    try { sessionStorage.setItem("bonus_banner_v1", "1"); } catch { /* ignore */ }
+    try { sessionStorage.setItem("bonus_banner_v2", "1"); } catch { /* ignore */ }
     setDismissed(true);
   };
 
@@ -43,10 +43,10 @@ export default function BonusBanner({ lang, onNavigateRegister }: BonusBannerPro
         <span style={{ fontSize: "22px", flexShrink: 0 }}>🎁</span>
         <div>
           <div style={{ fontSize: "13px", fontWeight: 800, color: "#0D2618", lineHeight: 1.2 }}>
-            {es ? "Abre tu billetera gratis · recibe $25 MXN" : "Open your wallet free · get $25 MXN"}
+            {es ? "Regístrate gratis → recibe $150 MXN → paga tu primer servicio" : "Sign up free → get $150 MXN → pay your first bill"}
           </div>
           <div style={{ fontSize: "11px", color: "#6B9980", marginTop: "2px" }}>
-            {es ? "Sin banco, sin trámites · se acredita al instante" : "No bank needed · credited instantly"}
+            {es ? "Sin banco, sin OXXO · se acredita al registrarte" : "No bank needed · credited instantly on signup"}
           </div>
         </div>
       </div>
