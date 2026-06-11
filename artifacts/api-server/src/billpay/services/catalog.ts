@@ -25,8 +25,9 @@ export const BILL_CATALOG: BillService[] = [
   },
 
   // ── AGUA ─────────────────────────────────────────────────────────────────
-  { id: "sacmex", name: "SACMEX", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SACMEX" },
-  { id: "agua_jalisco", name: "SIAPA Jalisco", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SIAPA" },
+  { id: "sacmex",      name: "SACMEX",          category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SACMEX01" },
+  { id: "agua_jalisco", name: "SIAPA Jalisco",  category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SIA000"   },
+  { id: "seapal",      name: "SEAPAL Vallarta", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SEAPAL01" },
 
   // ── GAS ───────────────────────────────────────────────────────────────────
   { id: "gas_natural", name: "Gas Natural", category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "GAS000", minReferencia: 14, maxReferencia: 28 },
