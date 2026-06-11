@@ -24,13 +24,13 @@ export default function SlideTrustScore() {
             Cada pago construye<br />
             su identidad financiera.
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3vh" }} />
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "1.8vh" }} />
 
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.5, marginBottom: "2.2vh" }}>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.4, marginBottom: "1.6vh" }}>
             7 dimensiones de comportamiento real — el expediente crediticio que ningún buró ha construido para esta población.
           </p>
 
-          <div className="flex flex-col gap-[1.1vh]">
+          <div className="flex flex-col gap-[0.75vh]">
             {[
               { icon: "⚡", title: "Racha de pagos", sub: "Pagos consecutivos a tiempo — el predictor más fuerte de confiabilidad" },
               { icon: "🌐", title: "Diversidad de servicios", sub: "CFE + Telmex + Netflix: múltiples servicios = mayor estabilidad financiera" },
@@ -40,11 +40,11 @@ export default function SlideTrustScore() {
               { icon: "🎯", title: "Misiones completadas", sub: "Engagement con la plataforma — indicador de permanencia a largo plazo" },
               { icon: "📅", title: "Antigüedad de cuenta", sub: "Tiempo activo con PagoYa — historial acumulado sin banco requerido" },
             ].map(({ icon, title, sub }) => (
-              <div key={title} className="flex items-start gap-[1vw]">
-                <span style={{ fontSize: "1.5vw", lineHeight: 1, marginTop: "0.2vh", flexShrink: 0 }}>{icon}</span>
+              <div key={title} className="flex items-start gap-[0.9vw]">
+                <span style={{ fontSize: "1.35vw", lineHeight: 1, marginTop: "0.2vh", flexShrink: 0 }}>{icon}</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{title}</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{sub}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.05vh" }}>{title}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.25 }}>{sub}</p>
                 </div>
               </div>
             ))}

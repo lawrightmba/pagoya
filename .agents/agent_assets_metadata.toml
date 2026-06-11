@@ -275,3 +275,9 @@ id = "SOEDQyT_O9gQEYNtc50cg"
 uri = "file://pagoya-ux-audit.zip"
 type = "unspecified"
 title = "PagoYa UX Audit Package"
+
+[[outputs]]
+id = "YZlgGGAEUNY9pt7INc3B0"
+uri = "file://.local/outputs/PagoYa-Pitch-Deck-June-11-2026.pdf"
+type = "pdf"
+title = "PagoYa Pitch Deck — June 11 2026 (PDF)"
