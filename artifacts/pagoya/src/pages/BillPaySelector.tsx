@@ -9,43 +9,54 @@ import { usePayment } from "@/context/PaymentContext";
 // minAmount: minimum payment amount in MXN
 // ---------------------------------------------------------------------------
 const SERVICES = [
-  { id: "cfe",              name: "CFE",                category: "Luz",             emoji: "⚡", referenceDigits: 12 },
-  { id: "sacmex",           name: "SACMEX",             category: "Agua",            emoji: "💧" },
-  { id: "agua_jalisco",     name: "SIAPA Jalisco",       category: "Agua",            emoji: "💧" },
-  { id: "zeta_gas",         name: "Zeta Gas",            category: "Gas",             emoji: "🔥" },
-  { id: "megacable",        name: "Megacable",           category: "Internet",        emoji: "📡" },
-  { id: "telmex_internet",  name: "Telmex Internet",     category: "Internet",        emoji: "📡" },
-  { id: "starlink",         name: "Starlink",            category: "Internet",        emoji: "🛰️" },
-  { id: "sky",              name: "Sky",                 category: "Cable",           emoji: "📺" },
-  { id: "dish",             name: "Dish",                category: "Cable",           emoji: "📺" },
-  { id: "telcel",           name: "Telcel",              category: "Teléfono móvil",  emoji: "📱" },
-  { id: "telcel_recarga",   name: "Telcel Recarga",      category: "Teléfono móvil",  emoji: "📱", minAmount: 30 },
-  { id: "at_and_t",         name: "AT&T",                category: "Teléfono móvil",  emoji: "📱" },
-  { id: "movistar",         name: "Movistar",            category: "Teléfono móvil",  emoji: "📱" },
-  { id: "telmex_fijo",      name: "Telmex Fijo",         category: "Teléfono móvil",  emoji: "☎️", referenceDigits: 12 },
-  // Streaming — gift card PIN flow (no reference number)
-  { id: "netflix",          name: "Netflix",             category: "Streaming",       emoji: "🎬" },
-  { id: "spotify",          name: "Spotify",             category: "Streaming",       emoji: "🎵" },
-  { id: "disney_plus",      name: "Disney+",             category: "Streaming",       emoji: "🏰" },
-  { id: "hbo_max",          name: "Max (HBO)",           category: "Streaming",       emoji: "🎭" },
-  // Gift Cards — Entretenimiento
-  { id: "cinepolis",        name: "Cinépolis",           category: "Entretenimiento", emoji: "🎟️" },
-  { id: "gplay",            name: "Google Play",         category: "Entretenimiento", emoji: "🎮" },
-  // Gift Cards — Conveniencia
-  { id: "uber",             name: "Uber",                category: "Conveniencia",    emoji: "🚗" },
-  { id: "uber_eats",        name: "Uber Eats",           category: "Conveniencia",    emoji: "🍔" },
-  { id: "amazon",           name: "Amazon",              category: "Conveniencia",    emoji: "📦" },
-  // Gift Cards — Tiendas
-  { id: "starbucks",        name: "Starbucks",           category: "Tiendas",         emoji: "☕" },
-  { id: "liverpool",        name: "Liverpool",           category: "Tiendas",         emoji: "🛍️" },
-  { id: "soriana",          name: "Soriana",             category: "Tiendas",         emoji: "🛒" },
-  // Other services
-  { id: "kueski",           name: "Kueski",              category: "Préstamos",       emoji: "💳" },
-  { id: "konfio",           name: "Konfío",              category: "Préstamos",       emoji: "💳" },
-  { id: "gnp",              name: "GNP Seguros",         category: "Seguro",          emoji: "🛡️" },
-  { id: "hdi",              name: "HDI Seguros",         category: "Seguro",          emoji: "🛡️" },
-  { id: "sep",              name: "SEP / IMSS",          category: "Escuela",         emoji: "🎓" },
-  { id: "renta_pagoseguro", name: "PagoSeguro Renta",    category: "Renta",           emoji: "🏠" },
+  // ── Luz ──────────────────────────────────────────────────────────────────
+  { id: "cfe",              name: "CFE",                 category: "Luz",             emoji: "⚡", referenceDigits: 12 },
+  // ── Agua ─────────────────────────────────────────────────────────────────
+  { id: "sacmex",           name: "SACMEX",              category: "Agua",            emoji: "💧" },
+  { id: "agua_jalisco",     name: "SIAPA Jalisco",        category: "Agua",            emoji: "💧" },
+  { id: "agua_monterrey",   name: "SADM Monterrey",       category: "Agua",            emoji: "💧" },
+  { id: "seapal",           name: "SEAPAL Vallarta",      category: "Agua",            emoji: "💧", minReferencia: 28, maxReferencia: 28 },
+  // ── Gas ──────────────────────────────────────────────────────────────────
+  { id: "gas_natural",      name: "Gas Natural",          category: "Gas",             emoji: "🔥", minReferencia: 14, maxReferencia: 28 },
+  { id: "ecogas",           name: "Ecogas",               category: "Gas",             emoji: "🔥" },
+  { id: "mexicana_gas",     name: "Mexicana de Gas",      category: "Gas",             emoji: "🔥" },
+  { id: "naturgy",          name: "Naturgy",               category: "Gas",             emoji: "🔥" },
+  // ── Internet ─────────────────────────────────────────────────────────────
+  { id: "megacable",        name: "Megacable",            category: "Internet",        emoji: "📡" },
+  { id: "telmex_internet",  name: "Telmex Internet",      category: "Internet",        emoji: "📡" },
+  { id: "izzi",             name: "Izzi",                 category: "Internet",        emoji: "📡", minReferencia: 8,  maxReferencia: 8  },
+  { id: "totalplay",        name: "TotalPlay",            category: "Internet",        emoji: "📡", minReferencia: 17, maxReferencia: 17 },
+  { id: "starlink",         name: "Starlink",             category: "Internet",        emoji: "🛰️" },
+  // ── Cable ────────────────────────────────────────────────────────────────
+  { id: "sky",              name: "Sky",                  category: "Cable",           emoji: "📺" },
+  { id: "dish",             name: "Dish",                 category: "Cable",           emoji: "📺" },
+  { id: "maxcom",           name: "Maxcom",               category: "Cable",           emoji: "📺" },
+  // ── Teléfono ─────────────────────────────────────────────────────────────
+  { id: "telcel",           name: "Telcel",               category: "Teléfono móvil",  emoji: "📱" },
+  { id: "telcel_recarga",   name: "Telcel Recarga",       category: "Teléfono móvil",  emoji: "📱", minAmount: 30 },
+  { id: "at_and_t",         name: "AT&T",                 category: "Teléfono móvil",  emoji: "📱" },
+  { id: "movistar",         name: "Movistar Factura",     category: "Teléfono móvil",  emoji: "📱" },
+  { id: "telmex_fijo",      name: "Telmex Fijo",          category: "Teléfono móvil",  emoji: "☎️", referenceDigits: 12 },
+  // ── Streaming — gift card PIN flow ───────────────────────────────────────
+  { id: "netflix",          name: "Netflix",              category: "Streaming",       emoji: "🎬" },
+  { id: "spotify",          name: "Spotify",              category: "Streaming",       emoji: "🎵" },
+  { id: "disney_plus",      name: "Disney+",              category: "Streaming",       emoji: "🏰" },
+  { id: "hbo_max",          name: "Max (HBO)",            category: "Streaming",       emoji: "🎭" },
+  // ── Gift Cards — Entretenimiento ─────────────────────────────────────────
+  { id: "cinepolis",        name: "Cinépolis",            category: "Entretenimiento", emoji: "🎟️" },
+  { id: "gplay",            name: "Google Play",          category: "Entretenimiento", emoji: "🎮" },
+  // ── Gift Cards — Conveniencia ─────────────────────────────────────────────
+  { id: "uber",             name: "Uber",                 category: "Conveniencia",    emoji: "🚗" },
+  { id: "uber_eats",        name: "Uber Eats",            category: "Conveniencia",    emoji: "🍔" },
+  { id: "amazon",           name: "Amazon",               category: "Conveniencia",    emoji: "📦" },
+  // ── Gift Cards — Tiendas ─────────────────────────────────────────────────
+  { id: "starbucks",        name: "Starbucks",            category: "Tiendas",         emoji: "☕" },
+  { id: "liverpool",        name: "Liverpool",            category: "Tiendas",         emoji: "🛍️" },
+  { id: "soriana",          name: "Soriana",              category: "Tiendas",         emoji: "🛒" },
+  // ── Préstamos ─────────────────────────────────────────────────────────────
+  { id: "infonavit",        name: "Infonavit",            category: "Préstamos",       emoji: "🏠" },
+  // ── Cross-sell (external redirect — not a SIPREL payment) ─────────────────
+  { id: "renta_pagoseguro", name: "Pago de Renta",        category: "Renta",           emoji: "🏡", crossSellUrl: "https://pagoseguromx.com" },
 ] as const;
 
 type Service = (typeof SERVICES)[number];
@@ -471,6 +482,11 @@ export default function BillPaySelector() {
   });
 
   const handleSelectService = (svc: Service) => {
+    // Cross-sell services open an external URL instead of the payment flow
+    if ("crossSellUrl" in svc && svc.crossSellUrl) {
+      window.open(svc.crossSellUrl as string, "_blank", "noopener,noreferrer");
+      return;
+    }
     setSelectedService(svc);
     setReferencia("");
     setRefError(null);
@@ -741,7 +757,11 @@ export default function BillPaySelector() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-[#1F1F1F]">{svc.name}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          {GIFT_CARD_SERVICE_IDS.has(svc.id as string) ? (
+                          {"crossSellUrl" in svc ? (
+                            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE" }}>
+                              🏡 pagoseguromx.com →
+                            </span>
+                          ) : GIFT_CARD_SERVICE_IDS.has(svc.id as string) ? (
                             <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#FFF0E8", color: "#C45C1A", border: "1px solid #FFDCC9" }}>
                               🎁 Gift Card · PIN por WhatsApp
                             </span>
