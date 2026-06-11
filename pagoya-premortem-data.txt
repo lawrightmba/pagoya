@@ -1,0 +1,169 @@
+=== PAGOYA PRE-MORTEM DATA SNAPSHOT ===
+  Generated: 2026-06-11 21:24:30 UTC
+
+  ================================================================================
+  === USER METRICS ===
+  --------------------------------------------------------------------------------
+  total_users | users_30d | users_7d | users_with_email | bonus_claimed
+  8           | 8         | 3        | 0                | 1
+
+  ================================================================================
+  === WALLET METRICS ===
+  --------------------------------------------------------------------------------
+  total_wallets | wallets_with_balance | avg_balance_mxn | max_balance_mxn | total_float_mxn
+  5             | 1                    | 25.00           | 25.00           | 25.00
+
+  NOTE: balance col is balance_mxn; only 1 wallet funded (25 MXN signup bonus)
+
+  ================================================================================
+  === TRANSACTION METRICS ===
+  --------------------------------------------------------------------------------
+  total_wallet_txns | oxxo_loads | card_loads | total_loaded_mxn
+  1                 | 0          | 0          |
+
+  NOTE: The 1 transaction is the signup bonus credit (type = bonus_credit, not oxxo/card_load)
+        No real money has been loaded via OXXO or card yet.
+
+  ================================================================================
+  === BILL PAYMENT METRICS ===
+  --------------------------------------------------------------------------------
+  (no rows — zero bill payments attempted to date)
+
+  ================================================================================
+  === FAILED PAYMENTS BY PROVIDER ===
+  --------------------------------------------------------------------------------
+  (no rows — no payments attempted)
+
+  ================================================================================
+  === TOP SERVICES PAID ===
+  --------------------------------------------------------------------------------
+  (no rows — no completed payments)
+
+  ================================================================================
+  === PAYMENT FUNNEL DROP-OFF ===
+  --------------------------------------------------------------------------------
+  registered | loaded_wallet | attempted_payment | completed_payment
+  8          | 0             | 0                 | 0
+
+  NOTES:
+    - "loaded_wallet" counts distinct wallet_ids with oxxo/card/stp loads = 0
+    - All 8 users registered in last 30 days; 3 in last 7 days
+    - 1 user has claimed signup bonus (25 MXN credit)
+    - 0 users have linked a recovery email
+    - No user has funded their wallet with real money yet
+
+  ================================================================================
+  === STREET TEAM PERFORMANCE ===
+  --------------------------------------------------------------------------------
+  rep_code | is_active | referred_users | completed_payments | total_commissions_mxn
+  ENG-01   | active    | 0              | 0                  | 0.00
+
+  NOTE: Only 1 rep in system (ENG-01, engineering test rep). No street team referrals yet.
+
+  ================================================================================
+  === PTI SCORE DISTRIBUTION ===
+  --------------------------------------------------------------------------------
+  tier               | users
+  No score yet       | 7
+  1-49 (Bronce)      | 1
+
+  NOTE: PTI computed for 1 user (Bronce). 7 users have no PTI score yet.
+
+  ================================================================================
+  === SIGNUP BONUS CONFIG ===
+  --------------------------------------------------------------------------------
+  id | is_active | bonus_amount | eligible_rep_codes | warning_threshold | block_threshold | updated_at
+  1  | TRUE      | 25.00        |                    | 10                | 20              | 2026-05-26 15:16:57
+
+  STATUS: ✅ ACTIVE — bonus is live, all new users eligible (no rep code restriction)
+
+  ================================================================================
+  === GRAND PRIZE CONFIG ===
+  --------------------------------------------------------------------------------
+  TABLE: grand_prize_config — does NOT exist in schema
+  TABLE: monthly_grand_prize — exists but EMPTY (no rows)
+
+  NOTE: Grand prize has never been drawn. No winners, no entries.
+
+  ================================================================================
+  === LOYALTY TIERS ===
+  --------------------------------------------------------------------------------
+  tier   | accounts | avg_pts    | total_pts
+  bronce | 1        | 99.00      | 99.00
+  oro    | 1        | 63,733.00  | 63,733.00
+
+  NOTE: 2 loyalty accounts. The "oro" account with 63,733 pts is almost certainly
+        a test/dev account (seeded or admin-granted). Bronce user has 99 pts organically.
+        5 other users have no loyalty account at all.
+
+  ================================================================================
+  === MISSION PROGRESS ===
+  --------------------------------------------------------------------------------
+  total_missions_started | completed | rewarded
+  0                      | 0         | 0
+
+  ================================================================================
+  === SAVED CARDS ===
+  --------------------------------------------------------------------------------
+  saved_cards: 0
+
+  ================================================================================
+  === SAVED BILLERS ===
+  --------------------------------------------------------------------------------
+  saved_billers | users_with_billers
+  3             | 2
+
+  NOTE: 2 users have saved 3 billers total (avg 1.5 billers per user who saves any).
+
+  ================================================================================
+  === SCRATCH CARD PLAYS ===
+  --------------------------------------------------------------------------------
+  (no rows — no scratch cards played yet)
+
+  ================================================================================
+  === SPIN RESULTS ===
+  --------------------------------------------------------------------------------
+  (no rows — no wheel spins yet)
+
+  ================================================================================
+  === MONTHLY GRAND PRIZE ===
+  --------------------------------------------------------------------------------
+  (no rows — no grand prize drawings yet)
+
+  ================================================================================
+  === VELOCITY FLAGS (REP FRAUD) ===
+  --------------------------------------------------------------------------------
+  (no rows — no velocity flags triggered)
+
+  ================================================================================
+  === BELVO LINKS ===
+  --------------------------------------------------------------------------------
+  (no rows — no Belvo account links)
+  NOTE: Belvo deprioritized June 2026. STP/SPEI is primary wallet-load path.
+
+  ================================================================================
+  === RECENT ERRORS (API LOGS) ===
+  --------------------------------------------------------------------------------
+  No application-level errors found in logs.
+  API server running clean. Grand prize endpoint returning 304 (cached) on repeated polls.
+  Taecel reconciliation cron running every 10 min — 0 pending transactions consistently.
+
+  ================================================================================
+  === KEY TAKEAWAYS FOR PRE-MORTEM ===
+  --------------------------------------------------------------------------------
+  1. USERS:       8 total (all in last 30 days, test/pre-launch cohort)
+  2. ACTIVATION:  0% wallet funding rate — no user has loaded real money
+  3. PAYMENTS:    0 bill payments attempted (funnel blocked at wallet load step)
+  4. STREET TEAM: 0 rep-referred users (ENG-01 is test only)
+  5. GAMES:       0 plays (scratch, spin, grand prize all empty)
+  6. LOYALTY:     2 accounts; 1 appears seeded; 0 missions completed
+  7. FLOAT:       25.00 MXN total (1 signup bonus credit only)
+  8. REVENUE:     0.00 MXN collected fees to date
+  9. FRAUD:       0 velocity flags — clean
+  10. INFRA:      API healthy, cron running, 0 errors in logs
+
+  Pre-launch / staging environment confirmed. Not yet live to real users.
+
+  ================================================================================
+  === DONE ===
+  
