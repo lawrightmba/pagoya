@@ -1,0 +1,87 @@
+PagoYa UX Sprint 3 — Remaining Audit Fixes
+Please implement all of the following in one pass. Commit when complete.
+
+1. Stripe.js Audit & Removal
+Check whether any active user-facing payment flow calls Stripe APIs. Search for stripe, Stripe, loadStripe, Elements usage across all .ts and .tsx files.
+If Stripe is only initialized in App.tsx but never used in any active payment flow (payments go through Conekta + STP/SIPREL), then:
+
+Remove the Elements wrapper and loadStripe import from App.tsx
+Remove VITE_STRIPE_PUBLIC_KEY reference from App.tsx
+Leave the env var defined — do not delete it from Replit secrets
+
+If Stripe IS actively used in a payment flow, leave it in place and add a comment: // Stripe active — do not remove
+
+2. Home.tsx Refactor
+Home.tsx is ~57KB. Extract the following into separate component files under src/components/:
+
+GiftCardSection.tsx — the full gift card groups catalog and denomination selector UI
+BonusBanner.tsx — the $25 MXN welcome bonus banner with sessionStorage dismiss logic
+HowItWorksSection.tsx — the numbered step-by-step explainer rows
+
+Import and render them in Home.tsx in the same positions they currently occupy. Do not change any logic, styling, or behavior — pure extraction only. Target: Home.tsx under 25KB after extraction.
+
+3. Puntos Tab in BottomNav
+In src/components/BottomNav.tsx:
+Replace the current 5-tab configuration with this updated set:
+Inicio     → /          → Home icon
+Pagar      → /pagar     → Zap icon
+Cargar     → /cargar    → CreditCard icon
+Puntos     → /puntos    → Star icon  (NEW — replaces or supplements Juegos)
+Historial  → /wallet/historial → History icon
+Remove Gamepad2 / Juegos tab. Add /puntos to the SHOW_ON set. Update active detection so /puntos and /points both highlight the Puntos tab.
+
+4. Grand Prize Jackpot on Homepage
+In Home.tsx (after your refactor), add a GrandPrizeTeaser section between the Quick Access grid and the How It Works section.
+On mount, fetch GET /api/games/grand-prize. If the response has prize_amount > 0, render a tappable card:
+🏆  Premio Mayor del Mes
+    $[prize_amount] MXN  ·  [total_entries] participantes
+    [ Ver sorteo → ]   (navigates to /juegos?tab=premio)
+Style using existing brand palette (Forest Green background, white text, Coral Orange accent on the amount). If the API returns no data or errors, render nothing (no empty card).
+
+5. PDF Receipt on PaymentSuccess
+In src/pages/PaymentSuccess.tsx, add a "Descargar comprobante PDF" button below the existing WhatsApp share button.
+On click, generate a PDF client-side using the jspdf library (install if not present: npm install jspdf).
+PDF content:
+PagoYa | Comprobante Oficial
+─────────────────────────────
+Servicio:    [paymentData.empresa]
+Referencia:  [paymentData.referencia]
+Monto:       $[paymentData.monto] MXN
+Comisión:    $25.00 MXN
+Total:       $[monto + 25] MXN
+Fecha:       [transactionDate or current date]
+ID:          [transactionId]
+─────────────────────────────
+Pago procesado a través de STP/SIPREL
+Red oficial del Banco de México (Banxico)
+pagoyamx.com
+Filename: comprobante-pagoya-[transactionId].pdf
+Style: white background, PagoYa green (#004F2D) header bar, black body text, gray footer. No images required — text only is fine.
+
+6. PWA Add-to-Home-Screen Promotion
+sw.js is already in place. Add a PWA install prompt to Home.tsx:
+
+Listen for the beforeinstallprompt event
+Store the deferred prompt in a ref
+After 30 seconds on the home screen (or after the user's first completed payment), show a dismissible bottom sheet:
+
+📲  Instala PagoYa en tu celular
+    Acceso rápido sin abrir el navegador
+    [ Instalar gratis ]   [ Ahora no ]
+
+"Instalar gratis" triggers deferredPrompt.prompt()
+"Ahora no" dismisses and sets localStorage.setItem('pwa_prompt_dismissed', '1')
+Do not show if pwa_prompt_dismissed is set
+
+
+7. Canvas Scratch Animation on Raspa y Gana
+In src/pages/Juegos.tsx, replace the current tap-to-reveal scratch zone mechanic with a proper canvas scratch effect:
+
+Render a <canvas> element over each prize zone, filled with a silver/gray scratch surface (#C0C0C0 with a subtle texture pattern using fillRect grid)
+On touchmove / mousemove with pointer down, use ctx.clearRect around the pointer position (radius 28px) to reveal the prize underneath
+Track percent revealed using getImageData — when >60% of the canvas pixels are cleared, auto-complete the reveal for that zone and call the existing scratchZone(i) function
+Add a "Raspa aquí 👆" label overlay that disappears after first touch
+
+Do not change the game logic, API calls, or reward flow — only the visual scratch mechanic.
+
+Run all 7 items. If any item hits an unresolvable blocker, skip it, leave a // TODO: comment at the relevant location, and continue with the remaining items. Commit all changes when done.
