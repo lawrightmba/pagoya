@@ -538,7 +538,13 @@ router.post("/", async (req: Request, res: Response) => {
   const rawWaId: string = body.WaId ?? from;
 
   // Normalise: strip "whatsapp:+" prefix, keep digits only → session key + reply target
-  const phoneKey = rawWaId.replace(/^whatsapp:\+?/i, "").replace(/\D/g, "");
+  const phoneKey = (() => {
+    const raw = rawWaId.replace(/^whatsapp:\+?/i, "").replace(/\D/g, "");
+    // Mexico: WhatsApp sometimes sends 521XXXXXXXXXX (13 digits, legacy mobile prefix).
+    // Correct E.164 is 52XXXXXXXXXX (12 digits). Strip the extra 1.
+    if (/^521\d{10}$/.test(raw)) return "52" + raw.slice(3);
+    return raw;
+  })();
 
   console.log(
     `[${new Date().toISOString()}] whatsapp-agent inbound | phone=${phoneKey} | msg="${userMessage.slice(0, 50)}"`,
