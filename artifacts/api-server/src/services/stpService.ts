@@ -137,11 +137,16 @@ async function registerCuentaFisicaStp(params: {
     return;
   }
 
-  // Split full name into components
+  // Split full name into components.
+  // Handles both 3-word (Nombre Paterno Materno) and 4-word
+  // (Nombre SegundoNombre Paterno Materno) Mexican naming conventions.
+  // Always treat last 2 words as apellidos; everything before is nombre(s).
   const nameParts = (kycData?.fullName ?? telefono).trim().split(/\s+/);
-  const nombre = nameParts[0] ?? telefono;
-  const apellidoPaterno = nameParts[1] ?? "-";
-  const apellidoMaterno = nameParts[2] ?? "-";
+  const apellidoMaterno = nameParts.length >= 2 ? (nameParts[nameParts.length - 1] ?? "-") : "-";
+  const apellidoPaterno = nameParts.length >= 3 ? (nameParts[nameParts.length - 2] ?? "-") : (nameParts[1] ?? "-");
+  const nombre = nameParts.length >= 3
+    ? nameParts.slice(0, nameParts.length - 2).join(" ")
+    : (nameParts[0] ?? telefono);
 
   // Convert DOB from YYYY-MM-DD to DD-MM-YYYY for STP
   let fechaNacimiento = "01-01-1990";
