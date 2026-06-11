@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { db, billPaymentsTable, walletsTable, walletTransactionsTable } from "@workspace/db";
+import { db, billPaymentsTable, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
 import { eq, desc, and, gt, sql } from "drizzle-orm";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -414,6 +414,29 @@ async function executeToolCall(
       }
       if (!beneName.trim()) {
         return { result: { error: "Se requiere el nombre completo del titular de la cuenta destino." } };
+      }
+      // Beneficiary name must have at least 2 words (nombre + apellido) for SPEI
+      if (beneName.trim().split(/\s+/).filter(Boolean).length < 2) {
+        return { result: { error: "El nombre del beneficiario debe incluir nombre y apellido completos para que el banco receptor pueda identificarlo." } };
+      }
+
+      // Verify sender's stored legal name has 3+ words (nombre + ambos apellidos) — required by STP
+      const senderTelNorm = cleanWTel.replace(/\D/g, "").slice(-10);
+      const [senderRow] = await db
+        .select({ kycFullName: usersTable.kycFullName })
+        .from(usersTable)
+        .where(eq(usersTable.telefono, senderTelNorm))
+        .limit(1);
+
+      const senderNameParts = (senderRow?.kycFullName ?? "").trim().split(/\s+/).filter(Boolean);
+      if (senderNameParts.length < 3) {
+        return {
+          result: {
+            error: senderNameParts.length < 2
+              ? "Para hacer una transferencia SPEI necesito tu nombre completo con nombre y ambos apellidos. ¿Me puedes decir tu nombre completo? Por ejemplo: *María Alejandra Pizano Ríos*."
+              : "Para hacer una transferencia SPEI necesito tu nombre completo con *ambos apellidos* (paterno y materno). Solo tengo un apellido registrado. ¿Me puedes decir tu segundo apellido para completarlo?",
+          },
+        };
       }
 
       const [walletRow] = await db

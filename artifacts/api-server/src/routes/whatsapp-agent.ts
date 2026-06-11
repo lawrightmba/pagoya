@@ -35,8 +35,12 @@ type Lang = "es" | "en";
 
 const m = {
   invalidName: (lang: Lang) => lang === "en"
-    ? "Please tell me your full name (letters only, no numbers). What's your name?"
-    : "Por favor dime tu nombre completo (solo letras, sin números). ¿Cómo te llamas?",
+    ? "Please tell me your full name including at least one last name (letters only, no numbers). For example: *Maria Gonzalez* or *Carlos Ruiz Lopez*."
+    : "Por favor dime tu nombre completo incluyendo al menos un apellido (solo letras, sin números). Por ejemplo: *María González* o *Carlos Ruiz López*.",
+
+  invalidNameTooShort: (lang: Lang) => lang === "en"
+    ? "I need your full name — please include your last name too. For example: *Maria Gonzalez* or *Carlos Ruiz Lopez*."
+    : "Necesito tu nombre completo — por favor incluye también tu apellido. Por ejemplo: *María González* o *Carlos Ruiz López*.",
 
   registrationError: (lang: Lang) => lang === "en"
     ? "Sorry, I had a problem creating your account. Please try again in a moment."
@@ -570,8 +574,14 @@ router.post("/", async (req: Request, res: Response) => {
     // Step 2: we already asked for name — this message IS the name
     if (session.awaitingName) {
       const rawName = userMessage.trim();
-      if (rawName.length < 2 || rawName.length > 60 || /\d/.test(rawName)) {
+      if (rawName.length < 2 || rawName.length > 80 || /\d/.test(rawName)) {
         await sendWhatsApp(phoneKey, m.invalidName(lang));
+        return;
+      }
+      // Require at least nombre + 1 apellido (minimum 2 words)
+      const wordCount = rawName.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount < 2) {
+        await sendWhatsApp(phoneKey, m.invalidNameTooShort(lang));
         return;
       }
       saveSession(phoneKey, { awaitingName: false });
