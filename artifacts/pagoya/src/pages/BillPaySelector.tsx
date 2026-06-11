@@ -515,13 +515,33 @@ export default function BillPaySelector() {
       setRefError("Ingresa el número de referencia / Enter reference number");
       return;
     }
-    if ("referenceDigits" in selectedService && selectedService.referenceDigits) {
-      const digits = trimmed.replace(/\D/g, "");
-      if (digits.length < selectedService.referenceDigits) {
-        setRefError(`Mínimo ${selectedService.referenceDigits} dígitos / Minimum ${selectedService.referenceDigits} digits`);
+
+    // ── Length validation (minReferencia / maxReferencia) ─────────────────────
+    const svc = selectedService as { minReferencia?: number; maxReferencia?: number; referenceDigits?: number };
+    const minLen = svc.minReferencia ?? svc.referenceDigits ?? null;
+    const maxLen = svc.maxReferencia ?? (svc.referenceDigits ? svc.referenceDigits : null);
+    const digits = trimmed.replace(/\D/g, "");
+    const len    = digits.length || trimmed.length; // prefer digits-only count; fall back to raw length
+
+    if (minLen !== null && maxLen !== null && minLen === maxLen) {
+      // Exact length required (e.g. SEAPAL = 28, Izzi = 8)
+      if (len !== minLen) {
+        setRefError(
+          `La referencia debe tener exactamente ${minLen} dígitos / Reference must be exactly ${minLen} digits`
+        );
+        return;
+      }
+    } else {
+      if (minLen !== null && len < minLen) {
+        setRefError(`Mínimo ${minLen} dígitos / Minimum ${minLen} digits`);
+        return;
+      }
+      if (maxLen !== null && len > maxLen) {
+        setRefError(`Máximo ${maxLen} dígitos / Maximum ${maxLen} digits`);
         return;
       }
     }
+
     setRefError(null);
 
     setPaymentData({
@@ -852,11 +872,11 @@ export default function BillPaySelector() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder={
-                    "referenceDigits" in selectedService && selectedService.referenceDigits
-                      ? `${"0".repeat(selectedService.referenceDigits)} (${selectedService.referenceDigits} dígitos)`
-                      : "Ej. 1234567890"
-                  }
+                  placeholder={(() => {
+                    const s = selectedService as { minReferencia?: number; maxReferencia?: number; referenceDigits?: number };
+                    const exact = s.minReferencia === s.maxReferencia && s.minReferencia ? s.minReferencia : (s.referenceDigits ?? null);
+                    return exact ? `${"0".repeat(Math.min(exact, 20))}${exact > 20 ? "…" : ""} (${exact} dígitos)` : "Ej. 1234567890";
+                  })()}
                   value={referencia}
                   onChange={(e) => {
                     setReferencia(e.target.value);
@@ -895,6 +915,22 @@ export default function BillPaySelector() {
             {refError && (
               <p className="text-xs text-red-500 mt-1 mb-0">{refError}</p>
             )}
+
+            {/* Per-service reference hint */}
+            {!refError && (() => {
+              const s = selectedService as { id: string; minReferencia?: number; maxReferencia?: number };
+              if (s.id === "seapal") return (
+                <p className="text-xs mt-1.5" style={{ color: "#6B9980" }}>
+                  📄 Escanea o escribe el código de barras de tu recibo SEAPAL — exactamente 28 dígitos
+                </p>
+              );
+              if (s.minReferencia && s.maxReferencia && s.minReferencia === s.maxReferencia) return (
+                <p className="text-xs mt-1.5" style={{ color: "#6B9980" }}>
+                  Referencia de exactamente {s.minReferencia} dígitos requerida
+                </p>
+              );
+              return null;
+            })()}
 
             {/* Secondary scan text link */}
             <button
