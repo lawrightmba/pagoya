@@ -661,12 +661,14 @@ router.post("/transfer/lookup", async (req: Request, res: Response) => {
 // Executes a P2P transfer between two wallets.
 // Body: { senderTelefono, receiverTelefono, amountMXN, memo? }
 router.post("/transfer", async (req: Request, res: Response) => {
-  const { senderTelefono, receiverTelefono, amountMXN, memo } = req.body as {
+  const { senderTelefono, receiverTelefono, amountMXN, memo, source } = req.body as {
     senderTelefono?: string;
     receiverTelefono?: string;
     amountMXN?: number;
     memo?: string;
+    source?: string;
   };
+  const calledFromAgent = source === "agent";
 
   if (!senderTelefono || !receiverTelefono) {
     res.status(400).json({ error: "Se requieren los teléfonos del emisor y receptor." });
@@ -682,14 +684,16 @@ router.post("/transfer", async (req: Request, res: Response) => {
   try {
     const result = await p2pTransfer(senderTelefono, receiverTelefono, amount, memo);
 
-    // Non-blocking: notify sender
-    const senderMsg =
-      `✅ Transferencia enviada\n\n` +
-      `Enviaste *$${amount.toFixed(2)} MXN* a ${receiverTelefono}\n` +
-      (memo ? `Nota: ${memo}\n` : "") +
-      `Saldo restante: $${result.newSenderBalance.toFixed(2)} MXN\n\n` +
-      `_PagoYa — pagoyamx.com_`;
-    sendWhatsApp(senderTelefono, senderMsg).catch(() => {});
+    // Non-blocking: notify sender (suppressed when called from agent — agent sends its own message)
+    if (!calledFromAgent) {
+      const senderMsg =
+        `✅ Transferencia enviada\n\n` +
+        `Enviaste *$${amount.toFixed(2)} MXN* a ${receiverTelefono}\n` +
+        (memo ? `Nota: ${memo}\n` : "") +
+        `Saldo restante: $${result.newSenderBalance.toFixed(2)} MXN\n\n` +
+        `_PagoYa — pagoyamx.com_`;
+      sendWhatsApp(senderTelefono, senderMsg).catch(() => {});
+    }
 
     // Non-blocking: notify receiver (invite if new user, receipt if existing)
     const receiverMsg = result.receiverIsNew
@@ -716,13 +720,14 @@ router.post("/transfer", async (req: Request, res: Response) => {
     const code = (err as { code?: string }).code;
     if (code === "INSUFFICIENT_BALANCE") {
       const balance = (err as { currentBalance?: number }).currentBalance ?? 0;
-      res.status(422).json({ error: "INSUFFICIENT_BALANCE", currentBalance: balance });
+      res.status(422).json({ code: "INSUFFICIENT_BALANCE", error: "Saldo insuficiente.", currentBalance: balance });
       return;
     }
     if (code === "DAILY_LIMIT_EXCEEDED") {
       const e = err as { dailyTotal?: number; remaining?: number };
       res.status(422).json({
-        error: "DAILY_LIMIT_EXCEEDED",
+        code: "DAILY_LIMIT_EXCEEDED",
+        error: "Límite diario de transferencias alcanzado.",
         dailyTotal: e.dailyTotal,
         remaining: e.remaining,
         limitMXN: P2P_DAILY_LIMIT_MXN,
@@ -730,15 +735,15 @@ router.post("/transfer", async (req: Request, res: Response) => {
       return;
     }
     if (code === "SAME_ACCOUNT") {
-      res.status(400).json({ error: "No puedes enviarte dinero a ti mismo." });
+      res.status(400).json({ code: "SAME_ACCOUNT", error: "No puedes enviarte dinero a ti mismo." });
       return;
     }
     if (code === "BELOW_MINIMUM") {
-      res.status(400).json({ error: `El monto mínimo de transferencia es $${P2P_MIN_MXN} MXN.` });
+      res.status(400).json({ code: "BELOW_MINIMUM", error: `El monto mínimo de transferencia es $${P2P_MIN_MXN} MXN.` });
       return;
     }
     logger.error({ err, senderTelefono, receiverTelefono, amount }, "p2p: transfer failed");
-    res.status(500).json({ error: "Error al procesar la transferencia." });
+    res.status(500).json({ code: "SERVER_ERROR", error: "Error al procesar la transferencia." });
   }
 });
 

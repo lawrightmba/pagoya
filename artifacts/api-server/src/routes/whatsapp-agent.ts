@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, usersTable, walletsTable, signupBonusConfigTable } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-import { getSession, saveSession, type PendingWithdrawalSession } from "../services/whatsapp-sessions.js";
+import { getSession, saveSession, type PendingWithdrawalSession, type PendingP2PSession } from "../services/whatsapp-sessions.js";
 import {
   createPendingPayment,
   getPendingPayment,
@@ -138,6 +138,26 @@ const m = {
   paymentCancelled: (lang: Lang) => lang === "en"
     ? "❌ Payment cancelled. How else can I help you?"
     : "❌ Pago cancelado. ¿En qué más te puedo ayudar?",
+
+  p2pProcessing: (lang: Lang, amount: number, recipientName: string) => lang === "en"
+    ? `⏳ Sending *$${amount.toFixed(2)} MXN* to ${recipientName}...`
+    : `⏳ Enviando *$${amount.toFixed(2)} MXN* a ${recipientName}...`,
+
+  p2pSuccess: (lang: Lang, amount: number, recipientName: string, newBalance: number) => lang === "en"
+    ? `✅ *Transfer sent!*\n\n💸 $${amount.toFixed(2)} MXN → ${recipientName}\n💳 No fee\n\nYour new balance: *$${newBalance.toFixed(2)} MXN*`
+    : `✅ *¡Transferencia enviada!*\n\n💸 $${amount.toFixed(2)} MXN → ${recipientName}\n💳 Sin comisión\n\nTu saldo actual: *$${newBalance.toFixed(2)} MXN*`,
+
+  p2pFailed: (lang: Lang, amount: number, reason: string) => lang === "en"
+    ? `❌ The transfer of *$${amount.toFixed(2)} MXN* could not be completed.\n\n${reason}\n\nYour balance was not affected.`
+    : `❌ La transferencia de *$${amount.toFixed(2)} MXN* no se pudo completar.\n\n${reason}\n\nTu saldo no fue afectado.`,
+
+  p2pCancelled: (lang: Lang) => lang === "en"
+    ? "Transfer cancelled. Anything else I can help you with?"
+    : "Transferencia cancelada. ¿En qué más te puedo ayudar?",
+
+  ambiguousP2P: (lang: Lang, amount: number, recipientName: string) => lang === "en"
+    ? `Please reply *SÍ* to confirm the $${amount.toFixed(2)} MXN transfer to ${recipientName}, or *NO* to cancel.`
+    : `Por favor responde *SÍ* para confirmar el envío de $${amount.toFixed(2)} MXN a ${recipientName}, o *NO* para cancelar.`,
 
   withdrawalCancelled: (lang: Lang) => lang === "en"
     ? "❌ Withdrawal cancelled. Your balance was not affected. How else can I help you?"
@@ -740,6 +760,67 @@ router.post("/", async (req: Request, res: Response) => {
       saveSession(phoneKey, { pendingWithdrawal: null });
     }
 
+    // ── Pending P2P transfer confirmation intercept (session-backed) ──────────
+    const pendingP2P = session.pendingP2P;
+    if (pendingP2P && Date.now() < pendingP2P.expiresAt) {
+      const msgNorm = userMessage.trim();
+
+      if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
+        saveSession(phoneKey, { pendingP2P: null });
+        await sendWhatsApp(phoneKey, m.p2pCancelled(lang));
+        return;
+      }
+
+      if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
+        saveSession(phoneKey, { pendingP2P: null });
+        await sendWhatsApp(phoneKey, m.p2pProcessing(lang, pendingP2P.amountMXN, pendingP2P.recipientName));
+
+        try {
+          const resp = await fetch(`http://localhost:${port}/api/wallet/transfer`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              senderTelefono: pendingP2P.senderTelefono,
+              receiverTelefono: pendingP2P.recipientTelefono,
+              amountMXN: pendingP2P.amountMXN,
+              memo: pendingP2P.memo,
+              source: "agent",
+            }),
+          });
+
+          const data = (await resp.json()) as {
+            newSenderBalance?: number;
+            error?: string;
+            code?: string;
+          };
+
+          if (resp.ok && data.newSenderBalance !== undefined) {
+            await sendWhatsApp(phoneKey, m.p2pSuccess(lang, pendingP2P.amountMXN, pendingP2P.recipientName, data.newSenderBalance));
+          } else {
+            const reason = data.code === "INSUFFICIENT_BALANCE"
+              ? (lang === "en" ? "Insufficient balance." : "Saldo insuficiente.")
+              : data.code === "DAILY_LIMIT_EXCEEDED"
+              ? (lang === "en" ? "Daily transfer limit reached ($2,500 MXN)." : "Límite diario de transferencias alcanzado ($2,500 MXN).")
+              : (data.error ?? (lang === "en" ? "Technical error." : "Error técnico."));
+            await sendWhatsApp(phoneKey, m.p2pFailed(lang, pendingP2P.amountMXN, reason));
+          }
+        } catch (err) {
+          logger.error({ err, phoneKey }, "whatsapp-agent: P2P execution failed");
+          await sendWhatsApp(phoneKey, m.p2pFailed(lang, pendingP2P.amountMXN, lang === "en" ? "Connection error. Please try again." : "Error de conexión. Intenta de nuevo."));
+        }
+        return;
+      }
+
+      // Ambiguous — remind
+      await sendWhatsApp(phoneKey, m.ambiguousP2P(lang, pendingP2P.amountMXN, pendingP2P.recipientName));
+      return;
+    }
+
+    // Clear expired pending P2P
+    if (pendingP2P && Date.now() >= pendingP2P.expiresAt) {
+      saveSession(phoneKey, { pendingP2P: null });
+    }
+
     // ── Append user turn to history ──────────────────────────────────────────
     const updatedHistory = [
       ...session.conversationHistory,
@@ -763,7 +844,7 @@ router.post("/", async (req: Request, res: Response) => {
       throw new Error(`agent/chat returned ${agentRes.status}`);
     }
 
-    const { reply, pendingPayment, pendingWithdrawal } = (await agentRes.json()) as {
+    const { reply, pendingPayment, pendingWithdrawal, pendingP2P: incomingP2P } = (await agentRes.json()) as {
       reply: string;
       escalated: boolean;
       pendingPayment: {
@@ -783,6 +864,14 @@ router.post("/", async (req: Request, res: Response) => {
         beneficiaryName: string;
         walletBalance: number;
       } | null;
+      pendingP2P: {
+        senderTelefono: string;
+        recipientTelefono: string;
+        recipientName: string;
+        amountMXN: number;
+        walletBalance: number;
+        memo?: string;
+      } | null;
     };
 
     // ── Persist updated conversation history ─────────────────────────────────
@@ -794,7 +883,17 @@ router.post("/", async (req: Request, res: Response) => {
       conversationHistory: newHistory.slice(-20),
     });
 
-    if (pendingWithdrawal) {
+    if (incomingP2P) {
+      // Store pending P2P in session with 10-min TTL
+      const p2pSession: PendingP2PSession = {
+        ...incomingP2P,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      };
+      saveSession(phoneKey, { pendingP2P: p2pSession });
+      // Send Paula's reply (contains the confirmText built by prepare_p2p_transfer)
+      await sendWhatsApp(phoneKey, reply);
+      logger.info({ phoneKey, amountMXN: incomingP2P.amountMXN, recipientTelefono: incomingP2P.recipientTelefono }, "whatsapp-agent: P2P staged");
+    } else if (pendingWithdrawal) {
       // Store pending withdrawal in session with 10-min TTL
       const withdrawal: PendingWithdrawalSession = {
         ...pendingWithdrawal,

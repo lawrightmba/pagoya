@@ -39,6 +39,7 @@ export function getSession(waId: string): WhatsAppSession {
     profileName: null,
     lastActivity: Date.now(),
     pendingWithdrawal: null,
+    pendingP2P: null,
     lang: "es",
   };
   sessions.set(waId, fresh);

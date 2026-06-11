@@ -95,6 +95,8 @@ UMBRAL DE ESCALACIÓN (Gap 5): Usa escalate_to_support en cualquiera de estos ca
 
 RETIROS / TRANSFERENCIA A CUENTA BANCARIA (SPEI OUT): Cuando el usuario quiere retirar su saldo, transferir a su banco, o enviar dinero a una CLABE, usa prepare_withdrawal. Necesitas: CLABE destino (18 dígitos, el usuario la encuentra en su app bancaria o estado de cuenta), monto (mínimo $50, máximo $8,000 MXN), y nombre completo del titular de la cuenta destino. El retiro llega en minutos por SPEI — sistema oficial del Banco de México. Sin comisión adicional: solo se descuenta el monto exacto del saldo. Si el usuario no sabe su CLABE, dile: "La CLABE la encuentras en tu app bancaria → Datos de cuenta → CLABE interbancaria. Son 18 números."
 
+TRANSFERENCIA ENTRE USUARIOS PAGOYA (P2P): Cuando el usuario quiere enviarle dinero a otra persona que también usa PagoYa, usa prepare_p2p_transfer. Es instantáneo, sin comisión, mínimo $10 MXN, límite diario $2,500 MXN. Necesitas: número de teléfono del destinatario y monto. Puedes pedir una nota opcional. Si el destinatario no está registrado en PagoYa, infórmale al usuario: "Esa persona todavía no tiene cuenta PagoYa. Pueden registrarse gratis en pagoyamx.com o escribiéndole a este número de WhatsApp."
+
 Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}`;
 }
 
@@ -198,6 +200,20 @@ const TOOLS = [
         beneficiary_name: { type: "string", description: "Full name of the account holder at the destination bank. Ask the user if not provided." },
       },
       required: ["telefono", "destination_clabe", "amount_mxn", "beneficiary_name"],
+    },
+  },
+  {
+    name: "prepare_p2p_transfer",
+    description: "Stages a wallet-to-wallet P2P transfer to another registered PagoYa user for confirmation. Instant and free. Min $10 MXN, daily limit $2,500 MXN. Use when the user wants to send money to another PagoYa user by phone number.",
+    input_schema: {
+      type: "object",
+      properties: {
+        telefono: { type: "string", description: "Sender's phone number with country code" },
+        recipient_phone: { type: "string", description: "Recipient's phone number (any format — will be normalized)" },
+        amount_mxn: { type: "number", description: "Amount to send in MXN (min $10, daily limit $2,500)" },
+        memo: { type: "string", description: "Optional note for the transfer (e.g. 'Para la renta', 'Para los tacos')" },
+      },
+      required: ["telefono", "recipient_phone", "amount_mxn"],
     },
   },
 ];
@@ -479,6 +495,89 @@ async function executeToolCall(
       };
     }
 
+    case "prepare_p2p_transfer": {
+      const senderRaw = ((input.telefono as string | undefined) ?? resolvedTelefono ?? "").trim();
+      const recipientRaw = ((input.recipient_phone as string | undefined) ?? "").trim();
+      const amtMxn = Number(input.amount_mxn ?? 0);
+      const memo = ((input.memo as string | undefined) ?? "").trim();
+
+      const senderNorm = senderRaw.replace(/\D/g, "").slice(-10);
+      const recipientNorm = recipientRaw.replace(/\D/g, "").slice(-10);
+
+      if (recipientNorm.length < 10) {
+        return { result: { error: "Número de teléfono del destinatario inválido. Pídele que te confirme su número completo." } };
+      }
+      if (senderNorm === recipientNorm) {
+        return { result: { error: "No puedes enviarte dinero a ti mismo." } };
+      }
+      if (amtMxn < 10) {
+        return { result: { error: "El monto mínimo de transferencia entre usuarios es $10 MXN." } };
+      }
+      if (amtMxn > 2500) {
+        return { result: { error: "El límite diario de transferencias entre usuarios es $2,500 MXN." } };
+      }
+
+      // Look up recipient
+      const [recipientRow] = await db
+        .select({ telefono: usersTable.telefono, kycFullName: usersTable.kycFullName })
+        .from(usersTable)
+        .where(eq(usersTable.telefono, recipientNorm))
+        .limit(1);
+
+      if (!recipientRow) {
+        return {
+          result: {
+            error: `Ese número (+${recipientNorm}) todavía no tiene cuenta PagoYa. Para registrarse es gratis — solo necesitan escribirle a este mismo número de WhatsApp o entrar a pagoyamx.com.`,
+          },
+        };
+      }
+
+      const recipientName = recipientRow.kycFullName
+        ? recipientRow.kycFullName.split(" ")[0]
+        : `+${recipientNorm}`;
+
+      // Check sender balance
+      const cleanSender = senderRaw.startsWith("+") ? senderRaw : `+${senderRaw}`;
+      const [walletRow] = await db
+        .select({ balance_mxn: walletsTable.balanceMxn })
+        .from(walletsTable)
+        .where(eq(walletsTable.userId, cleanSender))
+        .limit(1);
+
+      const senderBalance = walletRow ? Number(walletRow.balance_mxn) : 0;
+
+      if (senderBalance < amtMxn) {
+        return {
+          result: {
+            error: `Saldo insuficiente. Tienes $${senderBalance.toFixed(2)} MXN pero quieres enviar $${amtMxn.toFixed(2)} MXN.`,
+          },
+        };
+      }
+
+      const confirmText =
+        `💸 *Resumen de transferencia*\n\n` +
+        `💰 Monto: $${amtMxn.toFixed(2)} MXN\n` +
+        `👤 Para: ${recipientName} (****${recipientNorm.slice(-4)})\n` +
+        (memo ? `📝 Nota: ${memo}\n` : "") +
+        `💳 Comisión: Sin comisión ✅\n` +
+        `⚡ Llega: al instante\n\n` +
+        `Saldo actual: $${senderBalance.toFixed(2)} MXN\n` +
+        `Saldo después de enviar: $${(senderBalance - amtMxn).toFixed(2)} MXN\n\n` +
+        `Responde *SÍ* para confirmar o *NO* para cancelar.`;
+
+      return {
+        result: { ready: true, confirmText },
+        pendingP2P: {
+          senderTelefono: cleanSender,
+          recipientTelefono: recipientNorm,
+          recipientName,
+          amountMXN: amtMxn,
+          walletBalance: senderBalance,
+          memo: memo || undefined,
+        },
+      };
+    }
+
     default:
       return { result: { error: `Unknown tool: ${name}` } };
   }
@@ -531,6 +630,7 @@ router.post("/", async (req: Request, res: Response) => {
     let finalReply = "";
     let stagedPayment: PendingPaymentStage | undefined;
     let stagedWithdrawal: PendingWithdrawalStage | undefined;
+    let stagedP2P: { senderTelefono: string; recipientTelefono: string; recipientName: string; amountMXN: number; walletBalance: number; memo?: string } | undefined;
 
     for (let i = 0; i < 5; i++) {
       const response = await (anthropic.messages.create as (p: unknown) => Promise<{
@@ -553,10 +653,11 @@ router.post("/", async (req: Request, res: Response) => {
 
         const results = await Promise.all(
           toolBlocks.map(async (tb) => {
-            const { result, pendingPayment, pendingWithdrawal } = await executeToolCall(tb.name, tb.input, telefono ?? null);
+            const { result, pendingPayment, pendingWithdrawal, pendingP2P } = await executeToolCall(tb.name, tb.input, telefono ?? null);
             if (tb.name === "escalate_to_support") escalated = true;
             if (pendingPayment) stagedPayment = pendingPayment;
             if (pendingWithdrawal) stagedWithdrawal = pendingWithdrawal;
+            if (pendingP2P) stagedP2P = pendingP2P;
             return { id: tb.id, result };
           }),
         );
@@ -580,8 +681,8 @@ router.post("/", async (req: Request, res: Response) => {
       finalReply = "Lo sentimos, ocurrió un error. Intenta de nuevo.";
     }
 
-    logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment, hasStagedWithdrawal: !!stagedWithdrawal }, "agentChat: success");
-    res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null, pendingWithdrawal: stagedWithdrawal ?? null });
+    logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment, hasStagedWithdrawal: !!stagedWithdrawal, hasStagedP2P: !!stagedP2P }, "agentChat: success");
+    res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null, pendingWithdrawal: stagedWithdrawal ?? null, pendingP2P: stagedP2P ?? null });
   } catch (err) {
     logger.error({ err }, "agentChat: error");
     res.json({ reply: "Lo sentimos, ocurrió un error. Intenta de nuevo.", escalated: false, pendingPayment: null });
