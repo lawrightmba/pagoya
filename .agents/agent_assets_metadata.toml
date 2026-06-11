@@ -245,3 +245,9 @@ id = "AzSMKCxnZTxZYBVRs8OIS"
 uri = "file://artifacts/pagoya-mastercard-demo/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music"
+
+[[outputs]]
+id = "sYqZ9gIyZ9IbJJ_uk0hbw"
+uri = "file://pagoya-whatsapp-qr.png"
+type = "image"
+title = "PagoYa WhatsApp QR Code"
