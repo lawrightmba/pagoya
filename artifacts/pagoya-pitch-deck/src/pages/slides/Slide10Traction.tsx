@@ -32,9 +32,9 @@ export default function Slide10Traction() {
             { live: true, name: "Stripe", detail: "Pagos con tarjeta (Visa, Mastercard)", note: "Activo desde el 31 de mayo de 2026" },
             { live: true, name: "SIPREL", detail: "Red de pago de facturas — 10+ proveedores", note: "CFE, Telmex, Sky, Izzi, TotalPlay, Gas Natural, Telcel, AT&T, Megacable, Dish" },
             { live: true, name: "Conekta / OXXO", detail: "OXXO cash-in + procesamiento de tarjetas", note: "22,000 ubicaciones de depósito en todo el país" },
-            { live: true, name: "Belvo", detail: "Banca abierta / débito bancario directo", note: "Vinculación de cuentas y pago directo" },
+            { live: true, name: "STP / SPEI", detail: "Transferencia interbancaria directa", note: "CLABE única por usuario · riel activo de depósito a billetera" },
             { live: true, name: "Tarjetas de Regalo", detail: "Netflix · Amazon · Google Play · Spotify", note: "Primera compra Netflix procesada junio 2026" },
-            { live: false, name: "STP / SPEI", detail: "Rieles de transferencia interbancaria directa", note: "Documentos corporativos enviados — credenciales solicitadas" },
+            { live: false, name: "Belvo", detail: "Banca abierta / débito bancario directo", note: "Deprioritizado jun 2026 — STP/SPEI cubre el riel directo" },
           ].map(({ live, name, detail, note }) => (
             <div key={name} style={{ background: live ? "rgba(0,200,117,0.07)" : "rgba(255,92,26,0.07)", border: `1px solid ${live ? "rgba(0,200,117,0.2)" : "rgba(255,92,26,0.2)"}`, borderRadius: "0.7vw", padding: "1.3vh 2.2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
               <span style={{ fontSize: "1.6vw", lineHeight: 1, marginTop: "0.2vh", flexShrink: 0 }}>{live ? "✅" : "🔜"}</span>

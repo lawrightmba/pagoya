@@ -26,22 +26,25 @@ export default function SlideTrustScore() {
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3vh" }} />
 
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.55, marginBottom: "3vh" }}>
-            Después de 90 días con Paula, sabemos más sobre la confiabilidad financiera de nuestros usuarios que cualquier buró de crédito tradicional — porque vemos <em style={{ color: "#fff" }}>comportamiento real</em>, no historial bancario declarado.
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.5, marginBottom: "2.2vh" }}>
+            7 dimensiones de comportamiento real — el expediente crediticio que ningún buró ha construido para esta población.
           </p>
 
-          <div className="flex flex-col gap-[1.6vh]">
+          <div className="flex flex-col gap-[1.1vh]">
             {[
-              { icon: "⚡", title: "Puntualidad de pagos", sub: "Porcentaje de pagos realizados antes del vencimiento — el indicador más fuerte de confiabilidad crediticia" },
-              { icon: "🔄", title: "Frecuencia y consistencia", sub: "Patrones semanales y mensuales que revelan disciplina financiera sin necesidad de extracto bancario" },
-              { icon: "🌐", title: "Diversidad de servicios", sub: "CFE + Telmex + Telcel + Netflix — una persona que gestiona múltiples servicios es más estable, no menos" },
-              { icon: "📈", title: "Crecimiento del saldo", sub: "Cómo carga y usa su billetera PagoYa — patrón de ahorro vs. gasto impulsivo, visible desde el día uno" },
+              { icon: "⚡", title: "Racha de pagos", sub: "Pagos consecutivos a tiempo — el predictor más fuerte de confiabilidad" },
+              { icon: "🌐", title: "Diversidad de servicios", sub: "CFE + Telmex + Netflix: múltiples servicios = mayor estabilidad financiera" },
+              { icon: "💰", title: "Saldo de billetera", sub: "Nivel promedio de saldo — patrón de ahorro visible desde el día uno" },
+              { icon: "⚖️", title: "Ratio carga-gasto", sub: "Cuánto carga vs. gasta por ciclo — disciplina de flujo de efectivo" },
+              { icon: "🔐", title: "Verificación KYC", sub: "Identidad confirmada por INE/pasaporte — confianza del ecosistema" },
+              { icon: "🎯", title: "Misiones completadas", sub: "Engagement con la plataforma — indicador de permanencia a largo plazo" },
+              { icon: "📅", title: "Antigüedad de cuenta", sub: "Tiempo activo con PagoYa — historial acumulado sin banco requerido" },
             ].map(({ icon, title, sub }) => (
-              <div key={title} className="flex items-start gap-[1.2vw]">
-                <span style={{ fontSize: "1.8vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>{icon}</span>
+              <div key={title} className="flex items-start gap-[1vw]">
+                <span style={{ fontSize: "1.5vw", lineHeight: 1, marginTop: "0.2vh", flexShrink: 0 }}>{icon}</span>
                 <div>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>{title}</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.35 }}>{sub}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{title}</p>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{sub}</p>
                 </div>
               </div>
             ))}
@@ -76,7 +79,7 @@ export default function SlideTrustScore() {
               {[
                 { label: "12/12", sub: "pagos a tiempo" },
                 { label: "5", sub: "servicios" },
-                { label: "4", sub: "sem. racha" },
+                { label: "KYC ✓", sub: "verificado" },
                 { label: "Oro", sub: "nivel" },
               ].map(({ label, sub }) => (
                 <div key={sub} style={{ textAlign: "center" }}>
