@@ -7,12 +7,23 @@ export interface PendingWithdrawalSession {
   expiresAt: number;
 }
 
+export interface PendingP2PSession {
+  senderTelefono: string;
+  recipientTelefono: string;
+  recipientName: string;
+  amountMXN: number;
+  walletBalance: number;
+  memo?: string;
+  expiresAt: number;
+}
+
 export interface WhatsAppSession {
   conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   repCode: string | null;
   profileName: string | null;
   lastActivity: number;
   pendingWithdrawal: PendingWithdrawalSession | null;
+  pendingP2P: PendingP2PSession | null;
   awaitingName?: boolean;
   lang: "es" | "en";
 }
