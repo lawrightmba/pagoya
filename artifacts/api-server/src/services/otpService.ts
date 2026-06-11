@@ -12,8 +12,14 @@ const twilioClient = twilio(
 
 function toE164(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  // 10-digit Mexican number → prepend +52
+  // 10-digit number → assume Mexican, prepend +52
   return digits.length === 10 ? `+52${digits}` : `+${digits}`;
+}
+
+// WhatsApp-registered users are stored as last-10 digits (no country code).
+// Normalize to last 10 before any DB lookup so +14157972483 → 4157972483.
+function normalizeForDb(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
 }
 
 function verifyServiceSid(): string | null {
@@ -50,7 +56,7 @@ export async function generateOTP(phone: string): Promise<{ success: boolean; er
     const result = await db
       .update(usersTable)
       .set({ otpCode: code, otpExpiresAt: expiresAt, otpAttempts: 0, otpVerified: false })
-      .where(eq(usersTable.telefono, phone))
+      .where(eq(usersTable.telefono, normalizeForDb(phone)))
       .returning({ id: usersTable.id });
 
     if (result.length === 0) {
@@ -95,7 +101,7 @@ export async function verifyOTP(
         await db
           .update(usersTable)
           .set({ otpVerified: true })
-          .where(eq(usersTable.telefono, phone));
+          .where(eq(usersTable.telefono, normalizeForDb(phone)));
         logger.info({ phone: e164 }, "otpService.verifyOTP: approved via Twilio Verify");
         return { verified: true };
       }
@@ -121,7 +127,7 @@ export async function verifyOTP(
     const [user] = await db
       .select({ otpCode: usersTable.otpCode, otpExpiresAt: usersTable.otpExpiresAt, otpAttempts: usersTable.otpAttempts })
       .from(usersTable)
-      .where(eq(usersTable.telefono, phone))
+      .where(eq(usersTable.telefono, normalizeForDb(phone)))
       .limit(1);
 
     if (!user) {
@@ -134,7 +140,7 @@ export async function verifyOTP(
       return { verified: false, reason: "max_attempts" };
     }
 
-    await db.update(usersTable).set({ otpAttempts: attempts + 1 }).where(eq(usersTable.telefono, phone));
+    await db.update(usersTable).set({ otpAttempts: attempts + 1 }).where(eq(usersTable.telefono, normalizeForDb(phone)));
 
     if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
       return { verified: false, reason: "expired" };
@@ -144,7 +150,7 @@ export async function verifyOTP(
       return { verified: false, reason: "invalid" };
     }
 
-    await db.update(usersTable).set({ otpVerified: true }).where(eq(usersTable.telefono, phone));
+    await db.update(usersTable).set({ otpVerified: true }).where(eq(usersTable.telefono, normalizeForDb(phone)));
     logger.info({ phone }, "otpService.verifyOTP: verified via legacy path");
     return { verified: true };
   } catch (err) {
@@ -162,7 +168,7 @@ export async function clearOTP(phone: string): Promise<void> {
     await db
       .update(usersTable)
       .set({ otpCode: null, otpExpiresAt: null })
-      .where(eq(usersTable.telefono, phone));
+      .where(eq(usersTable.telefono, normalizeForDb(phone)));
     logger.info({ phone }, "otpService.clearOTP: cleared");
   } catch (err) {
     logger.error({ err, phone }, "otpService.clearOTP: error");

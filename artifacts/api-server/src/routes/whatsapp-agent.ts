@@ -52,7 +52,7 @@ const m = {
       return (
         `✅ *Done, ${firstName}! Your PagoYa account is active.*\n` +
         `──────────────────\n` +
-        `📱 Registered number: +52${phoneKey.slice(-10)}\n` +
+        `📱 Registered number: +${phoneKey.replace(/\D/g, "")}\n` +
         `👤 Name: ${rawName}${bonusLine}\n` +
         `──────────────────\n\n` +
         `With PagoYa you can:\n` +
@@ -67,7 +67,7 @@ const m = {
     return (
       `✅ *¡Listo, ${firstName}! Tu cuenta PagoYa está activa.*\n` +
       `──────────────────\n` +
-      `📱 Número registrado: +52${phoneKey.slice(-10)}\n` +
+      `📱 Número registrado: +${phoneKey.replace(/\D/g, "")}\n` +
       `👤 Nombre: ${rawName}${bonusLine}\n` +
       `──────────────────\n\n` +
       `Con PagoYa puedes:\n` +
