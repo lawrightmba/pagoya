@@ -251,3 +251,9 @@ id = "sYqZ9gIyZ9IbJJ_uk0hbw"
 uri = "file://pagoya-whatsapp-qr.png"
 type = "image"
 title = "PagoYa WhatsApp QR — with Logo"
+
+[[outputs]]
+id = "SULBqBd6Xmdv3mejA3xbo"
+uri = "file://pagoya-flyer.pdf"
+type = "pdf"
+title = "PagoYa — Registration Flyer (Bilingual)"
