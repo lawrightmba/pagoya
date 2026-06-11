@@ -52,8 +52,8 @@ export default function BlogRecargasTelcel() {
         <meta name="description" content="Cómo recargar Telcel con efectivo sin tarjeta ni banco en México. Paso a paso con PagoYa: carga en OXXO y recarga en segundos desde tu celular." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/recargas-telcel-efectivo" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/recargas-telcel-efectivo" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/recargas-telcel-efectivo" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/recargas-telcel-efectivo" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/recargas-telcel-efectivo" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Recargas Telcel con Efectivo Sin Tarjeta | PagoYa" />

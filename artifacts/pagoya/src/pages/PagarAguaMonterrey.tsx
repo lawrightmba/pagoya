@@ -65,12 +65,13 @@ export default function PagarAguaMonterrey() {
         <meta name="description" content="Paga tu recibo de agua SADM Monterrey desde tu celular en 2 minutos. Sin banco, sin tarjeta, sin filas. Carga con efectivo en OXXO y paga al instante con PagoYa." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-agua-monterrey" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-agua-monterrey" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-agua-monterrey" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-monterrey" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-monterrey" />
         <meta name="geo.region" content="MX-NL" />
         <meta name="geo.placename" content="Monterrey, Nuevo León" />
         <meta property="og:title" content="Pagar Agua SADM Monterrey Sin Banco | PagoYa" />
         <meta property="og:description" content="Paga tu recibo de agua SADM Monterrey desde tu celular. Sin banco ni tarjeta. Efectivo en OXXO con PagoYa." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-agua-monterrey" />
         <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>

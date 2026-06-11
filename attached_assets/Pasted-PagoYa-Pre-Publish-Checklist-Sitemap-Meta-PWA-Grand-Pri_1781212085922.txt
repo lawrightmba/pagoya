@@ -1,0 +1,135 @@
+PagoYa Pre-Publish Checklist — Sitemap, Meta, PWA, Grand Prize API
+Please run all of the following checks and fixes in one pass. Commit when complete.
+
+1. Sitemap Audit & Update
+Read the current sitemap.xml (likely at artifacts/pagoya/public/sitemap.xml or public/sitemap.xml).
+Compare against the full route list in App.tsx. Add any missing public-facing routes. The following should be present:
+/puntos
+/juegos
+/confianza
+/pti
+/enviar
+/verificar
+/pagar-cfe-monterrey
+/pagar-cfe-cdmx
+/pagar-agua-monterrey
+/pagar-agua-cdmx
+/pagar-agua-guadalajara
+/pagar-cfe-sin-banco
+/pagar-telmex-en-linea-efectivo
+/recargar-saldo-sin-tarjeta
+/pagar-luz-sin-banco
+/recargas-guadalajara
+/pagar-servicios-guadalajara
+/pagar-cfe-guadalajara
+Explicitly exclude from sitemap (add to robots.txt Disallow if not already blocked):
+/admin
+/rep-dashboard
+/rep-login
+/bienvenida
+/deck
+/video
+/vincular-banco
+/wallet/historial
+/exito
+/revisar
+/tarjeta
+Set lastmod on all entries to today's date. Set changefreq to weekly for landing/blog pages, monthly for legal pages.
+
+2. OG / Social Meta Tags Audit
+Check every TSX page component under src/pages/ for the presence of og:title, og:description, and og:image meta tags.
+For any page missing these tags, add them using the pattern already established in PagarCFE.tsx. Use the page's existing <title> and <meta name="description"> content as the source values.
+Pages most likely to be missing tags (check these first):
+/puntos  (LoyaltyDashboard.tsx)
+/juegos  (Juegos.tsx)
+/confianza  (Confianza.tsx)
+/enviar  (Enviar.tsx)
+/verificar  (Verificar.tsx)
+/pagar-agua-monterrey
+/pagar-agua-cdmx
+Default og:image if none exists: https://pagoyamx.com/og-default.png
+
+3. PWA Manifest Verification
+Read public/manifest.json (or manifest.webmanifest).
+Confirm and fix if needed:
+json{
+  "name": "PagoYa — Paga sin banco",
+  "short_name": "PagoYa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#004F2D",
+  "theme_color": "#004F2D",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
+If icon files don't exist at those paths, generate placeholder PNG icons using a Node script:
+bashnpm install canvas --save-dev
+Create scripts/generate-icons.js that draws a solid #004F2D square with white centered text "PY" and saves both sizes to public/icons/. Run it. Confirm both files exist before proceeding.
+
+4. Grand Prize API Endpoint — Existence & Graceful Failure
+Search api-server/src/routes/ for a /games/grand-prize GET endpoint.
+If it exists: confirm it returns { prize_amount: 0, total_entries: 0 } (or similar) when no prize is configured rather than a 404 or unhandled error.
+If it does NOT exist: create it at the correct route file. Minimum viable implementation:
+typescriptrouter.get("/games/grand-prize", async (req, res) => {
+  try {
+    // Query grand prize config from DB — return safe defaults if not configured
+    const result = await db.query.grandPrizeConfig?.findFirst({
+      where: (t, { eq }) => eq(t.is_active, true)
+    });
+    res.json({
+      prize_amount: result?.prize_amount ?? 0,
+      total_entries: result?.total_entries ?? 0,
+      draw_date: result?.draw_date ?? null
+    });
+  } catch (err) {
+    // Never 500 on homepage — always return safe defaults
+    res.json({ prize_amount: 0, total_entries: 0, draw_date: null });
+  }
+});
+If grandPrizeConfig table doesn't exist in the schema, add a minimal version to shared/schema.ts:
+typescriptexport const grandPrizeConfig = pgTable("grand_prize_config", {
+  id: serial("id").primaryKey(),
+  prize_amount: integer("prize_amount").notNull().default(0),
+  total_entries: integer("total_entries").notNull().default(0),
+  draw_date: timestamp("draw_date"),
+  is_active: boolean("is_active").notNull().default(false),
+  created_at: timestamp("created_at").defaultNow(),
+});
+Run the migration. Seed one row:
+sqlINSERT INTO grand_prize_config (prize_amount, total_entries, is_active)
+VALUES (2000, 0, true);
+
+5. Admin Route Auth Guard
+Open api-server/src/routes/ and confirm there is a middleware guard on any route prefixed /admin or serving admin data that checks for a valid session or API key before responding.
+If the guard exists: leave it. Add a comment // Admin auth guard — verified pre-publish [June 2026].
+If no guard exists: add a simple middleware check:
+typescriptconst adminAuth = (req: Request, res: Response, next: NextFunction) => {
+  const key = req.headers["x-admin-key"] || req.query.adminKey;
+  if (key !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+};
+Apply it to all /admin/* routes. Add ADMIN_SECRET_KEY to the list of required env vars in your README or .env.example.
+
+6. Console Error Sweep
+Run a build check:
+bashcd artifacts/pagoya && npx tsc --noEmit 2>&1 | grep -v "node_modules" | head -40
+Save output to tsc-check.txt. If there are errors in files touched during the last sprint (GiftCardSection.tsx, HowItWorksSection.tsx, BonusBanner.tsx, Home.tsx, PaymentSuccess.tsx, Juegos.tsx, BottomNav.tsx), fix them. Pre-existing errors in unrelated files (e.g. billpay.ts rep_id query) can be left with a // pre-existing comment.
+
+7. USD Equivalent Sanity Check — pagar-cfe-desde-usa
+In pagar-cfe-desde-usa.html and pagar-cfe-desde-usa/index.html, confirm the Western Union comparison example still makes PagoYa look favorable at $25 MXN (~$1.25 USD).
+Current text should read something like:
+
+"Con PagoYa pagas $25 MXN de comisión fija (~$1.25 USD) y el pago llega directo a CFE"
+
+Versus:
+
+"Western Union cobrando 5% sobre $800 MXN = $40 MXN en comisiones"
+
+That comparison still holds strongly ($1.25 vs $2.00+). If the example numbers read correctly, leave as-is. If the Western Union example amount needs adjusting for the new fee, update it.
+
+Run all 7 items. Skip any item that is already correctly implemented and leave a // verified [June 2026] comment at the relevant location. Commit with message: chore: pre-publish checklist — sitemap, meta, PWA, grand prize API, admin auth

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
+import { Helmet } from "react-helmet-async";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -222,6 +223,13 @@ export default function LoyaltyDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", overflowX: "hidden" }}>
+      <Helmet>
+        <title>Mis Puntos — PagoYa</title>
+        <meta name="description" content="Consulta tu saldo de puntos PagoYa, historial de recompensas y nivel de fidelidad. Canjea puntos por saldo y beneficios exclusivos." />
+        <meta property="og:title" content="Mis Puntos — PagoYa" />
+        <meta property="og:description" content="Consulta tu saldo de puntos PagoYa, historial de recompensas y nivel de fidelidad." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
+      </Helmet>
 
       {confetti && <ConfettiPop />}
 

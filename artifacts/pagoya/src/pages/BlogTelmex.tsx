@@ -55,8 +55,8 @@ export default function BlogTelmex() {
         <meta name="description" content="Guía paso a paso para pagar tu recibo de Telmex, Izzi o Totalplay sin tarjeta de crédito ni cuenta bancaria. Solo tu celular y efectivo en OXXO." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-telmex-sin-tarjeta" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-telmex-sin-tarjeta" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-telmex-sin-tarjeta" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-telmex-sin-tarjeta" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-telmex-sin-tarjeta" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Cómo Pagar Telmex Sin Tarjeta ni Banco | PagoYa" />

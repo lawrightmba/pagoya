@@ -52,8 +52,8 @@ export default function BlogAguaMexico() {
         <meta name="description" content="Cómo pagar el recibo de agua en México sin cuenta bancaria: SACMEX (CDMX), SIAPA (Guadalajara), JUMAPAM y más. Solo tu celular y efectivo en OXXO." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-agua-mexico" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-agua-mexico" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-agua-mexico" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-mexico" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-mexico" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Pagar Agua SACMEX, SIAPA y Más Sin Banco | PagoYa" />

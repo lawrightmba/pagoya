@@ -29,6 +29,9 @@ export default function Confianza() {
       <Helmet>
         <title>PagoYa Trust Index (PTI) — Metodología de Confianza</title>
         <meta name="description" content="El PTI es el sistema de puntuación conductual de PagoYa. Mide tu historial real en 4 dimensiones y 15 señales — sin consultar el buró de crédito." />
+        <meta property="og:title" content="PagoYa Trust Index (PTI) — Metodología de Confianza" />
+        <meta property="og:description" content="El PTI mide tu historial real en 4 dimensiones y 15 señales — sin consultar el buró de crédito." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
       </Helmet>
 
       {/* Top bar */}

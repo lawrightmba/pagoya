@@ -51,8 +51,8 @@ export default function BlogServiciosPV() {
         <meta name="description" content="Guía completa para pagar CFE, agua SEAPAL, gas y más servicios en Puerto Vallarta desde tu celular. Sin filas, sin banco, en menos de 2 minutos." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-servicios-puerto-vallarta" />
         <meta name="geo.region" content="MX-JAL" />
         <meta name="geo.placename" content="Puerto Vallarta, Jalisco, México" />
         <meta name="geo.position" content="20.6534;-105.2253" />

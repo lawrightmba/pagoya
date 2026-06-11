@@ -285,7 +285,8 @@ router.get("/grand-prize", async (_req: Request, res: Response) => {
     });
   } catch (err) {
     logger.error({ err }, "games/grand-prize: failed");
-    res.status(500).json({ error: "Error." });
+    // Never 500 on homepage — always return safe defaults
+    res.json({ prize_amount: 0, total_entries: 0, draw_date: null });
   }
 });
 

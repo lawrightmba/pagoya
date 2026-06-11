@@ -43,8 +43,8 @@ export default function BlogOXXOPay() {
         <meta name="description" content="Guía completa sobre OXXO Pay: qué es, cómo funciona, cuánto cobra y cómo usarlo para cargar tu billetera PagoYa y pagar servicios sin banco ni tarjeta." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/que-es-oxxo-pay" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/que-es-oxxo-pay" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/que-es-oxxo-pay" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/que-es-oxxo-pay" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/que-es-oxxo-pay" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Qué es OXXO Pay y Cómo Funciona | PagoYa" />

@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { eq, desc, gte, sql as drizzleSql } from "drizzle-orm";
@@ -44,6 +44,16 @@ import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.j
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
+
+// ─── Admin auth guard ──────────────────────────────────────────────────────────
+const adminAuth = (req: Request, res: Response, next: NextFunction): void => {
+  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
+  if (!key || key !== process.env.ADMIN_SECRET_KEY) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+};
 
 router.use(healthRouter);
 router.use("/pagoya", pagoyaRouter);
@@ -226,6 +236,9 @@ router.post("/sync", (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
+router.all(/^\/admin/, adminAuth);
 
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {

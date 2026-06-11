@@ -115,7 +115,7 @@ export function usePushNotifications(telefono: string | null) {
       // Subscribe to push
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey), // pre-existing: Uint8Array<ArrayBufferLike> TS lib mismatch
       });
 
       // Save to server

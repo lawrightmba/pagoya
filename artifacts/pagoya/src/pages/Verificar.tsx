@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ShieldCheck, ChevronLeft, CheckCircle2, AlertCircle, Loader2, Lock } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 type KycStatus = "none" | "pending" | "verified" | "rejected";
 
@@ -135,6 +136,13 @@ export default function Verificar() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "#0A2540", color: "#E2E8F0", fontFamily: "'Inter', sans-serif" }}>
+      <Helmet>
+        <title>Verificar identidad — PagoYa</title>
+        <meta name="description" content="Verifica tu identidad en PagoYa para desbloquear límites de pago más altos y funciones avanzadas de la billetera." />
+        <meta property="og:title" content="Verificar identidad — PagoYa" />
+        <meta property="og:description" content="Verifica tu identidad en PagoYa para desbloquear límites de pago más altos." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
+      </Helmet>
       {/* Header */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", paddingTop: "24px", paddingBottom: "8px" }}>

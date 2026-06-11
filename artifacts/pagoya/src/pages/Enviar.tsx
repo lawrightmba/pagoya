@@ -156,6 +156,10 @@ export default function Enviar() {
     <div className="min-h-screen" style={{ background: navyBg }}>
       <Helmet>
         <title>Enviar dinero — PagoYa</title>
+        <meta name="description" content="Envía dinero a cualquier usuario de PagoYa al instante, sin banco ni comisión adicional." />
+        <meta property="og:title" content="Enviar dinero — PagoYa" />
+        <meta property="og:description" content="Envía dinero a cualquier usuario de PagoYa al instante, sin banco ni comisión adicional." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
       </Helmet>
 
       {/* Header */}

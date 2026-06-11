@@ -30,6 +30,14 @@ Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /command-center
 Disallow: /api/
+Disallow: /bienvenida
+Disallow: /deck
+Disallow: /video
+Disallow: /vincular-banco
+Disallow: /wallet/historial
+Disallow: /exito
+Disallow: /revisar
+Disallow: /tarjeta
 
 User-agent: Bingbot
 Allow: /
@@ -40,6 +48,14 @@ Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /command-center
 Disallow: /api/
+Disallow: /bienvenida
+Disallow: /deck
+Disallow: /video
+Disallow: /vincular-banco
+Disallow: /wallet/historial
+Disallow: /exito
+Disallow: /revisar
+Disallow: /tarjeta
 
 # ── Global rule — allow all other crawlers, block internal/admin paths ────────
 User-agent: *
@@ -51,5 +67,13 @@ Disallow: /rep-login
 Disallow: /rep-signup
 Disallow: /login
 Disallow: /api/
+Disallow: /bienvenida
+Disallow: /deck
+Disallow: /video
+Disallow: /vincular-banco
+Disallow: /wallet/historial
+Disallow: /exito
+Disallow: /revisar
+Disallow: /tarjeta
 
 Sitemap: https://pagoyamx.com/sitemap.xml

@@ -43,8 +43,8 @@ export default function BlogDineroElectronico() {
         <meta name="description" content="¿Qué es una cuenta de dinero electrónico en México? Cómo funciona, diferencias con una cuenta bancaria y por qué es útil para quienes no tienen banco." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/que-es-dinero-electronico-mexico" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/que-es-dinero-electronico-mexico" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/que-es-dinero-electronico-mexico" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/que-es-dinero-electronico-mexico" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/que-es-dinero-electronico-mexico" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Qué es el Dinero Electrónico en México | PagoYa" />

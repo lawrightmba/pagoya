@@ -14,8 +14,8 @@ export default function PagarCFE() {
         <meta name="description" content="Paga tu recibo de CFE desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Recarga con efectivo en OXXO y paga al instante con PagoYa." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-cfe" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-cfe" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-cfe" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-cfe" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-cfe" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Cómo Pagar tu Recibo de CFE Sin Ir al Banco | PagoYa" />

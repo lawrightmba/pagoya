@@ -44,8 +44,8 @@ export default function BlogPagarIzzi() {
         <meta name="description" content="Guía paso a paso para pagar tu recibo Izzi sin tarjeta ni banco. Usa efectivo, OXXO o PagoYa desde tu celular. Rápido y sin filas." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
-        <link rel="alternate" hreflang="es-MX" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
-        <link rel="alternate" hreflang="x-default" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
         <meta property="og:title" content="Cómo Pagar Izzi sin Cuenta Bancaria | PagoYa" />

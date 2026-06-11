@@ -106,7 +106,13 @@ export default function Juegos() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#004F2D", paddingBottom: "80px" }}>
-      <Helmet><title>Juegos — PagoYa</title></Helmet>
+      <Helmet>
+        <title>Juegos — PagoYa</title>
+        <meta name="description" content="Raspa tarjetas y gira la ruleta para ganar puntos, saldo gratis y entradas al Gran Premio mensual. Solo para usuarios de PagoYa." />
+        <meta property="og:title" content="Juegos — PagoYa" />
+        <meta property="og:description" content="Raspa tarjetas y gira la ruleta para ganar puntos, saldo gratis y entradas al Gran Premio mensual." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
+      </Helmet>
 
       {/* Header */}
       <div style={{ background: "#005432", padding: "20px 20px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
