@@ -30,30 +30,44 @@ function getTierColor(tier?: string): string {
   return "#6B7280";
 }
 
-function formatDate(iso: string): string {
+const TIER_LABELS_EN: Record<string, string> = {
+  "Iniciando":   "Starting",
+  "En proceso":  "In Progress",
+  "Bueno":       "Good",
+  "Excelente":   "Excellent",
+};
+
+function formatDate(iso: string, lang: "es" | "en"): string {
   const d = new Date(iso);
-  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  const monthsEs = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const monthsEn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const m = lang === "es" ? monthsEs[d.getMonth()] : monthsEn[d.getMonth()];
+  return `${d.getDate()} ${m} ${d.getFullYear()}`;
 }
 
-function formatNextUpdate(dateStr: string): string {
+function formatNextUpdate(dateStr: string, lang: "es" | "en"): string {
   const d = new Date(dateStr + "T00:00:00");
-  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  return `1 ${months[d.getMonth()]} ${d.getFullYear()}`;
+  const monthsEs = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const monthsEn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const m = lang === "es" ? monthsEs[d.getMonth()] : monthsEn[d.getMonth()];
+  return `1 ${m} ${d.getFullYear()}`;
 }
 
-function getImprovementHint(bd: PTIBreakdown): string {
+function getImprovementHint(bd: PTIBreakdown, lang: "es" | "en"): string {
+  const es = lang === "es";
   if (bd.biller_diversity.count < 3) {
     const more = 3 - bd.biller_diversity.count;
-    return `💡 Paga ${more} servicio${more > 1 ? "s" : ""} diferente${more > 1 ? "s" : ""} para +${more * 5} pts`;
+    return es
+      ? `💡 Paga ${more} servicio${more > 1 ? "s" : ""} diferente${more > 1 ? "s" : ""} para +${more * 5} pts`
+      : `💡 Pay ${more} different service${more > 1 ? "s" : ""} for +${more * 5} pts`;
   }
   if (!bd.kyc_verified.verified) {
-    return "💡 Verifica tu identidad para +15 pts";
+    return es ? "💡 Verifica tu identidad para +15 pts" : "💡 Verify your identity for +15 pts";
   }
   if (bd.payment_streak.months < 25) {
-    return "💡 Sigue pagando cada mes para subir tu racha";
+    return es ? "💡 Sigue pagando cada mes para subir tu racha" : "💡 Keep paying every month to grow your streak";
   }
-  return "🌟 ¡Excelente historial! Sigue así.";
+  return es ? "🌟 ¡Excelente historial! Sigue así." : "🌟 Excellent history! Keep it up.";
 }
 
 interface ScoreRowProps {
@@ -79,9 +93,11 @@ interface Props {
   telefono: string;
   refreshKey?: number;
   pendingCompute?: boolean;
+  lang?: "es" | "en";
 }
 
-export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute = false }: Props) {
+export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute = false, lang = "es" }: Props) {
+  const es = lang === "es";
   const [data, setData] = useState<PTIResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -163,7 +179,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
         textAlign: "center",
       }}>
         <p style={{ color: "#6B7280", fontSize: "0.85rem", margin: "0 0 10px" }}>
-          No pudimos cargar tu puntaje. Intenta de nuevo.
+          {es ? "No pudimos cargar tu puntaje. Intenta de nuevo." : "We couldn't load your score. Please try again."}
         </p>
         <button
           onClick={fetchScore}
@@ -173,7 +189,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
             fontWeight: 600, cursor: "pointer",
           }}
         >
-          Reintentar
+          {es ? "Reintentar" : "Retry"}
         </button>
       </div>
     );
@@ -193,7 +209,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
       }}>
         <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#005432", margin: "0 0 6px" }}>
-          🛡️ Tu PagoYa Trust Index
+          🛡️ {es ? "Tu PagoYa Trust Index" : "Your PagoYa Trust Index"}
         </p>
         <p style={{ fontSize: "0.82rem", color: "#6B7280", margin: 0 }}>
           {nullMessage}
@@ -213,17 +229,26 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
   }
 
   const bd = data.breakdown!;
+  const streakN = bd.payment_streak.months;
+  const billerN = bd.biller_diversity.count;
+  const missionN = bd.mission_completions.count;
   const positiveRows: { icon: string; label: string; score: number; max: number }[] = [
-    { icon: "🪪", label: "Identidad verificada",         score: bd.kyc_verified.score,        max: 15 },
-    { icon: "📅", label: `${bd.payment_streak.months} mes${bd.payment_streak.months !== 1 ? "es" : ""} seguidos de pago`, score: bd.payment_streak.score, max: 25 },
-    { icon: "🏢", label: `${bd.biller_diversity.count} servicio${bd.biller_diversity.count !== 1 ? "s" : ""} distinto${bd.biller_diversity.count !== 1 ? "s" : ""}`, score: bd.biller_diversity.score, max: 15 },
-    { icon: "🏆", label: `${bd.mission_completions.count} misión${bd.mission_completions.count !== 1 ? "es" : ""} completada${bd.mission_completions.count !== 1 ? "s" : ""}`, score: bd.mission_completions.score, max: 15 },
-    { icon: "💰", label: `Saldo en cartera`,             score: bd.wallet_balance.score,      max: 15 },
-    { icon: "🔄", label: `Proporción carga/gasto`,       score: bd.load_spend_ratio.score,    max: 10 },
-    { icon: "📆", label: `Antigüedad de cuenta`,         score: bd.account_age.score,         max: 5  },
+    { icon: "🪪", label: es ? "Identidad verificada" : "Verified identity",         score: bd.kyc_verified.score,   max: 15 },
+    { icon: "📅", label: es
+        ? `${streakN} mes${streakN !== 1 ? "es" : ""} seguidos de pago`
+        : `${streakN} consecutive payment month${streakN !== 1 ? "s" : ""}`,       score: bd.payment_streak.score, max: 25 },
+    { icon: "🏢", label: es
+        ? `${billerN} servicio${billerN !== 1 ? "s" : ""} distinto${billerN !== 1 ? "s" : ""}`
+        : `${billerN} different service${billerN !== 1 ? "s" : ""}`,               score: bd.biller_diversity.score, max: 15 },
+    { icon: "🏆", label: es
+        ? `${missionN} misión${missionN !== 1 ? "es" : ""} completada${missionN !== 1 ? "s" : ""}`
+        : `${missionN} mission${missionN !== 1 ? "s" : ""} completed`,             score: bd.mission_completions.score, max: 15 },
+    { icon: "💰", label: es ? "Saldo en cartera"    : "Wallet balance",             score: bd.wallet_balance.score, max: 15 },
+    { icon: "🔄", label: es ? "Proporción carga/gasto" : "Load/spend ratio",        score: bd.load_spend_ratio.score, max: 10 },
+    { icon: "📆", label: es ? "Antigüedad de cuenta" : "Account age",               score: bd.account_age.score,    max: 5  },
   ].filter(r => r.score > 0);
 
-  const hint = getImprovementHint(bd);
+  const hint = getImprovementHint(bd, lang);
 
   return (
     <div style={{
@@ -235,7 +260,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
     }}>
       {/* Header */}
       <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#005432", margin: "0 0 12px" }}>
-        🛡️ Tu PagoYa Trust Index
+        🛡️ {es ? "Tu PagoYa Trust Index" : "Your PagoYa Trust Index"}
       </p>
 
       {/* Score + tier */}
@@ -253,7 +278,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
         </div>
         <div>
           <div style={{ fontSize: "1.25rem", fontWeight: 800, color: tierColor, lineHeight: 1 }}>
-            {data.tier_label}
+            {es ? data.tier_label : (TIER_LABELS_EN[data.tier_label ?? ""] ?? data.tier_label)}
           </div>
           <div style={{ fontSize: "0.75rem", color: "#9CA3AF", marginTop: 2 }}>
             {displayScore}/100
@@ -318,10 +343,10 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
         <span style={{ fontSize: "18px", flexShrink: 0 }}>🚀</span>
         <div>
           <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#005432", marginBottom: "1px" }}>
-            Fase 2 disponible el 7 de julio
+            {es ? "Fase 2 disponible el 7 de julio" : "Phase 2 available July 7"}
           </div>
           <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>
-            Nuevas recompensas y beneficios se desbloquean pronto
+            {es ? "Nuevas recompensas y beneficios se desbloquean pronto" : "New rewards and benefits unlocking soon"}
           </div>
         </div>
       </div>
@@ -329,10 +354,10 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
       {/* Dates */}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#9CA3AF", marginTop: "10px" }}>
         {data.computed_at && (
-          <span>Actualizado: {formatDate(data.computed_at)}</span>
+          <span>{es ? "Actualizado" : "Updated"}: {formatDate(data.computed_at, lang)}</span>
         )}
         {data.next_update && (
-          <span>Próxima actualización: {formatNextUpdate(data.next_update)}</span>
+          <span>{es ? "Próxima actualización" : "Next update"}: {formatNextUpdate(data.next_update, lang)}</span>
         )}
       </div>
     </div>

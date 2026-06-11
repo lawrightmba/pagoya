@@ -597,13 +597,13 @@ export default function Home() {
 
             <div style={{ textAlign: "left", flex: 1 }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "11px", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "2px" }}>
-                Gratis · cada día
+                {es ? "Gratis · cada día" : "Free · every day"}
               </p>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "22px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "4px" }}>
-                Raspa y Gana
+                {es ? "Raspa y Gana" : "Scratch & Win"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.65)" }}>
-                Gana puntos y saldo MXN en segundos{" "}
+                {es ? "Gana puntos y saldo MXN en segundos" : "Win points and MXN balance in seconds"}{" "}
                 <span style={{ display: "inline-block", animation: "rypBounce 1.2s ease-in-out infinite" }}>→</span>
               </p>
             </div>
@@ -613,7 +613,7 @@ export default function Home() {
               background: "#00C875", borderRadius: "10px", padding: "8px 14px", flexShrink: 0,
               animation: "rypPulse 2s ease-in-out infinite",
             }}>
-              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>JUGAR</span>
+              <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 900, color: "#004F2D" }}>{es ? "JUGAR" : "PLAY"}</span>
             </div>
           </button>
         </section>
@@ -630,7 +630,7 @@ export default function Home() {
             )}
             {storedPhone && (
               <div style={{ marginBottom: "20px" }}>
-                <PTIScoreCard telefono={storedPhone} refreshKey={ptiRefreshKey} pendingCompute={ptiPendingCompute} />
+                <PTIScoreCard telefono={storedPhone} refreshKey={ptiRefreshKey} pendingCompute={ptiPendingCompute} lang={lang} />
               </div>
             )}
             <AutofillInput
@@ -642,7 +642,7 @@ export default function Home() {
             <div style={{ textAlign: "center", margin: "10px 0 4px" }}>
               <PaulaHint
                 message="Hola Paula, ¿cómo funciona PagoYa? ¿Puedo usarlo sin tener cuenta bancaria?"
-                label="¿Tienes dudas? Pregúntale a Paula"
+                label={es ? "¿Tienes dudas? Pregúntale a Paula" : "Questions? Ask Paula"}
               />
             </div>
 

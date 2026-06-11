@@ -4,37 +4,20 @@ import { Home, Zap, CreditCard, Star, History } from "lucide-react";
 const BILL_PAY_PATHS = ["/servicios", "/pagar", "/revisar", "/tarjeta", "/exito"];
 const PUNTOS_PATHS   = ["/puntos", "/points", "/juegos"];
 
-const TABS = [
-  {
-    path: "/",
-    icon: Home,
-    label: "Inicio",
-    matchPaths: ["/"],
-  },
-  {
-    path: "/servicios",
-    icon: Zap,
-    label: "Pagar",
-    matchPaths: BILL_PAY_PATHS,
-  },
-  {
-    path: "/cargar",
-    icon: CreditCard,
-    label: "Cargar",
-    matchPaths: ["/cargar"],
-  },
-  {
-    path: "/puntos",
-    icon: Star,
-    label: "Puntos",
-    matchPaths: PUNTOS_PATHS,
-  },
-  {
-    path: "/wallet/historial",
-    icon: History,
-    label: "Historial",
-    matchPaths: ["/wallet/historial"],
-  },
+const TABS_ES = [
+  { path: "/",                icon: Home,       label: "Inicio",    matchPaths: ["/"] },
+  { path: "/servicios",       icon: Zap,        label: "Pagar",     matchPaths: BILL_PAY_PATHS },
+  { path: "/cargar",          icon: CreditCard, label: "Cargar",    matchPaths: ["/cargar"] },
+  { path: "/puntos",          icon: Star,       label: "Puntos",    matchPaths: PUNTOS_PATHS },
+  { path: "/wallet/historial",icon: History,    label: "Historial", matchPaths: ["/wallet/historial"] },
+];
+
+const TABS_EN = [
+  { path: "/",                icon: Home,       label: "Home",      matchPaths: ["/"] },
+  { path: "/servicios",       icon: Zap,        label: "Pay",       matchPaths: BILL_PAY_PATHS },
+  { path: "/cargar",          icon: CreditCard, label: "Load",      matchPaths: ["/cargar"] },
+  { path: "/puntos",          icon: Star,       label: "Points",    matchPaths: PUNTOS_PATHS },
+  { path: "/wallet/historial",icon: History,    label: "History",   matchPaths: ["/wallet/historial"] },
 ];
 
 const SHOW_ON = new Set([
@@ -52,12 +35,15 @@ function isActive(location: string, matchPaths: string[]): boolean {
 
 export default function BottomNav() {
   const [location, navigate] = useLocation();
+  const lang = typeof localStorage !== "undefined"
+    ? ((localStorage.getItem("pagoya_lang") ?? "es") as "es" | "en")
+    : "es";
+  const TABS = lang === "es" ? TABS_ES : TABS_EN;
 
   if (!SHOW_ON.has(location.split("?")[0])) return null;
 
   return (
     <>
-      {/* Spacer so page content isn't hidden behind the bar */}
       <div style={{ height: "68px" }} />
 
       <nav
@@ -97,7 +83,6 @@ export default function BottomNav() {
                 position: "relative",
               }}
             >
-              {/* Active indicator pill */}
               {active && (
                 <span
                   style={{

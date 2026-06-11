@@ -22,6 +22,10 @@ export default function WalletBalanceWidget() {
     typeof localStorage !== "undefined"
       ? (localStorage.getItem("pagoya_telefono") ?? "")
       : "";
+  const lang = typeof localStorage !== "undefined"
+    ? ((localStorage.getItem("pagoya_lang") ?? "es") as "es" | "en")
+    : "es";
+  const es = lang === "es";
 
   const [state, setState] = useState<WalletState>({
     balance: null,
@@ -131,8 +135,8 @@ export default function WalletBalanceWidget() {
           <Wallet className="w-5 h-5" style={{ color: "#1D9E75" }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-400 font-semibold mb-0.5">Saldo PagoYa</p>
-          <p className="text-sm font-bold" style={{ color: "#1D9E75" }}>Configura tu monedero →</p>
+          <p className="text-xs text-gray-400 font-semibold mb-0.5">{es ? "Saldo PagoYa" : "PagoYa Balance"}</p>
+          <p className="text-sm font-bold" style={{ color: "#1D9E75" }}>{es ? "Configura tu monedero →" : "Set up your wallet →"}</p>
         </div>
       </button>
     );
@@ -195,13 +199,13 @@ export default function WalletBalanceWidget() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <p className="text-xs text-gray-400 font-semibold">Saldo PagoYa</p>
+            <p className="text-xs text-gray-400 font-semibold">{es ? "Saldo PagoYa" : "PagoYa Balance"}</p>
             {state.hasPending && (
               <span
                 className="px-2 py-0.5 rounded-full text-xs font-bold leading-none"
                 style={{ background: "#FFF8E1", color: "#B45309", border: "1px solid #FCD34D" }}
               >
-                Carga pendiente
+                {es ? "Carga pendiente" : "Pending load"}
               </span>
             )}
             {isVerified && (
@@ -210,13 +214,13 @@ export default function WalletBalanceWidget() {
                 style={{ background: "#F0FAF3", color: "#046C2C", border: "1px solid #D4EDDA" }}
               >
                 <ShieldCheck style={{ width: 10, height: 10 }} />
-                Nivel 2
+                {es ? "Nivel 2" : "Level 2"}
               </span>
             )}
           </div>
           <p className="text-lg font-black text-[#1F1F1F] leading-tight">{formatted}</p>
         </div>
-        <span className="text-xs text-gray-400">Ver todo →</span>
+        <span className="text-xs text-gray-400">{es ? "Ver todo →" : "View all →"}</span>
       </button>
 
       {/* KYC prompt — shown only when unverified and user is logged in */}
@@ -229,10 +233,10 @@ export default function WalletBalanceWidget() {
           <ShieldAlert style={{ width: 16, height: 16, color: "#B45309", flexShrink: 0 }} />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold" style={{ color: "#92400E", margin: 0 }}>
-              Límite: $6,000 MXN/mes
+              {es ? "Límite: $6,000 MXN/mes" : "Limit: $6,000 MXN/mo"}
             </p>
             <p className="text-xs" style={{ color: "#B45309", margin: 0 }}>
-              Verifica tu CURP → sube a $24,000/mes
+              {es ? "Verifica tu CURP → sube a $24,000/mes" : "Verify your ID → raise limit to $24,000/mo"}
             </p>
           </div>
           <span className="text-xs font-bold" style={{ color: "#B45309", flexShrink: 0 }}>→</span>
@@ -251,7 +255,7 @@ export default function WalletBalanceWidget() {
           }}
         >
           <Plus className="w-4 h-4" strokeWidth={2.5} />
-          Cargar
+          {es ? "Cargar" : "Load"}
         </button>
         <button
           onClick={() => navigate("/enviar")}
@@ -263,7 +267,7 @@ export default function WalletBalanceWidget() {
           }}
         >
           <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
-          Enviar
+          {es ? "Enviar" : "Send"}
         </button>
       </div>
     </div>

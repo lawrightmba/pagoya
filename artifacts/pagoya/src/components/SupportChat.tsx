@@ -40,6 +40,8 @@ const STRINGS = {
     newConversation: "Nueva conversación",
     errorMsg: "Lo sentimos, ocurrió un error. Intenta de nuevo.",
     fabLabel: "Pregúntame",
+    bubbleTitle: "Hola, soy Paula 👋",
+    bubbleBody: "Estoy aquí para ayudarte. ¡Pregúntame lo que necesitas!",
   },
   en: {
     header: "Paula · PagoYa",
@@ -50,6 +52,8 @@ const STRINGS = {
     newConversation: "New conversation",
     errorMsg: "Sorry, something went wrong. Please try again.",
     fabLabel: "Ask me",
+    bubbleTitle: "Hi, I'm Paula 👋",
+    bubbleBody: "I'm here to help. Ask me anything!",
   },
 };
 
@@ -734,10 +738,10 @@ export default function SupportChat() {
           }}
         >
           <span style={{ display: "block", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>
-            Hola, soy Paula 👋
+            {s.bubbleTitle}
           </span>
           <span style={{ display: "block", color: "#374151", fontSize: 12, fontWeight: 500 }}>
-            Estoy aquí para ayudarte. ¡Pregúntame lo que necesitas!
+            {s.bubbleBody}
           </span>
           {/* tail pointing down-right toward avatar */}
           <span style={{
