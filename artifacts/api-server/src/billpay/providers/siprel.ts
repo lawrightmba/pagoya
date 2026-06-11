@@ -50,10 +50,18 @@ const SIPREL_SKU_MAP: Record<string, SkuEntry | null> = {
   izzi:              { sku: "IZZ000", bolsa: "pagoServicios" },
   totalplay:         { sku: "TOT000", bolsa: "pagoServicios" },
   gas_natural:       { sku: "GAS000",   bolsa: "pagoServicios" },
+  // — Gas (additional providers) ——
+  ecogas:            { sku: "ECO000",   bolsa: "pagoServicios" },
+  mexicana_gas:      { sku: "MGAS01",   bolsa: "pagoServicios" },
+  naturgy:           { sku: "NAT001",   bolsa: "pagoServicios" },
+  // — Mobile bills ——
+  movistar:          { sku: "MOF000",   bolsa: "pagoServicios" },
   // — Water Utilities ——
   sacmex:            { sku: "SACMEX01", bolsa: "pagoServicios" },
   agua_jalisco:      { sku: "SIA000",   bolsa: "pagoServicios" },
   seapal:            { sku: "SEAPAL01", bolsa: "pagoServicios" },
+  // — Housing ——
+  infonavit:         { sku: "INF000",   bolsa: "pagoServicios" },
   // — Gift Cards (Pago de Servicios bolsa, fixed-denomination) ——
   netflix_300:       { sku: "NET300",      bolsa: "pagoServicios" },
   netflix_400:       { sku: "NET150",      bolsa: "pagoServicios" },

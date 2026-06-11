@@ -30,8 +30,10 @@ export const BILL_CATALOG: BillService[] = [
   { id: "seapal",      name: "SEAPAL Vallarta", category: "Agua", providers: ["siprel"], logoEmoji: "💧", siprelServiceId: "SEAPAL01", minReferencia: 28, maxReferencia: 28 },
 
   // ── GAS ───────────────────────────────────────────────────────────────────
-  { id: "gas_natural", name: "Gas Natural", category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "GAS000", minReferencia: 14, maxReferencia: 28 },
-  { id: "zeta_gas", name: "Zeta Gas", category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "ZETA_GAS" },
+  { id: "gas_natural",   name: "Gas Natural",      category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "GAS000",  minReferencia: 14, maxReferencia: 28 },
+  { id: "ecogas",        name: "Ecogas",            category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "ECO000"  },
+  { id: "mexicana_gas",  name: "Mexicana de Gas",   category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "MGAS01"  },
+  { id: "naturgy",       name: "Naturgy",            category: "Gas", providers: ["siprel"], logoEmoji: "🔥", siprelServiceId: "NAT001"  },
 
   // ── INTERNET ─────────────────────────────────────────────────────────────
   { id: "izzi", name: "Izzi", category: "Internet", providers: ["siprel"], logoEmoji: "📡", siprelServiceId: "IZZ000", minReferencia: 8, maxReferencia: 8 },
@@ -87,7 +89,7 @@ export const BILL_CATALOG: BillService[] = [
   { id: "att_recarga_150", name: "AT&T Recarga $150", category: "Teléfono móvil", providers: ["siprel"], logoEmoji: "📱", siprelServiceId: "MOV150", minAmount: 150, isTopup: true },
 
   // ── MÓVIL — Other carriers ────────────────────────────────────────────────
-  { id: "movistar", name: "Movistar", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOVISTAR", evolucionaServiceId: "MOVISTAR" },
+  { id: "movistar", name: "Movistar Factura", category: "Teléfono móvil", providers: ["siprel", "evoluciona"], logoEmoji: "📱", siprelServiceId: "MOF000", evolucionaServiceId: "MOVISTAR" },
 
   // ── GIFT CARDS ────────────────────────────────────────────────────────────
   // Netflix
@@ -125,19 +127,8 @@ export const BILL_CATALOG: BillService[] = [
   // Soriana
   { id: "soriana_500", name: "Soriana $500", category: "Gift Cards", providers: ["siprel"], logoEmoji: "🛒", siprelServiceId: "SORIANA500", isGiftCard: true, fixedAmount: 500 },
 
-  // ── PRÉSTAMOS ─────────────────────────────────────────────────────────────
-  { id: "kueski", name: "Kueski", category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KUESKI" },
-  { id: "konfio",  name: "Konfío",  category: "Préstamos", providers: ["siprel"], logoEmoji: "💳", siprelServiceId: "KONFIO" },
-
-  // ── SEGUROS ───────────────────────────────────────────────────────────────
-  { id: "gnp", name: "GNP Seguros", category: "Seguro", providers: ["siprel"], logoEmoji: "🛡️", siprelServiceId: "GNP" },
-  { id: "hdi", name: "HDI Seguros", category: "Seguro", providers: ["siprel"], logoEmoji: "🛡️", siprelServiceId: "HDI" },
-
-  // ── EDUCACIÓN ─────────────────────────────────────────────────────────────
-  { id: "sep", name: "SEP / IMSS", category: "Escuela", providers: ["siprel"], logoEmoji: "🎓", siprelServiceId: "SEP" },
-
-  // ── RENTA ─────────────────────────────────────────────────────────────────
-  { id: "renta_pagoseguro", name: "PagoSeguro (Renta)", category: "Renta", providers: ["siprel"], logoEmoji: "🏠", siprelServiceId: "PAGOSEGURO_RENTA" },
+  // ── INFONAVIT ─────────────────────────────────────────────────────────────
+  { id: "infonavit", name: "Infonavit", category: "Préstamos", providers: ["siprel"], logoEmoji: "🏠", siprelServiceId: "INF000" },
 ];
 
 export function getServiceById(id: string): BillService | undefined {
