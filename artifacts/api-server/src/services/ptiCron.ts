@@ -108,6 +108,13 @@ async function checkPtiMilestones(
 // ── Scratch card reminder — 5 PM Mexico City (23:00 UTC) ─────────────────────
 // Cialdini: Scarcity — "tienes hasta medianoche" creates urgency without fabrication
 export async function sendScratchCardReminders(): Promise<void> {
+  // Scratch card reminders are business-initiated WhatsApp messages.
+  // They require an approved Meta template to deliver outside a session window.
+  // Suppress until SCRATCH_REMINDERS_ENABLED=true is set (after Meta biz verification).
+  if (process.env.SCRATCH_REMINDERS_ENABLED !== "true") {
+    logger.info("pti-cron: scratch reminders suppressed — SCRATCH_REMINDERS_ENABLED not set");
+    return;
+  }
   logger.info("pti-cron: sendScratchCardReminders running");
   try {
     const { db } = await import("@workspace/db");

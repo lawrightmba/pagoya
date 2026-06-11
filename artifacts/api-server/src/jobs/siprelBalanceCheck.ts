@@ -8,6 +8,13 @@ const ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // max one alert per 6 hours
 let lastAlertSentAt = 0;
 
 async function checkSiprelBalance(): Promise<void> {
+  // Skip entirely until SIPREL is live — balance is always $0 in dev/mock mode
+  // and would spam alerts on every restart. Set STP_ENABLED=true to activate.
+  if (process.env.STP_ENABLED !== "true") {
+    logger.info("siprelBalanceCheck: STP_ENABLED not set — skipping");
+    return;
+  }
+
   const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
   if (!adminNumber) {
     logger.warn("siprelBalanceCheck: ADMIN_WHATSAPP_NUMBER not set, skipping alert");
