@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
-import PagoYaLogo from "@/components/PagoYaLogo";
 import PaulaHint from "@/components/PaulaHint";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -421,7 +420,7 @@ export default function Register() {
           <meta name="robots" content="noindex,follow" />
         </Helmet>
         <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>
-          <PagoYaLogo style={{ height: "44px", width: "auto" }} />
+          <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "44px", width: "auto", objectFit: "contain" }} />
         </div>
         <div style={{
           width: "100%",
@@ -502,7 +501,7 @@ export default function Register() {
           <meta name="robots" content="noindex,follow" />
         </Helmet>
         <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>
-          <PagoYaLogo style={{ height: "44px", width: "auto" }} />
+          <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "44px", width: "auto", objectFit: "contain" }} />
         </div>
 
         <div style={{ width: "100%", maxWidth: "400px" }}>
@@ -677,7 +676,7 @@ export default function Register() {
             </svg>
           </button>
         </div>
-        <PagoYaLogo style={{ height: "44px", width: "auto" }} />
+        <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "44px", width: "auto", objectFit: "contain" }} />
       </div>
 
       <div style={{ width: "100%", maxWidth: "400px" }}>

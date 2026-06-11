@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
-import PagoYaLogo from "@/components/PagoYaLogo";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -120,7 +119,7 @@ export default function Bienvenida() {
 
       {/* Logo */}
       <div style={{ marginBottom: "28px", display: "flex", justifyContent: "center" }}>
-        <PagoYaLogo style={{ height: "40px", width: "auto" }} />
+        <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "40px", width: "auto", objectFit: "contain" }} />
       </div>
 
       <div style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "18px" }}>
