@@ -169,12 +169,13 @@ export default function Home() {
   const [notifSent, setNotifSent]   = useState(false);
   const [pointsBalance, setPointsBalance] = useState<number | null>(null);
   const [bonusBannerDismissed, setBonusBannerDismissed] = useState<boolean>(() => {
-    try { return localStorage.getItem("bonus_banner_v1") === "1"; } catch { return false; }
+    // Session-scoped: dismissing the banner only lasts until the tab is closed
+    try { return sessionStorage.getItem("bonus_banner_v1") === "1"; } catch { return false; }
   });
 
   function dismissBonusBanner(e: React.MouseEvent) {
     e.stopPropagation();
-    try { localStorage.setItem("bonus_banner_v1", "1"); } catch { /* ignore */ }
+    try { sessionStorage.setItem("bonus_banner_v1", "1"); } catch { /* ignore */ }
     setBonusBannerDismissed(true);
   }
 
@@ -810,8 +811,9 @@ export default function Home() {
               {[
                 { icon: "🔐", label: "Conekta" },
                 { icon: "🏪", label: "OXXO Pay" },
-                { icon: "🏦", label: "SPEI" },
+                { icon: "🏦", label: "STP" },
                 { icon: "🇲🇽", label: "Banxico" },
+                { icon: "⚡", label: "SIPREL" },
               ].map((item, i, arr) => (
                 <div key={item.label} style={{ display: "contents" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", flex: 1 }}>
@@ -1004,7 +1006,41 @@ export default function Home() {
         ══════════════════════════════════════════════════════ */}
         <section style={{ background: "#FFFFFF", padding: "24px 20px 8px" }}>
           <div style={{ maxWidth: "360px", margin: "0 auto" }}>
-            {!storedPhone && <WalletBalanceWidget />}
+            {/* ── Returning-user re-entry prompt (C1) ──────────────────── */}
+            {!storedPhone && (
+              <div style={{
+                background: "#F4FBF7",
+                border: "1.5px solid #CBE9D9",
+                borderRadius: "16px",
+                padding: "20px",
+                marginBottom: "16px",
+                textAlign: "center",
+              }}>
+                <p style={{ fontSize: "15px", fontWeight: 700, color: "#005432", margin: "0 0 4px" }}>
+                  {es ? "¿Ya tienes cuenta?" : "Have an account?"}
+                </p>
+                <p style={{ fontSize: "13px", color: "#6B9980", margin: "0 0 14px" }}>
+                  {es
+                    ? "Ingresa tu número para ver tu saldo y pagar"
+                    : "Enter your phone to see your balance and pay"}
+                </p>
+                <a
+                  href="/register"
+                  style={{
+                    display: "inline-block",
+                    background: "#007A4A",
+                    color: "#fff",
+                    borderRadius: "10px",
+                    padding: "10px 22px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  {es ? "Iniciar sesión →" : "Sign in →"}
+                </a>
+              </div>
+            )}
 
             {/* ── Push notification opt-in banner ─────────────────── */}
             {showPushBanner && (

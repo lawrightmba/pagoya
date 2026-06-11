@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export interface PaymentData {
   empresa: string;
@@ -32,21 +32,50 @@ const defaultPayment: PaymentData = {
   notas: "",
 };
 
+const SESSION_KEY = "pagoya_payment_ctx_v1";
+
+function readSession(): Partial<PaymentData> {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Partial<PaymentData>) : {};
+  } catch { return {}; }
+}
+
+function writeSession(data: PaymentData) {
+  try {
+    // Only persist if there's an active payment in progress
+    if (data.empresa) sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch { /* ignore */ }
+}
+
 const PaymentContext = createContext<PaymentContextType | null>(null);
 
 export function PaymentProvider({ children }: { children: ReactNode }) {
-  const [paymentData, setPaymentData] = useState<PaymentData>(defaultPayment);
+  const [paymentData, _setPaymentData] = useState<PaymentData>(() => ({
+    ...defaultPayment,
+    ...readSession(),
+  }));
   const [clientSecret, setClientSecret] = useState("");
   const [pendingPaymentIntentId, setPendingPaymentIntentId] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [transactionDate, setTransactionDate] = useState("");
 
+  // Keep sessionStorage in sync whenever paymentData changes
+  useEffect(() => { writeSession(paymentData); }, [paymentData]);
+
+  function setPaymentData(data: PaymentData) {
+    _setPaymentData(data);
+    writeSession(data);
+  }
+
   const resetPayment = () => {
-    setPaymentData(defaultPayment);
+    _setPaymentData(defaultPayment);
     setClientSecret("");
     setPendingPaymentIntentId("");
     setTransactionId("");
     setTransactionDate("");
+    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
   };
 
   return (

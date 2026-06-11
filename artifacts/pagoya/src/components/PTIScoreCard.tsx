@@ -304,8 +304,30 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
         {hint}
       </p>
 
+      {/* Phase 2 countdown banner */}
+      <div style={{
+        marginTop: "12px",
+        padding: "9px 12px",
+        background: "linear-gradient(135deg, rgba(0,122,74,0.08) 0%, rgba(0,200,117,0.08) 100%)",
+        border: "1px solid rgba(0,122,74,0.22)",
+        borderRadius: "10px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+      }}>
+        <span style={{ fontSize: "18px", flexShrink: 0 }}>🚀</span>
+        <div>
+          <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#005432", marginBottom: "1px" }}>
+            Fase 2 disponible el 7 de julio
+          </div>
+          <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>
+            Nuevas recompensas y beneficios se desbloquean pronto
+          </div>
+        </div>
+      </div>
+
       {/* Dates */}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#9CA3AF" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#9CA3AF", marginTop: "10px" }}>
         {data.computed_at && (
           <span>Actualizado: {formatDate(data.computed_at)}</span>
         )}

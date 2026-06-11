@@ -6,7 +6,6 @@
 - [Paula payment initiation](paula-payment-initiation.md) — 2FA flow via pendingPayment in session; agentChat returns pendingPayment in response body; whatsapp-agent intercepts sí/no before forwarding to agent
 - [PWA push notifications](pwa-push.md) — VAPID keys in env vars; push_subscriptions table; web-push in api-server; sw.js + manifest.json in pagoya/public; usePushNotifications hook; fires after bill payment confirmed
 - [Belvo deprioritized](belvo-deprioritized.md) — Belvo dropped June 2026; code stays but STP/SPEI is the wallet top-up path; alternatives: Finerio Connect, Prometeo
-- [Command center dual-file sync](command-center-dual-file.md) — two copies exist; edit pagoya/public, then cp to api-server/public after every session
 - [YC docs generation](yc-docs.md) — use python-docx not JS docx lib; .md files don't download from Replit presenter, use .txt copy as workaround
 - [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)
 - [Pre-demo checklist](pre-demo-checklist.md) — verify signup_bonus_config is_active=true before every demo and go-live
@@ -14,3 +13,4 @@
 - [Demo video architecture](demo-video-architecture.md) — 13-scene bilingual video; LangProvider in VideoTemplate; lang prop from VideoWithControls; Scene10 has correct $25 MXN / ~40% / 2.75% model
 - [Gift card catalog](gift-card-catalog.md) — 3 groups by purchase intent; denomination principles per brand; routing bypasses reference step; 100% MXN, no exchange rate needed
 - [PTI architecture](pti-architecture.md) — dual-model: pagoScore.ts (4-dim, credit_profiles) + pti.ts (7-component, users.pti_score); monthly cron 1st 3AM MX; widget in Home.tsx
+- [UX audit fixes](ux-audit-fixes.md) — Stripe IS used in CardEntry.tsx (false positive H11); App.tsx shell: only vincular-banco hides both BottomNav+Paula; PaymentContext uses sessionStorage for mid-flow refresh survival

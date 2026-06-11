@@ -162,15 +162,16 @@ function Router() {
 
 function AppShell() {
   const [location] = useLocation();
-  const isBienvenida = location === "/bienvenida";
   const isVincularBanco = location === "/vincular-banco";
-  const isConfianza = location === "/confianza" || location === "/pti";
-  const hideShell = isBienvenida || isVincularBanco || isConfianza;
+  // BottomNav hidden only on full-screen onboarding flows
+  const hideBottomNav = isVincularBanco;
+  // SupportChat (Paula) shown everywhere except vincular-banco
+  const hideSupportChat = isVincularBanco;
   return (
     <>
       <Router />
-      {!hideShell && <BottomNav />}
-      {!hideShell && <SupportChat />}
+      {!hideBottomNav && <BottomNav />}
+      {!hideSupportChat && <SupportChat />}
     </>
   );
 }

@@ -417,6 +417,32 @@ export default function BillPaySelector() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
 
+  // Recently-paid services (H6)
+  const [recentServices, setRecentServices] = useState<{ name: string; emoji: string; id: string }[]>([]);
+  useEffect(() => {
+    const phone = (() => { try { return localStorage.getItem("pagoya_phone") ?? ""; } catch { return ""; } })();
+    if (!phone) return;
+    const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+    fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=20`)
+      .then((r) => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then((rows: null | Array<{ service_name: string; status: string }>) => {
+        if (!rows) return;
+        const seen = new Set<string>();
+        const recent: { name: string; emoji: string; id: string }[] = [];
+        for (const row of rows) {
+          if (row.status !== "completed" && row.status !== "confirmado" && row.status !== "success") continue;
+          if (seen.has(row.service_name)) continue;
+          const match = SERVICES.find((s) => s.name === row.service_name);
+          if (!match) continue;
+          seen.add(row.service_name);
+          recent.push({ name: match.name, emoji: match.emoji, id: match.id });
+          if (recent.length >= 3) break;
+        }
+        setRecentServices(recent);
+      });
+  }, []);
+
   // ── Step 1 helpers ──────────────────────────────────────────────────────
   const filtered = SERVICES.filter((s) => {
     const matchCat = activeCategory === "Todos" || s.category === activeCategory;
@@ -548,6 +574,36 @@ export default function BillPaySelector() {
         {/* ── STEP 1: SERVICE SELECTION ──────────────────────────────── */}
         {step === "select" && (
           <main className="flex-1 flex flex-col">
+            {/* ── Recently paid chips (H6) ──────────────────────────────── */}
+            {recentServices.length > 0 && (
+              <div className="px-4 pt-4 pb-1 max-w-sm mx-auto w-full">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                  Mis servicios frecuentes
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {recentServices.map((svc) => {
+                    const match = SERVICES.find((s) => s.id === svc.id);
+                    if (!match) return null;
+                    return (
+                      <button
+                        key={svc.id}
+                        onClick={() => handleSelectService(match)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.95]"
+                        style={{
+                          background: "#F0FAF3",
+                          border: "1.5px solid #CBE9D9",
+                          color: "#046C2C",
+                        }}
+                      >
+                        <span>{svc.emoji}</span>
+                        <span>{svc.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Search bar */}
             <div className="px-4 pt-5 pb-3 max-w-sm mx-auto w-full">
               <div

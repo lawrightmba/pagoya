@@ -1,23 +1,59 @@
 import { useLocation } from "wouter";
-import { Home, Zap, History, CreditCard, Gamepad2 } from "lucide-react";
+import { Home, Zap, Trophy, History, CreditCard } from "lucide-react";
+
+const BILL_PAY_PATHS = ["/servicios", "/pagar", "/revisar", "/tarjeta", "/exito"];
+const REWARDS_PATHS  = ["/puntos", "/points", "/juegos"];
 
 const TABS = [
-  { path: "/",                  icon: Home,      label: "Inicio"   },
-  { path: "/pagar",             icon: Zap,       label: "Pagar"    },
-  { path: "/juegos",            icon: Gamepad2,  label: "Juegos"   },
-  { path: "/wallet/historial",  icon: History,   label: "Historial"},
-  { path: "/cargar",            icon: CreditCard, label: "Cargar"  },
+  {
+    path: "/",
+    icon: Home,
+    label: "Inicio",
+    matchPaths: ["/"],
+  },
+  {
+    path: "/servicios",
+    icon: Zap,
+    label: "Pagar",
+    matchPaths: BILL_PAY_PATHS,
+  },
+  {
+    path: "/puntos",
+    icon: Trophy,
+    label: "Recompensas",
+    matchPaths: REWARDS_PATHS,
+  },
+  {
+    path: "/wallet/historial",
+    icon: History,
+    label: "Historial",
+    matchPaths: ["/wallet/historial"],
+  },
+  {
+    path: "/cargar",
+    icon: CreditCard,
+    label: "Cargar",
+    matchPaths: ["/cargar"],
+  },
 ];
 
 const SHOW_ON = new Set([
-  "/", "/pagar", "/servicios", "/cargar",
-  "/wallet/historial", "/puntos", "/verificar", "/revisar", "/juegos",
+  "/", "/servicios", "/pagar", "/revisar", "/tarjeta", "/exito",
+  "/cargar", "/wallet/historial", "/puntos", "/points",
+  "/verificar", "/juegos",
 ]);
+
+function isActive(location: string, matchPaths: string[]): boolean {
+  return matchPaths.some((p) => {
+    if (p === "/") return location === "/";
+    return location === p || location.startsWith(p + "?") || location.startsWith(p + "/");
+  });
+}
 
 export default function BottomNav() {
   const [location, navigate] = useLocation();
 
-  if (!SHOW_ON.has(location)) return null;
+  if (!SHOW_ON.has(location.split("?")[0])) return null;
 
   return (
     <>
@@ -40,8 +76,8 @@ export default function BottomNav() {
           boxShadow: "0 -4px 24px rgba(0,0,0,0.25)",
         }}
       >
-        {TABS.map(({ path, icon: Icon, label }) => {
-          const active = location === path || (path !== "/" && location.startsWith(path));
+        {TABS.map(({ path, icon: Icon, label, matchPaths }) => {
+          const active = isActive(location, matchPaths);
           return (
             <button
               key={path}
