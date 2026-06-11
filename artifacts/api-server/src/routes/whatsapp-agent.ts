@@ -86,8 +86,10 @@ const m = {
       : (lang === "en" ? "Hello!" : "¡Hola!");
     if (lang === "en") {
       return (
-        `${greet} 👋 Welcome to *PagoYa*.\n\n` +
-        `We're a Mexican fintech company. We let you make *bill payments, mobile top-ups, gift cards, and bank transfers* — all from this WhatsApp chat, without needing a bank account.\n\n` +
+        `${greet} 👋 Welcome to *PagoYa*!\n\n` +
+        `I'm *Paula*, your personal assistant for PagoYa. You can ask me anything — I'm here to help! For example, you can say:\n` +
+        `_"Paula, I need to pay my CFE electricity bill"_ — and I'll take care of it right here in this chat. You can also find me on our website at *pagoyamx.com*.\n\n` +
+        `PagoYa lets you make *bill payments, mobile top-ups, gift cards, and bank transfers* — all from WhatsApp, without needing a bank account.\n\n` +
         `🏦 *How does your money work?*\n` +
         `Your balance lives in a *PagoYa Digital Wallet*. To fund it, you deposit cash at any OXXO store nationwide using a code we give you. The balance is available instantly.\n\n` +
         `🔒 *Is it safe?*\n` +
@@ -98,8 +100,10 @@ const m = {
       );
     }
     return (
-      `${greet} 👋 Bienvenido/a a *PagoYa*.\n\n` +
-      `Somos una empresa mexicana de tecnología financiera. Te permitimos hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde este chat de WhatsApp, sin necesidad de tener cuenta bancaria.\n\n` +
+      `${greet} 👋 ¡Bienvenido/a a *PagoYa*!\n\n` +
+      `Soy *Paula*, tu asistente personal de PagoYa. Puedes preguntarme lo que quieras — ¡estoy aquí para ayudarte! Por ejemplo, puedes decirme:\n` +
+      `_"Paula, necesito pagar mi recibo de CFE"_ — y lo resolvemos aquí mismo en este chat. También puedes encontrarme en nuestro sitio web *pagoyamx.com*.\n\n` +
+      `PagoYa te permite hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde WhatsApp, sin necesidad de tener cuenta bancaria.\n\n` +
       `🏦 *¿Cómo funciona tu dinero?*\n` +
       `Tu saldo vive en una *Cartera Digital PagoYa*. Para cargarla, depositas en efectivo en cualquier OXXO del país usando un código que te damos. Ese saldo queda disponible al instante.\n\n` +
       `🔒 *¿Es seguro?*\n` +
