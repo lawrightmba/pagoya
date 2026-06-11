@@ -257,3 +257,15 @@ id = "SULBqBd6Xmdv3mejA3xbo"
 uri = "file://pagoya-flyer.pdf"
 type = "pdf"
 title = "PagoYa — Registration Flyer with Paula"
+
+[[outputs]]
+id = "NkmPDGNEHbkelA4cn1C9P"
+uri = "file://pagoya-flyer-es.pdf"
+type = "pdf"
+title = "PagoYa Flyer — Español"
+
+[[outputs]]
+id = "OdOPe1NVIX-zYCgwl_i-V"
+uri = "file://pagoya-flyer-en.pdf"
+type = "pdf"
+title = "PagoYa Flyer — English"
