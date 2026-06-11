@@ -269,3 +269,9 @@ id = "OdOPe1NVIX-zYCgwl_i-V"
 uri = "file://pagoya-flyer-en.pdf"
 type = "pdf"
 title = "PagoYa Flyer — English"
+
+[[outputs]]
+id = "SOEDQyT_O9gQEYNtc50cg"
+uri = "file://pagoya-ux-audit.zip"
+type = "unspecified"
+title = "PagoYa UX Audit Package"
