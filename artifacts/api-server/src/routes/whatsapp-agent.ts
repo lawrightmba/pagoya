@@ -14,11 +14,21 @@ import { creditSignupBonus } from "../services/signupBonusService.js";
 import { logger } from "../lib/logger.js";
 
 // ── Language detection ────────────────────────────────────────────────────────
-const ENGLISH_PATTERN = /\b(hi|hello|hey|help|pay|balance|account|register|english|i want|i need|how|what|transfer|withdraw|top.?up|recharge|gift.?card|please|thank|yes|no|cancel|send|money|bill|service|wallet|deposit|charge)\b/i;
+// Strong English-only indicators (words that don't appear naturally in Spanish)
+const ENGLISH_STRONG = /\b(hi|hello|hey|help|pay|balance|account|register|english|i want|i need|i have|i don|transfer|withdraw|top.?up|gift.?card|please|thank you|thanks|send|money|bill|wallet|deposit|charge|recharge|how do|what is|i need help)\b/i;
+
+// Words that are too ambiguous (appear naturally in Spanish) — excluded:
+// "no", "cancel", "cancel", "what", "how", "yes", "service", "recharge"
+// "no" → very common Spanish word ("No tengo cuenta")
+// "cancel" → used as loanword in Mexican Spanish
 
 function detectLang(msg: string): "es" | "en" {
-  return ENGLISH_PATTERN.test(msg) ? "en" : "es";
+  return ENGLISH_STRONG.test(msg) ? "en" : "es";
 }
+
+// Explicit language-switch commands — work at any point in the conversation
+const SWITCH_TO_ENGLISH = /^(english|switch to english|in english|en inglés|en english|speak english|habla inglés)\s*[!.]*$/i;
+const SWITCH_TO_SPANISH = /^(español|en español|spanish|habla español|switch to spanish|en español por favor)\s*[!.]*$/i;
 
 // ── Bilingual message strings ─────────────────────────────────────────────────
 type Lang = "es" | "en";
@@ -512,7 +522,21 @@ router.post("/", async (req: Request, res: Response) => {
     const session = getSession(phoneKey);
     const port = process.env.PORT ?? "3000";
 
-    // ── Language detection (set once per session) ────────────────────────────
+    // ── Language detection + explicit switch commands ─────────────────────────
+    if (SWITCH_TO_ENGLISH.test(userMessage.trim())) {
+      saveSession(phoneKey, { lang: "en" });
+      session.lang = "en";
+      await sendWhatsApp(phoneKey, "Got it! I'll continue in English from now on. How can I help you?");
+      return;
+    }
+    if (SWITCH_TO_SPANISH.test(userMessage.trim())) {
+      saveSession(phoneKey, { lang: "es" });
+      session.lang = "es";
+      await sendWhatsApp(phoneKey, "¡Listo! Seguimos en español. ¿En qué te puedo ayudar?");
+      return;
+    }
+
+    // Auto-detect on first message only (never downgrade en → es)
     if (!session.lang || session.lang === "es") {
       const detected = detectLang(userMessage);
       if (detected === "en") {
