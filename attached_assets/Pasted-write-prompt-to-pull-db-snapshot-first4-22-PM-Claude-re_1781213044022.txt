@@ -1,0 +1,153 @@
+write prompt to pull db snapshot first4:22 PMClaude responded: ---
+PagoYa Pre-Mortem Data Pull
+Please run the following queries and commands and save all output to a single file /home/user/pagoya-premortem-data.txt. Then upload the file here.
+
+bashecho "=== TIMESTAMP ===" >> ~/pagoya-premortem-data.txt
+date >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== USER METRICS ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  (SELECT COUNT(*) FROM users) AS total_users,
+  (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '30 days') AS users_30d,
+  (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days') AS users_7d,
+  (SELECT COUNT(*) FROM users WHERE recovery_email IS NOT NULL) AS users_with_email,
+  (SELECT COUNT(*) FROM users WHERE signup_bonus_claimed = true) AS bonus_claimed;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== WALLET METRICS ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  (SELECT COUNT(*) FROM wallets) AS total_wallets,
+  (SELECT COUNT(*) FROM wallets WHERE balance > 0) AS wallets_with_balance,
+  (SELECT ROUND(AVG(balance)::numeric, 2) FROM wallets WHERE balance > 0) AS avg_balance_mxn,
+  (SELECT ROUND(MAX(balance)::numeric, 2) FROM wallets) AS max_balance_mxn,
+  (SELECT ROUND(SUM(balance)::numeric, 2) FROM wallets) AS total_float_mxn;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== TRANSACTION METRICS ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  (SELECT COUNT(*) FROM wallet_transactions) AS total_wallet_txns,
+  (SELECT COUNT(*) FROM wallet_transactions WHERE type = 'oxxo_load') AS oxxo_loads,
+  (SELECT COUNT(*) FROM wallet_transactions WHERE type = 'card_load') AS card_loads,
+  (SELECT ROUND(SUM(amount)::numeric, 2) FROM wallet_transactions WHERE type IN ('oxxo_load','card_load')) AS total_loaded_mxn;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== BILL PAYMENT METRICS ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  status,
+  COUNT(*) AS count,
+  ROUND(AVG(amount)::numeric, 2) AS avg_amount_mxn,
+  ROUND(SUM(platform_fee_mxn)::numeric, 2) AS total_fee_revenue_mxn
+FROM bill_payments
+GROUP BY status
+ORDER BY count DESC;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== FAILED PAYMENTS BY ERROR CODE ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  COALESCE(error_code, 'no_error_code') AS error_code,
+  COUNT(*) AS count
+FROM bill_payments
+WHERE status = 'failed'
+GROUP BY error_code
+ORDER BY count DESC;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== TOP SERVICES PAID ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  empresa,
+  COUNT(*) AS payments,
+  ROUND(SUM(amount)::numeric, 2) AS total_mxn
+FROM bill_payments
+WHERE status = 'completed'
+GROUP BY empresa
+ORDER BY payments DESC
+LIMIT 15;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== PAYMENT FUNNEL DROP-OFF ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  (SELECT COUNT(*) FROM users) AS registered,
+  (SELECT COUNT(DISTINCT user_id) FROM wallet_transactions WHERE type IN ('oxxo_load','card_load')) AS loaded_wallet,
+  (SELECT COUNT(DISTINCT user_id) FROM bill_payments) AS attempted_payment,
+  (SELECT COUNT(DISTINCT user_id) FROM bill_payments WHERE status = 'completed') AS completed_payment;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== STREET TEAM PERFORMANCE ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  r.rep_code,
+  r.colonia,
+  r.is_active,
+  COUNT(DISTINCT u.id) AS referred_users,
+  COUNT(DISTINCT bp.id) AS completed_payments,
+  ROUND(SUM(rc.commission_amount)::numeric, 2) AS total_commissions_mxn
+FROM reps r
+LEFT JOIN users u ON u.ref_code = r.rep_code
+LEFT JOIN bill_payments bp ON bp.user_id = u.id AND bp.status = 'completed'
+LEFT JOIN rep_commissions rc ON rc.rep_id = r.id
+GROUP BY r.rep_code, r.colonia, r.is_active
+ORDER BY completed_payments DESC;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== PTI SCORE DISTRIBUTION ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT
+  CASE
+    WHEN pti_score >= 80 THEN '80-100 (Oro)'
+    WHEN pti_score >= 50 THEN '50-79 (Plata)'
+    WHEN pti_score >= 1  THEN '1-49 (Bronce)'
+    ELSE 'No score yet'
+  END AS tier,
+  COUNT(*) AS users
+FROM users
+GROUP BY tier
+ORDER BY users DESC;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== SIGNUP BONUS CONFIG ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT * FROM signup_bonus_config LIMIT 5;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== GRAND PRIZE CONFIG ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT * FROM grand_prize_config LIMIT 5;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== RECENT ERRORS (API LOG) ===" >> ~/pagoya-premortem-data.txt
+find . -name "*.log" -not -path "*/node_modules/*" 2>/dev/null | xargs grep -i "error\|failed\|exception\|500\|timeout" 2>/dev/null | grep -v "node_modules" | tail -60 >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== VELOCITY FLAGS (REP FRAUD) ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT * FROM rep_velocity_flags ORDER BY created_at DESC LIMIT 20;
+" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== BELVO LINKS STATUS ===" >> ~/pagoya-premortem-data.txt
+psql $DATABASE_URL -c "
+SELECT status, COUNT(*) FROM belvo_links GROUP BY status;
+" 2>/dev/null >> ~/pagoya-premortem-data.txt || echo "belvo_links table not yet in prod schema" >> ~/pagoya-premortem-data.txt
+
+echo "" >> ~/pagoya-premortem-data.txt
+echo "=== DONE ===" >> ~/pagoya-premortem-data.txt
+Upload pagoya-premortem-data.txt here when complete.
