@@ -59,6 +59,7 @@ const SIPREL_SKU_MAP: Record<string, SkuEntry | null> = {
   // — Water Utilities ——
   sacmex:            { sku: "SACMEX01", bolsa: "pagoServicios" },
   agua_jalisco:      { sku: "SIA000",   bolsa: "pagoServicios" },
+  agua_monterrey:    { sku: "SADM001",  bolsa: "pagoServicios" },
   seapal:            { sku: "SEAPAL01", bolsa: "pagoServicios" },
   // — Housing ——
   infonavit:         { sku: "INF000",   bolsa: "pagoServicios" },
