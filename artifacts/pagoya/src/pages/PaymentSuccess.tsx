@@ -258,6 +258,24 @@ export default function PaymentSuccess() {
             </div>
             <h1 className="text-3xl font-black text-[#1F1F1F] mb-1">¡Pago realizado!</h1>
             <p className="text-sm text-gray-500">Tu transacción fue exitosa ✅</p>
+            {transactionId && (
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#F0FAF3",
+                border: "1px solid #CBE9D9",
+                borderRadius: "999px",
+                padding: "5px 16px",
+                marginTop: "10px",
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#046C2C",
+                letterSpacing: "0.02em",
+              }}>
+                🧾 Folio #{transactionId}
+              </div>
+            )}
           </div>
 
           {/* Receipt card */}

@@ -243,6 +243,20 @@ export default function WalletBalanceWidget() {
         </button>
       )}
 
+      {/* Funds assurance micro-copy */}
+      <p style={{
+        fontSize: "10px",
+        color: "#9CA3AF",
+        textAlign: "center",
+        margin: "2px 0 4px",
+        letterSpacing: "0.01em",
+        lineHeight: 1.4,
+      }}>
+        🔒 {es
+          ? "Fondos asegurados — No somos banco, pero tu dinero no desaparece"
+          : "Funds secured — Not a bank, but your money doesn't disappear"}
+      </p>
+
       {/* Action buttons */}
       <div className="grid grid-cols-2 gap-2">
         <button

@@ -529,6 +529,23 @@ export default function Register() {
             </span>
           </p>
 
+          {/* $150 trust line */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "rgba(29,158,117,0.12)",
+            border: "1px solid rgba(29,158,117,0.3)",
+            borderRadius: "10px",
+            padding: "10px 14px",
+            marginBottom: "20px",
+          }}>
+            <span style={{ fontSize: "16px", flexShrink: 0 }}>🔒</span>
+            <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.88)", fontWeight: 600, lineHeight: 1.4 }}>
+              Tu bono de $150 MXN está protegido — se acredita al verificar tu número
+            </span>
+          </div>
+
           {/* Six OTP inputs */}
           <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "12px" }}>
             {digits.map((d, i) => (
@@ -689,7 +706,7 @@ export default function Register() {
           margin: "0 0 6px",
           letterSpacing: "-0.02em",
         }}>
-          Paga todo desde tu celular
+          Crea tu cuenta y recibe $150 MXN
         </h1>
         <p style={{
           fontSize: "15px",

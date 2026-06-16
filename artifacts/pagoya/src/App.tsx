@@ -61,6 +61,11 @@ import PagarCFECdmx from "@/pages/PagarCFECdmx";
 import PagarAguaGuadalajara from "@/pages/PagarAguaGuadalajara";
 import PagarCFEDesdeUSA from "@/pages/PagarCFEDesdeUSA";
 import SpinWheel from "@/pages/SpinWheel";
+import PagarAguaVallarta from "@/pages/PagarAguaVallarta";
+import PagarTelmexVallarta from "@/pages/PagarTelmexVallarta";
+import PagarIzziVallarta from "@/pages/PagarIzziVallarta";
+import PagarTelcelVallarta from "@/pages/PagarTelcelVallarta";
+import PagarTotalPlayVallarta from "@/pages/PagarTotalPlayVallarta";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -143,6 +148,11 @@ function Router() {
       <Route path="/pagar-cfe-monterrey" component={PagarCFEMonterrey} />
       <Route path="/pagar-cfe-cdmx" component={PagarCFECdmx} />
       <Route path="/pagar-agua-guadalajara" component={PagarAguaGuadalajara} />
+      <Route path="/pagar-agua-vallarta" component={PagarAguaVallarta} />
+      <Route path="/pagar-telmex-vallarta" component={PagarTelmexVallarta} />
+      <Route path="/pagar-izzi-vallarta" component={PagarIzziVallarta} />
+      <Route path="/pagar-telcel-vallarta" component={PagarTelcelVallarta} />
+      <Route path="/pagar-totalplay-vallarta" component={PagarTotalPlayVallarta} />
       <Route path="/pagar-cfe-desde-usa" component={PagarCFEDesdeUSA} />
       <Route path="/spin" component={SpinWheel} />
       <Route path="/ruleta" component={SpinWheel} />
