@@ -305,3 +305,9 @@ id = "85s50-G48M6Hg9Upwbxwl"
 uri = "file://pagoya_partnership_onepager_ES.pdf"
 type = "pdf"
 title = "PagoYa — One-Pager de Alianza (Español)"
+
+[[outputs]]
+id = "EXSeh8XCbGjokyUdvJQNR"
+uri = "file://artifacts/pagoya-twilio-demo/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music"

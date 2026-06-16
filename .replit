@@ -17,6 +17,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/pagoya-twilio-demo: web"
+
+[[workflows.workflow]]
+name = "artifacts/pagoya-twilio-demo: web"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=21145 BASE_PATH=/pagoya-twilio-demo/ pnpm --filter @workspace/pagoya-twilio-demo run dev"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

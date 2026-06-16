@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/pagoya-twilio-demo/"
+title = "PagoYa × Twilio — AI Startup Searchlight Demo"
+version = "1.0.0"
+id = "artifacts/pagoya-twilio-demo"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/pagoya-twilio-demo/" ]
+localPort = 22900
+
+[services.development]
+run = "pnpm --filter @workspace/pagoya-twilio-demo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pagoya-twilio-demo", "run", "build" ]
+publicDir = "artifacts/pagoya-twilio-demo/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22900"
+BASE_PATH = "/pagoya-twilio-demo/"
