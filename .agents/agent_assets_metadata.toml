@@ -293,3 +293,9 @@ id = "ab5MyWi0QbC_9wnyhWrNj"
 uri = "file://pagoya-premortem-data.txt"
 type = "text"
 title = "PagoYa Pre-Mortem Data Snapshot — 2026-06-11"
+
+[[outputs]]
+id = "GNF6Pu9Oa_p4EmW2uATEV"
+uri = "file://pagoya_partnership_onepager.pdf"
+type = "pdf"
+title = "PagoYa — Partnership One-Pager (Kueski)"
