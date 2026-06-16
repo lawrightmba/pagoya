@@ -299,3 +299,9 @@ id = "GNF6Pu9Oa_p4EmW2uATEV"
 uri = "file://pagoya_partnership_onepager.pdf"
 type = "pdf"
 title = "PagoYa — Partnership One-Pager (Kueski)"
+
+[[outputs]]
+id = "85s50-G48M6Hg9Upwbxwl"
+uri = "file://pagoya_partnership_onepager_ES.pdf"
+type = "pdf"
+title = "PagoYa — One-Pager de Alianza (Español)"
