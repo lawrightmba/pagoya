@@ -11,14 +11,14 @@ import { Scene7TwilioStack } from './scenes/Scene7TwilioStack';
 import { Scene8Close } from './scenes/Scene8Close';
 
 export const SCENE_DURATIONS: Record<string, number> = {
-  scene1: 35000,
-  scene2: 40000,
-  scene3: 40000,
-  scene4: 45000,
-  scene5: 40000,
-  scene6: 40000,
-  scene7: 35000,
-  scene8: 25000,
+  scene1: 15000,
+  scene2: 16000,
+  scene3: 16000,
+  scene4: 15000,
+  scene5: 15000,
+  scene6: 14000,
+  scene7: 14000,
+  scene8: 10000,
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
