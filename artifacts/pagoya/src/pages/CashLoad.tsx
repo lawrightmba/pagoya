@@ -1508,11 +1508,31 @@ export default function CashLoad() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3 py-6">
-              <p className="text-4xl">⏳</p>
-              <p className="text-base font-black text-[#1F1F1F]">Próximamente</p>
-              <p className="text-sm text-gray-400 text-center leading-relaxed">
-                Las transferencias SPEI estarán disponibles muy pronto en PagoYa.
+            <div className="flex flex-col gap-4">
+              {/* Graceful SPEI holding state */}
+              <div style={{ background: "#F0FAF3", border: "1.5px solid #D4EDDA", borderRadius: 16, padding: "18px 16px", textAlign: "center" }}>
+                <p style={{ fontSize: 32, margin: "0 0 8px" }}>🏗️</p>
+                <p style={{ margin: "0 0 4px", fontWeight: 800, fontSize: 15, color: "#046C2C" }}>
+                  SPEI disponible pronto
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: "#6B9980", lineHeight: 1.55 }}>
+                  Estamos activando transferencias bancarias. Por ahora puedes cargar tu monedero en cualquier OXXO — en efectivo, sin fila digital, en 2 minutos.
+                </p>
+              </div>
+              {/* OXXO fallback CTA */}
+              <button
+                onClick={() => setActiveTab('oxxo')}
+                style={{
+                  width: "100%", background: "#1D9E75", color: "#fff",
+                  border: "none", borderRadius: 14, padding: "15px 20px",
+                  fontSize: 15, fontWeight: 800, cursor: "pointer",
+                  boxShadow: "0 4px 16px rgba(29,158,117,0.3)",
+                }}
+              >
+                🏪 Cargar en OXXO ahora →
+              </button>
+              <p style={{ margin: 0, fontSize: 11, color: "#9CA3AF", textAlign: "center" }}>
+                Disponible en más de 20,000 tiendas OXXO en México
               </p>
             </div>
           )}

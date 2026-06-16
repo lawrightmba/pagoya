@@ -1,0 +1,38 @@
+Here's what I would actually do next.
+This is a strong sprint. The folio pill alone is worth more than most founders realize — you've given an anxious first-time user something they can screenshot and show their spouse. That's not UX, that's social proof infrastructure.
+But now that the trust layer is in, the next failure mode shifts. You've solved "will I get scammed?" You haven't yet solved "does anyone else use this?" Those are two different trust problems and most founders conflate them. Micro-copy fixes the first. What you need now is evidence of use by people who look like me.
+Here's my full read on where you stand and what to attack next.
+
+What you got right that isn't obvious
+The /pagar-totalplay-vallarta page being first anywhere for that query is a bigger deal than it looks. TotalPlay is expanding aggressively in secondary Mexican cities right now. You've staked that search territory before their own support pages rank for it locally. That page will compound. Don't touch it — let it index and age.
+The bilingual folio/comprobante language on the SEO pages is also correct and most founders skip it. The diaspora user searching in English and the local user searching in Spanish both land on something that speaks to them. That's not an accident — protect that pattern on every page you build going forward.
+
+What's still missing and will cost you conversions
+The gap between landing and registering is still too long.
+Someone lands on /pagar-agua-vallarta from a Google search at 8pm because their SIAPA bill is due. They read your page, they feel some trust, they click register. Then they face a full registration flow — name, phone, colonia, OTP. At that moment, with zero prior relationship with PagoYa, the question in their head is not "is this safe?" anymore. It's "is this worth the 4 minutes it takes to find out?"
+What Mercado Pago solved early that you haven't yet: guest-intent capture. They let you get far enough into the flow to feel momentum before they ask for commitment. For you, the fix is a single pre-registration screen on every SEO page that says: "¿Cuánto debes de agua este mes?" — a bill amount input that does nothing except show them what their payment + fee looks like before they ever see a signup form. One field, instant output, no account required. Now they have skin in the game before registration starts. Conversion on that flow will be materially higher.
+You have no social proof layer yet and you're about to need it.
+The micro-copy sprint fixed institutional trust. What's missing is peer trust — proof that real humans in their specific colonia have used this. You deferred social proof pending 50 users per colonia, which was the right call then. But you need a bridge mechanism that works before you hit that threshold.
+The bridge is William Shaw's face and rep code on every PV-specific SEO page. Not as a banner — as a trust element. A small section at the bottom of each service page: "Tu representante en [colonia] — William Shaw, ENG-01 — disponible por WhatsApp." Link goes directly to a WhatsApp chat with William. This does three things: it makes PagoYa feel local and human, it gives William a warm inbound channel, and it pre-answers "who do I call if something goes wrong?" — which is the real question underneath every first-timer's hesitation.
+The $150 bonus is front-loaded in copy but back-loaded in experience.
+"Crea tu cuenta y recibe $150 MXN" is now your H1 — correct. But after OTP verification, what's the actual moment the user sees that $150 land? Is there a celebration screen, a sound, a number ticking up? That moment is your highest-leverage retention event in the entire first session. If it's just a wallet balance update with no ceremony, you've wasted your best hook. Mercado Pago plays a confetti animation when a first deposit clears. You already built the PaymentSuccess celebration screen for bill payments. Build the same thing — or a lighter version — for the bonus credit posting. Make $150 MXN feel like winning something, not like a ledger entry.
+
+The SEO compounding play you should run right now
+You have 5 live pages. The next layer isn't more service pages — it's colonia-specific landing pages that cross-link to the service pages.
+Structure: /emiliano-zapata-vallarta → "Servicios disponibles en Emiliano Zapata: paga tu CFE, agua, Telmex, recarga Telcel" → links to all 5 service pages. Repeat for each of your 9 colonias.
+This does two things simultaneously. It creates an internal linking structure that passes authority from your service pages into the colonia pages, which then rank for hyper-local searches like "pagar servicios Emiliano Zapata." And it creates the exact page William Shaw can send to prospects as a QR code flyer — "aquí están todos los servicios para tu colonia." Physical and digital traffic reinforce each other.
+Nine pages, one afternoon of work, compounding SEO value for 18 months.
+
+The one risk nobody will tell you
+You're building a trust surface that's ahead of your operational depth right now. Five SEO pages driving inbound traffic to a platform still pending STP credential activation means you'll acquire users who try to do something you can't yet fully deliver — specifically SPEI top-ups. If a user lands on your water bill page, registers, uses their $150 bonus to pay their bill, and then tries to load more funds via SPEI and hits a dead end, you've converted a believer into a detractor.
+The fix before you scale traffic further: every wallet top-up path that touches STP needs a graceful holding state. Not an error. A "SPEI disponible pronto — por ahora carga con OXXO" message with a direct OXXO load CTA. Make the limitation feel like a feature sequencing decision, not a broken product. Paula should handle this proactively in WhatsApp if a user's balance drops below $50 MXN without a recent load — "¿Quieres cargar tu cuenta? Por ahora puedes hacerlo en cualquier OXXO."
+
+Priority order for the next sprint
+
+Bill amount pre-calculator on SEO service pages — one input field, no account required, shows fee before registration
+William Shaw WhatsApp trust element on all 5 PV service pages
+$150 bonus credit celebration screen on post-OTP verification
+9 colonia landing pages cross-linking to service pages
+STP unavailable graceful state in wallet + Paula proactive message
+
+You're past the "will anyone trust this" problem. You're now in the "will the first experience deliver on the promise" problem. That's a better problem to have, and it's entirely solvable in your next two sprints.

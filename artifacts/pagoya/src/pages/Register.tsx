@@ -419,6 +419,40 @@ export default function Register() {
           <title>Registro exitoso | PagoYa</title>
           <meta name="robots" content="noindex,follow" />
         </Helmet>
+
+        {/* Confetti layer */}
+        <style>{`
+          @keyframes confettiFall {
+            0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+          }
+          @keyframes bonusPop {
+            0%   { transform: scale(0.5); opacity: 0; }
+            60%  { transform: scale(1.15); }
+            100% { transform: scale(1);   opacity: 1; }
+          }
+        `}</style>
+        {bonusCredited && (
+          <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 50, overflow: "hidden" }}>
+            {Array.from({ length: 32 }).map((_, i) => {
+              const colors = ["#00C875","#FFD700","#FF6B6B","#4ECDC4","#45B7D1","#FFA07A","#98D8C8","#F7DC6F"];
+              const left = Math.random() * 100;
+              const delay = Math.random() * 1.6;
+              const dur = 1.8 + Math.random() * 1.4;
+              const size = 8 + Math.random() * 8;
+              const color = colors[i % colors.length];
+              return (
+                <div key={i} style={{
+                  position: "absolute", top: 0, left: `${left}%`,
+                  width: size, height: size,
+                  background: color, borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+                  animation: `confettiFall ${dur}s ${delay}s ease-in forwards`,
+                }} />
+              );
+            })}
+          </div>
+        )}
+
         <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>
           <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "44px", width: "auto", objectFit: "contain" }} />
         </div>
@@ -433,15 +467,29 @@ export default function Register() {
         }}>
           {bonusCredited ? (
             <>
-              <div style={{ fontSize: "52px", marginBottom: "16px" }}>💳</div>
-              <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#FFFFFF", margin: "0 0 14px", lineHeight: 1.25 }}>
-                ¡Bienvenido a PagoYa! 🎉
+              {/* Big animated bonus amount */}
+              <div style={{ fontSize: "48px", marginBottom: "8px", animation: "bonusPop 0.6s ease-out forwards" }}>🎉</div>
+              <h2 style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF", margin: "0 0 8px", lineHeight: 1.2 }}>
+                ¡Tu saldo llegó!
               </h2>
-              <p style={{ fontSize: "17px", fontWeight: 700, color: "#1D9E75", margin: "0 0 10px" }}>
-                ${bonusAmount.toFixed(2)} MXN han sido acreditados a tu cartera.
-              </p>
-              <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.55)", lineHeight: 1.55, margin: "0 0 24px" }}>
-                Revisa tu WhatsApp para más detalles.
+              <div style={{
+                display: "inline-block",
+                background: "linear-gradient(135deg, #005432, #1D9E75)",
+                borderRadius: 16,
+                padding: "16px 32px",
+                margin: "12px 0 16px",
+                boxShadow: "0 8px 32px rgba(0,200,117,0.4)",
+                animation: "bonusPop 0.5s 0.2s ease-out both",
+              }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  Saldo acreditado
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: 42, fontWeight: 900, color: "#00C875", lineHeight: 1 }}>
+                  ${bonusAmount.toFixed(0)} MXN
+                </p>
+              </div>
+              <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", lineHeight: 1.55, margin: "0 0 22px" }}>
+                Listo para pagar tu primer recibo. Revisa tu WhatsApp — Paula te está esperando.
               </p>
             </>
           ) : (

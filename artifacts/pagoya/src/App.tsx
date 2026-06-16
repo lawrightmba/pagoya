@@ -66,6 +66,14 @@ import PagarTelmexVallarta from "@/pages/PagarTelmexVallarta";
 import PagarIzziVallarta from "@/pages/PagarIzziVallarta";
 import PagarTelcelVallarta from "@/pages/PagarTelcelVallarta";
 import PagarTotalPlayVallarta from "@/pages/PagarTotalPlayVallarta";
+import EmilianoZapataVallarta from "@/pages/colonias/EmilianoZapataVallarta";
+import VersallesVallarta from "@/pages/colonias/VersallesVallarta";
+import CincoDeDiciembreVallarta from "@/pages/colonias/CincoDeDiciembreVallarta";
+import PitilalVallarta from "@/pages/colonias/PitilalVallarta";
+import FluvialVallarta from "@/pages/colonias/FluvialVallarta";
+import LasJuntasVallarta from "@/pages/colonias/LasJuntasVallarta";
+import ZonaRomanticaVallarta from "@/pages/colonias/ZonaRomanticaVallarta";
+import MarinaVallarta from "@/pages/colonias/MarinaVallarta";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -153,6 +161,14 @@ function Router() {
       <Route path="/pagar-izzi-vallarta" component={PagarIzziVallarta} />
       <Route path="/pagar-telcel-vallarta" component={PagarTelcelVallarta} />
       <Route path="/pagar-totalplay-vallarta" component={PagarTotalPlayVallarta} />
+      <Route path="/emiliano-zapata-vallarta" component={EmilianoZapataVallarta} />
+      <Route path="/versalles-vallarta" component={VersallesVallarta} />
+      <Route path="/5-de-diciembre-vallarta" component={CincoDeDiciembreVallarta} />
+      <Route path="/pitillal-vallarta" component={PitilalVallarta} />
+      <Route path="/fluvial-vallarta" component={FluvialVallarta} />
+      <Route path="/las-juntas-vallarta" component={LasJuntasVallarta} />
+      <Route path="/zona-romantica-vallarta" component={ZonaRomanticaVallarta} />
+      <Route path="/marina-vallarta" component={MarinaVallarta} />
       <Route path="/pagar-cfe-desde-usa" component={PagarCFEDesdeUSA} />
       <Route path="/spin" component={SpinWheel} />
       <Route path="/ruleta" component={SpinWheel} />

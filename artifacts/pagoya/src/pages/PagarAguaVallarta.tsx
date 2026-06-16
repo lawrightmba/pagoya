@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
+import BillCalculator from "@/components/BillCalculator";
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -69,6 +70,11 @@ export default function PagarAguaVallarta() {
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 10 }}>
           $25 MXN por pago · Folio de comprobante al instante · Sin cuenta de banco
         </p>
+      </div>
+
+      {/* Bill Calculator */}
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "0 20px 16px" }}>
+        <BillCalculator label="¿Cuánto debes de agua este mes?" />
       </div>
 
       {/* Steps */}
