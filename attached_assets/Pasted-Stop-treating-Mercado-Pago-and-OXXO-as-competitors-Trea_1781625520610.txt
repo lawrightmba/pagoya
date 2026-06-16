@@ -1,0 +1,41 @@
+Stop treating Mercado Pago and OXXO as competitors. Treat them as your trust map. They've already spent hundreds of millions teaching your exact target user what "safe" looks like online. Your job is to borrow those learned expectations and satisfy them on pagoyamx.com — faster and more locally than they can for Puerto Vallarta colonias.
+Here's the breakdown by category:
+
+1. The single biggest takeaway: lead with the network, not the product
+Mercado Pago's hybrid network — turning corner shops into cash-in/cash-out points — is their core trust mechanism, not their app features. They lead every homepage with "where you can use this" before they lead with "what this does." OXXO does the same: their entire site is organized around physical presence first, digital services second. Miranda Intelligence
+PagoYa is currently product-first. Flip it. Your homepage hero should answer one question before anything else: "Is this real and can I touch it?" That means William Shaw's face and rep code, colonia names, and a map or list of where users near them have already paid — before you say one word about the app.
+What most builders overlook: in underbanked Mexico, trust is spatial and social, not institutional. Your neighbor used it → you'll use it. Your street name on the screen → it's real.
+
+2. OXXO's most underrated UX move: services listed as nouns, not verbs
+Look at OXXO's nav: Pago de servicios, Envíos y recibos de dinero, Depósitos y retiros. Not "Send money safely" or "Pay your bills easily." No marketing language. Just the thing. Mexican consumers, especially first-timers, are trained to be suspicious of hype. Plain nouns feel official. Adjectives feel like a scam.
+Audit every CTA and header on pagoyamx.com right now. Remove every adjective that isn't functional. "Paga tu CFE desde aquí" beats "Paga tu CFE fácil y seguro" every single time with this user.
+
+3. Mercado Pago's trust architecture you need to replicate at low cost
+Mercado Pago's trust is built on buyer protection programs, advanced encryption visibility, and fraud detection systems that are prominently communicated to users. They don't just have security — they surface it at every anxiety point in the flow. Photonpay
+For PagoYa, this means:
+
+At the registration step: show "Tu saldo de $150 MXN está protegido" with a lock icon before the OTP even fires
+At the bill payment confirmation: show a checkmark with "Pago registrado con folio #XXXXX" — not just a success screen. A receipt number makes it feel like OXXO.
+At the wallet balance screen: a small line that says "Fondos asegurados — No somos banco, pero tu dinero no desaparece"
+
+The trade-off: over-engineering this delays launch. The minimum viable version is 3 trust micro-copy insertions at the highest anxiety moments. Do that this week.
+
+4. OXXO's biggest traffic driver you're ignoring: service-specific landing pages optimized for "cómo pagar X"
+OXXO maintains dedicated pages for each service: pago de servicios, boletos de autobús, tarjetas de regalo, envíos y recibos de dinero. Each is a standalone SEO asset targeting exactly what someone Googles at the moment of intent. oxxo
+You already built /pagar-cfe-desde-usa and the CFE 9-division table — that's the right instinct. Now replicate that pattern for every billable utility in Puerto Vallarta: Agua de Jalisco, Telmex, TotalPlay, Izzi, Telcel recargas. One page per service. Each targeting the exact search query someone types when they need to pay right now. Cash still represents 38% of transaction value in Mexico — those people aren't searching for "digital wallets," they're searching for "cómo pagar mi recibo de agua en Puerto Vallarta." financialcontent
+What others overlook: these pages have compounding value. They drive organic traffic, they're indexed before you have reviews or backlinks, and they pre-answer objections before the user even registers.
+
+5. The one Mercado Pago move that would break your current funnel if you don't address it
+Mercado Pago's average cash-in is US$122 and they've grown to 60 million monthly active users — but what drives that is that first-time users understand exactly what happens to their money before they deposit it. The flow is: see amount → see where it goes → see receipt → feel safe → come back. Miranda Intelligence
+Your $150 MXN bonus credit immediately on OTP is smart and solves the first-transaction barrier. But right now, does the user understand before they verify their OTP that $150 is waiting for them? If that expectation is set post-registration, you're underselling your best hook. Mercado Pago sets the value prop on the pre-registration screen. Move your bonus announcement to before the signup form, not after. "Crea tu cuenta y recibe $150 MXN al instante" as the hero line — not buried in onboarding.
+
+Key risks and what to ignore
+The risk of borrowing too much from these competitors is that you drift toward genericism and away from your actual wedge, which is hyperlocal PV identity. Mercado Pago is for all of Mexico. You are for the person in Emiliano Zapata who knows William Shaw by name. Don't copy their visual language — copy their trust architecture, then fill it with your local texture.
+What most founders overlook: OXXO Pay's success is built on high familiarity and consumer confidence, not technology superiority. The thing that makes people trust a new fintech in Mexico isn't features — it's recognition. Recognition comes from faces, colonia names, rep codes, and receipts that look like something official. You can engineer all four of those cheaply and immediately. Nilos
+The immediate priority list:
+
+Move the $150 bonus CTA above the fold, pre-registration
+Add folio numbers to every payment confirmation
+Add 3 trust micro-copy lines at registration, payment, and balance screens
+Build 5 service-specific SEO pages (Agua de Jalisco, Telmex, Izzi, Telcel, TotalPlay) in PV context
+Rewrite all hero copy to plain service nouns — zero adjectives
