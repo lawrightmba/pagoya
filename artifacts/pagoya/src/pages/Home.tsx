@@ -320,7 +320,7 @@ export default function Home() {
 
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div style={{
-            background: "rgba(255,255,255,0.50)",
+            background: "rgba(245,242,234,0.88)",
             borderRadius: "10px",
             padding: "5px 14px",
             display: "inline-flex",
