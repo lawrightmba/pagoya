@@ -52,6 +52,7 @@ import Deck from "@/pages/Deck";
 import VideoPage from "@/pages/VideoPage";
 import FounderBio from "@/pages/FounderBio";
 import Confianza from "@/pages/Confianza";
+import Cumplimiento from "@/pages/Cumplimiento";
 import LandingCFESinBanco from "@/pages/LandingCFESinBanco";
 import LandingTelmexEfectivo from "@/pages/LandingTelmexEfectivo";
 import LandingRecargarSinTarjeta from "@/pages/LandingRecargarSinTarjeta";
@@ -143,6 +144,7 @@ function Router() {
       <Route path="/verificar" component={Verificar} />
       <Route path="/vincular-banco" component={BankLink} />
       <Route path="/aviso-de-privacidad" component={AvisoPrivacidad} />
+      <Route path="/cumplimiento" component={Cumplimiento} />
       <Route path="/deck" component={Deck} />
       <Route path="/video" component={VideoPage} />
       <Route path="/lloyd" component={FounderBio} />

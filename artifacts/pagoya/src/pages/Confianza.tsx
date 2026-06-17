@@ -59,16 +59,13 @@ export default function Confianza() {
         {/* Definition */}
         <div style={{ background: "rgba(0,200,117,0.06)", border: "1px solid rgba(0,200,117,0.18)", borderRadius: "16px", padding: "28px 24px", marginBottom: "40px" }}>
           <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
-            PagoYa Trust Index (PTI) es un sistema de puntuación conductual desarrollado internamente que mide la salud financiera digital de cada usuario a través de{" "}
+            PagoYa Trust Index (PTI) es un <strong style={{ color: "#FFFFFF" }}>sistema de datos alternativos</strong> desarrollado internamente que construye la <strong style={{ color: "#FFFFFF" }}>identidad financiera conductual</strong> de cada usuario a través de{" "}
             <strong style={{ color: "#FFFFFF" }}>4 dimensiones</strong> y{" "}
-            <strong style={{ color: "#FFFFFF" }}>15 señales individuales</strong>.
+            <strong style={{ color: "#FFFFFF" }}>15 señales individuales</strong> — sin consultar el buró de crédito.
           </p>
           <div style={{ marginTop: "18px", paddingTop: "18px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
-              No es una consulta al buró de crédito.
-            </p>
-            <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.88)", marginTop: "4px" }}>
-              Es <strong style={{ color: "#FFFFFF" }}>tu historial real</strong>, no el de alguien más.
+              Cada pago que haces construye <strong style={{ color: "#FFFFFF" }}>tu historial financiero real</strong> — medible, auditable, y reconocido por socios institucionales como clasificación conductual de riesgo bajo la Ley Fintech 2018.
             </p>
           </div>
         </div>
@@ -138,8 +135,36 @@ export default function Confianza() {
           ))}
         </div>
 
+        {/* Institutional partner section */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(0,200,117,0.12)", borderRadius: "14px", padding: "24px", marginTop: "40px", marginBottom: "32px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "14px" }}>
+            Para socios institucionales
+          </p>
+          <p style={{ fontSize: "14px", lineHeight: 1.7, color: "rgba(255,255,255,0.72)", marginBottom: "18px" }}>
+            El PTI satisface el requisito de <strong style={{ color: "#FFFFFF" }}>clasificación de riesgo conductual</strong> de la Ley Fintech 2018 (CNBV/SHCP) para poblaciones de perfil delgado — habilitando la medición de inclusión financiera con datos reales y auditables.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "18px" }}>
+            {([
+              ["Datos alternativos verificables", "Score de 4 dimensiones — cada cómputo queda versionado, fechado y trazable por usuario"],
+              ["Inclusión financiera medible", "Cohorte verificable de usuarios sin cuenta bancaria que construyen historial transaccional desde cero"],
+              ["API para originación e integración", "Disponible vía REST API para integración directa en procesos de KYC secundario o scoring crediticio"],
+            ] as [string, string][]).map(([title, desc]) => (
+              <div key={title} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                <span style={{ color: "#00C875", fontSize: "14px", flexShrink: 0, marginTop: "1px" }}>→</span>
+                <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.65)", lineHeight: 1.55, margin: 0 }}>
+                  <strong style={{ color: "rgba(255,255,255,0.9)" }}>{title}:</strong> {desc}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div style={{ paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <a href="/cumplimiento" style={{ fontSize: "13px", color: "#00C875", textDecoration: "none" }}>Política de Cumplimiento →</a>
+            <a href="mailto:institucional@pagoyamx.com" style={{ fontSize: "13px", color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>institucional@pagoyamx.com</a>
+          </div>
+        </div>
+
         {/* Back link */}
-        <div style={{ marginTop: "48px", textAlign: "center" }}>
+        <div style={{ textAlign: "center" }}>
           <a href="/" style={{ fontFamily: "DM Sans, sans-serif", fontSize: "13px", color: "#00C875", textDecoration: "none", opacity: 0.7 }}>
             ← Volver a PagoYa
           </a>

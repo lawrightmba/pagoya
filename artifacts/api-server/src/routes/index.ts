@@ -732,4 +732,67 @@ router.get("/admin/investor-stats", async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/compliance-summary — live compliance dashboard for institutional review
+router.get("/admin/compliance-summary", async (_req: Request, res: Response) => {
+  try {
+    const [kycRes, ptiRes, txRes, userSummary] = await Promise.all([
+      db.execute(drizzleSql`
+        SELECT kyc_tier, COUNT(*)::int AS n
+        FROM users WHERE is_test_account IS NOT TRUE
+        GROUP BY kyc_tier ORDER BY n DESC
+      `),
+      db.execute(drizzleSql`
+        SELECT
+          CASE WHEN pti_score >= 70 THEN 'Oro' WHEN pti_score >= 40 THEN 'Plata' ELSE 'Bronce' END AS tier,
+          COUNT(*)::int AS n
+        FROM users WHERE is_test_account IS NOT TRUE AND pti_score IS NOT NULL
+        GROUP BY 1
+      `),
+      db.execute(drizzleSql`
+        SELECT
+          date_trunc('week', created_at AT TIME ZONE 'America/Mexico_City')::date AS week_start,
+          COUNT(*)::int AS tx_count,
+          COALESCE(SUM(monto), 0)::float AS volume_mxn,
+          COALESCE(AVG(monto), 0)::float AS avg_mxn
+        FROM bill_payments
+        WHERE status IN ('confirmed','completed','confirmado','success')
+          AND created_at > NOW() - INTERVAL '8 weeks'
+        GROUP BY 1 ORDER BY 1 ASC
+      `),
+      db.execute(drizzleSql`
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days')::int AS new_30d,
+          COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days')::int AS new_90d,
+          COUNT(*) FILTER (WHERE kyc_tier IN ('standard','enhanced'))::int AS kyc_upgraded,
+          COUNT(*) FILTER (WHERE kyc_curp IS NOT NULL)::int AS curp_on_file,
+          COUNT(*) FILTER (WHERE pti_score IS NOT NULL)::int AS pti_scored,
+          COUNT(*) FILTER (WHERE referred_by_institution IS NOT NULL)::int AS from_institution
+        FROM users WHERE is_test_account IS NOT TRUE
+      `),
+    ]);
+
+    const s = userSummary.rows[0] as Record<string, unknown>;
+    res.set("Cache-Control", "no-store");
+    res.json({
+      as_of: new Date().toISOString(),
+      users: {
+        total:           s.total,
+        new_30d:         s.new_30d,
+        new_90d:         s.new_90d,
+        kyc_upgraded:    s.kyc_upgraded,
+        curp_on_file:    s.curp_on_file,
+        pti_scored:      s.pti_scored,
+        from_institution: s.from_institution,
+      },
+      kyc_tiers:  kycRes.rows,
+      pti_tiers:  ptiRes.rows,
+      weekly_tx:  txRes.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/compliance-summary: failed");
+    res.status(500).json({ error: "Error al obtener resumen de cumplimiento." });
+  }
+});
+
 export default router;

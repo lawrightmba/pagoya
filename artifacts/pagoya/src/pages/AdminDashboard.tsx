@@ -146,10 +146,35 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops" | "landlords">("investor");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance">("investor");
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
   const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem("pagoya_sheet_url") ?? "");
   const [sheetUrlInput, setSheetUrlInput] = useState("");
+
+  // ── Compliance state ──────────────────────────────────────────────────────
+  const [complianceData, setComplianceData] = useState<{
+    as_of: string;
+    users: { total: number; new_30d: number; new_90d: number; kyc_upgraded: number; curp_on_file: number; pti_scored: number; from_institution: number };
+    kyc_tiers: { kyc_tier: string; n: number }[];
+    pti_tiers: { tier: string; n: number }[];
+    weekly_tx: { week_start: string; tx_count: number; volume_mxn: number; avg_mxn: number }[];
+  } | null>(null);
+  const [complianceLoading, setComplianceLoading] = useState(false);
+  const [complianceError, setComplianceError] = useState("");
+
+  const loadCompliance = useCallback(async () => {
+    if (!adminKey.trim()) return;
+    setComplianceLoading(true);
+    setComplianceError("");
+    try {
+      const r = await fetch(`${BASE_URL}/api/admin/compliance-summary`, { headers: { "x-admin-key": adminKey } });
+      if (!r.ok) { setComplianceError(`${r.status}`); return; }
+      setComplianceData(await r.json());
+    } catch { setComplianceError("Network error"); }
+    finally { setComplianceLoading(false); }
+  }, [adminKey]);
+
+  useEffect(() => { if (tab === "compliance") loadCompliance(); }, [tab, loadCompliance]);
 
   // ── Landlords state ───────────────────────────────────────────────────────
   const [landlords, setLandlords] = useState<LandlordRow[]>([]);
@@ -386,11 +411,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : "Propietarios"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : "Cumplimiento"}
           </div>
           {/* Tab switcher */}
-          <div style={{ display: "flex", gap: 8 }}>
-            {(["investor", "ops", "landlords"] as const).map((t) => (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(["investor", "ops", "landlords", "compliance"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -408,7 +433,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : "🏠 Propietarios"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "landlords" ? "🏠 Propietarios" : "🛡️ Cumplimiento"}
               </button>
             ))}
           </div>
@@ -1731,6 +1756,135 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ══════════════ CUMPLIMIENTO TAB ══════════════ */}
+        {tab === "compliance" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {complianceLoading ? "Cargando…" : complianceData ? `Actualizado: ${new Date(complianceData.as_of).toLocaleString("es-MX")}` : "Resumen regulatorio en tiempo real"}
+              </div>
+              <button
+                onClick={loadCompliance}
+                disabled={complianceLoading}
+                style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}
+              >
+                ↻ Actualizar
+              </button>
+            </div>
+
+            {!adminKey.trim() && (
+              <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: 16, marginBottom: 20, fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#F59E0B" }}>
+                Ingresa tu Admin Key en la pestaña Investor View primero.
+              </div>
+            )}
+            {complianceError && (
+              <div style={{ background: "rgba(226,26,10,0.08)", border: "1px solid rgba(226,26,10,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#E21A0A" }}>
+                Error {complianceError}
+              </div>
+            )}
+
+            {complianceData && (() => {
+              const cd = complianceData;
+              const totalKyc = cd.kyc_tiers.reduce((a, r) => a + r.n, 0) || 1;
+              const totalPti = cd.pti_tiers.reduce((a, r) => a + r.n, 0) || 1;
+              const tierColor = (tier: string) => tier === "enhanced" ? "#39A935" : tier === "standard" ? "#F59E0B" : "#5a7080";
+              const ptiColor = (tier: string) => tier === "Oro" ? "#F59E0B" : tier === "Plata" ? "#9CA3AF" : "#CD7F32";
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+                  {/* KPI row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+                    {[
+                      ["Usuarios total", cd.users.total],
+                      ["Nuevos 30d", cd.users.new_30d],
+                      ["CURP en archivo", cd.users.curp_on_file],
+                      ["KYC Estándar+", cd.users.kyc_upgraded],
+                      ["PTI asignado", cd.users.pti_scored],
+                      ["Vía institución", cd.users.from_institution],
+                    ].map(([label, val]) => (
+                      <div key={String(label)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "16px 14px" }}>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{label}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.6rem", fontWeight: 700, color: "#e8f0f7" }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* KYC tiers + PTI tiers side by side */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    {/* KYC tier distribution */}
+                    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 20 }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>KYC Tier — Distribución</div>
+                      {cd.kyc_tiers.length === 0
+                        ? <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#5a7080" }}>Sin datos</div>
+                        : cd.kyc_tiers.map(row => (
+                          <div key={row.kyc_tier} style={{ marginBottom: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", marginBottom: 4 }}>
+                              <span style={{ color: tierColor(row.kyc_tier), textTransform: "uppercase" }}>{row.kyc_tier}</span>
+                              <span style={{ color: "#e8f0f7" }}>{row.n} ({Math.round(row.n / totalKyc * 100)}%)</span>
+                            </div>
+                            <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${Math.round(row.n / totalKyc * 100)}%`, background: tierColor(row.kyc_tier), borderRadius: 4 }} />
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+
+                    {/* PTI tier distribution */}
+                    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 20 }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>PTI Tier — Distribución</div>
+                      {cd.pti_tiers.length === 0
+                        ? <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#5a7080" }}>Sin usuarios con PTI asignado aún</div>
+                        : cd.pti_tiers.map(row => (
+                          <div key={row.tier} style={{ marginBottom: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", marginBottom: 4 }}>
+                              <span style={{ color: ptiColor(row.tier) }}>{row.tier}</span>
+                              <span style={{ color: "#e8f0f7" }}>{row.n} ({Math.round(row.n / totalPti * 100)}%)</span>
+                            </div>
+                            <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${Math.round(row.n / totalPti * 100)}%`, background: ptiColor(row.tier), borderRadius: 4 }} />
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+
+                  {/* Weekly transaction volume */}
+                  <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 20 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Volumen Transaccional — 8 Semanas</div>
+                    {cd.weekly_tx.length === 0
+                      ? <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#5a7080" }}>Sin transacciones en este período</div>
+                      : (
+                        <div style={{ overflowX: "auto" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "120px 80px 120px 100px", fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", padding: "0 0 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 10 }}>
+                            {["Semana", "Txns", "Volumen", "Promedio"].map(h => <div key={h}>{h}</div>)}
+                          </div>
+                          {cd.weekly_tx.map(row => (
+                            <div key={row.week_start} style={{ display: "grid", gridTemplateColumns: "120px 80px 120px 100px", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                              <div style={{ color: "#9CA3AF" }}>{row.week_start}</div>
+                              <div style={{ color: "#e8f0f7" }}>{row.tx_count}</div>
+                              <div style={{ color: "#39A935" }}>${row.volume_mxn.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div>
+                              <div style={{ color: "#9CA3AF" }}>${row.avg_mxn.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </div>
+
+                  {/* Footer link */}
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080" }}>
+                    Política completa:{" "}
+                    <a href="/cumplimiento" target="_blank" rel="noopener noreferrer" style={{ color: "#39A935", textDecoration: "none" }}>pagoyamx.com/cumplimiento</a>
+                  </div>
+
+                </div>
+              );
+            })()}
           </div>
         )}
 

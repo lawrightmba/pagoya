@@ -15,3 +15,4 @@
 - [Gift card catalog](gift-card-catalog.md) — 3 groups by purchase intent; denomination principles per brand; routing bypasses reference step; 100% MXN, no exchange rate needed
 - [PTI architecture](pti-architecture.md) — dual-model: pagoScore.ts (4-dim, credit_profiles) + pti.ts (7-component, users.pti_score); monthly cron 1st 3AM MX; widget in Home.tsx
 - [UX audit fixes](ux-audit-fixes.md) — Stripe IS used in CardEntry.tsx (false positive H11); App.tsx shell: only vincular-banco hides both BottomNav+Paula; PaymentContext uses sessionStorage for mid-flow refresh survival; Home.tsx refactored: GiftCardSection+HowItWorksSection+BonusBanner extracted
+- [Institutional compliance layer](institutional-compliance.md) — kyc_tier + referred_by_institution columns in users; /cumplimiento page; GET /api/admin/compliance-summary; CUMPLIMIENTO tab in AdminDashboard; Paula prompt has financial-identity + CURP nudge language
