@@ -319,19 +319,28 @@ export default function Home() {
         <span />
 
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <img
-            src="/pagoya-logo.png"
-            alt="PagoYa"
-            style={{ height: "44px", width: "auto", maxWidth: "180px", objectFit: "contain", display: "block" }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-              const sib = e.currentTarget.nextSibling as HTMLElement | null;
-              if (sib) sib.style.display = "inline";
-            }}
-          />
-          <span style={{ display: "none", color: "white", fontWeight: 800, fontSize: "22px" }}>
-            Pago<span style={{ color: "#1D9E75" }}>Ya</span>
-          </span>
+          <div style={{
+            background: "white",
+            borderRadius: "10px",
+            padding: "5px 14px",
+            display: "inline-flex",
+            alignItems: "center",
+            boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+          }}>
+            <img
+              src="/pagoya-logo.png"
+              alt="PagoYa"
+              style={{ height: "34px", width: "auto", maxWidth: "160px", objectFit: "contain", display: "block" }}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                const sib = e.currentTarget.nextSibling as HTMLElement | null;
+                if (sib) sib.style.display = "inline";
+              }}
+            />
+            <span style={{ display: "none", color: "#046C2C", fontWeight: 800, fontSize: "20px" }}>
+              Pago<span style={{ color: "#39A935" }}>Ya</span>
+            </span>
+          </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
