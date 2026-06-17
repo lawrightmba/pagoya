@@ -20,6 +20,7 @@ declare module "express-session" {
       city: string;
       colonia: string;
       ref_code: string;
+      landlord_ref?: string;
     };
   }
 }
@@ -104,6 +105,8 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
     }
 
     // ── 3. Store registration payload in session ───────────────────────────
+    const landlordRef = (req.body as { landlord_ref?: string }).landlord_ref?.trim() || undefined;
+
     req.session.pending_bonus_registration = {
       name: name.trim(),
       phone: phoneCleaned,
@@ -111,6 +114,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       city: city.trim(),
       colonia: colonia.trim(),
       ref_code: refCodeResolved,
+      landlord_ref: landlordRef,
     };
 
     // ── 4. Return OTP challenge ────────────────────────────────────────────
@@ -180,6 +184,20 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
           return;
         }
         userId = existing.id;
+      }
+
+      // ── Landlord referral: tag user + increment landlord counter ──────────
+      if (pending.landlord_ref) {
+        const { sql: drizzleSql } = await import("drizzle-orm");
+        db.execute(
+          drizzleSql`UPDATE users SET referred_by_landlord = ${pending.landlord_ref} WHERE telefono = ${pending.phone}`,
+        ).then(() =>
+          db.execute(
+            drizzleSql`UPDATE landlords SET referred_users = referred_users + 1, updated_at = NOW() WHERE landlord_code = ${pending.landlord_ref!} AND status = 'active'`,
+          ),
+        ).catch((err: unknown) => {
+          logger.warn({ err, landlordRef: pending.landlord_ref, phone: pending.phone }, "streetTeamBonus: landlord tag failed (non-fatal)");
+        });
       }
     } catch (err) {
       logger.error({ err, phone: pending.phone }, "streetTeamBonus: user creation failed");

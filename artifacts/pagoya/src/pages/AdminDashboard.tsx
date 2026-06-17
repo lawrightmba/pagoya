@@ -7,6 +7,22 @@ import {
 interface ColoniaRow { colonia: string; count: number; pct: number; }
 interface ColoniaBreakdown { total: number; breakdown: ColoniaRow[]; }
 
+interface LandlordRow {
+  id: number;
+  landlord_code: string;
+  full_name: string;
+  email: string;
+  whatsapp: string | null;
+  units: number;
+  city: string;
+  status: string;
+  referral_link: string | null;
+  referred_users: number;
+  total_commission_mxn: number;
+  notes: string | null;
+  created_at: string;
+}
+
 interface TxRow {
   id: string;
   type: string;
@@ -130,13 +146,65 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops">("investor");
-  const [investorData, setInvestorData] = useState<InvestorMetrics | null>(null);
-  const [investorLoading, setInvestorLoading] = useState(true);
-  const [investorError, setInvestorError] = useState("");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords">("investor");
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
   const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem("pagoya_sheet_url") ?? "");
   const [sheetUrlInput, setSheetUrlInput] = useState("");
+
+  // ── Landlords state ───────────────────────────────────────────────────────
+  const [landlords, setLandlords] = useState<LandlordRow[]>([]);
+  const [landlordLoading, setLandlordLoading] = useState(false);
+  const [landlordError, setLandlordError] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ full_name: "", email: "", whatsapp: "", units: "1", city: "Puerto Vallarta", notes: "" });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [addSuccess, setAddSuccess] = useState<{ landlord_code: string; referral_link: string } | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const loadLandlords = useCallback(async () => {
+    if (!adminKey.trim()) return;
+    setLandlordLoading(true);
+    setLandlordError("");
+    try {
+      const r = await fetch(`${BASE_URL}/api/landlords`, { headers: { "x-admin-key": adminKey } });
+      if (!r.ok) { setLandlordError(`${r.status}`); return; }
+      const d = await r.json();
+      setLandlords(d.landlords ?? []);
+    } catch { setLandlordError("Network error"); }
+    finally { setLandlordLoading(false); }
+  }, [adminKey]);
+
+  useEffect(() => { if (tab === "landlords") loadLandlords(); }, [tab, loadLandlords]);
+
+  const handleAddLandlord = async () => {
+    if (!addForm.full_name.trim() || !addForm.email.trim()) { setAddError("Nombre y email son requeridos"); return; }
+    setAddLoading(true);
+    setAddError("");
+    try {
+      const r = await fetch(`${BASE_URL}/api/landlords/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...addForm, units: parseInt(addForm.units) || 1 }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setAddError(d.error ?? `Error ${r.status}`); return; }
+      setAddSuccess({ landlord_code: d.landlord_code, referral_link: d.referral_link });
+      await loadLandlords();
+    } catch { setAddError("Error de red"); }
+    finally { setAddLoading(false); }
+  };
+
+  const copyLink = (link: string, code: string) => {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
+
+  const [investorData, setInvestorData] = useState<InvestorMetrics | null>(null);
+  const [investorLoading, setInvestorLoading] = useState(true);
+  const [investorError, setInvestorError] = useState("");
 
   const loadInvestorMetrics = useCallback(() => {
     if (!adminKey.trim()) return;
@@ -318,11 +386,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : "Rep Commission Center"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : "Propietarios"}
           </div>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 8 }}>
-            {(["investor", "ops"] as const).map((t) => (
+            {(["investor", "ops", "landlords"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -340,7 +408,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : "⚙️ Operaciones"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : "🏠 Propietarios"}
               </button>
             ))}
           </div>
@@ -1484,6 +1552,186 @@ export default function AdminDashboard() {
         </div>
 
         </div>
+        )}
+
+        {/* ══════════════ PROPIETARIOS TAB ══════════════ */}
+        {tab === "landlords" && (
+          <div>
+            {/* Header bar */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {landlordLoading ? "Cargando…" : `${landlords.length} propietario${landlords.length !== 1 ? "s" : ""} registrado${landlords.length !== 1 ? "s" : ""}`}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={loadLandlords}
+                  disabled={landlordLoading}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}
+                >
+                  ↻ Actualizar
+                </button>
+                <button
+                  onClick={() => { setShowAddModal(true); setAddSuccess(null); setAddError(""); setAddForm({ full_name: "", email: "", whatsapp: "", units: "1", city: "Puerto Vallarta", notes: "" }); }}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#007A4A,#39A935)", border: "none", borderRadius: 20, padding: "6px 18px", cursor: "pointer" }}
+                >
+                  + Agregar Propietario
+                </button>
+              </div>
+            </div>
+
+            {!adminKey.trim() && (
+              <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: 16, marginBottom: 20, fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#F59E0B" }}>
+                Ingresa tu Admin Key en la pestaña Investor View primero.
+              </div>
+            )}
+
+            {landlordError && (
+              <div style={{ background: "rgba(226,26,10,0.08)", border: "1px solid rgba(226,26,10,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#E21A0A" }}>
+                Error {landlordError}
+              </div>
+            )}
+
+            {/* Table */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 80px 100px 110px 110px 80px 1fr", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "10px 14px" }}>
+                {["Código","Nombre","Uds","Referidos","Comisión","Estado","Fecha","Link"].map(h => (
+                  <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+                ))}
+              </div>
+
+              {landlords.length === 0 && !landlordLoading && (
+                <div style={{ padding: "32px 14px", textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>
+                  Sin propietarios aún. Agrega el primero →
+                </div>
+              )}
+
+              {landlords.map((lnd, i) => (
+                <div
+                  key={lnd.landlord_code}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "90px 1fr 80px 100px 110px 110px 80px 1fr",
+                    padding: "12px 14px",
+                    borderBottom: i < landlords.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#F59E0B", fontWeight: 700 }}>{lnd.landlord_code}</div>
+                  <div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#e8f0f7" }}>{lnd.full_name}</div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080" }}>{lnd.email}</div>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#e8f0f7" }}>{lnd.units}</div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#39A935", fontWeight: 700 }}>{lnd.referred_users}</div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#00C875", fontWeight: 700 }}>${lnd.total_commission_mxn} MXN</div>
+                  <div>
+                    <span style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      background: lnd.status === "active" ? "rgba(57,169,53,0.15)" : "rgba(90,112,128,0.15)",
+                      color: lnd.status === "active" ? "#39A935" : "#5a7080",
+                      border: `1px solid ${lnd.status === "active" ? "rgba(57,169,53,0.3)" : "rgba(90,112,128,0.2)"}`,
+                    }}>
+                      {lnd.status === "active" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080" }}>
+                    {new Date(lnd.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </div>
+                  <div>
+                    {lnd.referral_link ? (
+                      <button
+                        onClick={() => copyLink(lnd.referral_link!, lnd.landlord_code)}
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          fontSize: "0.78rem",
+                          color: copiedCode === lnd.landlord_code ? "#39A935" : "#1D9E75",
+                          background: "rgba(29,158,117,0.1)",
+                          border: "1px solid rgba(29,158,117,0.25)",
+                          borderRadius: 8,
+                          padding: "4px 10px",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {copiedCode === lnd.landlord_code ? "✓ Copiado" : "📋 Copiar link"}
+                      </button>
+                    ) : <span style={{ color: "#5a7080", fontSize: "0.78rem" }}>—</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Landlord Modal */}
+            {showAddModal && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                <div style={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 28, width: "100%", maxWidth: 440 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.1rem", color: "#e8f0f7", fontWeight: 700 }}>🏠 Agregar Propietario</div>
+                    <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", color: "#5a7080", fontSize: "1.2rem", cursor: "pointer" }}>✕</button>
+                  </div>
+
+                  {addSuccess ? (
+                    <div>
+                      <div style={{ background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#39A935", fontWeight: 700, marginBottom: 8 }}>✓ Registrado exitosamente</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#e8f0f7", marginBottom: 4 }}>Código: <strong>{addSuccess.landlord_code}</strong></div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080", wordBreak: "break-all" }}>{addSuccess.referral_link}</div>
+                      </div>
+                      <button
+                        onClick={() => copyLink(addSuccess.referral_link, addSuccess.landlord_code)}
+                        style={{ width: "100%", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: "#fff", background: "#39A935", border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", marginBottom: 8 }}
+                      >
+                        {copiedCode === addSuccess.landlord_code ? "✓ Link copiado" : "📋 Copiar link de referido"}
+                      </button>
+                      <button
+                        onClick={() => { setShowAddModal(false); setAddSuccess(null); }}
+                        style={{ width: "100%", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#5a7080", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 0", cursor: "pointer" }}
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[
+                        { label: "Nombre completo *", key: "full_name", placeholder: "Juan García López" },
+                        { label: "Email *", key: "email", placeholder: "juan@gmail.com" },
+                        { label: "WhatsApp", key: "whatsapp", placeholder: "3221234567" },
+                        { label: "Unidades (# de cuartos/deptos)", key: "units", placeholder: "1" },
+                        { label: "Ciudad", key: "city", placeholder: "Puerto Vallarta" },
+                        { label: "Notas", key: "notes", placeholder: "Opcional" },
+                      ].map(({ label, key, placeholder }) => (
+                        <div key={key}>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+                          <input
+                            value={addForm[key as keyof typeof addForm]}
+                            onChange={e => setAddForm(f => ({ ...f, [key]: e.target.value }))}
+                            placeholder={placeholder}
+                            style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "10px 12px", color: "#e8f0f7", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }}
+                          />
+                        </div>
+                      ))}
+
+                      {addError && (
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#E21A0A" }}>{addError}</div>
+                      )}
+
+                      <button
+                        onClick={handleAddLandlord}
+                        disabled={addLoading}
+                        style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", fontWeight: 700, color: "#fff", background: addLoading ? "rgba(57,169,53,0.4)" : "linear-gradient(135deg,#007A4A,#39A935)", border: "none", borderRadius: 10, padding: "12px 0", cursor: addLoading ? "not-allowed" : "pointer", marginTop: 4 }}
+                      >
+                        {addLoading ? "Registrando…" : "Registrar Propietario"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
       </div>

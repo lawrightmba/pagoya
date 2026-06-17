@@ -233,12 +233,15 @@ export default function Register() {
   const handleColoniaBlur = () => setFieldError("colonia", validateColonia(colonia));
 
   // ── Build form payload ────────────────────────────────────────────────────
+  const isLandlordRef = refCode?.startsWith("LND") ?? false;
+
   const buildPayload = () => ({
     name: name.trim(),
     phone: combinedPhone,
     city,
     colonia,
-    ref_code: refCode ?? "",
+    ref_code: isLandlordRef ? "" : (refCode ?? ""),
+    ...(isLandlordRef ? { landlord_ref: refCode } : {}),
     ...(repId ? { repId } : {}),
     ...(recoveryEmail.trim() ? { recoveryEmail: recoveryEmail.trim() } : {}),
   });

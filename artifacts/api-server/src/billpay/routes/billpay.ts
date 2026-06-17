@@ -6,6 +6,7 @@ import { taecelGetProducts, taecelCheckSkuAvailability, taecelCheckStockAndAlert
 import { taecelProductCacheTable } from "@workspace/db";
 import { BILL_CATALOG, getCatalogSummary, getCategoriesWithTranslations, getServiceById } from "../services/catalog.js";
 import { sendWhatsAppReceipt, sendLowSaldoAlert, SALDO_LOW_THRESHOLD } from "../lib/notifications.js";
+import { sendWhatsApp } from "../../lib/whatsapp.js";
 import { getOrCreateWallet, getBalance } from "../../wallet/services/wallet.js";
 import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
@@ -465,6 +466,48 @@ router.post("/pay", async (req: Request, res: Response) => {
       logger.error({ err, repId: effectiveRepId, paymentId }, "billpay: commission insert failed");
     });
   }
+
+  // Landlord commission — $150 MXN on the user's FIRST confirmed bill payment
+  (async () => {
+    try {
+      const landlordRow = await db.execute(
+        sql`SELECT referred_by_landlord FROM users WHERE telefono = ${telefono} AND referred_by_landlord IS NOT NULL LIMIT 1`,
+      );
+      if (landlordRow.rows.length === 0) return;
+      const landlordCode = (landlordRow.rows[0] as { referred_by_landlord: string }).referred_by_landlord;
+
+      const priorPayments = await db.execute(
+        sql`SELECT COUNT(*) as cnt FROM bill_payments WHERE telefono = ${telefono} AND status = 'confirmed' AND id < ${paymentId}`,
+      );
+      const prior = parseInt((priorPayments.rows[0] as { cnt: string }).cnt, 10);
+      if (prior > 0) return;
+
+      const updated = await db.execute(
+        sql`UPDATE landlords SET total_commission_mxn = total_commission_mxn + 150, updated_at = NOW()
+            WHERE landlord_code = ${landlordCode}
+            RETURNING full_name, total_commission_mxn`,
+      );
+      if (updated.rows.length === 0) return;
+      const { full_name, total_commission_mxn } = updated.rows[0] as { full_name: string; total_commission_mxn: number };
+
+      await db.execute(
+        sql`INSERT INTO landlord_commissions (landlord_code, user_id, payment_id, amount_mxn)
+            VALUES (${landlordCode}, ${telefono}, ${String(paymentId)}, 150)`,
+      );
+
+      const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
+      if (adminNumber) {
+        sendWhatsApp(
+          adminNumber,
+          `💰 Comisión de propietario generada\nPropietario: ${landlordCode} (${full_name})\nInquilino: ${telefono}\nComisión: $150 MXN\nTotal acumulado: $${total_commission_mxn} MXN`,
+        ).catch(() => {});
+      }
+
+      logger.info({ landlordCode, telefono, paymentId }, "billpay: landlord commission credited");
+    } catch (err) {
+      logger.error({ err, telefono, paymentId }, "billpay: landlord commission failed (non-fatal)");
+    }
+  })();
 
   // WhatsApp receipt
   sendWhatsAppReceipt({

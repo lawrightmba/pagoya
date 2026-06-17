@@ -1,0 +1,277 @@
+You are working in the existing PagoYa codebase (Express/TypeScript backend, 
+PostgreSQL via existing db client, React/TypeScript frontend). The API server 
+runs on port 8080. Do not modify any existing routes, tables, or files unless 
+explicitly instructed below. Run a smoke test after each part before moving to 
+the next.
+
+═══════════════════════════════════════════════════════════════
+PART 1 — DATABASE: CREATE landlords TABLE
+═══════════════════════════════════════════════════════════════
+
+Add the following table to the database using a raw SQL migration. 
+Create the file: server/migrations/add_landlords.sql
+
+```sql
+CREATE TABLE IF NOT EXISTS landlords (
+  id SERIAL PRIMARY KEY,
+  landlord_code TEXT NOT NULL UNIQUE,    -- e.g. LND001, LND002
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  whatsapp TEXT,
+  units INTEGER DEFAULT 1,               -- how many rental units they manage
+  city TEXT DEFAULT 'Puerto Vallarta',
+  status TEXT NOT NULL DEFAULT 'active', -- active | inactive
+  referral_link TEXT,                    -- full constructed URL stored for convenience
+  referred_users INTEGER DEFAULT 0,      -- count of activated tenants via their link
+  total_commission_mxn INTEGER DEFAULT 0,-- running total earned (in whole pesos)
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_landlords_code ON landlords(landlord_code);
+CREATE INDEX IF NOT EXISTS idx_landlords_email ON landlords(email);
+```
+
+Execute this migration against the live database using the existing db 
+connection pattern in the codebase. Confirm the table was created with a 
+SELECT COUNT(*) query and log the result.
+
+═══════════════════════════════════════════════════════════════
+PART 2 — ADD landlord_code COLUMN TO EXISTING users TABLE
+═══════════════════════════════════════════════════════════════
+
+Run this migration:
+
+```sql
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS referred_by_landlord TEXT REFERENCES landlords(landlord_code);
+```
+
+This column records which landlord referred this user when they registered 
+via a landlord referral link. It is nullable — most users will not have it.
+
+═══════════════════════════════════════════════════════════════
+PART 3 — BACKEND UTILITY: generateLandlordCode()
+═══════════════════════════════════════════════════════════════
+
+Create file: server/utils/landlordCode.ts
+
+```typescript
+import { db } from '../db';  // use whatever the existing db import path is
+
+export async function generateLandlordCode(): Promise<string> {
+  // Find the highest existing LNDnnn code
+  const result = await db.query(
+    `SELECT landlord_code FROM landlords 
+     WHERE landlord_code ~ '^LND[0-9]+$' 
+     ORDER BY CAST(SUBSTRING(landlord_code FROM 4) AS INTEGER) DESC 
+     LIMIT 1`
+  );
+  
+  if (result.rows.length === 0) {
+    return 'LND001';
+  }
+  
+  const last = result.rows[0].landlord_code; // e.g. "LND003"
+  const num = parseInt(last.replace('LND', ''), 10);
+  const next = num + 1;
+  return 'LND' + String(next).padStart(3, '0'); // LND004, LND027, LND100 etc.
+}
+```
+
+═══════════════════════════════════════════════════════════════
+PART 4 — BACKEND ROUTES: /api/landlords/*
+═══════════════════════════════════════════════════════════════
+
+Create file: server/routes/landlords.ts
+
+Implement the following 4 routes:
+
+────────────────────────────────────────────────────────────────
+POST /api/landlords/register
+────────────────────────────────────────────────────────────────
+Body: { full_name, email, whatsapp?, units?, city?, notes? }
+
+Logic:
+1. Validate full_name and email are present. Return 400 if missing.
+2. Check if email already exists in landlords table. Return 409 if duplicate.
+3. Call generateLandlordCode() to get next code (e.g. LND004).
+4. Construct referral_link: 
+   `https://pagoyamx.com/registro?ref=${landlordCode}`
+5. Insert new row into landlords table with all fields + landlord_code + referral_link.
+6. Send Twilio WhatsApp notification to admin using the existing 
+   Twilio/WhatsApp pattern in the codebase. Message:
+   "🏠 Nuevo propietario registrado en PagoYa
+   Código: ${landlordCode}
+   Nombre: ${full_name}
+   Email: ${email}
+   Unidades: ${units || 1}
+   Link: ${referral_link}"
+7. Return 201 with: { landlord_code, referral_link, full_name, email }
+
+────────────────────────────────────────────────────────────────
+GET /api/landlords/:code
+────────────────────────────────────────────────────────────────
+Returns the landlord row matching landlord_code. 
+Include: landlord_code, full_name, email, units, referral_link, 
+         referred_users, total_commission_mxn, status, created_at.
+Return 404 if not found.
+
+────────────────────────────────────────────────────────────────
+GET /api/landlords/:code/stats
+────────────────────────────────────────────────────────────────
+Returns:
+{
+  landlord_code,
+  full_name,
+  referred_users: COUNT of users where referred_by_landlord = :code,
+  activated_users: COUNT of users where referred_by_landlord = :code 
+                   AND has at least one completed transaction 
+                   (join to transactions or payments table using 
+                    whatever the existing completed-payment pattern is),
+  total_commission_mxn: referred_users * 150,
+  pending_commission_mxn: activated_users not yet marked paid * 150
+}
+
+────────────────────────────────────────────────────────────────
+GET /api/landlords (admin only — protect with existing X-Admin-Key middleware)
+────────────────────────────────────────────────────────────────
+Returns all landlords ordered by created_at DESC.
+Include all columns. Used by admin dashboard.
+
+Register all 4 routes in the main server app file (app.ts or index.ts or 
+server.ts — wherever existing routes are registered):
+  import landlordRoutes from './routes/landlords';
+  app.use('/api/landlords', landlordRoutes);
+
+═══════════════════════════════════════════════════════════════
+PART 5 — HOOK INTO EXISTING USER REGISTRATION
+═══════════════════════════════════════════════════════════════
+
+In the existing user registration handler (the route that processes 
+/api/auth/register or /api/register or wherever OTP-verified signups 
+complete and create a user row):
+
+1. Read an optional query param or body field: `ref` (the landlord code).
+   Example: user arrives from pagoyamx.com/registro?ref=LND003
+   The frontend should pass `ref=LND003` in the registration payload.
+
+2. If `ref` is present:
+   a. Look up the landlord by landlord_code in the landlords table.
+   b. If found and status = 'active': 
+      - Set referred_by_landlord = landlord_code on the new user row.
+      - Increment landlords.referred_users by 1.
+   c. If not found or inactive: ignore silently (do not block registration).
+
+3. Do NOT modify the existing $150 MXN signup bonus logic for the user. 
+   That fires regardless of referral source. The landlord commission is 
+   separate and is triggered by the user's FIRST COMPLETED PAYMENT 
+   (see Part 6).
+
+DO NOT change any other part of the registration flow.
+
+═══════════════════════════════════════════════════════════════
+PART 6 — TRIGGER LANDLORD COMMISSION ON FIRST PAYMENT
+═══════════════════════════════════════════════════════════════
+
+In the existing payment completion handler (wherever a bill payment is 
+marked as completed/successful in the codebase):
+
+1. Check if the paying user has referred_by_landlord set.
+2. Check if this is the user's FIRST completed payment 
+   (count of their prior completed payments = 0 before this one).
+3. If both true:
+   a. Add 150 to landlords.total_commission_mxn for that landlord_code.
+   b. Send Twilio WhatsApp to admin:
+      "💰 Comisión de propietario generada
+      Propietario: ${landlord_code} (${landlord_name})
+      Inquilino: ${user_phone or user_id}
+      Comisión: $150 MXN
+      Total acumulado: $${new_total} MXN"
+   c. Log the commission event to the existing audit log or a new 
+      landlord_commissions table with: 
+      landlord_code, user_id, amount_mxn, triggered_at, payment_id.
+
+Create the landlord_commissions table if it does not exist:
+```sql
+CREATE TABLE IF NOT EXISTS landlord_commissions (
+  id SERIAL PRIMARY KEY,
+  landlord_code TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  payment_id TEXT,
+  amount_mxn INTEGER NOT NULL DEFAULT 150,
+  paid_out BOOLEAN DEFAULT FALSE,
+  triggered_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+═══════════════════════════════════════════════════════════════
+PART 7 — ADMIN DASHBOARD TAB: PROPIETARIOS
+═══════════════════════════════════════════════════════════════
+
+In the existing admin dashboard (command-center or /admin), add a new tab 
+called "PROPIETARIOS" (or "LANDLORDS") alongside the existing tabs.
+
+The tab should display a table with these columns, populated from 
+GET /api/landlords (admin endpoint):
+
+| Código | Nombre | Email | Unidades | Inquilinos Referidos | Comisión Total | Estado | Fecha | Link |
+
+- "Código" shows landlord_code (e.g. LND001)
+- "Inquilinos Referidos" shows referred_users count
+- "Comisión Total" shows total_commission_mxn formatted as "$X MXN"
+- "Estado" shows a green "Activo" or gray "Inactivo" badge
+- "Fecha" shows created_at formatted as DD/MM/YYYY
+- "Link" shows a small copy-to-clipboard button that copies referral_link
+
+Also add a simple "Add Landlord" button that opens a modal form with fields:
+  Full Name, Email, WhatsApp, Units (number), City, Notes
+Submitting calls POST /api/landlords/register and refreshes the table.
+
+═══════════════════════════════════════════════════════════════
+PART 8 — FRONTEND: READ ?ref= PARAM ON REGISTRATION PAGE
+═══════════════════════════════════════════════════════════════
+
+In the existing /registro or /register page (Register.tsx or equivalent):
+
+1. On component mount, read the URL query parameter `ref` using 
+   URLSearchParams or useSearchParams.
+2. If present, store it in component state: `const [landlordRef, setLandlordRef]`
+3. When submitting the registration form (or at OTP verification step), 
+   include `landlord_ref: landlordRef` in the payload sent to the backend.
+4. Do NOT display anything to the user about the ref parameter. 
+   It is invisible to them.
+
+DO NOT change any other part of the registration UI or flow.
+
+═══════════════════════════════════════════════════════════════
+SMOKE TESTS — RUN THESE AFTER ALL PARTS COMPLETE
+═══════════════════════════════════════════════════════════════
+
+1. POST /api/landlords/register with:
+   { full_name: "Test Landlord", email: "test.lnd@pagoyamx.com", units: 3 }
+   → Should return 201 with landlord_code: "LND001" (or next available) 
+     and referral_link: "https://pagoyamx.com/registro?ref=LND001"
+
+2. POST /api/landlords/register again with same email
+   → Should return 409 Conflict
+
+3. POST /api/landlords/register with a different email
+   → Should return landlord_code: "LND002" (sequential)
+
+4. GET /api/landlords/LND001
+   → Should return the landlord row
+
+5. GET /api/landlords (with correct X-Admin-Key header)
+   → Should return array of all landlords
+
+6. Navigate to /registro?ref=LND001 in the browser
+   → Confirm the ref param is captured silently (check browser console or 
+     network tab to confirm it's included in the registration payload)
+
+7. Check admin dashboard PROPIETARIOS tab renders without errors
+
+8. Confirm Twilio WhatsApp notification fired on step 1 above
+
+Log all smoke test results to the console and report pass/fail for each.
