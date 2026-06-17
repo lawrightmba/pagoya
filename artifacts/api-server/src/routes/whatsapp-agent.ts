@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql as drizzleSql } from "drizzle-orm";
 import { db, usersTable, walletsTable, signupBonusConfigTable } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { getSession, saveSession, type PendingWithdrawalSession, type PendingP2PSession } from "../services/whatsapp-sessions.js";
@@ -356,6 +356,14 @@ async function registerWhatsAppUser(
       .where(eq(usersTable.telefono, clean))
       .limit(1);
     userId = existing!.id;
+    // Backfill name + source if the user pre-existed with no name (e.g. partial web flow)
+    await db.execute(drizzleSql`
+      UPDATE users
+      SET kyc_full_name = ${name.trim()},
+          signup_source  = 'whatsapp_organic'
+      WHERE telefono = ${clean}
+        AND (kyc_full_name IS NULL OR kyc_full_name = '')
+    `);
   }
 
   // Create wallet (idempotent)

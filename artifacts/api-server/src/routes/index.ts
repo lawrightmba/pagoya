@@ -48,7 +48,8 @@ const router: IRouter = Router();
 // ─── Admin auth guard ──────────────────────────────────────────────────────────
 const adminAuth = (req: Request, res: Response, next: NextFunction): void => {
   const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
-  if (!key || key !== process.env.ADMIN_SECRET_KEY) {
+  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
+  if (!key || !expected || key !== expected) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -630,6 +631,102 @@ router.get("/admin/bonus-stats", async (req: Request, res: Response) => {
   } catch (err) {
     logger.error({ err }, "admin/bonus-stats: failed");
     res.status(500).json({ error: "Error al obtener estadísticas." });
+  }
+});
+
+// GET /api/admin/investor-stats — comprehensive investor-facing metrics
+// Protected by existing adminAuth (/admin/* guard above). Apps Script uses ?adminKey=
+router.get("/admin/investor-stats", async (_req: Request, res: Response) => {
+  try {
+    const [main, weekly, topBillers] = await Promise.all([
+      db.execute(drizzleSql`
+        SELECT
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE)                                                      AS users_total,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND created_at > NOW() - INTERVAL '7 days')           AS users_7d,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND created_at > NOW() - INTERVAL '30 days')          AS users_30d,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND kyc_full_name IS NOT NULL AND kyc_full_name != '') AS users_with_name,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND signup_source = 'whatsapp_organic')               AS users_whatsapp,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND signup_source = 'web_organic')                    AS users_web,
+          (SELECT COUNT(*)::int  FROM users WHERE is_test_account IS NOT TRUE AND signup_source = 'rep_referral')                   AS users_rep,
+          (SELECT COUNT(*)::int  FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success'))                AS payments_total,
+          (SELECT COALESCE(SUM(monto),0)::float            FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success'))                                                          AS volume_total,
+          (SELECT COALESCE(SUM(platform_fee_mxn),0)::float FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success'))                                                          AS revenue_total,
+          (SELECT COUNT(*)::int  FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '7 days')                                        AS payments_7d,
+          (SELECT COALESCE(SUM(monto),0)::float            FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '7 days')               AS volume_7d,
+          (SELECT COALESCE(SUM(platform_fee_mxn),0)::float FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '7 days')               AS revenue_7d,
+          (SELECT COUNT(*)::int  FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')                                       AS payments_30d,
+          (SELECT COALESCE(SUM(monto),0)::float            FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')              AS volume_30d,
+          (SELECT COALESCE(SUM(platform_fee_mxn),0)::float FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')              AS revenue_30d,
+          (SELECT COUNT(*)::int         FROM wallets)                                                                               AS wallet_count,
+          (SELECT COALESCE(SUM(balance_mxn),0)::float FROM wallets)                                                                AS wallet_balance_total,
+          (SELECT COALESCE(AVG(pti_score),0)::float   FROM users WHERE is_test_account IS NOT TRUE AND pti_score IS NOT NULL)      AS avg_pti_score
+      `),
+      db.execute(drizzleSql`
+        SELECT
+          date_trunc('week', created_at AT TIME ZONE 'America/Mexico_City')::date AS week_start,
+          COUNT(*)::int AS signups
+        FROM users
+        WHERE is_test_account IS NOT TRUE
+          AND created_at > NOW() - INTERVAL '12 weeks'
+        GROUP BY week_start
+        ORDER BY week_start ASC
+      `),
+      db.execute(drizzleSql`
+        SELECT service_name,
+               COUNT(*)::int                                               AS tx_count,
+               COALESCE(SUM(monto),0)::float                              AS volume_mxn,
+               COALESCE(SUM(platform_fee_mxn),0)::float                  AS revenue_mxn
+        FROM bill_payments
+        WHERE status IN ('confirmed','completed','confirmado','success')
+        GROUP BY service_name
+        ORDER BY volume_mxn DESC
+        LIMIT 5
+      `),
+    ]);
+
+    const row = main.rows[0] as Record<string, unknown>;
+    res.set("Cache-Control", "no-store");
+    res.json({
+      as_of: new Date().toISOString(),
+      users: {
+        total:         row.users_total,
+        new_7d:        row.users_7d,
+        new_30d:       row.users_30d,
+        with_name:     row.users_with_name,
+        by_source: {
+          whatsapp_organic: row.users_whatsapp,
+          web_organic:      row.users_web,
+          rep_referral:     row.users_rep,
+        },
+      },
+      payments: {
+        completed:      row.payments_total,
+        volume_total:   row.volume_total,
+        revenue_total:  row.revenue_total,
+        last_7d:  { count: row.payments_7d,  volume: row.volume_7d,  revenue: row.revenue_7d  },
+        last_30d: { count: row.payments_30d, volume: row.volume_30d, revenue: row.revenue_30d },
+      },
+      wallets: {
+        count:         row.wallet_count,
+        balance_total: row.wallet_balance_total,
+      },
+      pti: {
+        avg_score: row.avg_pti_score,
+      },
+      growth: {
+        weekly_signups: weekly.rows.map((r) => {
+          const rr = r as Record<string, unknown>;
+          return { week: rr.week_start, signups: rr.signups };
+        }),
+      },
+      top_billers: topBillers.rows.map((r) => {
+        const rr = r as Record<string, unknown>;
+        return { service: rr.service_name, count: rr.tx_count, volume: rr.volume_mxn, revenue: rr.revenue_mxn };
+      }),
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/investor-stats: failed");
+    res.status(500).json({ error: "Error al obtener métricas." });
   }
 });
 

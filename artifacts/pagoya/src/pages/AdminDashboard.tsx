@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import {
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 interface ColoniaRow { colonia: string; count: number; pct: number; }
 interface ColoniaBreakdown { total: number; breakdown: ColoniaRow[]; }
@@ -57,6 +61,30 @@ interface KitResult {
   initialPassword: string;
 }
 
+interface WeeklySignup { week: string; signups: number; }
+interface TopBiller { service: string; count: number; volume: number; revenue: number; }
+interface InvestorMetrics {
+  as_of: string;
+  users: {
+    total: number;
+    new_7d: number;
+    new_30d: number;
+    with_name: number;
+    by_source: { whatsapp_organic: number; web_organic: number; rep_referral: number };
+  };
+  payments: {
+    completed: number;
+    volume_total: number;
+    revenue_total: number;
+    last_7d: { count: number; volume: number; revenue: number };
+    last_30d: { count: number; volume: number; revenue: number };
+  };
+  wallets: { count: number; balance_total: number };
+  pti: { avg_score: number };
+  growth: { weekly_signups: WeeklySignup[] };
+  top_billers: TopBiller[];
+}
+
 const COLONIAS = [
   "Emiliano Zapata",
   "Versalles",
@@ -102,6 +130,25 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
+  const [tab, setTab] = useState<"investor" | "ops">("investor");
+  const [investorData, setInvestorData] = useState<InvestorMetrics | null>(null);
+  const [investorLoading, setInvestorLoading] = useState(true);
+  const [investorError, setInvestorError] = useState("");
+  const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
+
+  const loadInvestorMetrics = useCallback(() => {
+    if (!adminKey.trim()) return;
+    setInvestorLoading(true);
+    setInvestorError("");
+    fetch(`${window.location.origin}/api/admin/investor-stats?adminKey=${encodeURIComponent(adminKey.trim())}`)
+      .then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
+      .then((d: InvestorMetrics) => { setInvestorData(d); setInvestorLoading(false); })
+      .catch((e: unknown) => {
+        setInvestorError(e instanceof Error ? e.message : "Error");
+        setInvestorLoading(false);
+      });
+  }, [adminKey]);
+
   const loadWallet = useCallback(() => {
     setWalletLoading(true);
     fetch(`${window.location.origin}/api/wallet/admin/stats`)
@@ -146,6 +193,12 @@ export default function AdminDashboard() {
     }, 30000);
     return () => clearInterval(interval);
   }, [loadWallet, loadRevenue]);
+
+  useEffect(() => {
+    loadInvestorMetrics();
+    const iv = setInterval(loadInvestorMetrics, 60000);
+    return () => clearInterval(iv);
+  }, [loadInvestorMetrics]);
 
   async function lookupUser() {
     if (!userPhone.trim()) return;
@@ -258,17 +311,273 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 28 }}>
+        <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: "0.6rem", letterSpacing: "0.1em", color: "#39A935", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
             PagoYa · Admin
           </div>
-          <div style={{ fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
-            Rep Commission Center
+          <div style={{ fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
+            {tab === "investor" ? "Investor Metrics" : "Rep Commission Center"}
           </div>
-          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "#5a7080", marginTop: 4 }}>
-            Comisiones de pagos de servicios · $5.00 MXN por transacción · 7 días retención
+          {/* Tab switcher */}
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["investor", "ops"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: "0.52rem",
+                  fontWeight: 700,
+                  padding: "6px 16px",
+                  borderRadius: 20,
+                  border: tab === t ? "1px solid #39A935" : "1px solid rgba(255,255,255,0.12)",
+                  background: tab === t ? "rgba(57,169,53,0.15)" : "transparent",
+                  color: tab === t ? "#39A935" : "#5a7080",
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {t === "investor" ? "📊 Investor View" : "⚙️ Operaciones"}
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* ══════════════ INVESTOR METRICS TAB ══════════════ */}
+        {tab === "investor" && (
+          <div>
+            {/* Admin key prompt if not set */}
+            {!adminKey.trim() && (
+              <div style={{
+                background: "rgba(245,158,11,0.08)",
+                border: "1px solid rgba(245,158,11,0.3)",
+                borderRadius: 12,
+                padding: "16px",
+                marginBottom: 20,
+              }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#F59E0B", marginBottom: 8, textTransform: "uppercase" }}>
+                  Admin Key requerida para cargar métricas
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    value={adminKey}
+                    onChange={(e) => {
+                      setAdminKey(e.target.value);
+                      localStorage.setItem("pagoya_admin_key", e.target.value);
+                    }}
+                    placeholder="ADMIN_SECRET_KEY"
+                    type="password"
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      color: "#e8f0f7",
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.58rem",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    onClick={() => { localStorage.setItem("pagoya_admin_key", adminKey); loadInvestorMetrics(); }}
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.52rem",
+                      color: "#fff",
+                      background: "#39A935",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cargar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {investorError && (
+              <div style={{
+                background: "rgba(232,42,10,0.1)",
+                border: "1px solid rgba(232,42,10,0.3)",
+                borderRadius: 10,
+                padding: "12px 16px",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.6rem",
+                color: "#E21A0A",
+                marginBottom: 16,
+              }}>
+                Error {investorError} · Verifica tu Admin Key
+              </div>
+            )}
+
+            {/* ── Key metric cards ── */}
+            {investorData && (
+              <>
+                {/* Row 1: Users */}
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Usuarios
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+                  {[
+                    { label: "Total Usuarios", value: investorData.users.total.toLocaleString("es-MX"), color: "#e8f0f7" },
+                    { label: "Nuevos (7d)", value: `+${investorData.users.new_7d}`, color: "#39A935" },
+                    { label: "Nuevos (30d)", value: `+${investorData.users.new_30d}`, color: "#39A935" },
+                    { label: "Con Nombre KYC", value: investorData.users.with_name.toString(), color: "#6366F1" },
+                  ].map((c) => (
+                    <div key={c.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Source breakdown bar */}
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                    Canal de Adquisición
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 60 }}>
+                    {[
+                      { label: "WhatsApp (Paula)", value: investorData.users.by_source.whatsapp_organic, color: "#25D366" },
+                      { label: "Web Orgánico", value: investorData.users.by_source.web_organic, color: "#6366F1" },
+                      { label: "Rep Network", value: investorData.users.by_source.rep_referral, color: "#F59E0B" },
+                    ].map((s) => {
+                      const maxVal = Math.max(investorData.users.total, 1);
+                      const h = Math.max(4, Math.round((s.value / maxVal) * 56));
+                      return (
+                        <div key={s.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", fontWeight: 700, color: s.color }}>{s.value}</div>
+                          <div style={{ width: "100%", height: h, background: s.color, borderRadius: 4, opacity: 0.8 }} />
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.38rem", color: "#5a7080", textAlign: "center", lineHeight: 1.3 }}>{s.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Row 2: Payments & Revenue */}
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  Pagos & Ingresos
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
+                  {[
+                    { label: "Transacciones Totales", value: investorData.payments.completed.toLocaleString("es-MX"), color: "#e8f0f7" },
+                    { label: "Volumen Total (MXN)", value: `$${investorData.payments.volume_total.toLocaleString("es-MX", { minimumFractionDigits: 0 })}`, color: "#1D9E75" },
+                    { label: "Revenue Plataforma (MXN)", value: `$${investorData.payments.revenue_total.toLocaleString("es-MX", { minimumFractionDigits: 0 })}`, color: "#39A935" },
+                    { label: "Txns (7d)", value: investorData.payments.last_7d.count.toString(), color: "#e8f0f7" },
+                    { label: "Volumen (7d)", value: `$${investorData.payments.last_7d.volume.toLocaleString("es-MX", { minimumFractionDigits: 0 })}`, color: "#1D9E75" },
+                    { label: "Revenue (7d)", value: `$${investorData.payments.last_7d.revenue.toLocaleString("es-MX", { minimumFractionDigits: 0 })}`, color: "#39A935" },
+                  ].map((c) => (
+                    <div key={c.label} style={{ background: "rgba(29,158,117,0.06)", border: "1px solid rgba(29,158,117,0.15)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 3: Wallets + PTI */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24 }}>
+                  {[
+                    { label: "Wallets Activos", value: investorData.wallets.count.toString(), color: "#6366F1" },
+                    { label: "Saldo en Circulación (MXN)", value: `$${investorData.wallets.balance_total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, color: "#6366F1" },
+                    { label: "PTI Score Promedio", value: investorData.pti.avg_score > 0 ? investorData.pti.avg_score.toFixed(1) : "—", color: "#F59E0B" },
+                  ].map((c) => (
+                    <div key={c.label} style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Weekly Signups Chart */}
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                    Nuevos Registros por Semana
+                  </div>
+                  {investorData.growth.weekly_signups.length === 0 ? (
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080", textAlign: "center", padding: "20px 0" }}>
+                      Sin datos todavía — aparecerá cuando haya usuarios
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={160}>
+                      <AreaChart data={investorData.growth.weekly_signups} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#39A935" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#39A935" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="week" tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "0.55rem" }} labelStyle={{ color: "#39A935" }} itemStyle={{ color: "#e8f0f7" }} />
+                        <Area type="monotone" dataKey="signups" stroke="#39A935" strokeWidth={2} fill="url(#greenGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* Top Billers */}
+                {investorData.top_billers.length > 0 && (
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                      Top Servicios por Volumen
+                    </div>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <BarChart data={investorData.top_billers} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="service" tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "0.55rem" }} labelStyle={{ color: "#1D9E75" }} itemStyle={{ color: "#e8f0f7" }} />
+                        <Bar dataKey="volume" fill="#1D9E75" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Last updated + refresh */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080" }}>
+                    Actualizado: {new Date(investorData.as_of).toLocaleString("es-MX")} · Auto-refresh 60s
+                  </div>
+                  <button
+                    onClick={loadInvestorMetrics}
+                    disabled={investorLoading}
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      fontSize: "0.44rem",
+                      color: "#39A935",
+                      background: "rgba(57,169,53,0.12)",
+                      border: "1px solid rgba(57,169,53,0.3)",
+                      borderRadius: 20,
+                      padding: "4px 12px",
+                      cursor: "pointer",
+                      opacity: investorLoading ? 0.5 : 1,
+                    }}
+                  >
+                    {investorLoading ? "Cargando…" : "↻ Refrescar"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Loading skeleton */}
+            {investorLoading && !investorData && adminKey.trim() && (
+              <div style={{ textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#5a7080", padding: "40px 0" }}>
+                Cargando métricas…
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════ OPS TAB ══════════════ */}
+        {tab === "ops" && (
+        <div>
 
         {/* ── Wallet Command Center Panel ── */}
         <div style={{
@@ -1109,6 +1418,9 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        </div>
+        )}
 
       </div>
     </div>
