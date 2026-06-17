@@ -320,12 +320,14 @@ export default function Home() {
 
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div style={{
-            background: "white",
+            background: "rgba(255,255,255,0.18)",
             borderRadius: "10px",
             padding: "5px 14px",
             display: "inline-flex",
             alignItems: "center",
-            boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+            boxShadow: "0 1px 6px rgba(0,0,0,0.15)",
+            backdropFilter: "blur(4px)",
+            border: "1px solid rgba(255,255,255,0.28)",
           }}>
             <img
               src="/pagoya-logo.png"
