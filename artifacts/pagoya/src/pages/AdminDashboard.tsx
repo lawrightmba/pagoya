@@ -314,7 +314,7 @@ export default function AdminDashboard() {
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: "0.75rem", letterSpacing: "0.1em", color: "#39A935", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
+          <div style={{ fontSize: "1.05rem", letterSpacing: "0.1em", color: "#39A935", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
@@ -328,7 +328,7 @@ export default function AdminDashboard() {
                 onClick={() => setTab(t)}
                 style={{
                   fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.8rem",
+                  fontSize: "1rem",
                   fontWeight: 700,
                   padding: "8px 20px",
                   borderRadius: 20,
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                 padding: "16px",
                 marginBottom: 20,
               }}>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#F59E0B", marginBottom: 8, textTransform: "uppercase" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#F59E0B", marginBottom: 8, textTransform: "uppercase" }}>
                   Admin Key requerida para cargar métricas
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
                       padding: "8px 10px",
                       color: "#e8f0f7",
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.58rem",
+                      fontSize: "1.05rem",
                       outline: "none",
                     }}
                   />
@@ -386,7 +386,7 @@ export default function AdminDashboard() {
                     onClick={() => { localStorage.setItem("pagoya_admin_key", adminKey); loadInvestorMetrics(); }}
                     style={{
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.52rem",
+                      fontSize: "1rem",
                       color: "#fff",
                       background: "#39A935",
                       border: "none",
@@ -409,7 +409,7 @@ export default function AdminDashboard() {
                 borderRadius: 10,
                 padding: "12px 16px",
                 fontFamily: "'Space Mono', monospace",
-                fontSize: "0.6rem",
+                fontSize: "1.05rem",
                 color: "#E21A0A",
                 marginBottom: 16,
               }}>
@@ -421,7 +421,7 @@ export default function AdminDashboard() {
             {investorData && (
               <>
                 {/* Row 1: Users */}
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
                   Usuarios
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
@@ -433,14 +433,14 @@ export default function AdminDashboard() {
                   ].map((c) => (
                     <div key={c.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: "1.4rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Source breakdown bar */}
                 <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
                     Canal de Adquisición
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 60 }}>
@@ -453,9 +453,9 @@ export default function AdminDashboard() {
                       const h = Math.max(4, Math.round((s.value / maxVal) * 56));
                       return (
                         <div key={s.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: s.color }}>{s.value}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", fontWeight: 700, color: s.color }}>{s.value}</div>
                           <div style={{ width: "100%", height: h, background: s.color, borderRadius: 4, opacity: 0.8 }} />
-                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#5a7080", textAlign: "center", lineHeight: 1.3 }}>{s.label}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080", textAlign: "center", lineHeight: 1.3 }}>{s.label}</div>
                         </div>
                       );
                     })}
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Row 2: Payments & Revenue */}
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
                   Pagos & Ingresos
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
@@ -477,7 +477,7 @@ export default function AdminDashboard() {
                   ].map((c) => (
                     <div key={c.label} style={{ background: "rgba(29,158,117,0.06)", border: "1px solid rgba(29,158,117,0.15)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: "1.3rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
@@ -491,18 +491,18 @@ export default function AdminDashboard() {
                   ].map((c) => (
                     <div key={c.label} style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: "1.3rem", fontWeight: 800, color: c.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{c.value}</div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#5a7080", textTransform: "uppercase" }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Weekly Signups Chart */}
                 <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
                     Nuevos Registros por Semana
                   </div>
                   {investorData.growth.weekly_signups.length === 0 ? (
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080", textAlign: "center", padding: "20px 0" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textAlign: "center", padding: "20px 0" }}>
                       Sin datos todavía — aparecerá cuando haya usuarios
                     </div>
                   ) : (
@@ -517,7 +517,7 @@ export default function AdminDashboard() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis dataKey="week" tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
                         <YAxis tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "0.55rem" }} labelStyle={{ color: "#39A935" }} itemStyle={{ color: "#e8f0f7" }} />
+                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "1rem" }} labelStyle={{ color: "#39A935" }} itemStyle={{ color: "#e8f0f7" }} />
                         <Area type="monotone" dataKey="signups" stroke="#39A935" strokeWidth={2} fill="url(#greenGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -527,7 +527,7 @@ export default function AdminDashboard() {
                 {/* Top Billers */}
                 {investorData.top_billers.length > 0 && (
                   <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 20 }}>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", marginBottom: 12 }}>
                       Top Servicios por Volumen
                     </div>
                     <ResponsiveContainer width="100%" height={120}>
@@ -535,7 +535,7 @@ export default function AdminDashboard() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                         <XAxis dataKey="service" tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
                         <YAxis tick={{ fill: "#5a7080", fontSize: 9, fontFamily: "Space Mono" }} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "0.55rem" }} labelStyle={{ color: "#1D9E75" }} itemStyle={{ color: "#e8f0f7" }} />
+                        <Tooltip contentStyle={{ background: "#0A2540", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontFamily: "Space Mono", fontSize: "1rem" }} labelStyle={{ color: "#1D9E75" }} itemStyle={{ color: "#e8f0f7" }} />
                         <Bar dataKey="volume" fill="#1D9E75" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -544,7 +544,7 @@ export default function AdminDashboard() {
 
                 {/* Last updated + refresh + sheet link */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, gap: 8, flexWrap: "wrap" }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#5a7080" }}>
                     Actualizado: {new Date(investorData.as_of).toLocaleString("es-MX")} · Auto-refresh 60s
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
                         rel="noopener noreferrer"
                         style={{
                           fontFamily: "'Space Mono', monospace",
-                          fontSize: "0.8rem",
+                          fontSize: "1rem",
                           color: "#1D9E75",
                           background: "rgba(29,158,117,0.12)",
                           border: "1px solid rgba(29,158,117,0.3)",
@@ -580,7 +580,7 @@ export default function AdminDashboard() {
                             padding: "4px 8px",
                             color: "#e8f0f7",
                             fontFamily: "'Space Mono', monospace",
-                            fontSize: "0.8rem",
+                            fontSize: "1rem",
                             outline: "none",
                             width: 240,
                           }}
@@ -595,7 +595,7 @@ export default function AdminDashboard() {
                           }}
                           style={{
                             fontFamily: "'Space Mono', monospace",
-                            fontSize: "0.8rem",
+                            fontSize: "1rem",
                             color: "#1D9E75",
                             background: "rgba(29,158,117,0.12)",
                             border: "1px solid rgba(29,158,117,0.3)",
@@ -613,7 +613,7 @@ export default function AdminDashboard() {
                       disabled={investorLoading}
                       style={{
                         fontFamily: "'Space Mono', monospace",
-                        fontSize: "0.8rem",
+                        fontSize: "1rem",
                         color: "#39A935",
                         background: "rgba(57,169,53,0.12)",
                         border: "1px solid rgba(57,169,53,0.3)",
@@ -632,7 +632,7 @@ export default function AdminDashboard() {
 
             {/* Loading skeleton */}
             {investorLoading && !investorData && adminKey.trim() && (
-              <div style={{ textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#5a7080", padding: "40px 0" }}>
+              <div style={{ textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080", padding: "40px 0" }}>
                 Cargando métricas…
               </div>
             )}
@@ -660,7 +660,7 @@ export default function AdminDashboard() {
           }}>
             <div style={{
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.52rem",
+              fontSize: "1rem",
               letterSpacing: "0.08em",
               color: "#5a7080",
               textTransform: "uppercase",
@@ -672,7 +672,7 @@ export default function AdminDashboard() {
               disabled={walletLoading}
               style={{
                 fontFamily: "'Space Mono', monospace",
-                fontSize: "0.44rem",
+                fontSize: "1rem",
                 color: "#39A935",
                 background: "rgba(57,169,53,0.12)",
                 border: "1px solid rgba(57,169,53,0.3)",
@@ -723,10 +723,10 @@ export default function AdminDashboard() {
                 borderRight: "1px solid rgba(255,255,255,0.05)",
                 textAlign: "center",
               }}>
-                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: card.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: card.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>
                   {card.value}
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", lineHeight: 1.5, textTransform: "uppercase" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", lineHeight: 1.5, textTransform: "uppercase" }}>
                   {card.label}
                 </div>
               </div>
@@ -747,7 +747,7 @@ export default function AdminDashboard() {
             padding: "12px 16px 10px",
             borderBottom: "1px solid rgba(29,158,117,0.12)",
           }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#1D9E75", textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", letterSpacing: "0.08em", color: "#1D9E75", textTransform: "uppercase" }}>
               Ingresos por Plataforma · $25.00 MXN / transacción
             </div>
           </div>
@@ -779,10 +779,10 @@ export default function AdminDashboard() {
               },
             ].map((card) => (
               <div key={card.label} style={{ padding: "14px 12px", borderRight: "1px solid rgba(29,158,117,0.10)", textAlign: "center" }}>
-                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: card.color, marginBottom: 2, fontFamily: "'Space Mono', monospace" }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: card.color, marginBottom: 2, fontFamily: "'Space Mono', monospace" }}>
                   {card.value}
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#1D9E75", opacity: 0.7, marginBottom: 2, textTransform: "uppercase" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#1D9E75", opacity: 0.7, marginBottom: 2, textTransform: "uppercase" }}>
                   {card.label}
                 </div>
                 <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.38rem", color: "#5a7080" }}>
@@ -811,7 +811,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: "1.1rem", fontWeight: 800, color: card.color, marginBottom: 4 }}>
                   {card.value}
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", lineHeight: 1.4, textTransform: "uppercase" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", lineHeight: 1.4, textTransform: "uppercase" }}>
                   {card.label}
                 </div>
               </div>
@@ -820,7 +820,7 @@ export default function AdminDashboard() {
         )}
 
         {loading && (
-          <div style={{ textAlign: "center", color: "#5a7080", fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", padding: "40px 0" }}>
+          <div style={{ textAlign: "center", color: "#5a7080", fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", padding: "40px 0" }}>
             Cargando reps…
           </div>
         )}
@@ -832,7 +832,7 @@ export default function AdminDashboard() {
             borderRadius: 10,
             padding: "14px 16px",
             fontFamily: "'Space Mono', monospace",
-            fontSize: "0.65rem",
+            fontSize: "0.85rem",
             color: "#E21A0A",
           }}>
             {error}
@@ -848,7 +848,7 @@ export default function AdminDashboard() {
             textAlign: "center",
           }}>
             <div style={{ fontSize: "1.5rem", marginBottom: 10 }}>🔓</div>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#5a7080", lineHeight: 1.6 }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080", lineHeight: 1.6 }}>
               Sin reps registrados aún.<br />
               Inserta un rep en la tabla <code>reps</code> para comenzar.
             </div>
@@ -873,7 +873,7 @@ export default function AdminDashboard() {
           }}>
             <div style={{
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.52rem",
+              fontSize: "1rem",
               letterSpacing: "0.08em",
               color: "#5a7080",
               textTransform: "uppercase",
@@ -884,7 +884,7 @@ export default function AdminDashboard() {
               onClick={() => { setKitOpen(!kitOpen); setKitResult(null); setKitError(""); }}
               style={{
                 fontFamily: "'Space Mono', monospace",
-                fontSize: "0.48rem",
+                fontSize: "1rem",
                 fontWeight: 700,
                 color: kitOpen ? "#F59E0B" : "#1D9E75",
                 background: kitOpen ? "rgba(245,158,11,0.1)" : "rgba(29,158,117,0.12)",
@@ -915,7 +915,7 @@ export default function AdminDashboard() {
                   borderRadius: 10,
                   padding: "16px",
                 }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#39A935", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#39A935", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>
                     ✅ Rep Creado
                   </div>
                   {[
@@ -926,11 +926,11 @@ export default function AdminDashboard() {
                     ["Contraseña inicial", kitResult.initialPassword],
                   ].map(([label, val]) => (
                     <div key={label} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080", minWidth: 110, textTransform: "uppercase" }}>{label}</div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7", wordBreak: "break-all" }}>{val}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", minWidth: 110, textTransform: "uppercase" }}>{label}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#e8f0f7", wordBreak: "break-all" }}>{val}</div>
                     </div>
                   ))}
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginTop: 8 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginTop: 8 }}>
                     WhatsApp enviado · Rep puede iniciar sesión en /rep-login
                   </div>
                   <button
@@ -938,7 +938,7 @@ export default function AdminDashboard() {
                     style={{
                       marginTop: 12,
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.46rem",
+                      fontSize: "1rem",
                       color: "#1D9E75",
                       background: "rgba(29,158,117,0.12)",
                       border: "1px solid rgba(29,158,117,0.3)",
@@ -953,13 +953,13 @@ export default function AdminDashboard() {
               ) : (
                 /* Input form */
                 <div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#1D9E75", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#1D9E75", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                     Nuevo Rep — Kit de Onboarding
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
                     {/* Name */}
                     <div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Nombre completo</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Nombre completo</div>
                       <input
                         value={kitName}
                         onChange={(e) => setKitName(e.target.value)}
@@ -972,7 +972,7 @@ export default function AdminDashboard() {
                           padding: "8px 10px",
                           color: "#e8f0f7",
                           fontFamily: "'Space Mono', monospace",
-                          fontSize: "0.6rem",
+                          fontSize: "1.05rem",
                           outline: "none",
                           boxSizing: "border-box",
                         }}
@@ -980,7 +980,7 @@ export default function AdminDashboard() {
                     </div>
                     {/* Phone */}
                     <div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>WhatsApp (10 dígitos)</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>WhatsApp (10 dígitos)</div>
                       <input
                         value={kitPhone}
                         onChange={(e) => setKitPhone(e.target.value)}
@@ -993,7 +993,7 @@ export default function AdminDashboard() {
                           padding: "8px 10px",
                           color: "#e8f0f7",
                           fontFamily: "'Space Mono', monospace",
-                          fontSize: "0.6rem",
+                          fontSize: "1.05rem",
                           outline: "none",
                           boxSizing: "border-box",
                         }}
@@ -1001,7 +1001,7 @@ export default function AdminDashboard() {
                     </div>
                     {/* Colonia */}
                     <div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Colonia</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Colonia</div>
                       <select
                         value={kitColonia}
                         onChange={(e) => setKitColonia(e.target.value)}
@@ -1013,7 +1013,7 @@ export default function AdminDashboard() {
                           padding: "8px 10px",
                           color: "#e8f0f7",
                           fontFamily: "'Space Mono', monospace",
-                          fontSize: "0.6rem",
+                          fontSize: "1.05rem",
                           outline: "none",
                           boxSizing: "border-box",
                         }}
@@ -1026,7 +1026,7 @@ export default function AdminDashboard() {
                   </div>
 
                   {kitError && (
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#E21A0A", marginBottom: 10 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#E21A0A", marginBottom: 10 }}>
                       {kitError}
                     </div>
                   )}
@@ -1036,7 +1036,7 @@ export default function AdminDashboard() {
                     disabled={kitLoading}
                     style={{
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.52rem",
+                      fontSize: "1rem",
                       fontWeight: 700,
                       color: "#fff",
                       background: kitLoading ? "rgba(29,158,117,0.4)" : "#1D9E75",
@@ -1064,7 +1064,7 @@ export default function AdminDashboard() {
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
               }}>
                 {["REP", "SIGNUP", "REFERRAL", "BILL PAY", "EN ESPERA", "TOTAL", ""].map((h) => (
-                  <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", letterSpacing: "0.06em" }}>
+                  <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", letterSpacing: "0.06em" }}>
                     {h}
                   </div>
                 ))}
@@ -1082,23 +1082,23 @@ export default function AdminDashboard() {
                 }}>
                   <div>
                     <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>{rep.name || rep.id}</div>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#5a7080" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>
                       {rep.id} · {rep.phone}
                     </div>
                   </div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#e8f0f7" }}>
                     <div style={{ fontWeight: 700 }}>{rep.signupCount}</div>
-                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.signupTotal)}</div>
+                    <div style={{ color: "#5a7080", fontSize: "1rem" }}>{fmt(rep.signupTotal)}</div>
                   </div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#e8f0f7" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#e8f0f7" }}>
                     <div style={{ fontWeight: 700 }}>{rep.referralCount}</div>
-                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.referralTotal)}</div>
+                    <div style={{ color: "#5a7080", fontSize: "1rem" }}>{fmt(rep.referralTotal)}</div>
                   </div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#39A935" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#39A935" }}>
                     <div style={{ fontWeight: 700 }}>{rep.billPayCount}</div>
-                    <div style={{ color: "#5a7080", fontSize: "0.48rem" }}>{fmt(rep.billPayTotal)}</div>
+                    <div style={{ color: "#5a7080", fontSize: "1rem" }}>{fmt(rep.billPayTotal)}</div>
                   </div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.58rem", color: "#F59E0B" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#F59E0B" }}>
                     {fmt(rep.billPayPending)}
                   </div>
                   <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.62rem", fontWeight: 700, color: "#e8f0f7" }}>
@@ -1113,7 +1113,7 @@ export default function AdminDashboard() {
                       href={`/rep-dashboard?repId=${encodeURIComponent(rep.id)}`}
                       style={{
                         fontFamily: "'Space Mono', monospace",
-                        fontSize: "0.48rem",
+                        fontSize: "1rem",
                         color: "#39A935",
                         textDecoration: "none",
                         padding: "3px 8px",
@@ -1140,30 +1140,30 @@ export default function AdminDashboard() {
           marginTop: 24,
         }}>
           <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
               Usuarios por Colonia · {coloniaLoading ? "…" : `${colonia?.total ?? 0} registrados`}
             </div>
           </div>
           <div style={{ padding: "14px 16px" }}>
             {coloniaLoading ? (
-              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Cargando…</div>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>Cargando…</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {(colonia?.breakdown ?? []).map((row) => (
                   <div key={row.colonia} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7", minWidth: 160 }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#e8f0f7", minWidth: 160 }}>
                       {row.colonia}
                     </div>
                     <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 4, height: 6, overflow: "hidden" }}>
                       <div style={{ width: `${row.pct}%`, height: "100%", background: "#1D9E75", borderRadius: 4 }} />
                     </div>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#1D9E75", minWidth: 52, textAlign: "right" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#1D9E75", minWidth: 52, textAlign: "right" }}>
                       {row.count} <span style={{ color: "#5a7080" }}>({row.pct}%)</span>
                     </div>
                   </div>
                 ))}
                 {(colonia?.breakdown ?? []).length === 0 && (
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Sin datos aún.</div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>Sin datos aún.</div>
                 )}
               </div>
             )}
@@ -1179,7 +1179,7 @@ export default function AdminDashboard() {
           marginTop: 24,
         }}>
           <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
               Historial por Usuario
             </div>
           </div>
@@ -1197,7 +1197,7 @@ export default function AdminDashboard() {
                   padding: "8px 10px",
                   color: "#e8f0f7",
                   fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.6rem",
+                  fontSize: "1.05rem",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -1208,7 +1208,7 @@ export default function AdminDashboard() {
                 disabled={userTxLoading}
                 style={{
                   fontFamily: "'Space Mono', monospace",
-                  fontSize: "0.52rem",
+                  fontSize: "1rem",
                   color: "#fff",
                   background: userTxLoading ? "rgba(29,158,117,0.4)" : "#1D9E75",
                   border: "none",
@@ -1223,7 +1223,7 @@ export default function AdminDashboard() {
             </div>
 
             {userTxError && (
-              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#E21A0A", marginBottom: 10 }}>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#E21A0A", marginBottom: 10 }}>
                 {userTxError}
               </div>
             )}
@@ -1237,21 +1237,21 @@ export default function AdminDashboard() {
                   padding: "10px 12px",
                   marginBottom: 12,
                 }}>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "#1D9E75", fontWeight: 700 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#1D9E75", fontWeight: 700 }}>
                     {userTxData.user.name}
                   </div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.48rem", color: "#5a7080", marginTop: 4 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginTop: 4 }}>
                     {userTxData.user.phone} · {userTxData.user.colonia ?? "—"} · ID {userTxData.user.id}
                   </div>
                 </div>
 
                 {userTxData.transactions.length === 0 ? (
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#5a7080" }}>Sin transacciones.</div>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>Sin transacciones.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px", gap: 0, padding: "4px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                       {["DESCRIPCIÓN", "TIPO", "MONTO", "SALDO"].map((h) => (
-                        <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", letterSpacing: "0.06em" }}>{h}</div>
+                        <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", letterSpacing: "0.06em" }}>{h}</div>
                       ))}
                     </div>
                     {userTxData.transactions.map((tx) => {
@@ -1259,16 +1259,16 @@ export default function AdminDashboard() {
                       return (
                         <div key={tx.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 80px", gap: 0, padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", alignItems: "center" }}>
                           <div>
-                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7" }}>{tx.description ?? "—"}</div>
-                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080", marginTop: 2 }}>
+                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#e8f0f7" }}>{tx.description ?? "—"}</div>
+                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", marginTop: 2 }}>
                               {tx.createdAt ? new Date(tx.createdAt).toLocaleString("es-MX", { timeZone: "America/Mexico_City", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
                             </div>
                           </div>
-                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.46rem", color: "#5a7080" }}>{tx.type}</div>
-                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: amt >= 0 ? "#1D9E75" : "#E21A0A", fontWeight: 700 }}>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080" }}>{tx.type}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: amt >= 0 ? "#1D9E75" : "#E21A0A", fontWeight: 700 }}>
                             {amt >= 0 ? "+" : ""}${Math.abs(amt).toFixed(2)}
                           </div>
-                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#e8f0f7" }}>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#e8f0f7" }}>
                             ${parseFloat(tx.balanceAfter ?? "0").toFixed(2)}
                           </div>
                         </div>
@@ -1299,7 +1299,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: "1rem" }}>💸</span>
             <div style={{
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.52rem",
+              fontSize: "1rem",
               letterSpacing: "0.08em",
               color: "#00C875",
               textTransform: "uppercase",
@@ -1309,7 +1309,7 @@ export default function AdminDashboard() {
             <div style={{
               marginLeft: "auto",
               fontFamily: "'Space Mono', monospace",
-              fontSize: "0.42rem",
+              fontSize: "0.78rem",
               color: "#5a7080",
             }}>
               USA → Mexico wallet · acreditación inmediata
@@ -1324,23 +1324,23 @@ export default function AdminDashboard() {
                 borderRadius: 10,
                 padding: "14px 16px",
               }}>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#00C875", fontWeight: 700, marginBottom: 6 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1.05rem", color: "#00C875", fontWeight: 700, marginBottom: 6 }}>
                   ✓ Crédito Enviado
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.55rem", color: "#e8f0f7", marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#e8f0f7", marginBottom: 4 }}>
                   {creditResult.phone} recibió <strong>${creditResult.credited.toFixed(2)} MXN</strong>
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.5rem", color: "#5a7080", marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginBottom: 4 }}>
                   Saldo nuevo: ${creditResult.newBalanceMXN.toFixed(2)} MXN
                 </div>
-                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#3a5060", marginBottom: 12 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#3a5060", marginBottom: 12 }}>
                   TX: {creditResult.transactionId}
                 </div>
                 <button
                   onClick={() => setCreditResult(null)}
                   style={{
                     fontFamily: "'Space Mono', monospace",
-                    fontSize: "0.5rem",
+                    fontSize: "1rem",
                     color: "#00C875",
                     background: "rgba(0,200,117,0.12)",
                     border: "1px solid rgba(0,200,117,0.3)",
@@ -1356,7 +1356,7 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                       Teléfono destino (MX)
                     </div>
                     <input
@@ -1371,14 +1371,14 @@ export default function AdminDashboard() {
                         padding: "8px 10px",
                         color: "#e8f0f7",
                         fontFamily: "'Space Mono', monospace",
-                        fontSize: "0.6rem",
+                        fontSize: "1.05rem",
                         outline: "none",
                         boxSizing: "border-box",
                       }}
                     />
                   </div>
                   <div>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                       Monto (MXN)
                     </div>
                     <input
@@ -1397,7 +1397,7 @@ export default function AdminDashboard() {
                         padding: "8px 10px",
                         color: "#e8f0f7",
                         fontFamily: "'Space Mono', monospace",
-                        fontSize: "0.6rem",
+                        fontSize: "1.05rem",
                         outline: "none",
                         boxSizing: "border-box",
                       }}
@@ -1406,7 +1406,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                     Nota / Concepto (opcional)
                   </div>
                   <input
@@ -1421,7 +1421,7 @@ export default function AdminDashboard() {
                       padding: "8px 10px",
                       color: "#e8f0f7",
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.6rem",
+                      fontSize: "1.05rem",
                       outline: "none",
                       boxSizing: "border-box",
                     }}
@@ -1429,7 +1429,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.44rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                     Admin Token
                   </div>
                   <input
@@ -1445,7 +1445,7 @@ export default function AdminDashboard() {
                       padding: "8px 10px",
                       color: "#e8f0f7",
                       fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.6rem",
+                      fontSize: "1.05rem",
                       outline: "none",
                       boxSizing: "border-box",
                     }}
@@ -1453,7 +1453,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {creditError && (
-                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.52rem", color: "#E21A0A" }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#E21A0A" }}>
                     {creditError}
                   </div>
                 )}
@@ -1463,7 +1463,7 @@ export default function AdminDashboard() {
                   disabled={creditLoading}
                   style={{
                     fontFamily: "'Space Mono', monospace",
-                    fontSize: "0.6rem",
+                    fontSize: "1.05rem",
                     fontWeight: 700,
                     color: "#fff",
                     background: creditLoading ? "rgba(0,200,117,0.4)" : "linear-gradient(135deg, #007A4A 0%, #00C875 100%)",
