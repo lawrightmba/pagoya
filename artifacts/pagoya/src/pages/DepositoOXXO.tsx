@@ -170,7 +170,7 @@ export default function DepositoOXXO() {
             <li><a href="/pagar-cfe">CFE (recibo de luz) →</a></li>
             <li><a href="/pagar-telmex">Telmex, Izzi, Totalplay, Megacable, Sky →</a></li>
             <li><a href="/recargas">Recargas Telcel, AT&amp;T y Movistar →</a></li>
-            <li><a href="/pagar-renta">Renta de vivienda →</a></li>
+            <li><a href="/servicios">Renta de vivienda →</a></li>
             <li><a href="/servicios">Ver todos los 26+ servicios →</a></li>
           </ul>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
@@ -217,6 +217,8 @@ export default function DepositoOXXO() {
           <a href="/" style={{ color: "#475569", textDecoration: "none" }}>PagoYa</a>
           {" · "}
           <a href="/terminos-y-condiciones" style={{ color: "#1D9E75" }}>Términos y Condiciones</a>
+          {" · "}
+          <a href="/atencion" style={{ color: "#475569", textDecoration: "none" }}>Atención al Cliente</a>
           {" · "}
           <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>

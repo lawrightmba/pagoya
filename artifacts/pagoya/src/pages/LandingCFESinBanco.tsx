@@ -262,7 +262,8 @@ export default function LandingCFESinBanco() {
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "24px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: "13px" }}>
         © {new Date().getFullYear()} PagoYa · Tu monedero digital, sin banco ·{" "}
         <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate("/terminos-y-condiciones")}>Términos</span>{" · "}
-        <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate("/aviso-de-privacidad")}>Privacidad</span>
+        <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate("/aviso-de-privacidad")}>Privacidad</span>{" · "}
+        <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate("/atencion")}>Atención al Cliente</span>
       </footer>
     </div>
   );

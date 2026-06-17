@@ -20,7 +20,11 @@ export async function checkAndUpgradeKycTier(telefono: string): Promise<void> {
     const userRes = await db.execute(sql`
       SELECT kyc_tier FROM users WHERE telefono = ${telefono} LIMIT 1
     `);
-    if (!userRes.rows.length) return;
+    if (!userRes.rows.length) {
+      // Guest / unregistered phone flowed through billpay — safe to skip, but log so we can spot the pattern
+      logger.warn({ telefono }, "kyc: telefono not found in users table — possible guest payment, skipping upgrade check");
+      return;
+    }
     const row = userRes.rows[0] as Record<string, unknown>;
     if (row.kyc_tier !== "simplified") return;
 

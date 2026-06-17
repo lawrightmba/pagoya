@@ -212,7 +212,7 @@ export default function PagarTelmex() {
           <ul className="telmex-ul" style={{ marginBottom: "20px" }}>
             <li><a href="/pagar-cfe">CFE (recibo de luz) →</a></li>
             <li><a href="/recargas">Recargas Telcel, AT&amp;T y Movistar →</a></li>
-            <li><a href="/pagar-renta">Renta de vivienda →</a></li>
+            <li><a href="/servicios">Renta de vivienda →</a></li>
             <li><a href="/servicios">Ver catálogo completo de 26+ servicios →</a></li>
           </ul>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>

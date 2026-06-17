@@ -1029,6 +1029,10 @@ export default function Home() {
           {" · "}
           <a href="/terminos-y-condiciones" style={{ color: "#00C875", textDecoration: "none" }}>Términos y Condiciones</a>
           {" · "}
+          <a href="/cumplimiento" style={{ color: "#6A9F82", textDecoration: "none" }}>Cumplimiento</a>
+          {" · "}
+          <a href="/atencion" style={{ color: "#6A9F82", textDecoration: "none" }}>Atención al Cliente</a>
+          {" · "}
           <a href="mailto:soporte@pagoyamx.com" style={{ color: "#6A9F82", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>
       </footer>

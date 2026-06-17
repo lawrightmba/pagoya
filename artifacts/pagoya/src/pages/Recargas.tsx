@@ -208,7 +208,7 @@ export default function Recargas() {
           <ul className="rec-ul" style={{ marginBottom: "20px" }}>
             <li><a href="/pagar-cfe">CFE (recibo de luz) →</a></li>
             <li><a href="/pagar-telmex">Telmex, Izzi, Totalplay →</a></li>
-            <li><a href="/pagar-renta">Renta de vivienda →</a></li>
+            <li><a href="/servicios">Renta de vivienda →</a></li>
             <li><a href="/servicios">Ver todos los servicios →</a></li>
           </ul>
           <p style={{ lineHeight: 1.7, padding: "14px 18px", background: "rgba(255,255,255,0.05)", borderRadius: "8px" }}>
