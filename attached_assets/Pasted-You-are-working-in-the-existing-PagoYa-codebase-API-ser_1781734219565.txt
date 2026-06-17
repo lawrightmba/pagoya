@@ -1,0 +1,538 @@
+You are working in the existing PagoYa codebase.
+API server: ~/workspace/artifacts/api-server/src/
+Frontend: ~/workspace/artifacts/pagoya/src/
+App runs on port 8080. Do NOT modify any existing payment 
+routes, PTI scoring, SIPREL integration, STP integration, 
+Conekta/OXXO flow, or authentication system.
+
+Before starting each part, grep for the relevant files to 
+confirm paths. Run a smoke test after each part before 
+proceeding to the next. If any part fails, stop and report 
+the error rather than continuing.
+
+══════════════════════════════════════════════════════════
+PART 1 — KYC UPGRADE TRIGGER
+══════════════════════════════════════════════════════════
+
+CONTEXT: The users table already has a kyc_tier column 
+(simplified / standard / enhanced). The $3,200 MXN 
+threshold is established. Nothing currently upgrades a 
+user from simplified to standard.
+
+STEP 1 — Find the existing payment completion handler:
+
+grep -rn "wallet_balance\|bill_payment\|payment.*success\
+|completed.*payment" \
+  ~/workspace/artifacts/api-server/src/ \
+  --include="*.ts" -l
+
+Identify the file where a payment is marked complete and 
+the user's wallet is debited or a payment record is 
+confirmed successful. This is where the KYC check fires.
+
+STEP 2 — Create file:
+~/workspace/artifacts/api-server/src/services/\
+kycUpgradeService.ts
+
+Content:
+
+import { db } from '../db'; // adjust import to match 
+                             // existing db import path
+
+const KYC_UPGRADE_THRESHOLD_MXN = 3200;
+
+export async function checkAndUpgradeKycTier(
+  userId: number | string
+): Promise<void> {
+  try {
+    // Get current user kyc_tier and total completed 
+    // transaction value
+    const userResult = await db.query(
+      `SELECT kyc_tier FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (!userResult.rows.length) return;
+    const { kyc_tier } = userResult.rows[0];
+
+    // Only act on simplified users
+    if (kyc_tier !== 'simplified') return;
+
+    // Sum all completed payments for this user
+    // Adjust table/column names to match existing schema
+    const sumResult = await db.query(
+      `SELECT COALESCE(SUM(amount_mxn), 0) as total
+       FROM bill_payments
+       WHERE user_id = $1
+       AND status = 'completed'`,
+      [userId]
+    );
+
+    const total = parseFloat(sumResult.rows[0].total);
+
+    if (total >= KYC_UPGRADE_THRESHOLD_MXN) {
+      // Upgrade tier
+      await db.query(
+        `UPDATE users 
+         SET kyc_tier = 'standard', 
+             updated_at = NOW()
+         WHERE id = $1 
+         AND kyc_tier = 'simplified'`,
+        [userId]
+      );
+
+      // Log to kyc_upgrade_log table (create if needed)
+      await db.query(
+        `INSERT INTO kyc_upgrade_log 
+         (user_id, from_tier, to_tier, trigger_amount_mxn,
+          triggered_at)
+         VALUES ($1, 'simplified', 'standard', $2, NOW())
+         ON CONFLICT DO NOTHING`,
+        [userId, total]
+      );
+
+      // Send Paula CURP request via existing Twilio 
+      // WhatsApp pattern
+      await sendPaulaCurpRequest(userId);
+    }
+  } catch (err) {
+    console.error('[KYC] upgrade check failed:', err);
+    // Never throw — never block payment flow
+  }
+}
+
+async function sendPaulaCurpRequest(
+  userId: number | string
+): Promise<void> {
+  try {
+    // Get user phone from users table
+    const result = await db.query(
+      `SELECT phone, first_name FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (!result.rows.length) return;
+
+    const { phone, first_name } = result.rows[0];
+    const name = first_name || 'estimado usuario';
+
+    // Use existing Twilio WhatsApp sender pattern
+    // Find it with:
+    // grep -rn "twilio\|sendWhatsApp\|client.messages" 
+    //   ~/workspace/artifacts/api-server/src/ -l
+    // Import and use the same function used elsewhere
+    
+    const message = 
+      `¡Hola ${name}! 🎉 Tu historial de pagos con ` +
+      `PagoYa es excelente. Para seguir construyendo ` +
+      `tu identidad financiera y acceder a mejores ` +
+      `productos en el futuro, puedes registrar tu ` +
+      `CURP en tu perfil. Es opcional, pero acelera ` +
+      `tu progreso hacia el nivel Oro. ¿Te gustaría ` +
+      `agregarlo ahora? Responde con tu CURP o escribe ` +
+      `"después" si prefieres hacerlo más tarde.`;
+
+    // Use existing WhatsApp send function here
+    // Do NOT create a new Twilio client — reuse existing
+    await sendWhatsAppMessage(phone, message);
+
+  } catch (err) {
+    console.error('[KYC] Paula CURP request failed:', err);
+  }
+}
+
+STEP 3 — Create the kyc_upgrade_log table:
+
+Run this SQL migration:
+
+CREATE TABLE IF NOT EXISTS kyc_upgrade_log (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  from_tier TEXT NOT NULL,
+  to_tier TEXT NOT NULL,
+  trigger_amount_mxn NUMERIC,
+  triggered_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, from_tier, to_tier)
+);
+
+STEP 4 — Wire into payment completion handler:
+
+In the payment completion handler identified in Step 1,
+after the payment is confirmed successful, add exactly 
+one line:
+
+  await checkAndUpgradeKycTier(userId);
+
+Import the function at the top of that file:
+
+  import { checkAndUpgradeKycTier } from 
+    '../services/kycUpgradeService';
+
+Adjust relative path based on actual file location.
+
+CRITICAL: The call must be wrapped so it NEVER throws 
+and NEVER blocks the payment response to the user:
+
+  // Fire and forget — never block payment completion
+  checkAndUpgradeKycTier(userId).catch(err => 
+    console.error('[KYC] non-blocking error:', err)
+  );
+
+STEP 5 — Also add to nightly PTI cron as a sweep:
+
+Find the existing nightly cron file:
+grep -rn "cron\|schedule\|2 AM\|08:00 UTC\|nightly" \
+  ~/workspace/artifacts/api-server/src/ -l
+
+In that file, after the PTI scoring batch runs, add a 
+sweep that calls checkAndUpgradeKycTier for all 
+simplified-tier users whose total payments may have 
+crossed the threshold since the last check:
+
+  const simplifiedUsers = await db.query(
+    `SELECT DISTINCT u.id 
+     FROM users u
+     JOIN bill_payments bp ON bp.user_id = u.id
+     WHERE u.kyc_tier = 'simplified'
+     AND bp.status = 'completed'`
+  );
+  for (const row of simplifiedUsers.rows) {
+    await checkAndUpgradeKycTier(row.id);
+  }
+
+SMOKE TEST PART 1:
+- Confirm kyc_upgrade_log table exists
+- Find a test user with kyc_tier = 'simplified'
+- Manually set their completed payment sum above 3200 
+  in the DB (UPDATE bill_payments... for testing only)
+- Call checkAndUpgradeKycTier(userId) directly via a 
+  temporary test route or run it in the shell
+- Confirm kyc_tier changed to 'standard' in users table
+- Confirm a row was inserted in kyc_upgrade_log
+- Confirm WhatsApp message fired (check Twilio logs)
+- Revert the test data
+
+══════════════════════════════════════════════════════════
+PART 2 — COMPLAINT INTAKE PAGE + PAULA BRANCH + LOG
+══════════════════════════════════════════════════════════
+
+STEP 1 — Create complaint_log table:
+
+CREATE TABLE IF NOT EXISTS complaint_log (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT,
+  channel TEXT NOT NULL DEFAULT 'whatsapp',
+  complaint_text TEXT,
+  status TEXT NOT NULL DEFAULT 'received',
+  received_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP,
+  resolution_notes TEXT
+);
+
+STEP 2 — Create backend route:
+~/workspace/artifacts/api-server/src/routes/complaints.ts
+
+POST /api/complaints
+Body: { user_id?, channel, complaint_text }
+- Insert into complaint_log
+- Send Twilio WhatsApp alert to admin:
+  "⚠️ Nueva queja recibida en PagoYa
+   Canal: ${channel}
+   Usuario: ${user_id || 'Anónimo'}
+   Mensaje: ${complaint_text?.substring(0, 200)}"
+- Return 201 { complaint_id, status: 'received' }
+
+Register in main app file:
+  import complaintRoutes from './routes/complaints';
+  app.use('/api/complaints', complaintRoutes);
+
+STEP 3 — Create frontend page:
+~/workspace/artifacts/pagoya/src/pages/Atencion.tsx
+
+A clean, minimal page with:
+- Page title: "Atención al Cliente / Customer Support"
+- Subtitle: "Estamos aquí para ayudarte"
+- Two contact buttons:
+  
+  Button 1 — WhatsApp (primary, green):
+  href="https://wa.me/523221839799?text=Hola%20PagoYa%2C%20necesito%20ayuda%20con"
+  Label: "💬 Escríbenos por WhatsApp"
+
+  Button 2 — Email (secondary, outlined):
+  href="mailto:atencion@pagoyamx.com"
+  Label: "✉️ Enviar correo a atencion@pagoyamx.com"
+
+- Below the buttons, a simple text form:
+  Textarea: "Describe tu problema o pregunta"
+  Optional: Phone number field
+  Submit button: "Enviar mensaje"
+  On submit: POST /api/complaints with channel='web'
+  On success: Show "Tu mensaje fue recibido. 
+  Te responderemos en menos de 24 horas."
+
+- Footer note (small text):
+  "Si no recibes respuesta, puedes contactar a 
+   CONDUSEF en condusef.gob.mx o al 800-999-8080"
+
+- Use existing Tailwind/CSS patterns from other pages
+- Match existing PagoYa color scheme (navy/teal)
+
+STEP 4 — Add route to React Router:
+
+In the main router file (App.tsx or router config),
+add:
+  import Atencion from './pages/Atencion';
+  <Route path="/atencion" element={<Atencion />} />
+
+STEP 5 — Add to footer:
+
+Find the existing Footer component:
+grep -rn "Footer\|footer" \
+  ~/workspace/artifacts/pagoya/src/ \
+  --include="*.tsx" -l
+
+Add a link to /atencion in the footer alongside 
+existing legal links. Label: "Atención al Cliente"
+
+STEP 6 — Add to /cumplimiento page:
+
+Find the /cumplimiento page file and update the 
+consumer protection section to include a link:
+  <a href="/atencion">Centro de Atención al Cliente</a>
+
+STEP 7 — Paula complaint acknowledgment branch:
+
+Find the Paula system prompt or instruction file:
+grep -rn "paula\|system.*prompt\|IDENTIDAD FINANCIERA" \
+  ~/workspace/artifacts/api-server/src/ -l
+
+Add this instruction block to Paula's system prompt
+after the existing instruction blocks:
+
+---
+ATENCIÓN AL CLIENTE / QUEJAS
+If the user expresses frustration, dissatisfaction, 
+reports an error, uses words like "problema", "error", 
+"no funciona", "queja", "cobro", "mal", or asks for 
+help with a failed transaction:
+
+1. Acknowledge calmly and empathetically in 1 sentence.
+2. Ask them to describe the issue briefly.
+3. When they describe it, log it by calling the 
+   complaint intake endpoint internally if possible,
+   OR direct them to:
+   "Para registrar tu queja formalmente, escríbenos 
+   a atencion@pagoyamx.com o visita 
+   pagoyamx.com/atencion — respondemos en menos de 
+   24 horas."
+4. Never dismiss, argue, or blame the user.
+5. End with: "¿Hay algo más en lo que pueda ayudarte?"
+---
+
+SMOKE TEST PART 2:
+- Navigate to /atencion — confirm page renders
+- Submit the web form — confirm complaint_log row inserted
+- Confirm admin WhatsApp notification fires
+- Confirm /atencion link appears in footer
+- Confirm /cumplimiento links to /atencion
+- Send Paula a WhatsApp message with "no funciona"
+  and confirm she responds with empathy + contact info
+
+══════════════════════════════════════════════════════════
+PART 3 — COMPLIANCE SUMMARY DATA DICTIONARY
+══════════════════════════════════════════════════════════
+
+This adds an explanatory panel to the existing 
+CUMPLIMIENTO admin tab. No new endpoint needed —
+this is UI-only, rendered as static content alongside
+the existing KPI cards.
+
+Find the CUMPLIMIENTO tab component:
+grep -rn "CUMPLIMIENTO\|cumplimiento\|compliance" \
+  ~/workspace/artifacts/pagoya/src/ \
+  --include="*.tsx" -l
+
+In that component, after the existing KPI cards and 
+charts, add a collapsible section titled:
+"📋 Glosario de Datos / Data Dictionary"
+
+Render the following as a clean two-column table
+(Term | Definition), styled consistently with the 
+existing admin dashboard:
+
+TERM                   | DEFINITION
+-----------------------|------------------------------------------
+kyc_tier: simplified   | Usuario verificado por teléfono OTP. 
+                       | Transacciones acumuladas < $3,200 MXN.
+                       | Aplica KYC simplificado per Ley Fintech.
+kyc_tier: standard     | Usuario que alcanzó $3,200 MXN en 
+                       | transacciones. CURP solicitado via Paula.
+kyc_tier: enhanced     | Usuario con CURP + INE verificados.
+                       | Asignado manualmente por el administrador.
+PTI: Bronce            | Score 0–49. Usuario nuevo o irregular.
+                       | < 3 pagos completados o rachas cortas.
+PTI: Plata             | Score 50–74. Usuario establecido.
+                       | Pago consistente, racha activa.
+PTI: Oro               | Score 75–100. Usuario de alta confianza.
+                       | Racha larga, comportamiento predecible.
+Transacciones (8 sem.) | Pagos de servicios completados en las
+                       | últimas 8 semanas. No incluye cargas 
+                       | de saldo ni intentos fallidos.
+CURP registrado        | Usuarios que han proporcionado su CURP
+                       | vía Paula o perfil. Base para tier 
+                       | standard/enhanced.
+Atrib. Institucional   | Usuarios referidos por un socio 
+                       | institucional via referred_by_institution.
+Actualización          | Los datos se actualizan en tiempo real
+                       | desde la base de datos de producción.
+                       | PTI se recalcula cada noche a las 2 AM MX.
+
+Add a small note below the table:
+"Este glosario está disponible para revisión en 
+procesos de due diligence institucional."
+
+SMOKE TEST PART 3:
+- Navigate to admin dashboard CUMPLIMIENTO tab
+- Confirm glosario section renders below existing charts
+- Confirm it is collapsible (click to expand/collapse)
+- Confirm no existing KPI cards or charts are displaced
+
+══════════════════════════════════════════════════════════
+PART 4 — COMPLIANCE TAB EXPORT (PDF + CSV)
+══════════════════════════════════════════════════════════
+
+In the same CUMPLIMIENTO tab component, add two 
+export buttons in the top-right corner of the tab header,
+alongside any existing controls:
+
+BUTTON 1 — Export CSV:
+Label: "⬇ CSV"
+Style: small outlined button, existing admin style
+
+On click:
+1. Fetch GET /api/admin/compliance-summary 
+   (already exists, use existing auth header pattern)
+2. Flatten the JSON response into CSV rows:
+   - One row per KYC tier with count
+   - One row per PTI tier with count  
+   - Summary rows: total_users, total_transactions_8wk,
+     curp_on_file_count, institutional_attribution_count
+3. Add a header row with column names
+4. Add metadata rows at top:
+   "PagoYa Compliance Summary"
+   "Generated: [current datetime]"
+   "pagoyamx.com"
+5. Trigger browser download as:
+   "PagoYa_Compliance_[YYYY-MM-DD].csv"
+
+Do NOT use any external CSV library — build the CSV 
+string manually. It is simple enough.
+
+BUTTON 2 — Print / Save PDF:
+Label: "🖨 PDF"
+Style: small outlined button, existing admin style
+
+On click:
+1. Add a CSS class "print-mode" to the CUMPLIMIENTO 
+   tab container
+2. Call window.print()
+3. Remove "print-mode" class after print dialog closes
+
+Add print CSS (in the component's style block or 
+global admin CSS):
+@media print {
+  /* Hide everything except CUMPLIMIENTO tab content */
+  body > *:not(.cumplimiento-print-target) { 
+    display: none; 
+  }
+  .cumplimiento-print-target { display: block; }
+  
+  /* Add header to printed page */
+  .cumplimiento-print-target::before {
+    content: "PagoYa Technologies — Resumen de Cumplimiento";
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  
+  /* Hide the export buttons themselves from print */
+  .export-buttons { display: none; }
+  
+  /* Ensure charts render in print */
+  canvas { max-width: 100%; }
+}
+
+Add class "cumplimiento-print-target" to the main 
+container div of the CUMPLIMIENTO tab content.
+Add class "export-buttons" to the div containing 
+the two export buttons.
+
+SMOKE TEST PART 4:
+- Click CSV button — confirm file downloads with 
+  correct filename and valid CSV content
+- Open CSV in a text editor and confirm headers 
+  and data rows are present
+- Click PDF button — confirm print dialog opens
+- In print preview, confirm only CUMPLIMIENTO 
+  content is visible with the header text
+- Confirm KPI cards and charts are visible in preview
+
+══════════════════════════════════════════════════════════
+PART 5 — INFRASTRUCTURE NOTE IN CUMPLIMIENTO TAB
+══════════════════════════════════════════════════════════
+
+In the CUMPLIMIENTO tab component, add a final section 
+at the bottom titled:
+"🗄️ Infraestructura y Retención de Datos"
+
+Render as a styled info card (light gray background, 
+left border in navy, consistent with existing admin 
+card styles):
+
+---
+Plataforma actual: PostgreSQL (Replit), con respaldo 
+automático diario. Historial completo de transacciones 
+desde el inicio de operaciones.
+
+Retención comprometida: Mínimo 10 años per Ley Fintech 
+2018, Art. 58. Todos los registros de usuario, 
+transacciones y actividad sospechosa se conservan 
+en base de datos estructurada con timestamps inmutables.
+
+Plan post-financiamiento: Migración a infraestructura 
+cloud dedicada (AWS RDS o Google Cloud SQL) con 
+replicación multi-región, backups point-in-time, 
+y auditoría de acceso. Estimado: Q2 2027.
+
+Contacto para auditoría: alianzas@pagoyamx.com
+---
+
+This is static content — no data fetch required.
+
+SMOKE TEST PART 5:
+- Confirm the infrastructure card renders at the 
+  bottom of the CUMPLIMIENTO tab
+- Confirm it appears in the PDF print view
+- Confirm it appears in the CSV export as metadata rows
+
+══════════════════════════════════════════════════════════
+FINAL VERIFICATION — RUN ALL TOGETHER
+══════════════════════════════════════════════════════════
+
+After all 5 parts complete:
+
+1. kyc_upgrade_log table exists in DB
+2. checkAndUpgradeKycTier is wired to payment handler
+3. /atencion page renders and form submits successfully
+4. complaint_log table has a test row after form submit
+5. Admin WhatsApp fires on complaint submission
+6. Paula responds empathetically to "no funciona"
+7. CUMPLIMIENTO tab shows glosario, export buttons, 
+   and infrastructure card
+8. CSV export downloads a valid file
+9. Print dialog opens showing only compliance content
+10. No existing tests broken — run full test suite:
+    cd ~/workspace/artifacts/api-server && npm test
+    
+Report pass/fail for each of the 10 verification items.
+If any fail, report the error and stop.

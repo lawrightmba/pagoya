@@ -251,3 +251,27 @@
     inset: -1px;
   }
 }
+
+/* ── Compliance tab print styles ──────────────────────────────────────────── */
+@media print {
+  body > *:not(.cumplimiento-print-target) {
+    display: none !important;
+  }
+  .cumplimiento-print-target {
+    display: block !important;
+  }
+  .cumplimiento-print-target::before {
+    content: "PagoYa Technologies — Resumen de Cumplimiento";
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    font-family: monospace;
+  }
+  .export-buttons {
+    display: none !important;
+  }
+  canvas {
+    max-width: 100%;
+  }
+}

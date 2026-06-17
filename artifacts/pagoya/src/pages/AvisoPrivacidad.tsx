@@ -318,6 +318,8 @@ export default function AvisoPrivacidad() {
           {" · "}
           <a href="/cumplimiento" style={{ color: "#475569", textDecoration: "none" }}>Cumplimiento</a>
           {" · "}
+          <a href="/atencion" style={{ color: "#475569", textDecoration: "none" }}>Atención al Cliente</a>
+          {" · "}
           <a href="mailto:soporte@pagoyamx.com" style={{ color: "#475569", textDecoration: "none" }}>soporte@pagoyamx.com</a>
         </p>
       </footer>

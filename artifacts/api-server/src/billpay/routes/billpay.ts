@@ -12,6 +12,7 @@ import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { sendPushToUser } from "../../services/pushService.js";
 import { scheduleReferralNudgeIfEligible } from "../../services/lifecycleNudgeService.js";
+import { checkAndUpgradeKycTier } from "../../services/kycUpgradeService.js";
 import { logger } from "../../lib/logger.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
@@ -542,6 +543,11 @@ router.post("/pay", async (req: Request, res: Response) => {
     body: `$${montoNum.toFixed(2)} MXN pagados exitosamente.`,
     url: "/",
   }).catch(() => {});
+
+  // KYC upgrade check — fire-and-forget, never blocks payment completion
+  checkAndUpgradeKycTier(telefono).catch(err =>
+    console.error("[KYC] non-blocking error:", err),
+  );
 
   // SIPREL saldo low-balance alert
   if (siprelProvider.getSaldoBalance) {

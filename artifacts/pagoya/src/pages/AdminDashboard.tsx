@@ -161,6 +161,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [complianceLoading, setComplianceLoading] = useState(false);
   const [complianceError, setComplianceError] = useState("");
+  const [glosarioOpen, setGlosarioOpen] = useState(false);
 
   const loadCompliance = useCallback(async () => {
     if (!adminKey.trim()) return;
@@ -1761,18 +1762,76 @@ export default function AdminDashboard() {
 
         {/* ══════════════ CUMPLIMIENTO TAB ══════════════ */}
         {tab === "compliance" && (
-          <div>
+          <div className="cumplimiento-print-target">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {complianceLoading ? "Cargando…" : complianceData ? `Actualizado: ${new Date(complianceData.as_of).toLocaleString("es-MX")}` : "Resumen regulatorio en tiempo real"}
               </div>
-              <button
-                onClick={loadCompliance}
-                disabled={complianceLoading}
-                style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}
-              >
-                ↻ Actualizar
-              </button>
+              <div style={{ display: "flex", gap: 8 }} className="export-buttons">
+                <button
+                  onClick={() => {
+                    if (!complianceData) return;
+                    const cd = complianceData;
+                    const now = new Date();
+                    const dateStr = now.toISOString().split("T")[0];
+                    const rows = [
+                      `"PagoYa Compliance Summary"`,
+                      `"Generated: ${now.toLocaleString("es-MX")}"`,
+                      `"pagoyamx.com"`,
+                      `""`,
+                      `"Metric","Value"`,
+                      `"Total Usuarios","${cd.users.total}"`,
+                      `"Nuevos (30d)","${cd.users.new_30d}"`,
+                      `"CURP en Archivo","${cd.users.curp_on_file}"`,
+                      `"KYC Estándar+","${cd.users.kyc_upgraded}"`,
+                      `"PTI Asignado","${cd.users.pti_scored}"`,
+                      `"Via Institución","${cd.users.from_institution}"`,
+                      `""`,
+                      `"KYC Tier","Usuarios"`,
+                      ...cd.kyc_tiers.map(r => `"${r.kyc_tier}","${r.n}"`),
+                      `""`,
+                      `"PTI Tier","Usuarios"`,
+                      ...cd.pti_tiers.map(r => `"${r.tier}","${r.n}"`),
+                      `""`,
+                      `"Semana","Transacciones","Volumen MXN","Promedio MXN"`,
+                      ...cd.weekly_tx.map(r => `"${r.week_start}","${r.tx_count}","${r.volume_mxn}","${r.avg_mxn}"`),
+                      `""`,
+                      `"Infraestructura","PostgreSQL (Replit) — respaldo diario automático"`,
+                      `"Retención","Mínimo 10 años per Ley Fintech 2018 Art. 58"`,
+                      `"Contacto auditoría","alianzas@pagoyamx.com"`,
+                    ];
+                    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `PagoYa_Compliance_${dateStr}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  disabled={!complianceData}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#9CA3AF", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "6px 14px", cursor: complianceData ? "pointer" : "not-allowed", opacity: complianceData ? 1 : 0.4 }}
+                >
+                  ⬇ CSV
+                </button>
+                <button
+                  onClick={() => {
+                    const el = document.querySelector(".cumplimiento-print-target");
+                    if (el) el.classList.add("print-mode");
+                    window.print();
+                    setTimeout(() => { if (el) el.classList.remove("print-mode"); }, 1000);
+                  }}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#9CA3AF", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "6px 14px", cursor: "pointer" }}
+                >
+                  🖨 PDF
+                </button>
+                <button
+                  onClick={loadCompliance}
+                  disabled={complianceLoading}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}
+                >
+                  ↻ Actualizar
+                </button>
+              </div>
             </div>
 
             {!adminKey.trim() && (
@@ -1876,10 +1935,75 @@ export default function AdminDashboard() {
                     }
                   </div>
 
+                  {/* ── Part 3: Glosario de Datos ─────────────────────── */}
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                    <button
+                      onClick={() => setGlosarioOpen(o => !o)}
+                      style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}
+                    >
+                      <span>📋 Glosario de Datos / Data Dictionary</span>
+                      <span style={{ fontSize: "1rem", transform: glosarioOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
+                    </button>
+                    {glosarioOpen && (
+                      <div style={{ padding: "0 20px 20px", overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'Space Mono', monospace", fontSize: "0.8rem" }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: "left", color: "#5a7080", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "8px 12px 8px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", width: "30%" }}>Término</th>
+                              <th style={{ textAlign: "left", color: "#5a7080", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>Definición</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {([
+                              ["kyc_tier: simplified", "Usuario verificado por teléfono OTP. Transacciones acumuladas < $3,200 MXN. Aplica KYC simplificado per Ley Fintech."],
+                              ["kyc_tier: standard", "Usuario que alcanzó $3,200 MXN en transacciones. CURP solicitado vía Paula."],
+                              ["kyc_tier: enhanced", "Usuario con CURP + INE verificados. Asignado manualmente por el administrador."],
+                              ["PTI: Bronce", "Score 0–49. Usuario nuevo o irregular. < 3 pagos completados o rachas cortas."],
+                              ["PTI: Plata", "Score 50–74. Usuario establecido. Pago consistente, racha activa."],
+                              ["PTI: Oro", "Score 75–100. Usuario de alta confianza. Racha larga, comportamiento predecible."],
+                              ["Transacciones (8 sem.)", "Pagos de servicios completados en las últimas 8 semanas. No incluye cargas de saldo ni intentos fallidos."],
+                              ["CURP registrado", "Usuarios que han proporcionado su CURP vía Paula o perfil. Base para tier standard/enhanced."],
+                              ["Atrib. Institucional", "Usuarios referidos por un socio institucional via referred_by_institution."],
+                              ["Actualización", "Los datos se actualizan en tiempo real desde la base de datos de producción. PTI se recalcula cada noche a las 2 AM MX."],
+                            ] as [string, string][]).map(([term, def]) => (
+                              <tr key={term}>
+                                <td style={{ padding: "10px 12px 10px 0", color: "#F59E0B", borderBottom: "1px solid rgba(255,255,255,0.04)", verticalAlign: "top" }}>{term}</td>
+                                <td style={{ padding: "10px 0", color: "#9CA3AF", borderBottom: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.55 }}>{def}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <p style={{ marginTop: 14, fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "#5a7080", fontStyle: "italic" }}>
+                          Este glosario está disponible para revisión en procesos de due diligence institucional.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Part 5: Infrastructure Note ───────────────────── */}
+                  <div style={{ borderLeft: "3px solid #1D3557", background: "rgba(29,53,87,0.15)", borderRadius: "0 12px 12px 0", padding: "18px 20px" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>🗄️ Infraestructura y Retención de Datos</div>
+                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080", lineHeight: 1.65, margin: "0 0 8px" }}>
+                      <strong style={{ color: "#9CA3AF" }}>Plataforma actual:</strong> PostgreSQL (Replit), con respaldo automático diario. Historial completo de transacciones desde el inicio de operaciones.
+                    </p>
+                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080", lineHeight: 1.65, margin: "0 0 8px" }}>
+                      <strong style={{ color: "#9CA3AF" }}>Retención comprometida:</strong> Mínimo 10 años per Ley Fintech 2018, Art. 58. Todos los registros de usuario, transacciones y actividad sospechosa se conservan en base de datos estructurada con timestamps inmutables.
+                    </p>
+                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080", lineHeight: 1.65, margin: "0 0 8px" }}>
+                      <strong style={{ color: "#9CA3AF" }}>Plan post-financiamiento:</strong> Migración a infraestructura cloud dedicada (AWS RDS o Google Cloud SQL) con replicación multi-región, backups point-in-time, y auditoría de acceso. Estimado: Q2 2027.
+                    </p>
+                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080", margin: 0 }}>
+                      <strong style={{ color: "#9CA3AF" }}>Contacto para auditoría:</strong>{" "}
+                      <a href="mailto:alianzas@pagoyamx.com" style={{ color: "#39A935", textDecoration: "none" }}>alianzas@pagoyamx.com</a>
+                    </p>
+                  </div>
+
                   {/* Footer link */}
                   <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080" }}>
                     Política completa:{" "}
                     <a href="/cumplimiento" target="_blank" rel="noopener noreferrer" style={{ color: "#39A935", textDecoration: "none" }}>pagoyamx.com/cumplimiento</a>
+                    {" · "}
+                    <a href="/atencion" target="_blank" rel="noopener noreferrer" style={{ color: "#39A935", textDecoration: "none" }}>Centro de Atención</a>
                   </div>
 
                 </div>

@@ -127,7 +127,7 @@ export default function Cumplimiento() {
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {([
               ["Divulgación de comisiones", "Comisión de $25 MXN por transacción informada antes de cada pago — confirmación explícita del usuario requerida."],
-              ["Quejas y disputas", "Canal de atención vía WhatsApp (soporte@pagoyamx.com) con tiempo de respuesta objetivo de 24 horas hábiles."],
+              ["Quejas y disputas", "Canal de atención dedicado en pagoyamx.com/atencion — WhatsApp directo y formulario web con tiempo de respuesta objetivo de 24 horas hábiles."],
               ["Registro CONDUSEF", "PagoYa está en proceso de registro ante la CONDUSEF como entidad financiera no bancaria — previsto para Q3 2025."],
               ["Aviso de Privacidad", "Publicado en pagoyamx.com/aviso-de-privacidad, conforme a la LFPDPPP. Los usuarios aceptan explícitamente al registrarse."],
               ["Protección de datos", "Sin venta de datos personales a terceros. Los datos del usuario son utilizados exclusivamente para prestación del servicio y cómputo del PTI."],

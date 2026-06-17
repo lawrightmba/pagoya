@@ -53,6 +53,7 @@ import VideoPage from "@/pages/VideoPage";
 import FounderBio from "@/pages/FounderBio";
 import Confianza from "@/pages/Confianza";
 import Cumplimiento from "@/pages/Cumplimiento";
+import Atencion from "@/pages/Atencion";
 import LandingCFESinBanco from "@/pages/LandingCFESinBanco";
 import LandingTelmexEfectivo from "@/pages/LandingTelmexEfectivo";
 import LandingRecargarSinTarjeta from "@/pages/LandingRecargarSinTarjeta";
@@ -175,6 +176,7 @@ function Router() {
       <Route path="/spin" component={SpinWheel} />
       <Route path="/ruleta" component={SpinWheel} />
       <Route path="/bienvenida" component={Bienvenida} />
+      <Route path="/atencion" component={Atencion} />
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {
           useEffect(() => {

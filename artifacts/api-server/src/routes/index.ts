@@ -40,6 +40,7 @@ import eventsRouter from "./events.js";
 import gamesRouter from "./games.js";
 import ptiRouter from "./pti.js";
 import landlordRouter from "./landlords.js";
+import complaintRouter from "./complaints.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -83,6 +84,7 @@ router.use("/events", eventsRouter);
 router.use("/games", gamesRouter);
 router.use("/pti", ptiRouter);
 router.use("/landlords", landlordRouter);
+router.use("/complaints", complaintRouter);
 
 console.log("✅ WhatsApp agent webhook ready at POST /api/whatsapp-agent");
 console.log("✅ PTI routes ready at GET /api/pti/score and POST /api/pti/compute-now");

@@ -17,6 +17,7 @@ import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { computePTIForAllUsers } from "./pti.js";
+import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 
 // ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
 // Unexpected rewards at threshold crossings — never announced in advance.
@@ -330,6 +331,9 @@ export async function runNightlyPtiBatch(): Promise<void> {
         if (result && result.pagoScore !== prevScore) {
           checkPtiMilestones(telefono, prevScore, result.pagoScore).catch(() => {});
         }
+
+        // KYC upgrade sweep — catch users who crossed $3,200 MXN since last check
+        checkAndUpgradeKycTier(telefono).catch(() => {});
 
         computed++;
       } catch (err) {
