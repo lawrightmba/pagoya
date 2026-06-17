@@ -332,7 +332,7 @@ export default function Home() {
             <img
               src="/pagoya-logo.png"
               alt="PagoYa"
-              style={{ height: "34px", width: "auto", maxWidth: "160px", objectFit: "contain", display: "block" }}
+              style={{ height: "38px", width: "auto", maxWidth: "170px", objectFit: "contain", display: "block" }}
               onError={(e) => {
                 e.currentTarget.style.display = "none";
                 const sib = e.currentTarget.nextSibling as HTMLElement | null;
