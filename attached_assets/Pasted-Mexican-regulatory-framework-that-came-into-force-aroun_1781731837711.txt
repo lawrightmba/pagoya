@@ -1,0 +1,91 @@
+Mexican regulatory framework that came into force around 2018, the most important development was Mexico’s Fintech Law (Ley para Regular las Instituciones de Tecnología Financiera), enacted in March 2018, together with existing anti-money laundering (AML) requirements and consumer-protection rules.  
+
+For banks, fintechs, payment processors, SOFOMs, and other financial institutions, the practical requirements fell into several categories:
+
+Customer Identification (KYC)
+Financial institutions must:
+
+Verify customer identities using official documentation.
+Maintain customer files and records.
+Understand the nature and purpose of customer relationships.
+Classify customers by risk level (higher-risk customers require enhanced review).
+
+Suspicious Activity Reporting
+
+Institutions must report:
+
+Suspicious transactions.
+Unusual or potentially illicit activity.
+Transactions that may involve money laundering or terrorist financing.
+Reports are filed with Mexico’s financial authorities through the Ministry of Finance (SHCP) and related regulators.  
+
+Record Retention
+Financial institutions must retain:
+
+Customer identification records.
+Transaction records.
+Suspicious activity reports and supporting documentation.
+The retention period is generally at least 10 years.  
+
+Financial Reporting and Regulatory Oversight
+Institutions are required to provide information and documentation to regulators, including:
+
+Transaction reporting.
+Regulatory filings.
+Compliance documentation.
+Responses to examinations by regulators such as the Mexican banking commission.
+
+Consumer Assistance and Protection
+
+The 2018 Fintech Law explicitly established principles including:
+
+Consumer protection.
+Financial inclusion.
+Transparency.
+Competition.
+Financial stability.
+Prevention of illicit operations.
+This means institutions must provide:
+
+Clear disclosures regarding fees and services.
+Complaint-handling procedures.
+Customer support and dispute resolution mechanisms.
+Fair treatment of users of financial products and services.
+
+Cryptocurrency and Fintech Reporting
+
+The 2018 reforms also brought crypto-related businesses into the AML framework.
+
+Virtual asset service providers became subject to obligations such as:
+
+Customer identification.
+Transaction monitoring.
+Record keeping.
+Reporting qualifying transactions to authorities.
+
+Internal Compliance Programs
+
+Financial institutions must maintain:
+
+AML policies and procedures.
+Employee training.
+Transaction-monitoring systems.
+Internal controls designed to detect illicit activity.
+The “Citizen Assistance” Angle
+
+If by “citizen assistance” you mean obligations toward customers and the public, the closest equivalents are:
+
+Consumer protection requirements.
+Transparency and disclosure rules.
+Complaint-resolution processes.
+Financial inclusion initiatives.
+Protection of customer information and access to services.
+For your Mexico fintech projects like PagoYa/PagoSeguro, the biggest practical takeaways are:
+
+KYC/identity verification.
+AML transaction monitoring.
+Suspicious activity reporting.
+Record retention.
+Customer complaint handling.
+Regulatory reporting to Mexican authorities.
+Consumer disclosures and transparency.
