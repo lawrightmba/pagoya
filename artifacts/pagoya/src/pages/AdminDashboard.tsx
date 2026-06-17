@@ -135,6 +135,8 @@ export default function AdminDashboard() {
   const [investorLoading, setInvestorLoading] = useState(true);
   const [investorError, setInvestorError] = useState("");
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
+  const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem("pagoya_sheet_url") ?? "");
+  const [sheetUrlInput, setSheetUrlInput] = useState("");
 
   const loadInvestorMetrics = useCallback(() => {
     if (!adminKey.trim()) return;
@@ -540,28 +542,90 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* Last updated + refresh */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+                {/* Last updated + refresh + sheet link */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, gap: 8, flexWrap: "wrap" }}>
                   <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.42rem", color: "#5a7080" }}>
                     Actualizado: {new Date(investorData.as_of).toLocaleString("es-MX")} · Auto-refresh 60s
                   </div>
-                  <button
-                    onClick={loadInvestorMetrics}
-                    disabled={investorLoading}
-                    style={{
-                      fontFamily: "'Space Mono', monospace",
-                      fontSize: "0.44rem",
-                      color: "#39A935",
-                      background: "rgba(57,169,53,0.12)",
-                      border: "1px solid rgba(57,169,53,0.3)",
-                      borderRadius: 20,
-                      padding: "4px 12px",
-                      cursor: "pointer",
-                      opacity: investorLoading ? 0.5 : 1,
-                    }}
-                  >
-                    {investorLoading ? "Cargando…" : "↻ Refrescar"}
-                  </button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {sheetUrl ? (
+                      <a
+                        href={sheetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          fontSize: "0.44rem",
+                          color: "#1D9E75",
+                          background: "rgba(29,158,117,0.12)",
+                          border: "1px solid rgba(29,158,117,0.3)",
+                          borderRadius: 20,
+                          padding: "4px 12px",
+                          cursor: "pointer",
+                          textDecoration: "none",
+                        }}
+                      >
+                        📊 Google Sheet
+                      </a>
+                    ) : (
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <input
+                          value={sheetUrlInput}
+                          onChange={(e) => setSheetUrlInput(e.target.value)}
+                          placeholder="Pega URL del Google Sheet"
+                          style={{
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 8,
+                            padding: "4px 8px",
+                            color: "#e8f0f7",
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: "0.46rem",
+                            outline: "none",
+                            width: 200,
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (sheetUrlInput.trim()) {
+                              setSheetUrl(sheetUrlInput.trim());
+                              localStorage.setItem("pagoya_sheet_url", sheetUrlInput.trim());
+                              setSheetUrlInput("");
+                            }
+                          }}
+                          style={{
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: "0.44rem",
+                            color: "#1D9E75",
+                            background: "rgba(29,158,117,0.12)",
+                            border: "1px solid rgba(29,158,117,0.3)",
+                            borderRadius: 8,
+                            padding: "4px 10px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Guardar
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      onClick={loadInvestorMetrics}
+                      disabled={investorLoading}
+                      style={{
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.44rem",
+                        color: "#39A935",
+                        background: "rgba(57,169,53,0.12)",
+                        border: "1px solid rgba(57,169,53,0.3)",
+                        borderRadius: 20,
+                        padding: "4px 12px",
+                        cursor: "pointer",
+                        opacity: investorLoading ? 0.5 : 1,
+                      }}
+                    >
+                      {investorLoading ? "Cargando…" : "↻ Refrescar"}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
