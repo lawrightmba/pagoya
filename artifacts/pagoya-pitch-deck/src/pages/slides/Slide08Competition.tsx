@@ -13,7 +13,7 @@ export default function Slide08Competition() {
       />
 
       <div className="relative z-10 flex h-full">
-        <div className="flex flex-col justify-center" style={{ padding: "7vh 5vw 7vh 8vw", width: "52%" }}>
+        <div className="flex flex-col justify-start" style={{ padding: "6vh 5vw 5vh 8vw", width: "52%" }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "1.8vh" }}>
             {es ? "P2P: Siguiente Fase" : "P2P: Next Phase"}
           </p>
@@ -39,7 +39,7 @@ export default function Slide08Competition() {
           </div>
         </div>
 
-        <div className="flex flex-col justify-center" style={{ flex: 1, padding: "7vh 8vw 7vh 4vw", gap: "2.5vh" }}>
+        <div className="flex flex-col justify-start" style={{ flex: 1, padding: "6vh 8vw 5vh 4vw", gap: "2.2vh" }}>
           <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
             {es ? "El efecto de red" : "The network effect"}
           </p>

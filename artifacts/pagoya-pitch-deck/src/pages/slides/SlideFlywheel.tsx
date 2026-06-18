@@ -12,9 +12,9 @@ export default function SlideFlywheel() {
         style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(0,200,117,0.1) 0%, transparent 65%)" }}
       />
 
-      <div className="relative z-10 flex flex-col h-full" style={{ padding: "4vh 8vw 3.5vh" }}>
+      <div className="relative z-10 flex flex-col h-full" style={{ padding: "3vh 8vw 2vh" }}>
 
-        <div style={{ marginBottom: "2.5vh", flexShrink: 0 }}>
+        <div style={{ marginBottom: "1.5vh", flexShrink: 0 }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
             {es ? "El Efecto Compuesto" : "The Compounding Effect"}
           </p>
@@ -105,7 +105,7 @@ export default function SlideFlywheel() {
             })}
           </div>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "1.5vh" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.8vh" }}>
 
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
               {es ? "Aceleradores del volante" : "Flywheel accelerants"}
@@ -115,7 +115,7 @@ export default function SlideFlywheel() {
               background: "linear-gradient(135deg, rgba(255,92,26,0.1) 0%, rgba(255,92,26,0.04) 100%)",
               border: "1px solid rgba(255,92,26,0.3)",
               borderRadius: "0.8vw",
-              padding: "1.8vh 2vw",
+              padding: "1.4vh 2vw",
             }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.1vh" }}>
                 {es ? "🎮 Capa de lealtad y gamificación" : "🎮 Loyalty & gamification layer"}
@@ -176,8 +176,8 @@ export default function SlideFlywheel() {
               </div>
             </div>
 
-            <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.6vh 2vw" }}>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.9vh" }}>
+            <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.2vh 2vw" }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6vh" }}>
                 {es ? "El resultado después de 12 meses" : "The result after 12 months"}
               </p>
               <div className="flex gap-[3vw]">
@@ -194,9 +194,9 @@ export default function SlideFlywheel() {
                     ]
                 ).map(({ stat, label, sub }) => (
                   <div key={label} style={{ textAlign: "center" }}>
-                    <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3.5vw", fontWeight: 900, color: "#00C875", lineHeight: 1, marginBottom: "0.2vh" }}>{stat}</p>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{label}</p>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{sub}</p>
+                    <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.8vw", fontWeight: 900, color: "#00C875", lineHeight: 1, marginBottom: "0.2vh" }}>{stat}</p>
+                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{label}</p>
+                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.05vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{sub}</p>
                   </div>
                 ))}
               </div>

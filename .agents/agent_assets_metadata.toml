@@ -311,3 +311,9 @@ id = "EXSeh8XCbGjokyUdvJQNR"
 uri = "file://artifacts/pagoya-twilio-demo/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music 115s"
+
+[[outputs]]
+id = "IYcCciGONAVaNzSe6jGjE"
+uri = "file://.local/outputs/PagoYa-500Global-Pitch-Deck.pdf"
+type = "pdf"
+title = "PagoYa — 500 Global LATAM Pitch Deck (PDF)"
