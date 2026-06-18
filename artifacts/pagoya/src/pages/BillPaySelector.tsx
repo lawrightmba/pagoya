@@ -484,6 +484,18 @@ export default function BillPaySelector() {
   const handleSelectService = (svc: Service) => {
     // Cross-sell services open an external URL instead of the payment flow
     if ("crossSellUrl" in svc && svc.crossSellUrl) {
+      // Log behavioral signal for PTI scoring (fire-and-forget)
+      try {
+        const tel = phone || localStorage.getItem("pagoya_telefono") || "";
+        if (tel) {
+          const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+          fetch(`${BASE}/api/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefono: tel, event_type: "pago_seguro_click", metadata: { service_id: svc.id, url: svc.crossSellUrl } }),
+          }).catch(() => {});
+        }
+      } catch {}
       window.open(svc.crossSellUrl as string, "_blank", "noopener,noreferrer");
       return;
     }

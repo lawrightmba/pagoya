@@ -31,6 +31,8 @@ router.post("/", async (req: Request, res: Response) => {
     "referral_sent", "game_played", "streak_completed", "loyalty_checked",
     // Consumption & trajectory (Phase 1 additions)
     "biller_added", "feature_abandoned", "oxxo_to_digital_upgrade",
+    // Cross-platform / Pago Seguro sister-site signals
+    "pago_seguro_click", "rent_payment_initiated",
   ]);
 
   if (!ALLOWED_EVENTS.has(event_type)) {
