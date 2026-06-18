@@ -1,0 +1,40 @@
+Hi {{contact.FIRSTNAME | default: "there"}},
+I'm Lloyd Wright, founder of PagoYa — a Puerto Vallarta-based app that helps your tenants pay their CFE bill from their phone in about two minutes, using cash at OXXO or a bank transfer.
+I want to make this worth your time, so I'll start with what's in it for you.
+──────────────────
+
+YOU EARN $150 MXN FOR EVERY TENANT WHO REGISTERS
+
+──────────────────
+Here's how it works:
+
+You share your personal referral link with your tenants (takes 30 seconds — we'll set it up for you).
+Any tenant who registers using your link and completes their first CFE payment gets $150 MXN in free credit — on us.
+You earn $150 MXN in referral credit for each tenant who activates.
+
+For a landlord with 5 units, that's $750 MXN in your pocket just for one message to your tenants.
+──────────────────
+
+WHAT YOUR TENANTS GET
+
+──────────────────
+Every time a tenant pays a bill through PagoYa, they build their PagoYa Trust Index (PTI) — a financial reliability score based on their actual payment behavior. Think of it as a credit history built from the ground up, one bill at a time.
+For your tenants who are unbanked or have no Buró de Crédito file, this is the first time their good payment behavior has ever been recorded anywhere.
+──────────────────
+
+WHAT YOU GET AS A LANDLORD
+
+──────────────────
+
+A monthly PTI summary report for each tenant who registers through your link — showing their payment streak, reliability tier (Bronze / Silver / Gold), and financial consistency score.
+Early visibility into which tenants are financially consistent before any rent dispute ever starts.
+Zero risk — we are not touching rent payments. This is purely CFE and utility bill payment to start. No platform migration required.
+
+──────────────────
+
+HOW TO GET STARTED
+
+──────────────────
+Reply to this email or send me a WhatsApp at +52 322 183 9799 and I'll set up your personal referral link within 24 hours. You share it once. We handle everything else.
+PagoYa is live at pagoyamx.com. Built in Puerto Vallarta, for Puerto Vallarta.
+Atentamente
