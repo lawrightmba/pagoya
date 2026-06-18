@@ -32,7 +32,11 @@ router.post("/", async (req: Request, res: Response) => {
     // Consumption & trajectory (Phase 1 additions)
     "biller_added", "feature_abandoned", "oxxo_to_digital_upgrade",
     // Cross-platform / Pago Seguro sister-site signals
-    "pago_seguro_click", "rent_payment_initiated",
+    "pago_seguro_click", "rent_payment_initiated", "high_value_intent_click",
+    // Paula WhatsApp AI interaction depth
+    "paula_interaction", "paula_2fa_confirmed", "paula_2fa_declined",
+    // P2P transfer signals (logged server-side after successful transfer)
+    "p2p_sent",
   ]);
 
   if (!ALLOWED_EVENTS.has(event_type)) {

@@ -499,6 +499,21 @@ export default function BillPaySelector() {
       window.open(svc.crossSellUrl as string, "_blank", "noopener,noreferrer");
       return;
     }
+    // Track high-value service selection intent for PTI scoring (fire-and-forget)
+    const HIGH_VALUE_CATS = new Set(["Gas", "Renta", "Seguro", "Predial"]);
+    if (HIGH_VALUE_CATS.has((svc as { category?: string }).category ?? "")) {
+      try {
+        const tel = phone || localStorage.getItem("pagoya_telefono") || "";
+        if (tel) {
+          const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+          fetch(`${BASE}/api/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefono: tel, event_type: "high_value_intent_click", metadata: { service_id: svc.id, category: (svc as { category?: string }).category } }),
+          }).catch(() => {});
+        }
+      } catch {}
+    }
     setSelectedService(svc);
     setReferencia("");
     setRefError(null);

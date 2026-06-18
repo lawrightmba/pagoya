@@ -670,6 +670,7 @@ router.post("/", async (req: Request, res: Response) => {
 
       if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
         console.log(`[Paula] Payment confirmation: cancelled | biller: ${pending.serviceName} | amount: ${pending.monto} | userId: ${pending.telefono}`);
+        db.execute(drizzleSql`INSERT INTO user_events (telefono, event_type, metadata) VALUES (${phoneKey}, 'paula_2fa_declined', ${JSON.stringify({ biller: pending.serviceName, amount: pending.monto })}::jsonb)`).catch(() => {});
         await deletePendingPayment(phoneKey);
         await sendWhatsApp(phoneKey, m.paymentCancelled(lang));
         return;
@@ -677,6 +678,7 @@ router.post("/", async (req: Request, res: Response) => {
 
       if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
         console.log(`[Paula] Payment confirmation: confirmed | biller: ${pending.serviceName} | amount: ${pending.monto} | userId: ${pending.telefono}`);
+        db.execute(drizzleSql`INSERT INTO user_events (telefono, event_type, metadata) VALUES (${phoneKey}, 'paula_2fa_confirmed', ${JSON.stringify({ biller: pending.serviceName, amount: pending.monto })}::jsonb)`).catch(() => {});
 
         // Reset TTL to 5 minutes from now (spec: TTL starts from SÍ)
         await confirmPendingPayment(phoneKey);
@@ -966,6 +968,14 @@ router.post("/", async (req: Request, res: Response) => {
       await sendWhatsApp(phoneKey, reply);
     }
 
+    // Log Paula interaction for PTI behavioral scoring (fire-and-forget)
+    {
+      const queryType = /pagar|pago|cfe|telmex|agua|predial|luz|gas|factur/i.test(userMessage) ? "bill_query"
+        : /saldo|balance|cuánto|cuanto|dinero|tengo|cuenta/i.test(userMessage) ? "balance_query"
+        : /transferir|mandar|enviar|transfer|p2p/i.test(userMessage) ? "p2p_query"
+        : "general_query";
+      db.execute(drizzleSql`INSERT INTO user_events (telefono, event_type, metadata) VALUES (${phoneKey}, 'paula_interaction', ${JSON.stringify({ query_type: queryType, msg_len: userMessage.length })}::jsonb)`).catch(() => {});
+    }
     logger.info({ phoneKey, hasPendingPayment: !!pendingPayment }, "whatsapp-agent: reply sent");
   } catch (err) {
     logger.error({ err }, "whatsapp-agent: error");

@@ -25,6 +25,7 @@ export interface PushPayload {
   body: string;
   url?: string;
   icon?: string;
+  telefono?: string;  // included in notification data so sw.js can log push_opened events
 }
 
 export async function sendPushToUser(telefono: string, payload: PushPayload): Promise<void> {

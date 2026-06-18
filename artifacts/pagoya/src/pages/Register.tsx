@@ -1015,7 +1015,7 @@ export default function Register() {
           textAlign: "center",
           lineHeight: 1.5,
         }}>
-          Al registrarte aceptas recibir mensajes por WhatsApp · By registering you agree to receive WhatsApp messages
+          Al registrarte aceptas recibir mensajes de WhatsApp y que tu actividad en la plataforma sea usada para calcular tu PagoYa Trust Index (perfil conductual de confianza financiera). · By registering you consent to WhatsApp messages and behavioral scoring for your Trust Index.
         </p>
       </div>
     </div>

@@ -157,5 +157,11 @@ export async function p2pTransfer(
     "p2p: transfer completed",
   );
 
+  // Log P2P send event for PTI behavioral scoring (fire-and-forget, non-blocking)
+  db.execute(sql`
+    INSERT INTO user_events (telefono, event_type, metadata)
+    VALUES (${senderTelefono}, 'p2p_sent', ${JSON.stringify({ amount: amountMXN, recipient: receiverTelefono })}::jsonb)
+  `).catch(() => {});
+
   return { senderTxId: senderTxId!, receiverTxId: receiverTxId!, newSenderBalance: newSenderBalance!, receiverIsNew };
 }

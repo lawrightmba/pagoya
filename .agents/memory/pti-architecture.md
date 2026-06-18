@@ -8,54 +8,75 @@ description: PagoYa Trust Index — dual-model system, DB schema gotchas, cron s
 | Model | File | Storage | Schedule | Purpose |
 |---|---|---|---|---|
 | PagoScore | `api-server/src/services/pagoScore.ts` | `credit_profiles.pago_score` | Nightly 2AM MX | B2B credit profile, Paula AI context, 4-dim (trajectory/financial/routine/social) |
-| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v2.0-4dim** (upgraded June 2026) |
+| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v2.1-4dim** (upgraded June 2026) |
 
 Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 
-## DB schema gotchas (critical — cost debugging time)
+## DB schema gotchas (critical)
 
-- `bill_payments`: biller column is `service_id` AND `empresa`. Status values: `completed`, `success`, `completed_ok`, `confirmed`.
-- `wallet_transactions`: NO `telefono` column. Uses `wallet_id` (UUID) → joins to `wallets.id`. Use `wallets.balance_mxn` directly for balance. Use subquery join for load sums.
-- `wallets.user_id` = telefono (text, format varies: `3221000001` or `+5213221000001`).
+- `bill_payments`: has both `service_id` and `empresa`. Status values: `completed`, `success`, `completed_ok`, `confirmed`.
+- `wallet_transactions`: NO `telefono` column. Uses `wallet_id` (UUID) → join to `wallets.id`. `wallets.user_id` = telefono.
+- P2P transfers stored as `type='transfer_send'` (sender) / `type='transfer_receive'` (receiver) in `wallet_transactions`.
 - `user_mission_progress` (NOT `user_missions`): columns `telefono`, `mission_id`, `completed_at`, `rewarded_at`.
-- `pti_behavioral_signals` table: per-computation audit trail + B2B export (created June 2026).
+- `pti_behavioral_signals` table: per-computation audit trail + B2B export + model training dataset. Has `computed_at` indexed for time-series queries.
 
-## PTI v2.0-4dim formula (pti.ts — current)
+## PTI v2.1-4dim formula (pti.ts — current)
 
 | Dimension | Max | Components |
 |---|---|---|
 | Payment Reliability (PR) | 30 | payment_streak(20) + payment_day_consistency(10) |
-| Behavioral Consistency (BC) | 20 | session_cadence(8) + game_engagement(7) + wallet_load_rhythm(5) |
-| Engagement Depth (ED) | 25 | biller_diversity(10) + kyc_verified(10) + spend_category_mix(5) |
-| Cash-Flow Stability (CF) | 25 | wallet_balance(12) + load_spend_ratio(8) + account_age(5) |
+| Behavioral Consistency (BC) | 20 | session_cadence(5) + game_engagement(5) + wallet_load_rhythm(3) + paula_interaction_depth(4) + push_engagement(3) |
+| Engagement Depth (ED) | 25 | biller_diversity(8) + kyc_verified(10) + spend_category_mix(4) + signup_utilization_speed(3) |
+| Cash-Flow Stability (CF) | 25 | wallet_balance(10) + load_spend_ratio(7) + p2p_network_activity(3) + account_age(5) |
 
-- `payment_day_consistency`: STDDEV of bill_payment day-of-month over 6 months (≤2 → 10pts, ≤5 → 7pts, ≤8 → 4pts, ≤12 → 2pts); needs ≥3 payments.
-- `session_cadence`: COUNT(DISTINCT DATE) from user_events WHERE event_type='login' LAST 30 days.
-- `game_engagement`: scratch_card_plays + spin_results + missions_done×2 (last 30d).
-- `wallet_load_rhythm`: STDDEV of load transaction dates over 90 days.
-- `spend_category_mix`: utility ratio from empresa ILIKE CFE/agua/gas pattern; +2pts if pago_seguro_click ≥1.
-- `pago_seguro_click`: tracked via POST /api/events; logged in BillPaySelector when renta_pagoseguro is tapped.
-- **Backward compat**: legacy flat fields still written to breakdown JSONB (payment_streak, biller_diversity, etc.) for old DB rows.
-- **PTIScoreCard.tsx**: shows 4-dimension DimCard bars when `is4Dim=true`, falls back to legacy list otherwise.
+### Signal sources
+- `payment_day_consistency`: STDDEV of bill_payment DOM over 6 months (≤2→10, ≤5→7, ≤8→4, ≤12→2); needs ≥3 payments
+- `session_cadence`: COUNT(DISTINCT DATE) from `user_events` WHERE event_type='login' last 30d
+- `game_engagement`: scratch_card_plays + spin_results + missions_done×2 last 30d
+- `wallet_load_rhythm`: STDDEV of wallet_transactions confirmed load dates over 90d
+- `paula_interaction_depth`: COUNT user_events WHERE event_type='paula_interaction' last 30d + 2FA bonus
+- `push_notification_engagement`: COUNT user_events WHERE event_type='push_opened' last 30d
+- `biller_diversity`: COUNT(DISTINCT service_id) from bill_payments
+- `kyc_verified`: kyc_submitted_at IS NOT NULL; full tier = 10pts, simplified = 7pts
+- `spend_category_mix`: utility ratio from empresa ILIKE CFE/agua/gas; +1pt if pago_seguro_click or high_value_intent_click exists
+- `signup_utilization_speed`: hours from users.created_at to first bill_payment (<6h=3, <24h=2, <72h=1)
+- `wallet_balance`: current balance_mxn from wallets
+- `load_spend_ratio`: total loads / total spend last 90d
+- `p2p_network_activity`: COUNT(transfer_send) + DISTINCT recipients from description field last 90d
+- `account_age`: days since users.created_at
 
-## Legacy 7-component formula (v1 — still in DB for existing users until monthly recompute)
+### Legacy flat fields
+Still written to breakdown JSONB for backward compat; PTIScoreCard reads `is4Dim` flag.
 
-payment_streak(25) + biller_diversity(15) + kyc_verified(15) + wallet_balance(15) + mission_completions(15) + load_spend_ratio(10) + account_age(5)
+## Event types logged (user_events table) — with source
+
+| event_type | Logged from | Used in |
+|---|---|---|
+| login | pagoya frontend | session_cadence (BC) |
+| push_opened | sw.js notificationclick | push_engagement (BC); requires `telefono` in push payload data |
+| paula_interaction | whatsapp-agent.ts (every reply) | paula_depth (BC); has `query_type` metadata |
+| paula_2fa_confirmed | whatsapp-agent.ts (payment SÍ) | paula_depth 2FA bonus (BC) |
+| paula_2fa_declined | whatsapp-agent.ts (payment NO) | paula_depth 2FA bonus (BC) |
+| p2p_sent | p2p.ts (after transfer_send) | p2p_network_activity (CF) |
+| pago_seguro_click | BillPaySelector.tsx crossSell | spend_category_mix intent (ED) |
+| high_value_intent_click | BillPaySelector.tsx Gas/Renta/Seguro/Predial | spend_category_mix intent (ED) |
 
 ## API endpoints
 
-- `GET /api/pti/score?telefono=xxx` — returns stored score or `{is_new_user: true}` if null
-- `POST /api/pti/compute-now` — telefono in body; self-service (no admin token required)
-- `POST /api/events` — ALLOWED_EVENTS includes `pago_seguro_click`, `rent_payment_initiated`
+- `GET /api/pti/score?telefono=xxx` — stored score or `{is_new_user: true}` if null
+- `POST /api/pti/compute-now` — telefono in body; no admin token required
 
 ## Frontend
 
-- `PTIScoreCard` → `artifacts/pagoya/src/components/PTIScoreCard.tsx` — props: `telefono`, `refreshKey`, `lang`, `pendingCompute`
-- `PTIIntroModal` → `artifacts/pagoya/src/components/PTIIntroModal.tsx` — full-screen, localStorage guard `pagoya_pti_intro_seen`
-- Both inserted in `Home.tsx`. Card below WalletBalanceWidget. Modal at top of return before `<Helmet>`.
-- `refreshKey` increments on intro modal dismiss → forces score re-fetch.
-- Scorecard has SVG circular progress ring + 4 animated DimCard fill bars (staggered: ring starts at t=0, bars at t=300ms).
+- `PTIScoreCard` → `artifacts/pagoya/src/components/PTIScoreCard.tsx` — 4 animated DimCard bars; SVG ring
+- `PTIIntroModal` → `artifacts/pagoya/src/components/PTIIntroModal.tsx` — localStorage guard `pagoya_pti_intro_seen`
+- Both in `Home.tsx`; `refreshKey` increments on intro dismiss → forces score re-fetch
 
-## WhatsApp notification
+## Compliance
 
-In `computePTIForAllUsers()` (monthly batch only — NOT on compute-now). Only fires for users with ≥1 completed bill_payment. Message includes score/tier and lowest-dimension improvement tip.
+- `AvisoPrivacidad.tsx`: added "Conductuales" row in data table + PTI in Finalidades primarias (Ley Fintech 2018 reference)
+- `Register.tsx`: consent text now explicitly covers WhatsApp messages AND behavioral scoring for Trust Index
+- Push notifications: `PushPayload.telefono?` field added → sw.js reads it for push_opened event tracking
+
+## WhatsApp notification (monthly batch only)
+Fires for users with ≥1 completed payment. Lowest-dimension improvement tip sent.

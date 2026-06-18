@@ -121,6 +121,11 @@ export default function AvisoPrivacidad() {
                   <td>Número de contrato CFE, número de cuenta Telmex, número de línea celular</td>
                   <td>Al ingresar un servicio para pagar</td>
                 </tr>
+                <tr>
+                  <td><strong style={{ color: "#E2E8F0" }}>Conductuales</strong></td>
+                  <td>Frecuencia de acceso, días y horarios de uso, categorías de servicios consultadas, actividad en juegos de recompensas (Raspa y Gana, Rueda), interacciones con el asistente Paula vía WhatsApp, apertura de notificaciones push</td>
+                  <td>Automáticamente al usar la plataforma (con su consentimiento expreso al registrarse)</td>
+                </tr>
               </tbody>
             </table>
             <p style={{ marginTop: "16px", color: "#94A3B8", fontSize: "13px" }}>
@@ -143,6 +148,7 @@ export default function AvisoPrivacidad() {
               <li>Verificar su identidad al vincular una cuenta bancaria para débito directo.</li>
               <li>Cumplir con obligaciones legales, fiscales y regulatorias aplicables.</li>
               <li>Prevenir fraudes, lavado de dinero y operaciones ilícitas.</li>
+              <li>Generar su <strong style={{ color: "#E2E8F0" }}>PagoYa Trust Index (PTI)</strong> — un perfil conductual de confiabilidad financiera calculado automáticamente a partir de su actividad en la plataforma (historial de pagos, frecuencia de uso, interacciones con el asistente), que puede compartirse con socios financieros bajo su consentimiento expreso, de conformidad con la Ley Fintech 2018.</li>
             </ul>
             <p style={{ marginBottom: "10px" }}>
               <strong style={{ color: "#E2E8F0" }}>Finalidades secundarias</strong> (puede oponerse sin afectar el servicio):
