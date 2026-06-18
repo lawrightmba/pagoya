@@ -16,9 +16,9 @@ export default function Slide09GoToMarket() {
         style={{ width: "0.4vw", background: "linear-gradient(180deg, #00C875 0%, transparent 100%)", opacity: 0.7 }}
       />
 
-      <div className="relative z-10 flex flex-col h-full" style={{ padding: "3.5vh 8vw 2.5vh" }}>
+      <div className="relative z-10 flex flex-col h-full" style={{ padding: "2.5vh 8vw 2vh" }}>
 
-        <div style={{ marginBottom: "1.8vh" }}>
+        <div style={{ marginBottom: "1.2vh" }}>
           <p style={{
             fontFamily: "DM Sans, sans-serif",
             fontSize: "1.5vw",
@@ -47,24 +47,25 @@ export default function Slide09GoToMarket() {
           <div style={{ width: "6vw", height: "0.35vh", background: "#00C875" }} />
         </div>
 
-        <div className="grid grid-cols-3 gap-[2vw]" style={{ marginBottom: "1.8vh", flex: 1, minHeight: 0 }}>
+        <div className="grid grid-cols-3 gap-[2vw]" style={{ marginBottom: "1.2vh", flex: 1, minHeight: 0, overflow: "hidden" }}>
 
           <div style={{
             background: "rgba(255,255,255,0.05)",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "0.8vw",
-            padding: "1.6vh 2vw"
+            padding: "1.2vh 1.6vw",
+            overflow: "hidden"
           }}>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.2vh" }}>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
               {es ? "Lo que recopilamos" : "What we collect"}
             </p>
             {(es
               ? ["Consistencia de pagos", "Cadencia y mezcla de facturas", "Frecuencia de carga de efectivo", "Señales de ingresos", "Puntuación de confiabilidad", "Historial de múltiples proveedores"]
               : ["Payment consistency", "Bill cadence and mix", "Cash load frequency", "Income signals", "Reliability score", "Multi-provider history"]
             ).map(d => (
-              <div key={d} className="flex items-center gap-[0.7vw]" style={{ marginBottom: "0.55vh" }}>
+              <div key={d} className="flex items-center gap-[0.7vw]" style={{ marginBottom: "0.4vh" }}>
                 <div style={{ width: "0.35vw", height: "0.35vw", borderRadius: "50%", background: "#00C875", flexShrink: 0 }} />
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", color: "rgba(255,255,255,0.8)" }}>{d}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.8)" }}>{d}</p>
               </div>
             ))}
           </div>
@@ -73,9 +74,10 @@ export default function Slide09GoToMarket() {
             background: "rgba(0,200,117,0.08)",
             border: "1px solid rgba(0,200,117,0.2)",
             borderRadius: "0.8vw",
-            padding: "1.6vh 2vw"
+            padding: "1.2vh 1.6vw",
+            overflow: "hidden"
           }}>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.2vh" }}>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
               {es ? "Quién lo paga" : "Who pays for it"}
             </p>
             {(es
@@ -92,9 +94,9 @@ export default function Slide09GoToMarket() {
                   { who: "Neobanks & fintechs", why: "Verified financial identity pre-attached to acquisition" },
                 ]
             ).map(({ who, why }) => (
-              <div key={who} style={{ marginBottom: "0.9vh" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.15vh" }}>{who}</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{why}</p>
+              <div key={who} style={{ marginBottom: "0.65vh" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{who}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{why}</p>
               </div>
             ))}
           </div>
@@ -103,9 +105,10 @@ export default function Slide09GoToMarket() {
             background: "rgba(255,92,26,0.08)",
             border: "1px solid rgba(255,92,26,0.2)",
             borderRadius: "0.8vw",
-            padding: "1.6vh 2vw"
+            padding: "1.2vh 1.6vw",
+            overflow: "hidden"
           }}>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "1.2vh" }}>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
               {es ? "Fuentes de ingreso" : "Revenue streams"}
             </p>
             {(es
@@ -122,9 +125,9 @@ export default function Slide09GoToMarket() {
                   { label: "Credit history API", sub: "Verified financial identity sold as a service to partners" },
                 ]
             ).map(({ label, sub }) => (
-              <div key={label} style={{ marginBottom: "0.9vh" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.15vh" }}>{label}</p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{sub}</p>
+              <div key={label} style={{ marginBottom: "0.65vh" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{label}</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.3 }}>{sub}</p>
               </div>
             ))}
           </div>
