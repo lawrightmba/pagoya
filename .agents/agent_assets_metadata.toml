@@ -316,4 +316,10 @@ title = "background music 115s"
 id = "IYcCciGONAVaNzSe6jGjE"
 uri = "file://.local/outputs/PagoYa-500Global-Pitch-Deck.pdf"
 type = "pdf"
-title = "PagoYa — 500 Global LATAM Pitch Deck (PDF)"
+title = "PagoYa — Pitch Deck (Español)"
+
+[[outputs]]
+id = "_ZBv4TpBd5Nt8qK4fMIPd"
+uri = "file://.local/outputs/PagoYa-500Global-Pitch-Deck-EN.pdf"
+type = "pdf"
+title = "PagoYa — Pitch Deck (English)"
