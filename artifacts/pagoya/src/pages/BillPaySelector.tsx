@@ -436,7 +436,7 @@ export default function BillPaySelector() {
     const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
     Promise.all([
       fetch(`${BASE}/api/wallet/balance?telefono=${encodeURIComponent(phone)}`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=1`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${BASE}/api/historial?phone=${encodeURIComponent(phone)}&limit=1`).then(r => r.ok ? r.json() : null).catch(() => null),
     ]).then(([bal, hist]) => {
       const balance = bal?.balance ?? bal?.balanceMXN ?? 0;
       const hasCompletedPayment = Array.isArray(hist) && hist.some((r: { status: string }) =>
@@ -452,7 +452,7 @@ export default function BillPaySelector() {
     const phone = (() => { try { return localStorage.getItem("pagoya_phone") ?? ""; } catch { return ""; } })();
     if (!phone) return;
     const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-    fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=20`)
+    fetch(`${BASE}/api/historial?phone=${encodeURIComponent(phone)}&limit=20`)
       .then((r) => r.ok ? r.json() : null)
       .catch(() => null)
       .then((rows: null | Array<{ service_name: string; status: string }>) => {

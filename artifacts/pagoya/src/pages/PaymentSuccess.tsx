@@ -102,7 +102,7 @@ export default function PaymentSuccess() {
     })();
     if (!phone) return;
     const BASE = (window as Window & { BASE_URL?: string }).BASE_URL ?? "";
-    fetch(`${BASE}/api/pagoya/historial?telefono=${encodeURIComponent(phone)}&limit=2`)
+    fetch(`${BASE}/api/historial?phone=${encodeURIComponent(phone)}&limit=2`)
       .then(r => r.ok ? r.json() : null)
       .then((rows: null | Array<{ status: string }>) => {
         if (!rows) return;
