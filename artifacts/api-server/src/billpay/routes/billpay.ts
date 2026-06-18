@@ -486,16 +486,30 @@ router.post("/pay", async (req: Request, res: Response) => {
       const updated = await db.execute(
         sql`UPDATE landlords SET total_commission_mxn = total_commission_mxn + 150, updated_at = NOW()
             WHERE landlord_code = ${landlordCode}
-            RETURNING full_name, total_commission_mxn`,
+            RETURNING full_name, total_commission_mxn, whatsapp`,
       );
       if (updated.rows.length === 0) return;
-      const { full_name, total_commission_mxn } = updated.rows[0] as { full_name: string; total_commission_mxn: number };
+      const { full_name, total_commission_mxn, whatsapp: landlordWhatsapp } = updated.rows[0] as { full_name: string; total_commission_mxn: number; whatsapp: string | null };
 
       await db.execute(
         sql`INSERT INTO landlord_commissions (landlord_code, user_id, payment_id, amount_mxn)
             VALUES (${landlordCode}, ${telefono}, ${String(paymentId)}, 150)`,
       );
 
+      // Notify the landlord directly on their WhatsApp
+      if (landlordWhatsapp) {
+        const landlordFirstName = full_name.trim().split(" ")[0] || full_name.trim();
+        sendWhatsApp(
+          landlordWhatsapp,
+          `💰 *¡Comisión generada, ${landlordFirstName}!*\n\n` +
+          `Uno de tus inquilinos completó su primer pago en PagoYa y ganaste *$150 MXN* de comisión.\n\n` +
+          `💼 Total acumulado: *$${total_commission_mxn} MXN*\n\n` +
+          `Tus comisiones se consolidan mensualmente. Escríbenos si tienes preguntas.\n\n` +
+          `_PagoYa — pagoyamx.com_`,
+        ).catch(() => {});
+      }
+
+      // Also notify admin
       const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
       if (adminNumber) {
         sendWhatsApp(

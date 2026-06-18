@@ -399,13 +399,106 @@ function scheduleMonthly1stAt(utcHour: number, fn: () => Promise<void>, label: s
   scheduleNext();
 }
 
+// ── Monthly landlord PTI report — runs after computePTIForAllUsers ────────────
+// Sends each landlord (who has a WhatsApp number) a summary of their tenants'
+// PTI scores, tiers, and payment streaks for the month.
+export async function sendLandlordMonthlyReports(): Promise<void> {
+  logger.info("pti-cron: sendLandlordMonthlyReports starting");
+  try {
+    const { db } = await import("@workspace/db");
+
+    // All active landlords with a WhatsApp number who have at least one tenant
+    const landlords = await db.execute(sql`
+      SELECT l.landlord_code, l.full_name, l.whatsapp, l.total_commission_mxn
+      FROM landlords l
+      WHERE l.status = 'active'
+        AND l.whatsapp IS NOT NULL
+        AND l.whatsapp != ''
+        AND EXISTS (
+          SELECT 1 FROM users u WHERE u.referred_by_landlord = l.landlord_code
+        )
+      ORDER BY l.full_name
+    `);
+
+    const monthLabel = new Date().toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+
+    for (const row of landlords.rows) {
+      const { landlord_code, full_name, whatsapp, total_commission_mxn } =
+        row as { landlord_code: string; full_name: string; whatsapp: string; total_commission_mxn: number };
+
+      try {
+        // Get all tenants for this landlord with their PTI data
+        const tenants = await db.execute(sql`
+          SELECT
+            COALESCE(u.kyc_full_name, 'Inquilino') AS name,
+            COALESCE(u.pti_score, 0)               AS pti_score,
+            COALESCE(u.consecutive_payment_months, 0) AS streak
+          FROM users u
+          WHERE u.referred_by_landlord = ${landlord_code}
+          ORDER BY u.pti_score DESC NULLS LAST
+          LIMIT 20
+        `);
+
+        if (tenants.rows.length === 0) continue;
+
+        // Map score → tier label + emoji
+        function tierLabel(score: number): string {
+          if (score >= 85) return "🏆 Élite";
+          if (score >= 70) return "🏅 Oro";
+          if (score >= 50) return "⭐ Plata";
+          if (score >= 30) return "🟤 Bronce";
+          return "🔴 Nuevo";
+        }
+
+        const landlordFirstName = full_name.trim().split(" ")[0] || full_name.trim();
+        const tenantLines = tenants.rows.map((t) => {
+          const { name, pti_score, streak } = t as { name: string; pti_score: number; streak: number };
+          const firstName = name.trim().split(" ")[0] || name.trim();
+          const streakText = streak > 0 ? `${streak} mes${streak !== 1 ? "es" : ""} seguido${streak !== 1 ? "s" : ""}` : "sin racha aún";
+          return `• ${firstName}: ${tierLabel(pti_score)} (${Math.round(pti_score)} pts) · ${streakText}`;
+        }).join("\n");
+
+        const activatedCount = (tenants.rows as Array<{ pti_score: number }>).filter(t => t.pti_score > 0).length;
+
+        const message =
+          `🏠 *Reporte PagoYa — ${monthLabel}*\n\n` +
+          `Hola ${landlordFirstName}, aquí está el resumen de confianza financiera de tus inquilinos:\n\n` +
+          `${tenantLines}\n\n` +
+          (total_commission_mxn > 0
+            ? `💰 Comisión total acumulada: *$${Number(total_commission_mxn).toFixed(0)} MXN*\n\n`
+            : "") +
+          `📌 _${activatedCount} de ${tenants.rows.length} inquilinos han completado al menos un pago._\n\n` +
+          `_PagoYa — construyendo historial financiero, una cuenta a la vez._`;
+
+        await sendWhatsApp(whatsapp, message);
+        logger.info({ landlord_code, tenants: tenants.rows.length }, "pti-cron: landlord monthly report sent");
+
+        // Rate-limit: 500ms between landlords to avoid WhatsApp flooding
+        await new Promise(r => setTimeout(r, 500));
+      } catch (err) {
+        logger.error({ err, landlord_code }, "pti-cron: landlord monthly report failed for one landlord");
+      }
+    }
+
+    logger.info({ count: landlords.rows.length }, "pti-cron: sendLandlordMonthlyReports complete");
+  } catch (err) {
+    logger.error({ err }, "pti-cron: sendLandlordMonthlyReports top-level failure");
+  }
+}
+
+// ── Monthly batch wrapper — PTI compute + landlord reports ────────────────────
+async function runMonthlyBatchAndReport(): Promise<void> {
+  await computePTIForAllUsers();
+  await sendLandlordMonthlyReports();
+}
+
 export function startPtiCron(): void {
   // 2 AM Mexico City (UTC-6 = 08:00 UTC) — after overnight transactions settle
   scheduleDailyAt(8, runNightlyPtiBatch, "nightlyPtiBatch");
   // 5 PM Mexico City (UTC-6 = 23:00 UTC) — scratch card scarcity reminder
   scheduleDailyAt(23, sendScratchCardReminders, "scratchCardReminders");
-  // 1st of month at 03:00 AM Mexico City (09:00 UTC) — monthly user-facing PTI score
-  scheduleMonthly1stAt(9, computePTIForAllUsers, "monthlyPtiBatch");
+  // 1st of month at 03:00 AM Mexico City (09:00 UTC) — PTI compute + landlord reports
+  scheduleMonthly1stAt(9, runMonthlyBatchAndReport, "monthlyPtiBatch");
   logger.info("[PTI Cron] Scheduled: runs 1st of month at 03:00 AM MX");
   logger.info("pti-cron: scheduled (PTI 2 AM MX / scratch reminder 5 PM MX / monthly PTI 1st of month 3 AM MX)");
 }
