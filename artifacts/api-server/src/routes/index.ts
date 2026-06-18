@@ -38,6 +38,7 @@ import pendingPaymentsRouter from "./pendingPayments.js";
 import videoConvertRouter from "./videoConvert.js";
 import eventsRouter from "./events.js";
 import gamesRouter from "./games.js";
+import b2bRouter from "./b2b.js";
 import ptiRouter from "./pti.js";
 import landlordRouter from "./landlords.js";
 import complaintRouter from "./complaints.js";
@@ -83,6 +84,7 @@ router.use("/video", videoConvertRouter);
 router.use("/events", eventsRouter);
 router.use("/games", gamesRouter);
 router.use("/pti", ptiRouter);
+router.use("/b2b", b2bRouter);
 router.use("/landlords", landlordRouter);
 router.use("/complaints", complaintRouter);
 
