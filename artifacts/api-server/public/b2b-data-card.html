@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PagoYa Trust Index — Data Card v2.1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; padding: 32px 40px; max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; color: #0a0a23; letter-spacing: -0.4px; }
+  h2 { font-size: 13px; font-weight: 700; color: #0a0a23; text-transform: uppercase; letter-spacing: 0.8px; margin: 28px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+  h3 { font-size: 12px; font-weight: 600; color: #1a1a2e; margin: 10px 0 4px; }
+  p, li { line-height: 1.65; color: #374151; }
+  ul { padding-left: 18px; margin: 4px 0 10px; }
+  li { margin-bottom: 2px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #00C875; padding-bottom: 12px; margin-bottom: 4px; }
+  .header-meta { text-align: right; font-size: 10px; color: #6b7280; line-height: 1.8; }
+  .header-meta strong { color: #374151; }
+  .badge { display: inline-block; background: #00C875; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; }
+  .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .dim-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+  .dim-card .dim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .dim-card .dim-name { font-weight: 700; font-size: 12px; color: #0a0a23; }
+  .dim-card .dim-pts { font-weight: 700; font-size: 11px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #374151; }
+  .dim-card .dim-code { font-size: 10px; color: #9ca3af; font-weight: 600; letter-spacing: 1px; }
+  .dim-card ul { font-size: 11px; margin: 0; padding-left: 14px; }
+  .dim-card li { margin-bottom: 1px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+  th { background: #f8fafc; text-align: left; padding: 6px 8px; font-weight: 600; color: #374151; border: 1px solid #e2e8f0; }
+  td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: top; color: #374151; }
+  td:first-child { font-family: 'Courier New', monospace; font-size: 10px; color: #1a1a2e; white-space: nowrap; }
+  .code { font-family: 'Courier New', monospace; font-size: 10px; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; color: #1a1a2e; }
+  .note { background: #fefce8; border-left: 3px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #78350f; margin: 10px 0; }
+  .info { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #1e40af; margin: 10px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .score-bar { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 11px; }
+  .score-bar .label { min-width: 90px; font-weight: 500; }
+  .score-bar .bar { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+  .score-bar .fill { height: 100%; border-radius: 3px; }
+  .score-bar .pts { min-width: 40px; text-align: right; color: #6b7280; }
+  footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between; }
+  @media print {
+    body { padding: 20px 24px; }
+    h2 { page-break-before: auto; }
+    .dim-grid { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div style="font-size:10px;font-weight:600;color:#6b7280;letter-spacing:1px;margin-bottom:4px;">PRODUCT METHODOLOGY DOCUMENT</div>
+    <h1>PagoYa Trust Index <span class="badge">PTI</span></h1>
+    <div style="font-size:11px;color:#6b7280;margin-top:4px;">Alternative behavioral credit data for the underbanked population of Mexico</div>
+  </div>
+  <div class="header-meta">
+    <div><strong>Model Version</strong> v2.1-4dim</div>
+    <div><strong>Effective Date</strong> June 2026</div>
+    <div><strong>Score Range</strong> 0 – 100</div>
+    <div><strong>Refresh Cycle</strong> Monthly (1st, 3:00 AM MX)</div>
+    <div><strong>Coverage</strong> PagoYa registered users, MX</div>
+  </div>
+</div>
+
+<h2>1. What the PTI Measures</h2>
+<p>
+  The PagoYa Trust Index is a <strong>behavioral creditworthiness score</strong> derived entirely from a user's activity inside the PagoYa digital wallet — bill payments, session patterns, wallet transactions, WhatsApp interactions, and peer-to-peer transfers. It is designed for populations with no formal credit bureau file (thin-file or no-file), where transactional and behavioral data is the primary signal available.
+</p>
+<p style="margin-top:8px;">
+  The PTI does not use: bureau data, bank account data, employment records, income declarations, or demographic surveys. All inputs are observed, not self-reported.
+</p>
+<div class="note">
+  <strong>Regulatory basis:</strong> Data collection and scoring are performed under the user's explicit consent captured at registration, in compliance with Mexico's Ley para Regular las Instituciones de Tecnología Financiera (Ley Fintech, 2018) and the Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).
+</div>
+
+<h2>2. Score Architecture — 4 Dimensions</h2>
+
+<div class="dim-grid">
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-code">PR</div>
+        <div class="dim-name">Payment Reliability</div>
+      </div>
+      <div class="dim-pts">max 30 pts</div>
+    </div>
+    <ul>
+      <li><strong>Payment streak</strong> — consecutive months with ≥1 completed payment (1pt/month, cap 20)</li>
+      <li><strong>Payment day consistency</strong> — low std-dev of DOM across 6 months: signals scheduled, proactive payer (max 10)</li>
+    </ul>
+  </div>
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-code">BC</div>
+        <div class="dim-name">Behavioral Consistency</div>
+      </div>
+      <div class="dim-pts">max 20 pts</div>
+    </div>
+    <ul>
+      <li><strong>Session cadence</strong> — login days per 30-day window + time-of-day variance (max 5)</li>
+      <li><strong>Game &amp; mission engagement</strong> — loyalty feature activity proxy for habit formation (max 5)</li>
+      <li><strong>Wallet load rhythm</strong> — load frequency std-dev over 90 days (max 3)</li>
+      <li><strong>Paula interaction depth</strong> — WhatsApp AI queries + 2FA completion rate (max 4)</li>
+      <li><strong>Push notification engagement</strong> — notification open rate, last 30 days (max 3)</li>
+    </ul>
+  </div>
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-code">ED</div>
+        <div class="dim-name">Engagement Depth</div>
+      </div>
+      <div class="dim-pts">max 25 pts</div>
+    </div>
+    <ul>
+      <li><strong>Biller diversity</strong> — distinct service providers paid (max 8)</li>
+      <li><strong>KYC verified</strong> — identity verification tier: simplified (7) or full (10)</li>
+      <li><strong>Spend category mix</strong> — utility payment ratio; high-value intent clicks (max 4)</li>
+      <li><strong>Signup utilization speed</strong> — hours from registration to first completed payment (max 3)</li>
+    </ul>
+  </div>
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-code">CF</div>
+        <div class="dim-name">Cash-Flow Stability</div>
+      </div>
+      <div class="dim-pts">max 25 pts</div>
+    </div>
+    <ul>
+      <li><strong>Wallet balance</strong> — current balance; maintaining positive float (max 10)</li>
+      <li><strong>Load/spend ratio</strong> — total loads vs. total spend, 90-day window (max 7)</li>
+      <li><strong>P2P network activity</strong> — wallet transfer send count + recipient diversity (max 3)</li>
+      <li><strong>Account age</strong> — days since registration (max 5)</li>
+    </ul>
+  </div>
+</div>
+
+<h2>3. Score Tiers</h2>
+<table>
+  <tr><th>Tier Label</th><th>Score Range</th><th>Interpretation</th></tr>
+  <tr><td>Excelente</td><td>80 – 100</td><td>Strong behavioral history; consistent payments; active engagement across all dimensions</td></tr>
+  <tr><td>Bueno</td><td>60 – 79</td><td>Reliable payment pattern; moderate session and wallet activity</td></tr>
+  <tr><td>En proceso</td><td>40 – 59</td><td>Developing history; some payment activity but inconsistent patterns</td></tr>
+  <tr><td>Iniciando</td><td>0 – 39</td><td>Insufficient behavioral history for strong inference; typically new users (&lt;30 days)</td></tr>
+</table>
+
+<h2>4. Anonymization &amp; Privacy Model</h2>
+<div class="two-col">
+  <div>
+    <h3>Per-User Export (<span class="code">pti_export_safe</span>)</h3>
+    <ul>
+      <li>The phone number (telefono) is <strong>never returned</strong> in any API response</li>
+      <li>Each user is identified only by a <strong>hashed_user_id</strong> = SHA-256(telefono + proprietary salt), a deterministic 64-character hex string</li>
+      <li>Dimension scores (PR, BC, ED, CF) and colonia label are included</li>
+      <li>Partners supply their own hashed_user_id mapping, obtained via a separate consent-gated matching process</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Cohort Export (<span class="code">pti_cohort_safe</span>)</h3>
+    <ul>
+      <li><strong>k-anonymity floor: n ≥ 5.</strong> Any geographic × score band × time cohort with fewer than 5 users is fully suppressed — no partial statistics are returned</li>
+      <li>Geographic granularity is limited to <strong>colonia</strong> (neighborhood level); no street address or precise coordinates</li>
+      <li>Scores are bucketed in 10-point bands in cohort exports</li>
+      <li>Useful for: portfolio risk modeling, underwriting calibration, geographic credit gap analysis</li>
+    </ul>
+  </div>
+</div>
+<div class="info">
+  <strong>Plain language:</strong> k-anonymity means any data point you receive represents at least 5 real users. It is impossible to reverse-engineer an individual's data from a cohort response.
+</div>
+
+<h2>5. API Endpoints</h2>
+<table>
+  <tr><th>Endpoint</th><th>Method</th><th>Returns</th><th>Rate Limit</th></tr>
+  <tr>
+    <td>/api/b2b/cohort</td><td>GET</td>
+    <td>Aggregate cohort stats (colonia × score band × month). k-anon enforced. Filterable by colonia, score_band, month.</td>
+    <td rowspan="4">1,000 requests / day per key<br/><span style="color:#9ca3af">Resets midnight MX time</span></td>
+  </tr>
+  <tr>
+    <td>/api/b2b/user/:hashed_id</td><td>GET</td>
+    <td>Single-user PTI scores by hashed_user_id. Returns all 4 dimension scores + tier + model version.</td>
+  </tr>
+  <tr>
+    <td>/api/b2b/batch</td><td>POST</td>
+    <td>Bulk lookup by array of hashed_user_ids. Max 500 per request. Body: <span class="code">{ hashed_user_ids: string[] }</span></td>
+  </tr>
+  <tr>
+    <td>/api/b2b/audit</td><td>GET</td>
+    <td>Partner's own query audit log, last 90 days. Supports compliance self-review.</td>
+  </tr>
+</table>
+<p>All endpoints require the <span class="code">x-api-key</span> HTTP header. TLS required (HTTPS only in production).</p>
+
+<h2>6. Model Versioning</h2>
+<p>
+  Every score record carries a <strong>model_version</strong> field (current: <span class="code">v2.1-4dim</span>). When the scoring formula changes materially — new signals added, weights adjusted, dimension structure changed — the version string is incremented and a migration note is published. Partners should filter by model_version when comparing scores across time periods.
+</p>
+<table>
+  <tr><th>Version</th><th>Date</th><th>Change</th></tr>
+  <tr><td>v1.0-flat</td><td>Q4 2025</td><td>Initial 7-component flat model</td></tr>
+  <tr><td>v2.0-4dim</td><td>May 2026</td><td>Restructured to 4 dimensions (PR/BC/ED/CF); added pagoScore behavioral signals table</td></tr>
+  <tr><td>v2.1-4dim</td><td>June 2026</td><td>5 new signals: Paula interaction depth, push engagement, signup utilization speed, P2P network activity, high-value intent index</td></tr>
+</table>
+
+<h2>7. Data Freshness</h2>
+<ul>
+  <li><strong>Score refresh:</strong> Monthly batch on the 1st of each month at 3:00 AM Mexico City time</li>
+  <li><strong>On-demand:</strong> Scores recompute automatically after any behavioral event (payment, login, P2P transfer)</li>
+  <li><strong>API latency:</strong> Reads from a pre-computed column (<span class="code">users.pti_score</span>) — typical response time &lt;100ms</li>
+  <li><strong>Historical depth:</strong> Score signals computed from all-time history for PR/ED; 30–90 day windows for BC/CF</li>
+</ul>
+
+<h2>8. Partner Onboarding</h2>
+<p>To receive API access, a partner must provide:</p>
+<ol style="padding-left:18px;margin:8px 0;">
+  <li><strong>Organization name and legal entity</strong></li>
+  <li><strong>Purpose code</strong> — one of: <span class="code">credit_scoring</span>, <span class="code">risk_assessment</span>, <span class="code">portfolio_monitoring</span>, <span class="code">research</span></li>
+  <li><strong>Data Processing Agreement (DPA)</strong> — executed, covering LFPDPPP obligations and prohibiting re-identification attempts</li>
+  <li><strong>Use case description</strong> — how the score will be used in the underwriting or risk decision</li>
+  <li><strong>hashed_user_id matching methodology</strong> — how the partner will link their own user records to PagoYa hashed IDs (requires a separate bilateral consent and matching process)</li>
+</ol>
+<p style="margin-top:8px;">Upon approval, an API key is provisioned programmatically. The raw key is delivered once via secure channel and never stored by PagoYa — only its SHA-256 hash is retained.</p>
+<div class="note">
+  <strong>To request access:</strong> Contact <strong>datos@pagoyamx.com</strong> with subject line "B2B Data Access Request" and include items 1–4 above.
+</div>
+
+<footer>
+  <span>PagoYa Trust Index — Data Card v2.1 &nbsp;|&nbsp; Confidential &amp; Proprietary &nbsp;|&nbsp; PagoYa Mexico S.A. de C.V.</span>
+  <span>pagoyamx.com &nbsp;|&nbsp; datos@pagoyamx.com</span>
+</footer>
+
+</body>
+</html>

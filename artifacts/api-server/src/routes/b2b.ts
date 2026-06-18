@@ -23,6 +23,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import crypto from "crypto";
+import path from "path";
 
 const router = Router();
 
@@ -47,6 +48,7 @@ interface B2BPartner {
   purpose_code: string;
   allowed_endpoints: string[];
   rate_limit_rpm: number;
+  rate_limit_per_day: number;
 }
 
 async function authenticateRequest(req: Request, res: Response): Promise<B2BPartner | null> {
@@ -60,7 +62,7 @@ async function authenticateRequest(req: Request, res: Response): Promise<B2BPart
 
   try {
     const row = await db.execute(sql`
-      SELECT id, partner_name, purpose_code, allowed_endpoints, rate_limit_rpm
+      SELECT id, partner_name, purpose_code, allowed_endpoints, rate_limit_rpm, rate_limit_per_day
       FROM b2b_api_keys
       WHERE api_key_hash = ${keyHash} AND is_active = true
       LIMIT 1
@@ -119,6 +121,40 @@ async function writeAuditLog(params: {
   `).catch(err => logger.error({ err }, "b2b: audit log write failed"));
 }
 
+// ── Per-key daily rate limiter ────────────────────────────────────────────────
+// Queries b2b_audit_log for today's request count per key.
+// Closes the enumeration gap on /user/:hash — without this, a partner
+// could enumerate the full dataset one record at a time despite the /batch cap.
+
+async function checkDailyRateLimit(
+  keyHash: string,
+  partner: B2BPartner,
+  res: Response,
+): Promise<boolean> {
+  try {
+    const countRow = await db.execute(sql`
+      SELECT COUNT(*)::int AS daily_count
+      FROM b2b_audit_log
+      WHERE api_key_hash = ${keyHash}
+        AND queried_at > DATE_TRUNC('day', NOW() AT TIME ZONE 'America/Mexico_City')
+    `);
+    const dailyCount = Number((countRow.rows[0] as Record<string, unknown>)?.daily_count ?? 0);
+    if (dailyCount >= partner.rate_limit_per_day) {
+      res.status(429).json({
+        error: "Daily request limit exceeded.",
+        limit: partner.rate_limit_per_day,
+        used: dailyCount,
+        resets_at: "midnight Mexico City time (America/Mexico_City)",
+      });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    logger.warn({ err, partner: partner.partner_name }, "b2b: rate limit check failed — allowing request");
+    return true; // fail open on DB error rather than blocking legitimate calls
+  }
+}
+
 // ── GET /api/b2b/cohort ───────────────────────────────────────────────────────
 // Returns k-anonymity-enforced cohort aggregates from pti_cohort_safe view.
 // Params: colonia?, score_band?, month? (YYYY-MM), limit? (max 200)
@@ -132,6 +168,7 @@ router.get("/cohort", async (req: Request, res: Response) => {
   const rowLimit = Math.min(200, Math.max(1, parseInt(limit) || 50));
 
   const keyHash = hashApiKey((req.headers["x-api-key"] as string).trim());
+  if (!(await checkDailyRateLimit(keyHash, partner, res))) return;
 
   try {
     // Build WHERE conditions
@@ -205,6 +242,7 @@ router.get("/user/:hashed_id", async (req: Request, res: Response) => {
   }
 
   const keyHash = hashApiKey((req.headers["x-api-key"] as string).trim());
+  if (!(await checkDailyRateLimit(keyHash, partner, res))) return;
 
   try {
     const rows = await db.execute(sql`
@@ -285,6 +323,7 @@ router.post("/batch", async (req: Request, res: Response) => {
   }
 
   const keyHash = hashApiKey((req.headers["x-api-key"] as string).trim());
+  if (!(await checkDailyRateLimit(keyHash, partner, res))) return;
 
   try {
     const idList = validIds.map(id => `'${id.replace(/'/g, "")}'`).join(", ");
@@ -340,6 +379,7 @@ router.get("/audit", async (req: Request, res: Response) => {
   if (!partner) return;
 
   const keyHash = hashApiKey((req.headers["x-api-key"] as string).trim());
+  if (!(await checkDailyRateLimit(keyHash, partner, res))) return;
   const { limit = "100" } = req.query as Record<string, string>;
   const rowLimit = Math.min(500, Math.max(1, parseInt(limit) || 100));
 
@@ -417,6 +457,15 @@ router.post("/admin/provision-key", async (req: Request, res: Response) => {
     logger.error({ err, partner_name }, "b2b: key provision failed");
     res.status(500).json({ error: "Key provisioning failed." });
   }
+});
+
+// ── GET /api/b2b/docs/data-card ──────────────────────────────────────────────
+// Serves the PTI Data Card HTML — public methodology document, no auth required.
+// Accessible at /api/b2b/docs/data-card (printable to PDF from browser).
+
+router.get("/docs/data-card", (_req: Request, res: Response) => {
+  const filePath = path.resolve(process.cwd(), "public", "b2b-data-card.html");
+  res.sendFile(filePath);
 });
 
 export default router;
