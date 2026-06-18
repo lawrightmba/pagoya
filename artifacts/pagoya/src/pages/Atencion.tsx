@@ -66,7 +66,7 @@ export default function Atencion() {
         {/* Contact buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "40px" }}>
           <a
-            href="https://wa.me/523221839799?text=Hola%20PagoYa%2C%20necesito%20ayuda%20con"
+            href="https://wa.me/14343319311?text=Hola%20PagoYa%2C%20necesito%20ayuda%20con"
             target="_blank"
             rel="noopener noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", background: "linear-gradient(135deg,#007A4A,#00C875)", color: "#FFFFFF", fontWeight: 700, fontSize: "16px", padding: "16px 24px", borderRadius: "14px", textDecoration: "none", letterSpacing: "0.01em" }}
