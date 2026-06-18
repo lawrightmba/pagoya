@@ -209,14 +209,14 @@ export default function Slide06BusinessModel() {
                 <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#004F2D" }}>3</p>
               </div>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {es ? "2028+ · Plataforma" : "2028+ · Platform"}
+                {es ? "2028+ · API de Datos" : "2028+ · Data API"}
               </p>
             </div>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "rgba(255,255,255,0.6)", lineHeight: 1, marginBottom: "0.4vh" }}>API SaaS</p>
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "rgba(255,255,255,0.6)", lineHeight: 1, marginBottom: "0.4vh" }}>Data API</p>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.35 }}>
               {es
-                ? "Trust Score API para bancos · seguros · remesas · diáspora en EE.UU./Canadá"
-                : "Trust Score API for banks · insurers · remittances · US/Canada diaspora"}
+                ? "API de crédito conductual licenciada a prestamistas, aseguradoras y fintechs que no pueden evaluar a los no bancarizados"
+                : "Behavioral credit data API licensed to lenders, insurers, and fintechs who can't underwrite the unbanked"}
             </p>
           </div>
         </div>

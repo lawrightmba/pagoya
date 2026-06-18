@@ -62,8 +62,8 @@ export default function Slide01Cover() {
             }}
           >
             {es
-              ? "Paula paga tus facturas, construye tu Trust Score y te da acceso a crédito — sin cuenta bancaria, en dos minutos, desde WhatsApp."
-              : "Paula pays your bills, builds your Trust Score, and unlocks credit access — no bank account, in two minutes, via WhatsApp."}
+              ? "PagoYa convierte pagos de facturas en puntajes de crédito conductual — el buró que los no bancarizados de México nunca tuvieron. Sin cuenta bancaria. Desde WhatsApp."
+              : "PagoYa turns bill payments into behavioral credit scores — building the credit bureau Mexico's unbanked never had. No bank account needed. Via WhatsApp."}
           </p>
           <p
             style={{

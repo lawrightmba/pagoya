@@ -134,7 +134,7 @@ export default function Slide11Why500() {
 
           <div style={{ background: "rgba(255,92,26,0.06)", padding: "1.1vh 1.8vw", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>
-              {es ? "Trust Score / identidad financiera" : "Trust Score / financial identity"}
+              {es ? "Trust Score · API de datos para prestamistas" : "Trust Score · data API licensed to lenders"}
             </p>
           </div>
           <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.1vh 1.5vw", borderTop: "1px solid rgba(255,255,255,0.07)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>

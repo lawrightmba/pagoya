@@ -77,14 +77,14 @@ export default function Slide04Market() {
               </p>
             </div>
           </div>
-          <div style={{ background: "rgba(0,200,117,0.08)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>✅</span>
+          <div style={{ background: "rgba(255,92,26,0.07)", border: "1px solid rgba(255,92,26,0.25)", borderRadius: "0.7vw", padding: "1.8vh 2vw", display: "flex", alignItems: "flex-start", gap: "1.2vw" }}>
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🔜</span>
             <div>
               <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.1vw", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.3vh" }}>
                 {es ? "Banca abierta Belvo" : "Belvo open banking"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                {es ? "Débito bancario directo y vinculación de cuentas" : "Direct bank debit and account linking"}
+                {es ? "Deprioritizado jun 2026 — STP/SPEI cubre el riel directo" : "Deprioritized Jun 2026 — STP/SPEI covers the direct rail"}
               </p>
             </div>
           </div>

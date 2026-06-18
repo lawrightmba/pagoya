@@ -60,8 +60,8 @@ export default function Slide03Solution() {
                 </p>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
                   {es
-                    ? "22,000 ubicaciones OXXO · Tarjeta Stripe · Débito bancario Belvo — acreditado en tiempo real"
-                    : "22,000 OXXO locations · Stripe card · Belvo bank debit — credited in real time"}
+                    ? "22,000 ubicaciones OXXO · Tarjeta Stripe · Transferencia STP/SPEI — acreditado en tiempo real"
+                    : "22,000 OXXO locations · Stripe card · STP/SPEI bank transfer — credited in real time"}
                 </p>
               </div>
             </div>

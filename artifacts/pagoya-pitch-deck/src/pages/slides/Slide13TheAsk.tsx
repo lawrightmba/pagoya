@@ -114,11 +114,14 @@ export default function Slide13TheAsk() {
                 : "5 live rails · Gift cards live · Field team deployed · Founder Institute Austin Summer 2026"}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-[0.5vh]">
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "#FFFFFF" }}>
-              Lloyd A. Wright, MBA
+          <div className="flex flex-col items-end gap-[0.3vh]">
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF" }}>
+              Lloyd A. Wright, MBA — Co-Founder &amp; CEO
             </span>
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", color: "#00C875" }}>
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF" }}>
+              Dr. Douglas Franklin, PhD — Co-Founder, Capital &amp; Data Strategy
+            </span>
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "#00C875" }}>
               lloyd@pagoyamx.com · pagoyamx.com
             </span>
           </div>
