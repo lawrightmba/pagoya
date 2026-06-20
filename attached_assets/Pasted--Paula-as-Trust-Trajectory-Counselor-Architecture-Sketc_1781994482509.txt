@@ -1,0 +1,237 @@
+# Paula as Trust Trajectory Counselor
+## Architecture Sketch — PagoYa Technologies
+### Version 1.0 | June 2026
+
+---
+
+## The North Star
+
+Paula evolves from a **notification agent** into a **trust trajectory counselor** — the first personalized financial coach the unbanked population of Mexico has ever had. Her job is to make invisible reliability visible, narrate the journey toward formal creditworthiness, and deliver warm, data-ready users to institutional partners at the moment of readiness.
+
+This is PagoYa's private-sector execution of what CONDUSEF has mandated but cannot deliver at scale to the informal economy.
+
+---
+
+## Four Phases of Paula's Evolution
+
+### Phase 1 — Reactive Paula (Live Now)
+- Payment reminders via WhatsApp
+- OXXO load nudges
+- CFE/water/internet bill due alerts
+- PTI score delivery on request
+
+### Phase 2 — Coaching Paula (Next Build)
+- Reads PTI trend, not just current score
+- Triggers counseling messages based on behavioral events
+- Delivers bite-sized financial literacy in WhatsApp format
+- Celebrates milestones with context (not just confetti)
+
+### Phase 3 — Advisor Paula (~6–9 months post-launch)
+- Full PTI trajectory narrative ("your trust arc")
+- Proactive goal-setting ("Tu meta: Nivel Plata en 45 días")
+- Comparative coaching ("Usuarios como tú alcanzaron Plata en 38 días promedio")
+- Credit literacy curriculum — 8-module WhatsApp course, one concept per week
+
+### Phase 4 — Bridge Paula (~12–18 months)
+- Readiness assessment against formal credit threshold
+- Warm handoff initiation to partner institutions (SOFOM, microfinance, TransUnion Mexico ecosystem)
+- Assisted application flow via WhatsApp
+- Post-handoff follow-up ("¿Cómo te fue con tu primera solicitud?")
+
+---
+
+## The PTI Trend Engine (What Paula Needs to Read)
+
+Paula cannot counsel from a static score. She needs a **trajectory read** — a rolling window that classifies each user's momentum.
+
+### Trend Classification (suggested logic)
+```
+IMPROVING   → PTI score up ≥5 pts over last 30 days AND ≥2 on-time payments
+PLATEAUING  → PTI movement < ±3 pts over 30 days
+DECLINING   → PTI score down ≥5 pts OR missed/late payment in last 14 days
+ACCELERATING → IMPROVING + all 4 PTI dimensions trending up simultaneously
+STALLED     → No payment activity in 14+ days
+```
+
+### Suggested DB additions
+```sql
+-- Rolling PTI trend view
+CREATE VIEW pti_trend_30d AS
+SELECT
+  user_id,
+  pti_score,
+  LAG(pti_score, 30) OVER (PARTITION BY user_id ORDER BY recorded_at) AS score_30d_ago,
+  pti_score - LAG(pti_score, 30) OVER (PARTITION BY user_id ORDER BY recorded_at) AS delta_30d,
+  CASE
+    WHEN delta_30d >= 5 THEN 'IMPROVING'
+    WHEN delta_30d <= -5 THEN 'DECLINING'
+    WHEN ABS(delta_30d) < 3 THEN 'PLATEAUING'
+    ELSE 'NEUTRAL'
+  END AS trend_label
+FROM pti_score_history
+WHERE recorded_at >= NOW() - INTERVAL '60 days';
+```
+
+---
+
+## Counseling Trigger System
+
+Paula speaks when something meaningful happens — not on a blind schedule.
+
+### Trigger Categories
+
+#### 1. Achievement Triggers (Positive Momentum)
+| Event | Paula Message Type |
+|---|---|
+| First on-time payment | "Welcome to your trust journey" |
+| 5 consecutive on-time payments | "Streak milestone — here's what it means" |
+| PTI crosses 40 (Bronce floor) | "You've entered Bronce tier" |
+| PTI crosses 65 (Plata floor) | "Plata achieved — this is what opens up" |
+| PTI crosses 80 (Oro floor) | "Oro status — you're now pre-qualified" |
+| 90 days of consistent activity | "3-month trust anniversary" |
+
+#### 2. Recovery Triggers (Negative Momentum)
+| Event | Paula Message Type |
+|---|---|
+| First late payment | Gentle "here's what happened and how to recover" |
+| PTI drops ≥5 pts in 7 days | "Let's talk about your score" |
+| 2nd late payment in 30 days | Pattern coaching — "I've noticed a pattern" |
+| No activity in 14 days | "We miss you — here's what's at stake" |
+
+#### 3. Educational Triggers (Milestone-Gated Literacy)
+| PTI Range | Curriculum Module Unlocked |
+|---|---|
+| 0–29 | Module 1: ¿Qué es un historial de confianza? |
+| 30–49 | Module 2: Cómo funciona el crédito en México |
+| 50–64 | Module 3: Buró de Crédito — mitos y realidades |
+| 65–79 | Module 4: Qué buscan los bancos en un solicitante |
+| 80+ | Module 5: Tu primera solicitud de crédito formal |
+
+#### 4. Readiness Trigger (Bridge Moment)
+- PTI ≥ 80 (Oro)
+- ≥ 90 days of consistent payment activity
+- ≥ 3 verified bill categories paid
+- KYC tier = verified
+→ Paula initiates the handoff conversation
+
+---
+
+## Credit Literacy Content Layer
+
+All content delivered in WhatsApp-native format: short, conversational, emoji-light, no jargon.
+
+### Message Design Principles
+- Max 3 sentences per message
+- One concept per session
+- Always ends with a question or micro-action ("¿Sabías esto? Responde SÍ o NO")
+- Never lectures — always connects to the user's own data
+
+### Sample Messages by Trigger
+
+**Achievement — First on-time payment:**
+> "🎯 ¡Primer pago puntual registrado, María! Eso es exactamente cómo empieza un historial de confianza. Cada pago a tiempo es un ladrillo. Sigamos construyendo."
+
+**Recovery — Late payment:**
+> "Hola María. Noté que tu pago de CFE llegó 4 días tarde este mes. No pasa nada — un retraso no destruye tu historial. Pero dos seguidos sí afectan tu PTI. ¿Quieres que te recuerde antes de tu próxima fecha?"
+
+**Education — Module 2 unlock (PTI hits 30):**
+> "📘 Alcanzaste 30 puntos — desbloqueaste algo. ¿Sabías que en México solo el 35% de adultos tiene historial en el Buró de Crédito? Tú estás construyendo el tuyo, sin necesitar una tarjeta de banco. La próxima vez te explico cómo funciona por dentro."
+
+**Readiness — Handoff initiation:**
+> "María, llevas 4 meses pagando a tiempo y tu PTI es 82. Eso ya te pone en un nivel donde algunas instituciones pueden revisar tu caso para un microcrédito formal. ¿Te gustaría que te explique cómo funciona ese proceso? No tienes que comprometerte a nada."
+
+---
+
+## The Readiness Assessment Model
+
+Before Paula initiates a handoff, she runs a silent readiness check against these criteria:
+
+```
+READINESS GATE (all must pass)
+──────────────────────────────────────────────
+[ ] PTI Score ≥ 80
+[ ] Payment streak ≥ 90 days (no gaps > 7 days)
+[ ] Bill category diversity ≥ 3 (CFE + at least 2 others)
+[ ] KYC tier = VERIFIED (phone + CURP or equivalent)
+[ ] No fraud flags in bonus_fraud_flags table
+[ ] User has completed ≥ 3 Paula educational modules
+──────────────────────────────────────────────
+RESULT: HANDOFF_READY | NOT_YET (with gap report)
+```
+
+For NOT_YET users, Paula generates a personalized gap report:
+> "Estás a 12 puntos del nivel que necesitas, y te faltan 2 módulos de educación. A este ritmo, podrías llegar en unos 6 semanas. ¿Seguimos?"
+
+---
+
+## Institutional Partner Bridge
+
+When a user is HANDOFF_READY, Paula's role shifts to facilitator.
+
+### Target Partner Categories (Mexico)
+- **SOFOMs** (non-bank lenders) — lowest bar for first formal credit
+- **SOFIPOs** (popular savings/loan institutions) — designed for unbanked population per Ley de Ahorro y Crédito Popular
+- **Microfinance institutions** — Compartamos, Gentera ecosystem
+- **TransUnion Mexico ecosystem** — the ultimate formal credit bureau entry point
+- **Neobanks** — Nu Mexico, Uala — actively seeking pre-qualified informal-sector users
+
+### What PagoYa delivers to partners
+Not just a lead. A **pre-qualified profile package**:
+- PTI score + trend trajectory
+- Payment diversity and consistency record
+- Anonymized behavioral cohort benchmarking
+- KYC tier and verification status
+- Financial literacy completion record (Paula modules)
+
+This is the B2B data thesis made concrete: PagoYa doesn't send a name and a phone number. It sends a trust dossier.
+
+---
+
+## The Regulatory Alignment Argument
+
+Paula as counselor is not just a product decision — it's a compliance-adjacent positioning move.
+
+| Mexican Regulatory Layer | What It Says | How Paula Satisfies It |
+|---|---|---|
+| Ley FinTech 2018 | Financial inclusion as explicit law purpose | Paula serves unbanked population, on-ramps to formal system |
+| CONDUSEF mandate | Education, supervision, asesoría as core obligations | Paula delivers personalized asesoría at scale |
+| Ley de Transparencia | Payment institutions must protect consumer interests | Paula coaches users to understand their own financial behavior |
+| CONDUSEF "Sanas Prácticas" for ITFs | Transparency obligations for fintech users | Paula explains PTI score, what it means, how it moves |
+
+**The pitch:** Paula is what happens when CONDUSEF's education mandate meets WhatsApp, AI, and real behavioral data. PagoYa isn't competing with the regulator — it's executing the regulator's vision for the population the regulator can't reach.
+
+---
+
+## Build Priority Order
+
+### Sprint 1 — PTI Trend Engine
+- `pti_score_history` table (if not already logging timestamped scores)
+- `pti_trend_30d` view
+- Trend classification logic
+- Expose trend label via `/api/pti/trend/:userId`
+
+### Sprint 2 — Trigger System
+- `paula_trigger_log` table (trigger type, user_id, fired_at, message_sent)
+- Trigger evaluation cron (runs every 6 hours)
+- Dead-letter protection (don't fire same trigger twice in 7 days)
+
+### Sprint 3 — Content Layer
+- `paula_messages` table (trigger_type, pti_range, message_es, message_en)
+- Message template system with variable injection (`{nombre}`, `{pti_score}`, `{days_streak}`)
+- Twilio WhatsApp send queue
+
+### Sprint 4 — Readiness Gate + Partner Bridge
+- `readiness_assessments` table
+- Readiness check function (evaluates all 6 gate criteria)
+- Handoff conversation flow
+- Partner referral tracking
+
+---
+
+## Narrative Framing for Accelerators
+
+> "Paula is Mexico's first AI-native financial trust counselor, delivering personalized credit readiness coaching to the 65 million unbanked adults that CONDUSEF's mandate was designed to serve but cannot reach. Every interaction is anchored in the user's own real payment data. Every milestone is a step toward formal financial inclusion. PagoYa doesn't just collect behavioral data — it uses that data to change behavior, then delivers creditworthy borrowers to institutional partners at a fraction of traditional acquisition cost."
+
+---
+
+*Document prepared for internal strategic use — PagoYa Technologies / Longview Meridian Holdings, LLC*
