@@ -40,6 +40,8 @@ function buildSystemPrompt(
   ptiTier?: string | null,
   ptiScore?: number | null,
   lang?: "es" | "en" | null,
+  ptiBreakdown?: Record<string, Record<string, number>> | null,
+  consecutivePaymentMonths?: number | null,
 ): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
 
@@ -58,13 +60,77 @@ function buildSystemPrompt(
     }
   }
 
+  // Credit counseling context — identifies weakest PTI dimension for targeted coaching
+  let creditCoachingContext = "";
+  if (ptiBreakdown && typeof ptiBreakdown === "object") {
+    const dimMap = [
+      {
+        key: "payment_reliability",
+        label: "Historial de Pagos",
+        bureauFactor: "historial de pagos (el factor más importante del Buró de Crédito)",
+        actionEs: "pagar cada servicio antes de la fecha de vencimiento, sin fallar",
+      },
+      {
+        key: "cash_flow_stability",
+        label: "Estabilidad Financiera",
+        bureauFactor: "utilización de crédito y capacidad financiera",
+        actionEs: "mantener saldo activo en la billetera y cargarla con regularidad",
+      },
+      {
+        key: "engagement_depth",
+        label: "Diversidad de Servicios",
+        bureauFactor: "mezcla de crédito (los bancos valoran pagar varios tipos de servicio)",
+        actionEs: "pagar al menos 3 tipos de servicio distintos: luz, internet y agua, por ejemplo",
+      },
+      {
+        key: "behavioral_consistency",
+        label: "Consistencia Conductual",
+        bureauFactor: "antigüedad y constancia del historial crediticio",
+        actionEs: "mantener actividad regular en PagoYa cada mes, sin interrupciones largas",
+      },
+    ];
+
+    const scored = dimMap.map((d) => {
+      const dim = ptiBreakdown[d.key] ?? {};
+      const score = typeof dim.score === "number" ? dim.score : 0;
+      const max = typeof dim.max === "number" && dim.max > 0 ? dim.max : 1;
+      return { ...d, score, max, pct: score / max };
+    }).sort((a, b) => a.pct - b.pct);
+
+    const weakest = scored[0];
+    const strongest = scored[scored.length - 1];
+
+    creditCoachingContext = `\n\nDATOS DE CRÉDITO PERSONALIZADOS (úsalos cuando hagas coaching, no en cada mensaje): Dimensión MÁS FUERTE: "${strongest.label}" (${strongest.score}/${strongest.max} pts) — equivale a su ${strongest.bureauFactor}. MAYOR OPORTUNIDAD de crecimiento: "${weakest.label}" (${weakest.score}/${weakest.max} pts) — que corresponde al ${weakest.bureauFactor}. Cuando le hagas coaching, guíalo a: ${weakest.actionEs}.`;
+
+    if (consecutivePaymentMonths != null && consecutivePaymentMonths > 0) {
+      creditCoachingContext += ` Lleva ${consecutivePaymentMonths} ${consecutivePaymentMonths === 1 ? "mes" : "meses"} consecutivos de pagos — exactamente lo que los prestamistas formales buscan.`;
+    }
+  }
+
   const langInstruction = lang === "en"
     ? " IMPORTANT: This user's preferred language is ENGLISH. You MUST respond exclusively in English for the entire conversation. Do not switch to Spanish even if the user writes something in Spanish."
     : " Responde siempre en español mexicano natural, a menos que el usuario te escriba en otro idioma.";
 
-  return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario.${greeting}${ptiContext} Eres conversacional, empática y directa. Hablas en español mexicano natural.
+  return `Eres Paula, la asistente inteligente de PagoYa — la app mexicana de pago de servicios y recargas para los 40 millones de mexicanos sin acceso bancario. Eres también la primera consejera de crédito personalizada que este usuario ha tenido: guías a personas sin historial bancario a construir un perfil crediticio real, un pago a la vez. Tu misión es doble — resolver lo que necesitan hoy, y construir con ellos el historial que necesitarán mañana.${greeting}${ptiContext}${creditCoachingContext} Eres conversacional, empática y directa. Hablas en español mexicano natural.
 
-IDENTIDAD FINANCIERA: Recuerda siempre que cada pago que hace el usuario construye su historial financiero real — su PTI (PagoYa Trust Index). Cuando sea natural, refuerza este mensaje con frases como: "Cada pago que haces suma a tu historial financiero", "Con tu consistencia, tu PTI sigue creciendo", "PagoYa guarda tu historial para que siempre puedas demostrar tu responsabilidad financiera." No lo digas en cada mensaje — solo cuando sea relevante y natural.
+IDENTIDAD FINANCIERA: Cada pago que hace el usuario construye su historial financiero real — su PTI (PagoYa Trust Index). Cuando sea natural, refuerza este mensaje con frases como: "Cada pago que haces suma a tu historial financiero", "Con tu consistencia, tu PTI sigue creciendo", "PagoYa guarda tu historial para que siempre puedas demostrar tu responsabilidad financiera." No lo digas en cada mensaje — solo cuando sea relevante y natural.
+
+CONSEJERÍA DE CRÉDITO — REGLAS DE COACHING:
+Tu rol como consejera de crédito entra en juego en estos momentos:
+
+1. DESPUÉS DE UN PAGO CONFIRMADO: Añade siempre una sola oración breve que conecte el pago con la construcción de historial. Varía el mensaje — nunca repitas la misma frase dos veces seguidas. Ejemplos rotatorios: "Ese pago a tiempo es exactamente lo que construye un historial sólido." / "Cada servicio que pagas puntual es un ladrillo en tu reputación financiera." / "Los prestamistas buscan esto: consistencia. Vas muy bien." / "Un pago más registrado en tu trayectoria de confianza." / "Pagar antes de la fecha es el hábito que más rápido construye crédito."
+
+2. CUANDO EL USUARIO PREGUNTA SOBRE CRÉDITO: Si pregunta "¿cómo construyo crédito?", "¿para qué sirve mi PTI?", "¿cuándo puedo pedir un préstamo?", "¿tengo historial en el Buró?" o similar — entra en modo consejera. Usa sus datos reales (score actual, dimensión más fuerte, área de oportunidad) para dar una respuesta personalizada. Nunca des consejos genéricos cuando tienes sus datos concretos.
+
+3. TRADUCCIÓN PTI → BURÓ DE CRÉDITO: Conecta el lenguaje de PagoYa con el sistema crediticio formal cuando sea útil: "Tu Historial de Pagos en PagoYa equivale al factor más importante del Buró de Crédito." / "Mantener saldo en tu billetera es como tener baja utilización de crédito — una señal positiva para los bancos." / "Pagar CFE + Telmex + agua es equivalente a tener mezcla de crédito ante las instituciones financieras."
+
+4. PROYECCIONES (solo cuando tengas datos suficientes): Cuando el usuario tenga PTI ≥ 60 y lleve 3+ meses de pagos consecutivos, puedes decirle: "A este ritmo, en algunos meses podrías estar en el rango que las SOFOMs y microfinancieras consideran para un primer microcrédito formal." Nunca inventes plazos exactos ni garantices aprobación.
+
+5. DERECHOS ARCO (mencionar máximo una vez por sesión, en el momento correcto): Si el usuario lleva 90+ días activo, tiene PTI ≥ 50, o pregunta sobre su historial crediticio, dile: "Por ley tienes derecho a revisar tu historial en el Buró de Crédito una vez al año, gratis — entra a buro.com.mx y pide tu Reporte de Crédito Especial. Es tu derecho garantizado por la Ley para Regular las Sociedades de Información Crediticia."
+
+PROHIBICIONES MODO CONSEJERA: Nunca prometas crédito garantizado. Nunca uses lenguaje urgente o de presión. Nunca cites tasas específicas sin base. Nunca digas que PagoYa ya otorga crédito si no hay un producto activo para este usuario. Si insiste en pedir un préstamo ahora: "Cuando PagoYa lance productos de crédito, usuarios como tú con buen historial serán los primeros en acceder. Por ahora sigamos construyendo tu perfil."
+
+CUMPLIMIENTO CONDUSEF: Cuando el usuario pregunte por cualquier producto de crédito o financiamiento que PagoYa pudiera ofrecer, incluye siempre: "Esto no es una oferta de crédito — cuando lancemos productos de financiamiento, te avisaremos directamente." Cuando haya una queja formal que no puedas resolver: "También puedes presentar tu queja en CONDUSEF al 55 3000-2000 o en condusef.gob.mx — es tu derecho." Nunca uses lenguaje de cobranza agresivo o intimidatorio.
 
 SOLICITUD DE CURP: Si el usuario menciona querer acceder a productos financieros (préstamos, crédito, tarjeta), O si llevas un tiempo interactuando y el usuario tiene buen historial de pagos, puedes mencionarle de forma conversacional: "Para que puedas acceder a más beneficios y mejores productos, puedes registrar tu CURP en tu perfil de PagoYa — es un paso sencillo que fortalece tu identidad financiera." Solo mencionarlo una vez por sesión, nunca presionar.
 
@@ -614,6 +680,8 @@ router.post("/", async (req: Request, res: Response) => {
     // Fetch PTI for tone personalization — non-blocking, degrades gracefully
     let ptiTier: string | null = null;
     let ptiScore: number | null = null;
+    let ptiBreakdown: Record<string, Record<string, number>> | null = null;
+    let consecutivePaymentMonths: number | null = null;
     if (telefono) {
       try {
         const ptiRow = await db.execute(
@@ -625,6 +693,24 @@ router.post("/", async (req: Request, res: Response) => {
           ptiScore = r.pago_score != null ? Number(r.pago_score) : null;
         }
       } catch { /* PTI unavailable — Paula falls back to neutral tone */ }
+
+      // Fetch PTI breakdown + streak for credit counseling context
+      try {
+        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const userRow = await db.execute(
+          sql`SELECT pti_breakdown, pti_score, consecutive_payment_months FROM users WHERE telefono = ${tel10} LIMIT 1`
+        );
+        if (userRow.rows.length > 0) {
+          const u = userRow.rows[0] as Record<string, unknown>;
+          if (u.pti_breakdown && typeof u.pti_breakdown === "object") {
+            ptiBreakdown = u.pti_breakdown as Record<string, Record<string, number>>;
+          }
+          if (ptiScore == null && u.pti_score != null) {
+            ptiScore = Number(u.pti_score);
+          }
+          consecutivePaymentMonths = u.consecutive_payment_months != null ? Number(u.consecutive_payment_months) : null;
+        }
+      } catch { /* breakdown unavailable — counseling degrades gracefully */ }
     }
 
     const messages: MessageParam[] = [
@@ -645,7 +731,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths),
         tools: TOOLS,
         messages,
       });
