@@ -1,0 +1,13 @@
+Show more8:07 PMClaude responded: Scope is clean.Scope is clean. One design decision to resolve on item 3 before locking, then the spec writes.
+Item 3 — modules_unlocked: derived vs. stored JSONB
+Same dual-write question as financial_literacy_score. The trigger log already has everything needed:
+sqlSELECT trigger_type FROM paula_trigger_log
+WHERE telefono = $1
+AND trigger_type LIKE 'module_unlock_%'
+ORDER BY fired_at ASC
+That returns ['module_unlock_2', 'module_unlock_3'] — which maps trivially to human-readable labels for prompt injection without a separate JSONB column to maintain. Same pattern as item 1, same rationale: paula_trigger_log is already the append-only canonical record, cooldown_days = 9999 guarantees each fires exactly once.
+Recommendation: derive it in buildUserContext alongside financial_literacy_score, return it as modules_unlocked: string[] in UserContext, serialize to a readable string for prompt injection. Zero schema changes.
+The only reason to store JSONB on users would be if you needed to query "all users who have completed module 3" at batch scale without hitting the trigger log. That's a Sprint 6 concern (readiness gate checks literacy_score >= 3), and even there the COUNT query is fast on an indexed table. Not worth the dual-write risk now.
+Confirm or override that, then here's the locked Sprint 4 scope:
+#DeliverableSchema change1financial_literacy_score derived in buildUserContextNone2modules_unlocked: string[] derived in buildUserContextNone3coaching_responsiveness column on usersOne ALTER TABLE4Both fields injected into buildSystemPrompt in agentChat.tsNone5Module curriculum review — confirm 5 seeds in DB match full specNone
+Also confirm item 5 before I write the spec: paste the current template_es values for all 5 module_unlock_% rows from your paula_messages table. I'll diff them against the full module curriculum in the architecture doc — ARCO woven into Module 3, CAT + CONDUSEF guard in Module 5 — and flag any gaps before the spec locks. Better to catch it here than in an acceptance test.
