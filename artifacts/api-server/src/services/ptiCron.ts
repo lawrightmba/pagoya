@@ -19,6 +19,7 @@ import { sendWhatsApp } from "../lib/whatsapp.js";
 import { computePTIForAllUsers } from "./pti.js";
 import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 import { runPaulaTriggerBatch } from "./paulaTriggers.js";
+import { processSendQueue } from "./paulaSendQueue.js";
 
 // ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
 // Unexpected rewards at threshold crossings — never announced in advance.
@@ -516,4 +517,14 @@ export function startPtiCron(): void {
     setInterval(runTriggers, SIX_HOURS_MS);
     logger.info("pti-cron: paulaTriggerBatch registered (every 6h, first run in 5min)");
   }, 5 * 60 * 1000);
+
+  // Paula send queue processor — every 2 minutes
+  const TWO_MIN_MS = 2 * 60 * 1000;
+  const runQueue = () => {
+    processSendQueue().catch(err =>
+      logger.error({ err }, "pti-cron: paulaSendQueue processor top-level failure"),
+    );
+  };
+  setInterval(runQueue, TWO_MIN_MS);
+  logger.info("pti-cron: paulaSendQueue processor registered (every 2min)");
 }
