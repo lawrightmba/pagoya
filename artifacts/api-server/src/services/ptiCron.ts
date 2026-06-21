@@ -263,27 +263,49 @@ export async function takeFinancialSnapshot(telefono: string): Promise<void> {
 export async function updatePaymentStreak(telefono: string): Promise<void> {
   try {
     const { db } = await import("@workspace/db");
+    // Paid this calendar month (all four terminal success statuses)
     await db.execute(sql`
       UPDATE users SET
         consecutive_payment_months = CASE
+          -- Paid this month AND last recorded month was the immediately prior month → extend streak
           WHEN EXISTS (
             SELECT 1 FROM bill_payments
             WHERE telefono = ${telefono}
               AND created_at >= date_trunc('month', CURRENT_DATE)
-              AND status IN ('completed', 'success')
+              AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
           ) AND (
             last_payment_streak_updated >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
             AND last_payment_streak_updated <  date_trunc('month', CURRENT_DATE)
           ) THEN consecutive_payment_months + 1
+          -- Paid this month AND no prior streak record (brand-new user) → start at 1
           WHEN EXISTS (
             SELECT 1 FROM bill_payments
             WHERE telefono = ${telefono}
               AND created_at >= date_trunc('month', CURRENT_DATE)
-              AND status IN ('completed', 'success')
+              AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
           ) AND last_payment_streak_updated IS NULL THEN 1
+          -- Paid this month AND streak was recorded this month already → already counted, no change
+          WHEN EXISTS (
+            SELECT 1 FROM bill_payments
+            WHERE telefono = ${telefono}
+              AND created_at >= date_trunc('month', CURRENT_DATE)
+              AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
+          ) AND last_payment_streak_updated >= date_trunc('month', CURRENT_DATE) THEN consecutive_payment_months
+          -- No payment this month → reset streak
           ELSE 0
         END,
-        last_payment_streak_updated = CURRENT_DATE
+        -- ONLY advance the timestamp when a payment was found this month.
+        -- If ELSE fired (no payment), preserve the old timestamp so the next
+        -- month's check can still correctly detect the prior-month boundary.
+        last_payment_streak_updated = CASE
+          WHEN EXISTS (
+            SELECT 1 FROM bill_payments
+            WHERE telefono = ${telefono}
+              AND created_at >= date_trunc('month', CURRENT_DATE)
+              AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
+          ) THEN CURRENT_DATE
+          ELSE last_payment_streak_updated
+        END
       WHERE telefono = ${telefono}
     `);
   } catch (err) {
