@@ -43,6 +43,9 @@ function buildSystemPrompt(
   ptiBreakdown?: Record<string, Record<string, number>> | null,
   consecutivePaymentMonths?: number | null,
   ptiTrend?: string | null,
+  financialLiteracyScore?: number | null,
+  modulesUnlocked?: string[] | null,
+  coachingResponsiveness?: string | null,
 ): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
 
@@ -120,6 +123,49 @@ function buildSystemPrompt(
     }
   }
 
+  // ── Sprint 4: Literacy + Responsiveness Context ───────────────────────────
+  const MODULE_LABELS: Record<string, string> = {
+    module_unlock_1: "¿Qué es un historial de crédito?",
+    module_unlock_2: "Cómo funciona el crédito en México",
+    module_unlock_3: "Buró de Crédito — mitos y realidades",
+    module_unlock_4: "Qué buscan los bancos",
+    module_unlock_5: "Primera solicitud de crédito formal",
+  };
+
+  let literacyContext = "";
+  if (financialLiteracyScore != null) {
+    const completed = (modulesUnlocked ?? []).map(k => MODULE_LABELS[k] ?? k);
+    const completedStr = completed.length > 0
+      ? completed.join(", ")
+      : "ninguno aún";
+    const remaining = 5 - financialLiteracyScore;
+
+    literacyContext =
+      `\n\nPROGRESO EDUCATIVO DEL USUARIO: Ha completado ${financialLiteracyScore} de 5 ` +
+      `módulos de educación financiera Paula. ` +
+      `Módulos completados: ${completedStr}. ` +
+      (remaining > 0
+        ? `Le faltan ${remaining} módulos — se desbloquean automáticamente al subir su PTI. `
+        : `Ha completado el curriculum completo — está listo para una evaluación de crédito formal. `) +
+      `Cuando hagas coaching educativo, construye sobre lo que ya sabe — no repitas conceptos ` +
+      `que ya aprendió. Si pregunta sobre algo cubierto en un módulo que YA completó, ` +
+      `puedes decirle "como ya aprendiste..." y avanzar.`;
+
+    if (coachingResponsiveness === "OPTED_OUT") {
+      literacyContext +=
+        ` IMPORTANTE: Este usuario ha optado por no recibir mensajes proactivos de Paula — ` +
+        `responde solo a sus preguntas directas, nunca inicies coaching no solicitado.`;
+    } else if (coachingResponsiveness === "PASSIVE") {
+      literacyContext +=
+        ` Este usuario recibe mensajes pero raramente responde — sé conciso, ` +
+        `no hagas preguntas de seguimiento encadenadas.`;
+    } else if (coachingResponsiveness === "ENGAGED") {
+      literacyContext +=
+        ` Este usuario responde activamente a los mensajes de Paula — puedes hacer ` +
+        `preguntas de seguimiento y profundizar en coaching cuando sea relevante.`;
+    }
+  }
+
   const langInstruction = lang === "en"
     ? " IMPORTANT: This user's preferred language is ENGLISH. You MUST respond exclusively in English for the entire conversation. Do not switch to Spanish even if the user writes something in Spanish."
     : " Responde siempre en español mexicano natural, a menos que el usuario te escriba en otro idioma.";
@@ -182,7 +228,7 @@ RETIROS / TRANSFERENCIA A CUENTA BANCARIA (SPEI OUT): Cuando el usuario quiere r
 
 TRANSFERENCIA ENTRE USUARIOS PAGOYA (P2P): Cuando el usuario quiere enviarle dinero a otra persona que también usa PagoYa, usa prepare_p2p_transfer. Es instantáneo, sin comisión, mínimo $10 MXN, límite diario $2,500 MXN. Necesitas: número de teléfono del destinatario y monto. Puedes pedir una nota opcional. Si el destinatario no está registrado en PagoYa, infórmale al usuario: "Esa persona todavía no tiene cuenta PagoYa. Pueden registrarse gratis en pagoyamx.com o escribiéndole a este número de WhatsApp."
 
-Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}`;
+Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}${literacyContext}`;
 }
 
 // ─── Tool definitions ──────────────────────────────────────────────────────────
@@ -712,7 +758,7 @@ router.post("/", async (req: Request, res: Response) => {
       try {
         const tel10 = telefono.replace(/\D/g, "").slice(-10);
         const userRow = await db.execute(
-          sql`SELECT pti_breakdown, pti_score, consecutive_payment_months FROM users WHERE telefono = ${tel10} LIMIT 1`
+          sql`SELECT pti_breakdown, pti_score, consecutive_payment_months, coaching_responsiveness FROM users WHERE telefono = ${tel10} LIMIT 1`
         );
         if (userRow.rows.length > 0) {
           const u = userRow.rows[0] as Record<string, unknown>;
@@ -736,6 +782,43 @@ router.post("/", async (req: Request, res: Response) => {
           ptiTrend = ((trendRow.rows[0] as Record<string, unknown>).trend_label as string) ?? null;
         }
       } catch { /* trend unavailable — degrades gracefully */ }
+
+      // Fetch financial literacy progress (Sprint 4)
+      let financialLiteracyScore: number | null = null;
+      let modulesUnlocked: string[] | null = null;
+      let coachingResponsiveness: string | null = null;
+      try {
+        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const literacyCountRow = await db.execute(sql`
+          SELECT COUNT(*) AS literacy_score
+          FROM paula_trigger_log
+          WHERE telefono = ${tel10}
+            AND trigger_type LIKE 'module_unlock_%'
+        `);
+        financialLiteracyScore = Number(
+          (literacyCountRow.rows[0] as Record<string, unknown>)?.literacy_score ?? 0,
+        );
+        const modulesRow = await db.execute(sql`
+          SELECT trigger_type FROM paula_trigger_log
+          WHERE telefono = ${tel10}
+            AND trigger_type LIKE 'module_unlock_%'
+          ORDER BY fired_at ASC
+        `);
+        modulesUnlocked = (modulesRow.rows as Array<{ trigger_type: string }>)
+          .map(r => r.trigger_type);
+      } catch { /* literacy unavailable — degrades gracefully */ }
+
+      // coaching_responsiveness from users row already fetched above
+      try {
+        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const crRow = await db.execute(sql`
+          SELECT coaching_responsiveness FROM users WHERE telefono = ${tel10} LIMIT 1
+        `);
+        if (crRow.rows.length > 0) {
+          coachingResponsiveness =
+            ((crRow.rows[0] as Record<string, unknown>).coaching_responsiveness as string) ?? "UNKNOWN";
+        }
+      } catch { /* responsiveness unavailable — degrades gracefully */ }
     }
 
     const messages: MessageParam[] = [
@@ -756,7 +839,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths, ptiTrend),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths, ptiTrend, financialLiteracyScore, modulesUnlocked, coachingResponsiveness),
         tools: TOOLS,
         messages,
       });

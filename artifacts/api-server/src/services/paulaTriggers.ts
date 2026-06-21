@@ -42,6 +42,7 @@ export const TRIGGER = {
   STALLED_14D:      "stalled_14d",
   PATTERN_LATE_2X:  "pattern_late_2x",
   // Educational (PTI-gated literacy modules)
+  MODULE_UNLOCK_1:  "module_unlock_1",
   MODULE_UNLOCK_2:  "module_unlock_2",
   MODULE_UNLOCK_3:  "module_unlock_3",
   MODULE_UNLOCK_4:  "module_unlock_4",
@@ -245,6 +246,18 @@ export async function evaluateTriggersForUser(
   // ═══════════════════════════════════════════════════════════════════════════
   // EDUCATIONAL TRIGGERS (PTI milestone-gated)
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // Module 1 unlock: PTI < 30, fires after first payment
+  // "Welcome to your credit journey" — frames everything that follows
+  // cooldown_days = 9999, fires exactly once per user lifetime
+  if (
+    totalPaid >= 1 &&
+    ptiScore < 30 &&
+    !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_1, templates))
+  ) {
+    await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
+    fired++;
+  }
 
   // Module 2 unlock: PTI 30–49
   if (ptiScore >= 30 && ptiScore < 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {

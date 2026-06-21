@@ -1,11 +1,14 @@
 /**
- * buildUserContext — Sprint 3
+ * buildUserContext — Sprint 3 + Sprint 4
  *
- * Assembles the full UserContext for a given telefono in a single round-trip.
+ * Assembles the full UserContext for a given telefono.
  * Called ONCE per user per cron batch — result is reused across all triggers
  * that fire for that user in the same run.
  *
- * Also used as the trigger_data JSONB snapshot in paula_trigger_log.
+ * Sprint 4 additions:
+ *   - financial_literacy_score: COUNT of fired module_unlock_% triggers
+ *   - modules_unlocked: ordered list of fired module triggers
+ *   - coaching_responsiveness: from users.coaching_responsiveness
  */
 
 import { sql } from "drizzle-orm";
@@ -36,7 +39,7 @@ export async function buildUserContext(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
   telefono: string,
 ): Promise<UserContext> {
-  // ── Single query: user + PTI trend + payment aggregates ──────────────────
+  // ── Query 1: user + PTI trend + payment aggregates ───────────────────────
   const row = await db.execute(sql`
     SELECT
       COALESCE(
@@ -60,7 +63,10 @@ export async function buildUserContext(
       -- Distinct bill categories paid
       COUNT(DISTINCT bp.service_type)
         FILTER (WHERE bp.status IN ('completed','success','completed_ok','confirmed'))
-                                                  AS bill_category_count
+                                                  AS bill_category_count,
+
+      -- Sprint 4: coaching responsiveness
+      COALESCE(u.coaching_responsiveness, 'UNKNOWN') AS coaching_responsiveness
 
     FROM users u
     LEFT JOIN pti_trend_30d t
@@ -68,7 +74,7 @@ export async function buildUserContext(
     LEFT JOIN bill_payments bp
       ON bp.telefono = u.telefono
     WHERE u.telefono = ${telefono}
-    GROUP BY u.kyc_full_name, u.pti_score, t.delta_30d, t.trend_label, u.pti_breakdown
+    GROUP BY u.kyc_full_name, u.pti_score, t.delta_30d, t.trend_label, u.pti_breakdown, u.coaching_responsiveness
     LIMIT 1
   `);
 
@@ -86,15 +92,42 @@ export async function buildUserContext(
 
   const ptiScore = Number(r.pti_score ?? 0);
 
+  // ── Query 2: financial_literacy_score (Sprint 4) ─────────────────────────
+  const literacyCountResult = await db.execute(sql`
+    SELECT COUNT(*) AS literacy_score
+    FROM paula_trigger_log
+    WHERE telefono = ${telefono}
+      AND trigger_type LIKE 'module_unlock_%'
+  `);
+  const financial_literacy_score = Number(
+    (literacyCountResult.rows[0] as Record<string, unknown>)?.literacy_score ?? 0,
+  );
+
+  // ── Query 3: modules_unlocked ordered list (Sprint 4) ───────────────────
+  const modulesResult = await db.execute(sql`
+    SELECT trigger_type
+    FROM paula_trigger_log
+    WHERE telefono = ${telefono}
+      AND trigger_type LIKE 'module_unlock_%'
+    ORDER BY fired_at ASC
+  `);
+  const modules_unlocked: string[] = (
+    modulesResult.rows as Array<{ trigger_type: string }>
+  ).map(row => row.trigger_type);
+
   return {
-    nombre:                String(r.nombre ?? "amig@"),
-    pti_score:             ptiScore,
-    pti_delta:             Number(r.pti_delta ?? 0),
-    pti_trend:             String(r.pti_trend ?? "NEUTRAL"),
-    days_streak:           Number(r.days_streak ?? 0),
-    weakest_dimension:     labelDimension(weakest),
-    strongest_dimension:   labelDimension(strongest),
-    bill_category_count:   Number(r.bill_category_count ?? 0),
-    tier:                  scoreTier(ptiScore),
+    nombre:                  String(r.nombre ?? "amig@"),
+    pti_score:               ptiScore,
+    pti_delta:               Number(r.pti_delta ?? 0),
+    pti_trend:               String(r.pti_trend ?? "NEUTRAL"),
+    days_streak:             Number(r.days_streak ?? 0),
+    weakest_dimension:       labelDimension(weakest),
+    strongest_dimension:     labelDimension(strongest),
+    bill_category_count:     Number(r.bill_category_count ?? 0),
+    tier:                    scoreTier(ptiScore),
+    // Sprint 4
+    financial_literacy_score,
+    modules_unlocked,
+    coaching_responsiveness: String(r.coaching_responsiveness ?? "UNKNOWN"),
   };
 }

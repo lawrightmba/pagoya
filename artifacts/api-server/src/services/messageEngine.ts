@@ -22,6 +22,9 @@ export interface UserContext {
   strongest_dimension: string;
   bill_category_count: number;
   tier: string;
+  financial_literacy_score: number;   // 0–5, count of fired module_unlock_% triggers
+  modules_unlocked: string[];          // ordered: ['module_unlock_1', 'module_unlock_2', ...]
+  coaching_responsiveness: string;     // 'ENGAGED' | 'PASSIVE' | 'OPTED_OUT' | 'UNKNOWN'
 }
 
 export interface TemplateRow {
