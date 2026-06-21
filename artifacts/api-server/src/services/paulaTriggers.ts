@@ -51,6 +51,8 @@ export const TRIGGER = {
   // Readiness gate
   READINESS_APPROACHING: "readiness_approaching",
   READINESS_HARD:        "readiness_hard",
+  // Gap report — below APPROACHING threshold, at least one payment
+  NOT_YET_GAP_REPORT:    "not_yet_gap_report",
 } as const;
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
@@ -326,6 +328,19 @@ export async function evaluateTriggersForUser(
           top_gap:     readiness.topGapLabel,
         };
         await fireTrigger(db, telefono, TRIGGER.READINESS_APPROACHING, enrichedCtx, templates);
+        fired++;
+      }
+
+    } else {
+      // NOT_YET — PTI < 70, largest cohort. 30-day cadence gap report.
+      // Names their single closest gap so every message is actionable, not generic.
+      if (!(await onCooldown(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, templates))) {
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days: readiness.streakDays,
+          top_gap:     readiness.topGapLabel,
+        };
+        await fireTrigger(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, enrichedCtx, templates);
         fired++;
       }
     }
