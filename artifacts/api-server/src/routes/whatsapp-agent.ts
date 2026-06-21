@@ -740,6 +740,72 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    // ── Handoff intercept (DB-backed — survives restarts) ─────────────────────
+    // Checked before pendingPayment/P2P/withdrawal — handoff reply takes priority.
+    // Fall-through (unrelated message while handoff pending) does NOT clear the
+    // pending row — the offer stays open until an explicit SÍ or NO.
+    {
+      const handoffRow = await db.execute(sql`
+        SELECT assessment_id, partner_display_name
+        FROM paula_pending_handoffs
+        WHERE telefono = ${phoneKey}
+        LIMIT 1
+      `);
+      const pendingHandoff = handoffRow.rows[0] as
+        { assessment_id: number; partner_display_name: string } | undefined;
+
+      if (pendingHandoff) {
+        const isYes = /^(sí|si|yes|yep|dale|va|ok|claro|quiero|conecta)$/i
+          .test(userMessage.trim());
+        const isNo  = /^(no|nel|nope|no\s+gracias|cancelar)$/i
+          .test(userMessage.trim());
+
+        if (isYes) {
+          db.execute(sql`
+            UPDATE readiness_assessments
+            SET handoff_requested = true, handoff_at = NOW()
+            WHERE id = ${pendingHandoff.assessment_id}
+          `).catch(() => {});
+
+          db.execute(sql`
+            DELETE FROM paula_pending_handoffs WHERE telefono = ${phoneKey}
+          `).catch(() => {});
+
+          db.execute(sql`
+            INSERT INTO user_events (telefono, event_type, metadata)
+            VALUES (${phoneKey}, 'handoff_requested', ${JSON.stringify({
+              assessmentId: pendingHandoff.assessment_id,
+              partner: pendingHandoff.partner_display_name,
+            })}::jsonb)
+          `).catch(() => {});
+
+          const replyText =
+            `¡Perfecto! 🎉 Hemos registrado tu solicitud. Alguien del equipo PagoYa ` +
+            `se pondrá en contacto contigo en los próximos días para guiarte en el ` +
+            `proceso con ${pendingHandoff.partner_display_name}.\n\n` +
+            `Mientras tanto, sigue pagando tus servicios a tiempo — eso fortalece ` +
+            `aún más tu perfil. 💪`;
+          await sendWhatsApp(phoneKey, replyText);
+          return;
+        }
+
+        if (isNo) {
+          db.execute(sql`
+            DELETE FROM paula_pending_handoffs WHERE telefono = ${phoneKey}
+          `).catch(() => {});
+
+          const replyText =
+            `Entendido, no hay problema. 😊 Tu perfil sigue aquí — cuando quieras ` +
+            `explorar tus opciones, solo dímelo.`;
+          await sendWhatsApp(phoneKey, replyText);
+          return;
+        }
+
+        // Unrelated message — do NOT clear pendingHandoff. The offer stays open.
+        // Fall through to normal Paula routing below.
+      }
+    }
+
     // ── Pending withdrawal confirmation intercept (session-backed) ───────────
     const pendingW = session.pendingWithdrawal;
     if (pendingW && Date.now() < pendingW.expiresAt) {

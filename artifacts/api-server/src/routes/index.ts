@@ -776,6 +776,11 @@ router.get("/admin/compliance-summary", async (_req: Request, res: Response) => 
       `),
     ]);
 
+    const handoffCountRes = await db.execute(drizzleSql`
+      SELECT COUNT(*) AS cnt FROM readiness_assessments WHERE handoff_requested = true
+    `);
+    const handoffPending = Number((handoffCountRes.rows[0] as Record<string, unknown>)?.cnt ?? 0);
+
     const s = userSummary.rows[0] as Record<string, unknown>;
     res.set("Cache-Control", "no-store");
     res.json({
@@ -792,10 +797,42 @@ router.get("/admin/compliance-summary", async (_req: Request, res: Response) => 
       kyc_tiers:  kycRes.rows,
       pti_tiers:  ptiRes.rows,
       weekly_tx:  txRes.rows,
+      handoff_requests_pending: handoffPending,
     });
   } catch (err) {
     logger.error({ err }, "admin/compliance-summary: failed");
     res.status(500).json({ error: "Error al obtener resumen de cumplimiento." });
+  }
+});
+
+// GET /api/admin/handoff-requests
+// Users who replied SÍ to the readiness_hard message — ops follow-up queue
+router.get("/admin/handoff-requests", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(drizzleSql`
+      SELECT
+        ra.id                AS assessment_id,
+        ra.telefono,
+        u.kyc_full_name      AS nombre,
+        ra.gate_status,
+        ra.pti_score_at,
+        ra.streak_days_at,
+        ra.bill_diversity_at,
+        ra.literacy_score_at,
+        ra.handoff_at,
+        pp.display_name      AS partner_display_name,
+        ra.handoff_notes
+      FROM readiness_assessments ra
+      LEFT JOIN users          u  ON u.telefono  = ra.telefono
+      LEFT JOIN partner_programs pp ON pp.id     = ra.partner_program_id
+      WHERE ra.handoff_requested = true
+      ORDER BY ra.handoff_at DESC
+      LIMIT 100
+    `);
+    res.json({ handoff_requests: rows.rows, count: rows.rows.length });
+  } catch (err) {
+    logger.error({ err }, "admin/handoff-requests: failed");
+    res.status(500).json({ error: "Failed to fetch handoff requests" });
   }
 });
 

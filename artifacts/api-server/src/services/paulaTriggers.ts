@@ -26,6 +26,7 @@ import {
 } from "./messageEngine.js";
 import { buildUserContext } from "./buildUserContext.js";
 import { enqueueWhatsApp } from "./paulaSendQueue.js";
+import { evaluateReadiness, getPartnerDisplayName } from "./readinessGate.js";
 
 // ── Trigger type registry ──────────────────────────────────────────────────────
 export const TRIGGER = {
@@ -47,6 +48,9 @@ export const TRIGGER = {
   MODULE_UNLOCK_3:  "module_unlock_3",
   MODULE_UNLOCK_4:  "module_unlock_4",
   MODULE_UNLOCK_5:  "module_unlock_5",
+  // Readiness gate
+  READINESS_APPROACHING: "readiness_approaching",
+  READINESS_HARD:        "readiness_hard",
 } as const;
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
@@ -288,6 +292,43 @@ export async function evaluateTriggersForUser(
   if (ptiScore >= 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_5, templates))) {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
     fired++;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // READINESS GATE TRIGGERS
+  // Evaluated last — most consequential.
+  // evaluateReadiness writes an assessment row every evaluation so the admin
+  // dashboard has a full history regardless of whether a trigger fires.
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (totalPaid >= 1) {
+    const readiness = await evaluateReadiness(db, telefono, ctx);
+
+    if (readiness.status === "READY") {
+      // Hard gate — fires exactly once per user lifetime (cooldown_days = 9999)
+      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_HARD, templates))) {
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days:          readiness.streakDays,
+          bill_diversity:       readiness.billDiversity,
+          literacy_score:       ctx.financial_literacy_score,
+          partner_display_name: readiness.partnerDisplayName,
+        };
+        await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
+        fired++;
+      }
+
+    } else if (readiness.status === "APPROACHING") {
+      // Soft gate — cooldown 14 days (set in paula_messages seed)
+      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_APPROACHING, templates))) {
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days: readiness.streakDays,
+          top_gap:     readiness.topGapLabel,
+        };
+        await fireTrigger(db, telefono, TRIGGER.READINESS_APPROACHING, enrichedCtx, templates);
+        fired++;
+      }
+    }
   }
 
   return fired;

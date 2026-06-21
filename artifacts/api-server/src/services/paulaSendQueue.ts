@@ -15,6 +15,7 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { getPartnerDisplayName } from "./readinessGate.js";
 
 const MAX_ATTEMPTS = 3;
 const BATCH_SIZE   = 10;
@@ -42,7 +43,7 @@ export async function processSendQueue(): Promise<void> {
   const { db } = await import("@workspace/db");
 
   const rows = await db.execute(sql`
-    SELECT id, telefono, message, trigger_log_id, attempts
+    SELECT id, telefono, message, trigger_type, trigger_log_id, attempts
     FROM paula_send_queue
     WHERE status IN ('PENDING', 'FAILED')
       AND attempts < ${MAX_ATTEMPTS}
@@ -59,6 +60,7 @@ export async function processSendQueue(): Promise<void> {
     const id           = Number(row.id);
     const telefono     = String(row.telefono);
     const message      = String(row.message);
+    const triggerType  = String(row.trigger_type ?? "");
     const triggerLogId = row.trigger_log_id != null ? Number(row.trigger_log_id) : null;
     const attempts     = Number(row.attempts) + 1;
 
@@ -76,6 +78,37 @@ export async function processSendQueue(): Promise<void> {
         SET status = 'SENT', sent_at = NOW()
         WHERE id = ${id}
       `);
+
+      // When a readiness_hard message is confirmed sent — write pending handoff to DB.
+      // DB-backed so the handoff offer survives server restarts.
+      if (triggerType === 'readiness_hard') {
+        try {
+          const latestAssessment = await db.execute(sql`
+            SELECT id FROM readiness_assessments
+            WHERE telefono = ${telefono}
+              AND gate_status = 'READY'
+            ORDER BY assessed_at DESC LIMIT 1
+          `);
+          const assessmentId = Number(
+            (latestAssessment.rows[0] as Record<string, unknown>)?.id,
+          );
+          if (assessmentId) {
+            const partnerName = await getPartnerDisplayName(db);
+            await db.execute(sql`
+              INSERT INTO paula_pending_handoffs
+                (telefono, assessment_id, partner_display_name)
+              VALUES
+                (${telefono}, ${assessmentId}, ${partnerName})
+              ON CONFLICT (telefono) DO UPDATE
+                SET assessment_id        = EXCLUDED.assessment_id,
+                    partner_display_name = EXCLUDED.partner_display_name,
+                    created_at           = NOW()
+            `);
+          }
+        } catch (handoffErr) {
+          logger.warn({ handoffErr, telefono }, "[SendQueue] Failed to write pending handoff row");
+        }
+      }
 
       if (triggerLogId != null) {
         await db.execute(sql`

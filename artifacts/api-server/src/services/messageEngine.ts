@@ -25,6 +25,14 @@ export interface UserContext {
   financial_literacy_score: number;   // 0–5, count of fired module_unlock_% triggers
   modules_unlocked: string[];          // ordered: ['module_unlock_1', 'module_unlock_2', ...]
   coaching_responsiveness: string;     // 'ENGAGED' | 'PASSIVE' | 'OPTED_OUT' | 'UNKNOWN'
+
+  // Optional readiness fields — populated at trigger evaluation time only
+  // Injected into enrichedCtx for readiness_approaching / readiness_hard templates
+  streak_days?:           number;   // calendar days of consecutive payments
+  bill_diversity?:        number;   // count of distinct service types paid
+  literacy_score?:        number;   // alias for financial_literacy_score in readiness templates
+  top_gap?:               string;   // human-readable label for closest-to-met criterion
+  partner_display_name?:  string;   // from partner_programs.display_name
 }
 
 export interface TemplateRow {
