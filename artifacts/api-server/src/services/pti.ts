@@ -422,6 +422,12 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     WHERE telefono = ${telefono}
   `);
 
+  // ── Log to score history (powers pti_trend_30d view + Paula trend coaching) ─
+  await db.execute(sql`
+    INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+    VALUES (${telefono}, ${total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
+  `).catch(err => logger.warn({ err, telefono }, "pti: history log failed — continuing"));
+
   // ── Persist dimension scores to behavioral signals audit table ────────────
   await db.execute(sql`
     INSERT INTO pti_behavioral_signals

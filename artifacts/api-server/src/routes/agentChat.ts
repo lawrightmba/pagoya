@@ -42,6 +42,7 @@ function buildSystemPrompt(
   lang?: "es" | "en" | null,
   ptiBreakdown?: Record<string, Record<string, number>> | null,
   consecutivePaymentMonths?: number | null,
+  ptiTrend?: string | null,
 ): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
 
@@ -71,7 +72,7 @@ function buildSystemPrompt(
         actionEs: "pagar cada servicio antes de la fecha de vencimiento, sin fallar",
       },
       {
-        key: "cash_flow_stability",
+        key: "cashflow_stability",
         label: "Estabilidad Financiera",
         bureauFactor: "utilización de crédito y capacidad financiera",
         actionEs: "mantener saldo activo en la billetera y cargarla con regularidad",
@@ -104,6 +105,18 @@ function buildSystemPrompt(
 
     if (consecutivePaymentMonths != null && consecutivePaymentMonths > 0) {
       creditCoachingContext += ` Lleva ${consecutivePaymentMonths} ${consecutivePaymentMonths === 1 ? "mes" : "meses"} consecutivos de pagos — exactamente lo que los prestamistas formales buscan.`;
+    }
+
+    if (ptiTrend && ptiTrend !== "NEW") {
+      const trendFraming: Record<string, string> = {
+        IMPROVING:    "TENDENCIA POSITIVA (score subiendo este mes) — usa esto para motivarlo a mantener el ritmo; este es el momento de reforzar el comportamiento.",
+        ACCELERATING: "TENDENCIA ACELERADA (score subiendo + todas las dimensiones en verde) — perfil muy atractivo para lenders; puedes mencionarlo si pregunta sobre crédito.",
+        PLATEAUING:   "TENDENCIA ESTANCADA (sin cambio significativo) — es el momento ideal para un nudge específico sobre su dimensión con más oportunidad.",
+        DECLINING:    "TENDENCIA NEGATIVA (score bajando) — usa tono recovery: reconoce el bajón sin dramatizar, ofrece un action step concreto hoy.",
+        STALLED:      "SIN ACTIVIDAD 14+ DÍAS — trigger de re-engagement; pregunta qué servicio puede pagar hoy para reactivar su racha.",
+        NEUTRAL:      "TENDENCIA NEUTRAL — refuerza la consistencia como el factor más valioso del historial crediticio.",
+      };
+      creditCoachingContext += ` ${trendFraming[ptiTrend] ?? trendFraming.NEUTRAL}`;
     }
   }
 
@@ -682,6 +695,7 @@ router.post("/", async (req: Request, res: Response) => {
     let ptiScore: number | null = null;
     let ptiBreakdown: Record<string, Record<string, number>> | null = null;
     let consecutivePaymentMonths: number | null = null;
+    let ptiTrend: string | null = null;
     if (telefono) {
       try {
         const ptiRow = await db.execute(
@@ -711,6 +725,17 @@ router.post("/", async (req: Request, res: Response) => {
           consecutivePaymentMonths = u.consecutive_payment_months != null ? Number(u.consecutive_payment_months) : null;
         }
       } catch { /* breakdown unavailable — counseling degrades gracefully */ }
+
+      // Fetch PTI trend label for momentum-aware coaching
+      try {
+        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const trendRow = await db.execute(
+          sql`SELECT trend_label FROM pti_trend_30d WHERE telefono = ${tel10} LIMIT 1`
+        );
+        if (trendRow.rows.length > 0) {
+          ptiTrend = ((trendRow.rows[0] as Record<string, unknown>).trend_label as string) ?? null;
+        }
+      } catch { /* trend unavailable — degrades gracefully */ }
     }
 
     const messages: MessageParam[] = [
@@ -731,7 +756,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths, ptiTrend),
         tools: TOOLS,
         messages,
       });
