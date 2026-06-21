@@ -19,11 +19,13 @@ import { sendWhatsApp } from "../lib/whatsapp.js";
 export const TRIGGER = {
   // Achievement
   FIRST_PAYMENT:    "first_payment",
+  STREAK_5:         "streak_5",
   PTI_CROSS_40:     "pti_cross_40",
   PTI_CROSS_60:     "pti_cross_60",
   PTI_CROSS_80:     "pti_cross_80",
   MILESTONE_90D:    "milestone_90d",
   // Recovery
+  LATE_PAYMENT_1:   "late_payment_1",
   PTI_DROP_7D:      "pti_drop_7d",
   STALLED_14D:      "stalled_14d",
   PATTERN_LATE_2X:  "pattern_late_2x",
@@ -110,6 +112,7 @@ export async function evaluateTriggersForUser(
   const payRow = await db.execute(sql`
     SELECT
       COUNT(*)         FILTER (WHERE status IN ('completed','success','completed_ok','confirmed'))                             AS total_paid,
+      COUNT(*)         FILTER (WHERE status IN ('failed','late'))                                                             AS total_late,
       COUNT(*)         FILTER (WHERE status IN ('failed','late') AND created_at >= NOW() - INTERVAL '30 days')                AS late_30d,
       MAX(created_at)  FILTER (WHERE status IN ('completed','success','completed_ok','confirmed'))                             AS last_payment_at
     FROM bill_payments
@@ -117,6 +120,7 @@ export async function evaluateTriggersForUser(
   `);
   const p               = payRow.rows[0] as Record<string, unknown>;
   const totalPaid       = Number(p.total_paid ?? 0);
+  const totalLate       = Number(p.total_late ?? 0);
   const late30d         = Number(p.late_30d ?? 0);
   const lastPaymentAt   = p.last_payment_at ? new Date(p.last_payment_at as string) : null;
   const daysSincePay    = lastPaymentAt
@@ -171,6 +175,20 @@ export async function evaluateTriggersForUser(
       `🎯 ¡Primer pago registrado, ${nombre}! Eso es exactamente cómo empieza un historial de confianza. ` +
       `Cada pago a tiempo es un ladrillo en tu reputación financiera. Sigamos construyendo.`;
     await fireTrigger(db, telefono, TRIGGER.FIRST_PAYMENT, msg, { total_paid: totalPaid });
+    fired++;
+  }
+
+  // T1b — 5-payment streak (fires week 2-3, before any PTI threshold is crossed)
+  // Window: payments 5–9, no all-time late payments (clean record so far)
+  if (
+    totalPaid >= 5 && totalPaid <= 9 && totalLate === 0 &&
+    !(await isOnCooldown(db, telefono, TRIGGER.STREAK_5))
+  ) {
+    const msg =
+      `🔥 ¡5 pagos puntuales, ${nombre}! Ese es exactamente el patrón que construye un historial de confianza real. ` +
+      `El Buró de Crédito valora la consistencia por encima de casi todo. ` +
+      `Tú ya la tienes. Sigamos.`;
+    await fireTrigger(db, telefono, TRIGGER.STREAK_5, msg, { total_paid: totalPaid, total_late: totalLate });
     fired++;
   }
 
@@ -233,6 +251,18 @@ export async function evaluateTriggersForUser(
   // ═══════════════════════════════════════════════════════════════════════════
   // RECOVERY TRIGGERS
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // T6a — First ever late payment (most critical recovery moment)
+  // Fire when exactly 1 all-time late/failed payment exists — before pattern forms
+  if (totalLate === 1 && !(await isOnCooldown(db, telefono, TRIGGER.LATE_PAYMENT_1))) {
+    const msg =
+      `Hola ${nombre}. Noté un retraso en tu último pago. ` +
+      `No pasa nada — un solo retraso no destruye tu historial. ` +
+      `Lo que importa es lo que hagas hoy. ` +
+      `¿Pagamos algo ahora para mantener tu racha activa?`;
+    await fireTrigger(db, telefono, TRIGGER.LATE_PAYMENT_1, msg, { total_late: totalLate });
+    fired++;
+  }
 
   // T6 — PTI dropped ≥5 pts in 7 days
   if (
