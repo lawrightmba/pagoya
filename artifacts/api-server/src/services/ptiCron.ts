@@ -18,6 +18,7 @@ import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { computePTIForAllUsers } from "./pti.js";
 import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
+import { runPaulaTriggerBatch } from "./paulaTriggers.js";
 
 // ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
 // Unexpected rewards at threshold crossings — never announced in advance.
@@ -501,4 +502,18 @@ export function startPtiCron(): void {
   scheduleMonthly1stAt(9, runMonthlyBatchAndReport, "monthlyPtiBatch");
   logger.info("[PTI Cron] Scheduled: runs 1st of month at 03:00 AM MX");
   logger.info("pti-cron: scheduled (PTI 2 AM MX / scratch reminder 5 PM MX / monthly PTI 1st of month 3 AM MX)");
+
+  // Paula trigger evaluation — every 6 hours (counseling is time-sensitive)
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  const runTriggers = () => {
+    runPaulaTriggerBatch().catch(err =>
+      logger.error({ err }, "pti-cron: paulaTriggerBatch top-level failure"),
+    );
+  };
+  // First run after 5-minute warm-up to let other crons settle
+  setTimeout(() => {
+    runTriggers();
+    setInterval(runTriggers, SIX_HOURS_MS);
+    logger.info("pti-cron: paulaTriggerBatch registered (every 6h, first run in 5min)");
+  }, 5 * 60 * 1000);
 }
