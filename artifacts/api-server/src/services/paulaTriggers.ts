@@ -106,6 +106,13 @@ export async function evaluateTriggersForUser(
   ctx: UserContext,
   templates: TemplateCache,
 ): Promise<number> {
+  // Suppression gate: never fire proactive triggers for opted-out users
+  // Paula still responds to direct inbound messages — this only suppresses
+  // outbound trigger-initiated messages
+  if (ctx.coaching_responsiveness === 'OPTED_OUT') {
+    return 0; // fired count = 0, log nothing
+  }
+
   let fired = 0;
 
   // ── Payment condition data (trigger logic only — not used in messages) ────
@@ -333,7 +340,71 @@ export async function runPaulaTriggerBatch(): Promise<void> {
     await new Promise((r) => setTimeout(r, 20));
   }
 
+  // Update coaching responsiveness for all users based on inbound reply patterns
+  await updateCoachingResponsiveness(db);
+  console.log('[Paula cron] coaching_responsiveness updated');
+
   logger.info(
     `[PaulaTriggers] Complete: ${users.length} users, ${totalFired} triggers fired, ${errors} errors — ${Date.now() - startedAt}ms`,
   );
+}
+
+// ── Coaching responsiveness detection ─────────────────────────────────────────
+// Runs at the end of every 6-hour cron batch.
+// Priority order is load-bearing — do NOT reorder or combine into a single CASE:
+//   1. OPTED_OUT — set on keyword match, never overridden by subsequent steps
+//   2. ENGAGED   — reply-within-24h signal, excludes OPTED_OUT users
+//   3. PASSIVE   — 3+ sends, zero 24h replies, excludes OPTED_OUT + ENGAGED
+type Database = Awaited<ReturnType<typeof import("@workspace/db").default>>;
+
+async function updateCoachingResponsiveness(db: Database): Promise<void> {
+  // Step 1: OPTED_OUT — stop keywords, irreversible
+  await db.execute(sql`
+    UPDATE users
+    SET coaching_responsiveness = 'OPTED_OUT'
+    WHERE coaching_responsiveness != 'OPTED_OUT'
+      AND telefono IN (
+        SELECT DISTINCT telefono
+        FROM paula_inbound_log
+        WHERE LOWER(message_body) IN ('stop', 'baja', 'cancelar', 'no messages')
+      )
+  `);
+
+  // Step 2: ENGAGED — replied within 24h of any Paula outbound send
+  // Excludes OPTED_OUT (already handled above)
+  await db.execute(sql`
+    UPDATE users
+    SET coaching_responsiveness = 'ENGAGED'
+    WHERE coaching_responsiveness NOT IN ('OPTED_OUT', 'ENGAGED')
+      AND telefono IN (
+        SELECT DISTINCT i.telefono
+        FROM paula_inbound_log i
+        INNER JOIN paula_send_queue q
+          ON q.telefono = i.telefono
+          AND q.status = 'SENT'
+          AND i.received_at BETWEEN q.sent_at AND q.sent_at + INTERVAL '24 hours'
+      )
+  `);
+
+  // Step 3: PASSIVE — 3+ sends, zero 24h replies
+  // Only touches UNKNOWN — OPTED_OUT and ENGAGED already excluded by state
+  await db.execute(sql`
+    UPDATE users
+    SET coaching_responsiveness = 'PASSIVE'
+    WHERE coaching_responsiveness = 'UNKNOWN'
+      AND telefono IN (
+        SELECT telefono FROM paula_send_queue
+        WHERE status = 'SENT'
+        GROUP BY telefono
+        HAVING COUNT(*) >= 3
+      )
+      AND telefono NOT IN (
+        SELECT DISTINCT i.telefono
+        FROM paula_inbound_log i
+        INNER JOIN paula_send_queue q
+          ON q.telefono = i.telefono
+          AND q.status = 'SENT'
+          AND i.received_at BETWEEN q.sent_at AND q.sent_at + INTERVAL '24 hours'
+      )
+  `);
 }

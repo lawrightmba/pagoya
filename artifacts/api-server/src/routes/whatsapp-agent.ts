@@ -554,6 +554,17 @@ router.post("/", async (req: Request, res: Response) => {
     return raw;
   })();
 
+  // Paula inbound log — fire-and-forget, same pattern as paula_interaction events
+  db.execute(sql`
+    INSERT INTO paula_inbound_log (telefono, received_at, message_body, message_length)
+    VALUES (
+      ${phoneKey},
+      NOW(),
+      ${userMessage ?? null},
+      ${userMessage ? userMessage.length : null}
+    )
+  `).catch(() => {}); // never block the response on log failure
+
   console.log(
     `[${new Date().toISOString()}] whatsapp-agent inbound | phone=${phoneKey} | msg="${userMessage.slice(0, 50)}"`,
   );
