@@ -387,7 +387,20 @@ router.get("/rep-recruitment-stats", async (req: Request, res: Response) => {
     const bonos_acreditados = Number(bonusRow?.bonos ?? 0);
     const valor_total = parseFloat(bonusRow?.valor ?? "0") || 0;
 
-    res.json({ referidos, bonos_acreditados, valor_total });
+    // Count users who signed up with this rep code AND have made ≥1 real payment
+    const convertedResult = await db.execute(
+      drizzleSql`
+        SELECT COUNT(DISTINCT u.id)::int AS converted
+        FROM users u
+        INNER JOIN bill_payments bp
+          ON bp.telefono = u.telefono
+          AND bp.status IN ('completed', 'confirmed', 'confirmado', 'success')
+        WHERE u.signup_ref_code = ${repCode}
+      `
+    );
+    const converted_count = Number((convertedResult.rows[0] as { converted?: number } | undefined)?.converted ?? 0);
+
+    res.json({ referidos, bonos_acreditados, valor_total, converted_count });
   } catch (err) {
     logger.error({ err, repCode }, "rep-recruitment-stats: query error");
     res.status(500).json({ error: "Error interno." });

@@ -106,7 +106,7 @@ const m = {
       );
     }
     return (
-      `¡Hola${firstName ? ` ${firstName}` : ""}! Bienvenido/a a PagoYa 👋\n` +
+      `¡Hola${firstName ? ` ${firstName}` : ""}! Bienvenido a PagoYa 👋\n` +
       `Soy Paula, la asistente oficial de PagoYa Technologies — empresa mexicana de pagos digitales.\n\n` +
       `¿En qué te puedo ayudar hoy?\n` +
       `Escribe *PAGAR* para pagar un servicio, o *SALDO* para consultar tu saldo.`

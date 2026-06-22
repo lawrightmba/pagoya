@@ -1,9 +1,8 @@
 import { db, usersTable, walletsTable, walletTransactionsTable } from "@workspace/db";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, lte, isNull, isNotNull } from "drizzle-orm";
+import { sql as drizzleSql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-
-const NUDGE_DELAY_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Prepend +52 if the stored phone has no country code prefix.
@@ -115,17 +114,67 @@ export async function sendActivationNudge(userId: number): Promise<{
 
 // ─────────────────────────────────────────────────────────────────────────────
 // scheduleNudge — call immediately after successful registration.
+// Writes a fire_at timestamp to the DB instead of using setTimeout,
+// so the schedule survives server restarts.
 // Fire-and-forget; never throws.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function scheduleNudge(userId: number): void {
-  logger.info({ userId, delayMs: NUDGE_DELAY_MS }, "nudge: queued for 10 min");
-  setTimeout(async () => {
+  db.execute(
+    drizzleSql`
+      UPDATE users
+      SET nudge_scheduled_at = NOW() + INTERVAL '10 minutes'
+      WHERE id = ${userId}
+        AND nudge_sent_at IS NULL
+        AND nudge_scheduled_at IS NULL
+    `
+  )
+    .then(() => {
+      logger.info({ userId }, "nudge: scheduled in DB (fires in 10 min)");
+    })
+    .catch((err) => {
+      logger.error({ err, userId }, "nudge: failed to write schedule to DB");
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// startNudgePollCron — call once at server startup.
+// Polls every 2 minutes for due nudges and fires them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const POLL_INTERVAL_MS = 2 * 60 * 1000;
+
+export function startNudgePollCron(): void {
+  const poll = async () => {
     try {
-      const result = await sendActivationNudge(userId);
-      logger.info({ userId, ...result }, "nudge: delayed send complete");
+      const due = await db.execute(
+        drizzleSql`
+          SELECT id
+          FROM users
+          WHERE nudge_scheduled_at IS NOT NULL
+            AND nudge_scheduled_at <= NOW()
+            AND nudge_sent_at IS NULL
+          LIMIT 20
+        `
+      );
+
+      const rows = due.rows as { id: number }[];
+      if (rows.length === 0) return;
+
+      logger.info({ count: rows.length }, "nudge-cron: processing due nudges");
+
+      for (const row of rows) {
+        const result = await sendActivationNudge(row.id);
+        logger.info({ userId: row.id, ...result }, "nudge-cron: send result");
+      }
     } catch (err) {
-      logger.error({ err, userId }, "nudge: uncaught error in delayed send");
+      logger.error({ err }, "nudge-cron: poll error");
     }
-  }, NUDGE_DELAY_MS);
+  };
+
+  // Run once immediately (catches any due nudges from before last restart),
+  // then on the interval.
+  void poll();
+  setInterval(poll, POLL_INTERVAL_MS);
+  logger.info({ intervalMs: POLL_INTERVAL_MS }, "nudge-cron: DB-polling cron registered (every 2min)");
 }
