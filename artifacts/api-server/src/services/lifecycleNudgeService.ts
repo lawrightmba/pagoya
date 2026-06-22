@@ -204,18 +204,28 @@ export async function sendBillDiscoveryNudge(userId: number): Promise<{ sent: bo
     if (suggestions.length < 1) return { sent: false, reason: "no_suggestions" };
 
     const service1 = suggestions[0];
-    const service2 = suggestions[1] ?? "más servicios";
+    const service2 = suggestions[1] ?? null;
     const firstName = ((user.kyc_full_name as string) ?? "").split(" ")[0].trim() || "amigo";
     const phone = normalizePhone(telefono);
 
+    // Personalized opener — reference a service they already pay if we know one
+    const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    const knownService = paidSet.size > 0 ? cap([...paidSet][0]) : null;
+
+    const openerLine = knownService
+      ? `Vimos que pagas *${knownService}* con PagoYa`
+      : `Ya usas PagoYa para pagar tus servicios`;
+
+    const suggestionLine = service2
+      ? `¿también tienes *${service1}* o *${service2}*?`
+      : `¿también tienes *${service1}*?`;
+
     const message =
-      `Hola ${firstName} 💡 ¿Sabías que también puedes pagar estos ` +
-      `servicios con tu billetera PagoYa?\n\n` +
-      `${service1} · ${service2}\n\n` +
-      `Más de 20 servicios disponibles — luz, agua, teléfono, internet, ` +
-      `streaming y más.\n\n` +
-      `👉 pagoyamx.com/pagar\n\n` +
-      `Paula te ayuda a encontrar el tuyo 💬`;
+      `Hola ${firstName} 💡 ${openerLine} — ${suggestionLine}\n\n` +
+      `Puedes pagarlos igual de fácil, aquí mismo en WhatsApp, en segundos.\n\n` +
+      `Responde con el nombre del servicio y tu número de contrato ` +
+      `y te ayudo ahora mismo 💬\n\n` +
+      `_Paula — tu asesora PagoYa_`;
 
     await sendWhatsApp(phone, message);
     await db.execute(drizzleSql`UPDATE users SET bill_discovery_nudge_sent_at = NOW() WHERE id = ${userId}`);
@@ -273,15 +283,23 @@ export async function sendReferralNudge(userId: number): Promise<{ sent: boolean
     const phone = normalizePhone(telefono);
     const referralLink = `pagoyamx.com/register?ref=${referralCode}`;
 
+    const shareCard =
+      `_Copia y manda este mensaje a quien quieras invitar:_\n\n` +
+      `Hola! Te recomiendo PagoYa para pagar tu CFE, Telmex y más — ` +
+      `desde WhatsApp, sin banco, sin filas.\n\n` +
+      `Regístrate con mi link y ambos recibimos *$${bonusAmount} MXN* de regalo 🎁\n` +
+      `👉 ${referralLink}`;
+
     const message =
       `Hola ${firstName} ¡Gracias por tu pago! 🎉\n\n` +
-      `¿Conoces a alguien que pague sus recibos en OXXO o en efectivo?\n\n` +
-      `Comparte PagoYa con ellos — cuando se registren con tu enlace, ` +
-      `ambos reciben $${bonusAmount} MXN en su billetera.\n\n` +
-      `🔗 ${referralLink}\n\n` +
-      `Es gratis y en menos de 2 minutos están listos 💬`;
+      `¿Conoces a alguien que todavía paga sus recibos en OXXO o en efectivo?\n\n` +
+      `Comparte PagoYa — cuando se registren con tu enlace, ` +
+      `ambos reciben *$${bonusAmount} MXN* en su billetera.\n\n` +
+      `🔗 ${referralLink}`;
 
     await sendWhatsApp(phone, message);
+    await new Promise(r => setTimeout(r, 2_500));
+    await sendWhatsApp(phone, shareCard);
     await db.execute(drizzleSql`UPDATE users SET referral_nudge_sent_at = NOW() WHERE id = ${userId}`);
     logger.info({ userId, referralCode }, "lifecycle: referral nudge sent");
     return { sent: true };
@@ -428,4 +446,78 @@ export function startBillDiscoveryNudgeCron(): void {
     }, delayMs);
   };
   scheduleNext();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUDGE 5 — Colonia Backfill
+// Trigger: colonia IS NULL, colonia_asked_at IS NULL, account ≥7 days old, ≥1 real payment
+// Cron: daily at 11 AM MX (17:00 UTC)
+// Reply handling: whatsapp-agent.ts colonia backfill intercept (48h window)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendColoniaBackfillMessage(userId: number): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
+    const user = r.rows[0] as Record<string, unknown> | undefined;
+    if (!user) return { sent: false, reason: "user_not_found" };
+
+    if (user.is_test_account) return { sent: false, reason: "test_account" };
+    if (user.colonia) return { sent: false, reason: "already_has_colonia" };
+    if (user.colonia_asked_at) return { sent: false, reason: "already_asked" };
+
+    const createdAt = new Date(user.created_at as string);
+    if ((Date.now() - createdAt.getTime()) < 7 * 86_400_000) return { sent: false, reason: "account_too_new" };
+
+    const telefono = user.telefono as string;
+    const realCount = await getRealPaymentCount(telefono);
+    if (realCount < 1) return { sent: false, reason: "no_payments_yet" };
+
+    const firstName = ((user.kyc_full_name as string) ?? "").split(" ")[0].trim() || "amigo";
+    const phone = normalizePhone(telefono);
+
+    const message =
+      `Hola ${firstName} 👋 Una pregunta rápida:\n\n` +
+      `¿En qué *colonia* vives?\n\n` +
+      `Estamos armando mejores opciones de servicios y beneficios ` +
+      `para cada zona. Solo escribe el nombre de tu colonia aquí 👇\n\n` +
+      `_(Escribe "saltar" si prefieres no decirlo)_`;
+
+    await sendWhatsApp(phone, message);
+    await db.execute(drizzleSql`UPDATE users SET colonia_asked_at = NOW() WHERE id = ${userId}`);
+    logger.info({ userId }, "lifecycle: colonia backfill message sent");
+    return { sent: true };
+  } catch (err) {
+    logger.error({ err, userId }, "lifecycle: colonia backfill message failed");
+    return { sent: false, reason: "send_error" };
+  }
+}
+
+export function startColoniaBackfillCron(): void {
+  const scheduleNext = () => {
+    const now = new Date();
+    const next = new Date();
+    next.setUTCHours(17, 0, 0, 0); // 11 AM MX (UTC-6)
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    const delayMs = next.getTime() - now.getTime();
+    logger.info({ nextInMs: delayMs }, "lifecycle-cron: colonia-backfill scheduled");
+    setTimeout(async () => {
+      logger.info("lifecycle-cron: colonia-backfill sweep starting");
+      const r = await db.execute(drizzleSql`
+        SELECT id FROM users
+        WHERE colonia IS NULL
+          AND colonia_asked_at IS NULL
+          AND created_at < NOW() - INTERVAL '7 days'
+          AND (is_test_account IS NULL OR is_test_account = false)
+        ORDER BY created_at DESC
+      `).catch(() => ({ rows: [] as any[] }));
+      let sent = 0;
+      for (const row of r.rows) {
+        const result = await sendColoniaBackfillMessage((row as any).id);
+        if (result.sent) sent++;
+      }
+      logger.info({ sent }, "lifecycle-cron: colonia-backfill sweep complete");
+      scheduleNext();
+    }, delayMs);
+  };
+  scheduleNext();
+  logger.info("lifecycle-cron: colonia-backfill cron registered (daily 11 AM MX)");
 }

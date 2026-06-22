@@ -902,6 +902,35 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Colonia backfill reply intercept ──────────────────────────────────────
+    // Catches replies to the "¿en qué colonia vives?" cron message.
+    // Active for 48 h after colonia_asked_at was set, while colonia is still NULL.
+    {
+      const coloniaCheckR = await db.execute(sql`
+        SELECT colonia, colonia_asked_at FROM users
+        WHERE telefono = ${phoneKey} LIMIT 1
+      `);
+      const coloniaRow = coloniaCheckR.rows[0] as
+        { colonia: string | null; colonia_asked_at: string | null } | undefined;
+
+      if (coloniaRow && !coloniaRow.colonia && coloniaRow.colonia_asked_at) {
+        const askedHoursAgo = (Date.now() - new Date(coloniaRow.colonia_asked_at).getTime()) / 3_600_000;
+        if (askedHoursAgo < 48) {
+          const coloniaInput = userMessage.trim();
+          const isSkip = /^(no|skip|saltar|nada|ninguna|-)$/i.test(coloniaInput);
+          if (!isSkip && coloniaInput.length >= 2 && coloniaInput.length <= 100) {
+            await db.execute(sql`UPDATE users SET colonia = ${coloniaInput} WHERE telefono = ${phoneKey}`);
+            await sendWhatsApp(phoneKey,
+              `¡Gracias! Registramos que vives en *${coloniaInput}*. ` +
+              `Si hay novedades o beneficios en tu zona, serás de los primeros en saberlo 💬`
+            );
+            return;
+          }
+          // Skip word or too short — fall through to normal Paula routing
+        }
+      }
+    }
+
     // ── Pending withdrawal confirmation intercept (session-backed) ───────────
     const pendingW = session.pendingWithdrawal;
     if (pendingW && Date.now() < pendingW.expiresAt) {
