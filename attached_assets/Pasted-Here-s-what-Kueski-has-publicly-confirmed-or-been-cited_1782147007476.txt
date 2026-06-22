@@ -1,0 +1,28 @@
+Here's what Kueski has publicly confirmed or been cited for:
+Data category 1 — Device signals
+
+Instead of relying on credit bureau information, Kueski uses contextual data such as device information, real-time behavioral data and sociodemographic data. Specifically this means device fingerprint, device type (the geographic bias paper cites state of residence and device type as socio-spatial proxies), OS version, whether the phone is new or old, how many apps are installed, battery level at time of application — all signals lenders have used in emerging markets to infer stability.
+Data category 2 — Digital/ecommerce behavior
+
+Kueski employs alternative data such as e-commerce transactions, online behavior, and digital wallet activity to provide small loans without requiring collateral or conventional documentation.
+Data category 3 — Social media
+
+Kueski uses big data analytics to determine creditworthiness and looks at thousands of non-traditional data points including social media presence. Early-stage this was more explicit; they've become less public about it as privacy regulation tightened.
+Data category 4 — Sociodemographic
+
+Colonia/zip code, state of residence, age, household composition — all inferred or collected at application.
+Data category 5 — Repayment behavior on Kueski itself
+
+This is the flywheel: accepted applications are paid in about ten minutes and returning borrowers can progressively ask for higher amounts if their previous loans are paid on time. Their best signal is their own internal ladder — which is exactly how PTI works. Similarweb
+Data category 6 — Biometric/identity verification
+
+Advanced ML algorithms such as biometric verification and device fingerprinting help confirm the identity of the individual carrying out the transaction.
+
+Honest gap assessment — where PTI stands vs. what lenders want:
+Signal categoryKueski / SOFIPO wantPTI todayGapOn-time payment consistency✅ Core✅ Payment Reliability dimensionCoveredPayment streak / duration✅ Core✅ 90-day streak gateCoveredBill diversity✅ Signals multi-utility stability✅ Bill diversity ≥ 3 gateCoveredCash flow regularity✅ Core✅ Cash-Flow Stability dimensionCoveredKYC / identity verification✅ Required✅ KYC tier columnCoveredEngagement depth✅ App/platform behavior✅ Engagement Depth dimensionCoveredDevice type / phone stability✅ Kueski uses❌ Not trackedGapColonia / geographic context✅ SOFIPO uses⚠️ Partially — colonia in street_team, not user recordPartial gapIncome level / ingresos declarados✅ SOFIPOs require❌ Not captured in PTIGapFraud-free history✅ Both require✅ bonus_fraud_flags tableCoveredSocial signals✅ Kueski uses❌ Not trackedGap — but likely ungettable under LFPDPPPOXXO vs. bank payment methodImplies cash economy⚠️ Trackable — how user pays PagoYaOpportunity
+
+What I'd recommend adding before handoff — 3 specific markers:
+1. Payment method trajectory. Does the user graduate from OXXO cash payments to SPEI/bank transfer over time? That's a behavioral upgrade signal lenders would love — it means the person is getting banked or at least more financially integrated. PTI currently tracks that payments happen; it could also track how.
+2. Self-declared income band at registration. A single voluntary field — "¿Cuánto ganas aproximadamente al mes?" with 4-5 buckets — costs you nothing to collect and lets you tell a SOFIPO partner "this cohort earns MXN $5K–$10K/month" which is their minimum underwriting threshold. You're not verifying it, you're capturing the declaration, which is what SOFIPOs do too.
+3. Colonia attached to the user record (not just the street team record). You already capture it in street_team.colonia — it should also live on the user profile. SOFIPOs operating in PV would want to know if someone is in Emiliano Zapata vs. Las Juntas because their risk models are neighborhood-sensitive.
+The investor framing on this: PTI doesn't need to replicate Kueski's 500 variables. You're doing something structurally different — longitudinal behavioral observation over 90+ days on a captive population that has no bureau history. Kueski makes a point-in-time decision with lots of noisy proxy signals. PTI builds a track record. That's a higher quality signal, just narrower in scope. The three additions above fill the most meaningful gaps without overbuilding.
