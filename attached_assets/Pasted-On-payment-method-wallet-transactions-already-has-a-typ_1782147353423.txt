@@ -1,0 +1,249 @@
+On payment method: wallet_transactions already has a type enum that includes load_oxxo and presumably load_card/load_spei. The bill_payments table has a payment_method column (confirmed by the test that checks payment_method = 'wallet'). So the raw material is already there — this is mostly a derived/view question, not a new instrumentation question.
+On device: nothing currently tracked anywhere in the schema.
+Here's the Replit prompt — clean, additive, two focused migrations:
+
+PAGOYA — Device Fingerprint Tracking + Payment Method Trajectory
+
+Two additive features only. Touch nothing outside the specified files.
+No changes to PTI scoring logic, Paula, or bill payment flows.
+
+═══════════════════════════════════════════
+PRE-FLIGHT — verify these exist before touching anything
+═══════════════════════════════════════════
+
+Run and confirm:
+SELECT column_name FROM information_schema.columns 
+  WHERE table_name = 'users' ORDER BY column_name;
+
+SELECT column_name FROM information_schema.columns 
+  WHERE table_name = 'wallet_transactions' ORDER BY column_name;
+
+SELECT column_name FROM information_schema.columns 
+  WHERE table_name = 'bill_payments' ORDER BY column_name;
+
+Confirm wallet_transactions.type enum values — run:
+SELECT DISTINCT type FROM wallet_transactions LIMIT 50;
+
+Report findings before writing any code.
+
+═══════════════════════════════════════════
+PART 1 — DEVICE FINGERPRINT
+═══════════════════════════════════════════
+
+1A. MIGRATION — add to users table:
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS device_os           VARCHAR(50)   DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_os_version   VARCHAR(20)   DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_model        VARCHAR(100)  DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_type         VARCHAR(20)   DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_access_mode  VARCHAR(20)   DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_first_seen_at TIMESTAMPTZ  DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS device_updated_at   TIMESTAMPTZ   DEFAULT NULL;
+
+-- device_type values: 'mobile' | 'tablet' | 'desktop'
+-- device_access_mode values: 'pwa' | 'browser'
+-- device_os values: 'iOS' | 'Android' | 'Windows' | 'macOS' | 'Linux' | 'Other'
+
+1B. MIGRATION — new table for device change history:
+
+CREATE TABLE IF NOT EXISTS user_device_log (
+  id              SERIAL PRIMARY KEY,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  device_os           VARCHAR(50),
+  device_os_version   VARCHAR(20),
+  device_model        VARCHAR(100),
+  device_type         VARCHAR(20),
+  device_access_mode  VARCHAR(20),
+  detected_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  change_reason   VARCHAR(50) NOT NULL DEFAULT 'update'
+  -- change_reason values: 'initial' | 'update'
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_device_log_user_id 
+  ON user_device_log(user_id);
+
+1C. SERVER-SIDE PARSING UTILITY — create lib/services/deviceParser.ts:
+
+Parse User-Agent string + optional PWA hint header.
+Export a single function:
+
+  parseDevice(userAgent: string, isPwa?: boolean): DeviceProfile
+
+  interface DeviceProfile {
+    os: string;           // 'iOS' | 'Android' | 'Windows' | 'macOS' | 'Linux' | 'Other'
+    osVersion: string;    // e.g. '17.4', '14', '11'
+    model: string;        // e.g. 'iPhone 15', 'Samsung SM-A055', 'Motorola Moto G', 'Unknown'
+    type: string;         // 'mobile' | 'tablet' | 'desktop'
+    accessMode: string;   // 'pwa' | 'browser'
+  }
+
+Parsing rules:
+- iOS: detect 'iPhone' (mobile), 'iPad' (tablet). Extract version from 'OS X_Y_Z'.
+  Model detection: iPhone15,x → 'iPhone 15', iPhone14,x → 'iPhone 14', etc.
+  If model not mappable, return 'iPhone (Unknown Model)'.
+- Android: detect 'Android'. Extract version from 'Android X.Y'.
+  Look for Samsung SM-*, Motorola moto*, Xiaomi, LG, Huawei in UA string.
+  Extract model identifier as-is if found, else 'Android Device'.
+- Desktop: Windows NT → 'Windows', Mac OS X (non-mobile) → 'macOS',
+  Linux (non-Android) → 'Linux'.
+- isPwa: if true, set accessMode = 'pwa'. Else 'browser'.
+- osVersion: extract best available semver string, or empty string if unparseable.
+
+1D. WIRE INTO REGISTRATION + SESSION:
+
+In the OTP verification endpoint (where users are marked as verified / 
+first login completes), after writing the user record:
+
+  const ua = req.headers['user-agent'] || '';
+  const isPwa = req.headers['x-pwa-launch'] === '1';
+  const profile = parseDevice(ua, isPwa);
+
+  UPDATE users SET
+    device_os = profile.os,
+    device_os_version = profile.osVersion,
+    device_model = profile.model,
+    device_type = profile.type,
+    device_access_mode = profile.accessMode,
+    device_first_seen_at = NOW(),
+    device_updated_at = NOW()
+  WHERE id = user_id
+    AND device_first_seen_at IS NULL;  -- only if not already set
+
+  INSERT INTO user_device_log 
+    (user_id, device_os, device_os_version, device_model, 
+     device_type, device_access_mode, change_reason)
+  VALUES (user_id, ..., 'initial');
+
+In any authenticated middleware/session refresh endpoint, add device 
+change detection:
+
+  Parse current UA → compare against users.device_os + users.device_model.
+  If BOTH os AND model differ from stored values AND device_first_seen_at IS NOT NULL:
+    UPDATE users SET device_os=..., device_model=..., device_os_version=...,
+      device_type=..., device_access_mode=..., device_updated_at=NOW()
+    WHERE id = user_id;
+    
+    INSERT INTO user_device_log (..., change_reason) VALUES (..., 'update');
+
+  If only accessMode changes (browser → pwa is a positive upgrade):
+    UPDATE users SET device_access_mode='pwa', device_updated_at=NOW()
+    WHERE id = user_id AND device_access_mode = 'browser';
+    -- no device_log entry needed for access mode change alone
+
+1E. FRONTEND — PWA launch hint:
+In the service worker or PWA manifest launch handler, on app launch 
+add header X-Pwa-Launch: 1 to the first authenticated API call.
+If PWA detection is not straightforward in the current SW setup, 
+add this TODO comment and skip — do not break anything.
+
+═══════════════════════════════════════════
+PART 2 — PAYMENT METHOD TRAJECTORY
+═══════════════════════════════════════════
+
+2A. MIGRATION — add to users table:
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS first_load_method    VARCHAR(20)  DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS last_load_method     VARCHAR(20)  DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS oxxo_load_count      INTEGER      DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS spei_load_count      INTEGER      DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS card_load_count      INTEGER      DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS first_spei_load_at   TIMESTAMPTZ  DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS load_method_updated_at TIMESTAMPTZ DEFAULT NULL;
+
+-- first_load_method / last_load_method values: 'oxxo' | 'spei' | 'card'
+-- first_spei_load_at = the date they first used a bank transfer to load
+--   (bancarization event — NULL means still cash-only)
+
+2B. MAP wallet_transactions.type → load method:
+
+After confirming actual type enum values in pre-flight, map as follows:
+  load_oxxo  → 'oxxo'
+  load_spei  → 'spei'   (use whatever the actual SPEI load type is)
+  load_card  → 'card'   (use whatever the actual card/Stripe load type is)
+
+If a type doesn't map cleanly, log it and skip — do not crash.
+
+2C. WIRE INTO WALLET CREDIT CONFIRMATION:
+
+In the wallet credit handler (where wallet_transactions status flips 
+to 'confirmed' — the Conekta webhook handler and any SPEI webhook handler):
+
+After crediting the wallet, detect the load method and update users:
+
+  const method = mapTransactionTypeToMethod(tx.type); // 'oxxo'|'spei'|'card'
+  if (!method) return; // unmapped type — skip silently
+
+  -- Increment the right counter:
+  UPDATE users SET
+    oxxo_load_count = oxxo_load_count + (method === 'oxxo' ? 1 : 0),
+    spei_load_count = spei_load_count + (method === 'spei' ? 1 : 0),
+    card_load_count = card_load_count + (method === 'card' ? 1 : 0),
+    first_load_method = COALESCE(first_load_method, method),
+    last_load_method  = method,
+    first_spei_load_at = CASE 
+      WHEN method = 'spei' AND first_spei_load_at IS NULL 
+      THEN NOW() ELSE first_spei_load_at END,
+    load_method_updated_at = NOW()
+  WHERE id = user_id;
+
+2D. BACKFILL SCRIPT — backfill existing users from wallet_transactions history:
+
+Write a one-time migration function backfillPaymentMethodCounters() 
+that can be run manually from the admin or as a startup task:
+
+  For each user:
+    SELECT type, COUNT(*), MIN(confirmed_at) FROM wallet_transactions wt
+    JOIN wallets w ON wt.wallet_id = w.id
+    WHERE w.user_id = ? AND wt.status = 'confirmed'
+    GROUP BY type;
+
+  Compute counts, first/last method, first_spei_load_at from history.
+  UPDATE users accordingly.
+  Log: "Backfilled payment method counters for N users."
+
+Gate this behind: only run if ALL oxxo_load_count + spei_load_count + 
+card_load_count = 0 for that user (so it doesn't overwrite live data).
+
+═══════════════════════════════════════════
+PART 3 — EXPOSE IN PTI EXPORT VIEW
+═══════════════════════════════════════════
+
+In the existing pti_export_safe view (or wherever PTI B2B export is 
+defined), add these anonymized fields:
+
+  device_os,
+  device_type,
+  device_access_mode,
+  first_load_method,
+  last_load_method,
+  CASE WHEN first_spei_load_at IS NOT NULL THEN true ELSE false END 
+    AS has_bancarized,
+  oxxo_load_count,
+  spei_load_count,
+  card_load_count
+
+Do NOT include device_model (too identifiable), device_os_version, 
+or first_spei_load_at (exact date is PII-adjacent).
+
+═══════════════════════════════════════════
+ACCEPTANCE CRITERIA
+═══════════════════════════════════════════
+
+[ ] Pre-flight SQL ran and findings reported before any code written
+[ ] users table has all 12 new columns (7 device + 5 payment method)
+[ ] user_device_log table created with index
+[ ] parseDevice() handles iOS, Android, desktop, unknown UA gracefully
+[ ] Registration/OTP flow writes device profile on first login only
+[ ] Session middleware detects device change and logs to user_device_log
+[ ] Wallet credit handler updates load method counters atomically
+[ ] backfillPaymentMethodCounters() function exists and is callable
+[ ] pti_export_safe view updated with new anonymized fields
+[ ] Zero breaking changes to existing endpoints
+[ ] Confirm with: SELECT device_os, device_type, first_load_method, 
+    oxxo_load_count FROM users LIMIT 5;
+
+Two things to flag before you run this:
+On device model: the UA string on Android is notoriously messy — you'll get clean Samsung SM-A055M but also garbage strings. The parser I've spec'd handles this gracefully (logs unknown, doesn't crash), but don't expect 100% model coverage on Android. iOS is much cleaner.
+On the bancarization event (first_spei_load_at): this is your single most valuable signal for a B2B PTI pitch. A user who arrives cash-only (OXXO) and migrates to SPEI while on your platform is a demonstrable financial inclusion outcome. That's a story Kueski, a SOFIPO, and Accion Venture Lab all want to hear quantified.
