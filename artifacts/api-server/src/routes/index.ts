@@ -261,6 +261,18 @@ router.get("/stats", async (_req: Request, res: Response) => {
 // ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
 router.all(/^\/admin/, adminAuth);
 
+// POST /api/admin/run-winback — manually trigger 30d win-back sweep (for verification)
+router.post("/admin/run-winback", async (_req: Request, res: Response) => {
+  try {
+    const { runWinbackSweep } = await import("../services/winbackCron.js");
+    const result = await runWinbackSweep();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "admin/run-winback: failed");
+    res.status(500).json({ error: "Winback sweep failed — check server logs." });
+  }
+});
+
 // POST /api/admin/backfill-payment-counters — one-time backfill for existing users
 // Only updates users where all three load counters are 0 (gate prevents overwrites)
 router.post("/admin/backfill-payment-counters", async (_req: Request, res: Response) => {

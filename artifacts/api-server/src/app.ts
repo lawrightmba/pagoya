@@ -14,6 +14,7 @@ import { startTaecelCrons } from "./billpay/crons/taecel-crons.js";
 import { startReminderCron } from "./services/reminders.js";
 import { cleanExpiredPayments } from "./services/pendingPaymentService.js";
 import { startLowBalanceNudgeCron, startBillDiscoveryNudgeCron, startActivation24hNudgeCron, startColoniaBackfillCron } from "./services/lifecycleNudgeService.js";
+import { startWinbackCron, runWinbackSweep } from "./services/winbackCron.js";
 import { startPtiCron } from "./services/ptiCron.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -165,6 +166,9 @@ startBillDiscoveryNudgeCron();
 startActivation24hNudgeCron();
 // Colonia backfill — daily 11 AM MX, asks existing users without colonia
 startColoniaBackfillCron();
+// 30-day win-back — daily 10 AM MX, targets registered non-payers after 30d
+startWinbackCron();
+console.log("✅ winback-cron: 30d win-back cron registered (daily 10am)");
 // PTI nightly batch — computes PagoYa Trust Index + financial snapshots at 2 AM MX
 startPtiCron();
 

@@ -1,0 +1,150 @@
+Here it is:
+
+PAGOYA — 30-Day Win-Back Cron
+
+Additive only. Zero changes to existing nudge logic, payment flow,
+or Paula trigger system. One new cron, one new column, one new
+Paula message template.
+
+═══════════════════════════════════════════
+PRE-FLIGHT — verify before writing any code
+═══════════════════════════════════════════
+
+Run and confirm:
+
+SELECT column_name FROM information_schema.columns
+  WHERE table_name = 'users' ORDER BY column_name;
+
+Confirm these columns exist:
+- activation_nudge_24h_sent_at (TIMESTAMPTZ)
+- winback_sent_at (if it already exists, report it)
+
+SELECT COUNT(*) FROM transactions
+  WHERE status IN ('success', 'completed', 'confirmed');
+-- just confirms transactions table and status values
+
+SELECT DISTINCT trigger_type FROM paula_trigger_log LIMIT 20;
+-- confirms naming convention before adding a new trigger type
+
+Report findings before writing any code.
+
+═══════════════════════════════════════════
+PART 1 — SCHEMA
+═══════════════════════════════════════════
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS winback_sent_at TIMESTAMPTZ DEFAULT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_winback_sent_at
+  ON users(winback_sent_at)
+  WHERE winback_sent_at IS NULL;
+
+═══════════════════════════════════════════
+PART 2 — PAULA MESSAGE TEMPLATE
+═══════════════════════════════════════════
+
+Insert into paula_messages table (or wherever Paula templates live —
+check the existing pattern before inserting):
+
+trigger_type:  'winback_30d'
+message_text:  'Hola {{first_name}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo. Solo dime el servicio y tu número de cuenta.'
+cooldown_days: 999  -- fires exactly once, never repeats
+active:        true
+
+If paula_messages uses a different schema (e.g. separate columns for
+cooldown, variables, active flag), match the existing pattern exactly.
+Do not invent new columns.
+
+The {{first_name}} Mustache variable must resolve from the users table
+name field. If the name field stores full name, extract first word only:
+SPLIT_PART(name, ' ', 1). If name is already first-name-only, use
+directly. Check existing templates to confirm which pattern is in use.
+
+═══════════════════════════════════════════
+PART 3 — CRON SERVICE
+═══════════════════════════════════════════
+
+Create services/winbackCron.ts
+
+Export a single function: runWinbackSweep()
+
+ELIGIBILITY QUERY — users who:
+  1. created_at < NOW() - INTERVAL '30 days'          -- at least 30 days old
+  2. activation_nudge_24h_sent_at IS NOT NULL          -- got the 24h nudge (real registered user, not a ghost)
+  3. winback_sent_at IS NULL                           -- never received win-back
+  4. Have ZERO completed bill payments:
+       NOT EXISTS (
+         SELECT 1 FROM transactions t
+         WHERE t.user_id = u.id
+           AND t.status IN ('success', 'completed', 'confirmed')
+           -- use whatever status values confirmed in pre-flight
+       )
+  5. users.phone IS NOT NULL                           -- can actually be reached
+
+Adjust status values to match what pre-flight confirms.
+
+EXECUTION LOGIC per eligible user:
+  a. Resolve first_name from users.name (SPLIT_PART or direct —
+     match paula_messages pattern confirmed above)
+  b. Render message: replace {{first_name}} with resolved name.
+     Fallback: if name is NULL or empty, use 'amigo' (never send
+     a blank or broken interpolation)
+  c. Send via the existing Twilio WhatsApp wrapper (same pattern
+     as activation nudge and 24h sweep — reuse exact import)
+  d. On send success:
+       UPDATE users SET winback_sent_at = NOW() WHERE id = user.id;
+       INSERT INTO paula_trigger_log
+         (user_id, trigger_type, whatsapp_sent, created_at)
+         VALUES (user.id, 'winback_30d', true, NOW());
+  e. On send failure: log warning, do NOT update winback_sent_at
+     (allows retry on next cron run), do NOT throw
+
+BATCH SAFETY:
+  - Process max 50 users per sweep (LIMIT 50 on eligibility query)
+  - Add 500ms delay between sends (avoid Twilio rate limits)
+  - Log at start: "winback-cron: sweep starting"
+  - Log at end:   "winback-cron: sweep complete | sent: N | skipped: N"
+  - Never throw — wrap entire sweep in try/catch, log error and return
+
+═══════════════════════════════════════════
+PART 4 — REGISTER CRON IN app.ts
+═══════════════════════════════════════════
+
+In app.ts, alongside existing cron registrations:
+
+Import runWinbackSweep from services/winbackCron.ts
+
+Schedule: cron.schedule('0 10 * * *', async () => {
+  // Runs once daily at 10am server time
+  // Users in the win-back bucket don't need hourly sweeps —
+  // they've already been cold 30 days, daily is sufficient
+  await runWinbackSweep();
+});
+
+Log on registration:
+  console.log('✅ winback-cron: 30d win-back cron registered (daily 10am)');
+
+═══════════════════════════════════════════
+ACCEPTANCE CRITERIA
+═══════════════════════════════════════════
+
+[ ] Pre-flight SQL ran and all findings reported before code written
+[ ] users.winback_sent_at column exists
+[ ] paula_messages has winback_30d template with cooldown_days = 999
+[ ] services/winbackCron.ts exists and exports runWinbackSweep()
+[ ] Eligibility query excludes users with any confirmed transaction
+[ ] {{first_name}} fallback to 'amigo' if name is null
+[ ] winback_sent_at only written on successful Twilio send
+[ ] paula_trigger_log row inserted on every successful send
+[ ] Cron registered in app.ts at daily 10am
+[ ] Zero changes to existing nudge logic or payment flow
+[ ] Build compiles with zero TypeScript errors
+
+Confirm with:
+  SELECT winback_sent_at FROM users LIMIT 5;
+  SELECT * FROM paula_messages WHERE trigger_type = 'winback_30d';
+  -- then trigger manually: call runWinbackSweep() from admin route
+  -- confirm log output shows "sweep complete | sent: 0 | skipped: N"
+  -- (correct — no eligible users yet)
+
+One note before you run it: the manual trigger confirmation at the end is important. Add a temporary POST /api/admin/run-winback route (same pattern as your backfill endpoint) so you can fire it on demand and confirm the log output before relying on the daily cron. Once you've seen "sent: 0 | skipped: N" with the right N, you know the eligibility query is working correctly against your actual data.
