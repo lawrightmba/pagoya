@@ -146,8 +146,71 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance">("investor");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte">("investor");
+
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
+
+  // ── Soporte state ──
+  interface SupportTicket {
+    id: number;
+    ticket_ref: string;
+    category: string;
+    channel: string;
+    status: string;
+    complaint_text: string;
+    telefono: string | null;
+    admin_response: string | null;
+    received_at: string;
+    admin_responded_at: string | null;
+    whatsapp_sent: boolean;
+  }
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportTotal, setSupportTotal] = useState(0);
+  const [supportFilter, setSupportFilter] = useState("all");
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [expandedTicket, setExpandedTicket] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState<Record<number, string>>({});
+  const [replySending, setReplySending] = useState<number | null>(null);
+
+  const loadSupportTickets = useCallback(async (statusFilter = supportFilter) => {
+    if (!adminKey.trim()) return;
+    setSupportLoading(true);
+    try {
+      const params = statusFilter !== "all" ? `?status=${statusFilter}` : "";
+      const r = await fetch(`/api/complaints/admin${params}`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setSupportTickets(d.tickets ?? []);
+        setSupportTotal(d.total ?? 0);
+      }
+    } catch { /* silent */ } finally {
+      setSupportLoading(false);
+    }
+  }, [adminKey, supportFilter]);
+
+  useEffect(() => { if (tab === "soporte") loadSupportTickets(); }, [tab, loadSupportTickets]);
+
+  async function resolveTicket(id: number, sendWa: boolean) {
+    const response = replyText[id]?.trim();
+    if (!response) return;
+    setReplySending(id);
+    try {
+      const r = await fetch(`/api/complaints/admin/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ admin_response: response, status: "resuelto", send_whatsapp: sendWa }),
+      });
+      if (r.ok) {
+        setReplyText(prev => { const n = { ...prev }; delete n[id]; return n; });
+        setExpandedTicket(null);
+        loadSupportTickets();
+      }
+    } catch { /* silent */ } finally {
+      setReplySending(null);
+    }
+  }
   const [sheetUrl, setSheetUrl] = useState(() => localStorage.getItem("pagoya_sheet_url") ?? "");
   const [sheetUrlInput, setSheetUrlInput] = useState("");
 
@@ -412,11 +475,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : "Cumplimiento"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : "Soporte"}
           </div>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["investor", "ops", "landlords", "compliance"] as const).map((t) => (
+            {(["investor", "ops", "landlords", "compliance", "soporte"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -434,7 +497,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "landlords" ? "🏠 Propietarios" : "🛡️ Cumplimiento"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : "🎧 Soporte"}
               </button>
             ))}
           </div>
@@ -2009,6 +2072,140 @@ export default function AdminDashboard() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ══════════════ SOPORTE TAB ══════════════ */}
+        {tab === "soporte" && (
+          <div>
+            {!adminKey.trim() && (
+              <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", color: "#F59E0B", textTransform: "uppercase" }}>
+                  Admin Key requerida
+                </div>
+              </div>
+            )}
+
+            {/* Filter + refresh bar */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+              {(["all", "recibido", "en proceso", "resuelto"] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => { setSupportFilter(f); loadSupportTickets(f); }}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", fontWeight: 700, padding: "6px 16px", borderRadius: 20, border: supportFilter === f ? "1px solid #39A935" : "1px solid rgba(255,255,255,0.12)", background: supportFilter === f ? "rgba(57,169,53,0.15)" : "transparent", color: supportFilter === f ? "#39A935" : "#5a7080", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}
+                >
+                  {f === "all" ? "Todos" : f}
+                </button>
+              ))}
+              <button
+                onClick={() => loadSupportTickets()}
+                style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", fontWeight: 700, padding: "6px 14px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#5a7080", cursor: "pointer" }}
+              >
+                ↻ Actualizar
+              </button>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#5a7080" }}>
+                {supportTotal} ticket{supportTotal !== 1 ? "s" : ""} total
+              </span>
+            </div>
+
+            {supportLoading && (
+              <p style={{ fontFamily: "'Space Mono', monospace", color: "#5a7080", fontSize: "0.9rem" }}>Cargando tickets…</p>
+            )}
+
+            {!supportLoading && supportTickets.length === 0 && (
+              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "32px 24px", textAlign: "center" }}>
+                <p style={{ fontFamily: "'Space Mono', monospace", color: "#5a7080", fontSize: "0.9rem" }}>No hay tickets {supportFilter !== "all" ? `con estado "${supportFilter}"` : ""}</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {supportTickets.map(ticket => {
+                const isExpanded = expandedTicket === ticket.id;
+                const statusColor = ticket.status === "resuelto" ? "#39A935" : ticket.status === "en proceso" ? "#3B82F6" : "#F59E0B";
+                return (
+                  <div
+                    key={ticket.id}
+                    style={{ background: "#0D1E15", border: `1px solid ${isExpanded ? "rgba(57,169,53,0.35)" : "rgba(255,255,255,0.07)"}`, borderRadius: 14, overflow: "hidden", transition: "border-color 0.2s" }}
+                  >
+                    {/* Ticket header */}
+                    <div
+                      onClick={() => setExpandedTicket(isExpanded ? null : ticket.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", cursor: "pointer" }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.88rem", fontWeight: 700, color: "#39A935" }}>{ticket.ticket_ref}</span>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: "2px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.07em" }}>{ticket.status}</span>
+                          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)", padding: "2px 8px", borderRadius: 12, textTransform: "uppercase" }}>{ticket.category}</span>
+                          {ticket.whatsapp_sent && <span style={{ fontSize: "0.72rem", color: "#39A935" }}>✓ WA enviado</span>}
+                        </div>
+                        <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "rgba(255,255,255,0.55)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {ticket.telefono ? `📱 ${ticket.telefono} · ` : "📱 anónimo · "}{ticket.complaint_text.slice(0, 80)}{ticket.complaint_text.length > 80 ? "…" : ""}
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>
+                          {new Date(ticket.received_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
+                        </span>
+                        <span style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.3)" }}>{isExpanded ? "▲" : "▼"}</span>
+                      </div>
+                    </div>
+
+                    {/* Expanded body */}
+                    {isExpanded && (
+                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+                        <div>
+                          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Mensaje completo</p>
+                          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{ticket.complaint_text}</p>
+                        </div>
+
+                        {ticket.admin_response && (
+                          <div style={{ background: "rgba(57,169,53,0.07)", border: "1px solid rgba(57,169,53,0.2)", borderRadius: 10, padding: "12px 14px" }}>
+                            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#39A935", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Respuesta enviada</p>
+                            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.5 }}>{ticket.admin_response}</p>
+                          </div>
+                        )}
+
+                        {ticket.status !== "resuelto" && (
+                          <div>
+                            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Responder y resolver</p>
+                            <textarea
+                              value={replyText[ticket.id] ?? ""}
+                              onChange={e => setReplyText(prev => ({ ...prev, [ticket.id]: e.target.value }))}
+                              placeholder="Escribe la respuesta para el usuario…"
+                              rows={3}
+                              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", color: "#FFFFFF", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", resize: "vertical", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+                            />
+                            <div style={{ display: "flex", gap: 10 }}>
+                              <button
+                                onClick={() => resolveTicket(ticket.id, true)}
+                                disabled={!replyText[ticket.id]?.trim() || replySending === ticket.id}
+                                style={{ flex: 1, fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", fontWeight: 700, padding: "9px 16px", borderRadius: 10, border: "none", background: replyText[ticket.id]?.trim() ? "linear-gradient(135deg,#007A4A,#39A935)" : "rgba(57,169,53,0.2)", color: "#FFFFFF", cursor: replyText[ticket.id]?.trim() ? "pointer" : "not-allowed", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                              >
+                                {replySending === ticket.id ? "Enviando…" : "✅ Resolver + Enviar WA"}
+                              </button>
+                              <button
+                                onClick={() => resolveTicket(ticket.id, false)}
+                                disabled={!replyText[ticket.id]?.trim() || replySending === ticket.id}
+                                style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", fontWeight: 700, padding: "9px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#5a7080", cursor: replyText[ticket.id]?.trim() ? "pointer" : "not-allowed" }}
+                              >
+                                Solo resolver
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {ticket.status === "resuelto" && (
+                          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#39A935" }}>
+                            ✓ Resuelto {ticket.admin_responded_at ? new Date(ticket.admin_responded_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
