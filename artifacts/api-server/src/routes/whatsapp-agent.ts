@@ -806,6 +806,45 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Income bucket collection intercept ────────────────────────────────────
+    // Fires after handoff block. Intercepts a numeric 1–5 reply when:
+    //   (a) users.declared_income_bucket IS NULL  (NULL guard at parse time)
+    //   (b) the last Paula outbound to this user was trigger_type='income_collection'
+    // User is never re-asked once bucket is set.
+    {
+      const INCOME_MAP: Record<string, string> = {
+        "1": "lt_3k", "2": "3k_5k", "3": "5k_10k", "4": "10k_20k", "5": "gt_20k",
+      };
+      const msgTrimmed = userMessage.trim();
+      const mappedBucket = INCOME_MAP[msgTrimmed];
+
+      if (mappedBucket) {
+        // Check if last Paula outbound was income_collection AND bucket not yet set
+        const incCheck = await db.execute(sql`
+          SELECT u.declared_income_bucket,
+                 (SELECT trigger_type FROM paula_trigger_log
+                  WHERE telefono = ${phoneKey}
+                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+          FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
+        `);
+        const incRow = incCheck.rows[0] as
+          { declared_income_bucket: string | null; last_trigger: string | null } | undefined;
+
+        if (incRow && incRow.declared_income_bucket == null && incRow.last_trigger === "income_collection") {
+          await db.execute(sql`
+            UPDATE users SET declared_income_bucket = ${mappedBucket}
+            WHERE telefono = ${phoneKey}
+          `);
+          await sendWhatsApp(phoneKey,
+            `✅ ¡Gracias! Guardamos tu rango de ingresos.\n\n` +
+            `Esta información nos ayuda a conectarte con mejores opciones cuando tu perfil esté listo. 💪\n\n` +
+            `_Paula — tu asesora financiera_`
+          );
+          return;
+        }
+      }
+    }
+
     // ── Pending withdrawal confirmation intercept (session-backed) ───────────
     const pendingW = session.pendingWithdrawal;
     if (pendingW && Date.now() < pendingW.expiresAt) {

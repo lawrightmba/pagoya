@@ -33,6 +33,21 @@ export interface UserContext {
   literacy_score?:        number;   // alias for financial_literacy_score in readiness templates
   top_gap?:               string;   // human-readable label for closest-to-met criterion
   partner_display_name?:  string;   // from partner_programs.display_name
+
+  // Optional device + load method fields — populated from users table
+  // Used in handoff_data payload for lending partner enrichment
+  device_os?:            string;
+  device_type?:          string;
+  device_access_mode?:   string;
+  first_load_method?:    string;
+  last_load_method?:     string;
+  oxxo_load_count?:      number;
+  spei_load_count?:      number;
+  card_load_count?:      number;
+  has_bancarized?:       boolean;
+  bancarization_days?:   number | null;
+  colonia?:              string | null;
+  declared_income_bucket?: string | null;
 }
 
 export interface TemplateRow {

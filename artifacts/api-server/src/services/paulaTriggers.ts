@@ -28,6 +28,18 @@ import { buildUserContext } from "./buildUserContext.js";
 import { enqueueWhatsApp } from "./paulaSendQueue.js";
 import { evaluateReadiness, getPartnerDisplayName } from "./readinessGate.js";
 
+// ── Income bucket labels (voluntary declaration via standalone follow-up) ──────
+const INCOME_BUCKET_MSG =
+  `💡 *Una pregunta rápida:*\n\n` +
+  `¿En qué rango está tu ingreso mensual aproximado?\n\n` +
+  `Responde con el número:\n` +
+  `*1* — Menos de $3,000\n` +
+  `*2* — $3,000–$5,000\n` +
+  `*3* — $5,000–$10,000\n` +
+  `*4* — $10,000–$20,000\n` +
+  `*5* — Más de $20,000\n\n` +
+  `_Esta información es voluntaria y nos ayuda a conectarte con mejores opciones financieras._`;
+
 // ── Trigger type registry ──────────────────────────────────────────────────────
 export const TRIGGER = {
   // Achievement
@@ -276,12 +288,37 @@ export async function evaluateTriggersForUser(
   if (ptiScore >= 30 && ptiScore < 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_2, ctx, templates);
     fired++;
+    // Income collection follow-up — standalone approach, fires once (NULL guard at send + parse)
+    // whatsapp-agent.ts intercepts the numeric reply and writes users.declared_income_bucket
+    if (ctx.declared_income_bucket == null) {
+      const logRow = await db.execute(sql`
+        INSERT INTO paula_trigger_log
+          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
+        VALUES
+          (${telefono}, 'income_collection', '{}'::jsonb, ${INCOME_BUCKET_MSG}, FALSE, NOW())
+        RETURNING id
+      `).catch(() => ({ rows: [{ id: 0 }] }));
+      const incLogId = Number((logRow.rows[0] as Record<string,unknown>).id ?? 0);
+      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId).catch(() => {});
+    }
   }
 
   // Module 3 unlock: PTI 50–64
+  // Also check income_bucket here to catch users who skipped Module 2 follow-up
   if (ptiScore >= 50 && ptiScore < 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_3, ctx, templates);
     fired++;
+    if (ctx.declared_income_bucket == null) {
+      const logRow = await db.execute(sql`
+        INSERT INTO paula_trigger_log
+          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
+        VALUES
+          (${telefono}, 'income_collection', '{}'::jsonb, ${INCOME_BUCKET_MSG}, FALSE, NOW())
+        RETURNING id
+      `).catch(() => ({ rows: [{ id: 0 }] }));
+      const incLogId = Number((logRow.rows[0] as Record<string,unknown>).id ?? 0);
+      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId).catch(() => {});
+    }
   }
 
   // Module 4 unlock: PTI 65–79
@@ -317,6 +354,36 @@ export async function evaluateTriggersForUser(
         };
         await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
         fired++;
+
+        // Populate handoff_data JSONB on paula_pending_handoffs for lending partner packet
+        // bancarization_days = days from account creation to first SPEI load — most compelling B2B signal
+        db.execute(sql`
+          UPDATE paula_pending_handoffs SET handoff_data = ${JSON.stringify({
+            pti_score:                enrichedCtx.pti_score,
+            tier:                     enrichedCtx.tier,
+            consecutive_payment_months: streakMonths,
+            streak_days:              readiness.streakDays,
+            bill_diversity:           readiness.billDiversity,
+            financial_literacy_score: enrichedCtx.financial_literacy_score,
+            coaching_responsiveness:  enrichedCtx.coaching_responsiveness,
+            device_os:                enrichedCtx.device_os ?? null,
+            device_type:              enrichedCtx.device_type ?? null,
+            device_access_mode:       enrichedCtx.device_access_mode ?? null,
+            first_load_method:        enrichedCtx.first_load_method ?? null,
+            last_load_method:         enrichedCtx.last_load_method ?? null,
+            oxxo_load_count:          enrichedCtx.oxxo_load_count ?? 0,
+            spei_load_count:          enrichedCtx.spei_load_count ?? 0,
+            card_load_count:          enrichedCtx.card_load_count ?? 0,
+            has_bancarized:           enrichedCtx.has_bancarized ?? false,
+            bancarization_days:       enrichedCtx.bancarization_days ?? null,
+            colonia:                  enrichedCtx.colonia ?? null,
+            declared_income_bucket:   enrichedCtx.declared_income_bucket ?? null,
+            partner_display_name:     readiness.partnerDisplayName,
+            handoff_generated_at:     new Date().toISOString(),
+          })}::jsonb
+          WHERE telefono = ${telefono}
+            AND status = 'pending'
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] handoff_data populate failed"));
       }
 
     } else if (readiness.status === "APPROACHING") {

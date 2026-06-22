@@ -60,13 +60,34 @@ export async function buildUserContext(
       -- PTI dimension breakdown (stored as jsonb in users)
       u.pti_breakdown,
 
-      -- Distinct bill categories paid
-      COUNT(DISTINCT bp.service_type)
+      -- Distinct bill categories paid (column is service_name, not service_type)
+      COUNT(DISTINCT bp.service_name)
         FILTER (WHERE bp.status IN ('completed','success','completed_ok','confirmed'))
                                                   AS bill_category_count,
 
       -- Sprint 4: coaching responsiveness
-      COALESCE(u.coaching_responsiveness, 'UNKNOWN') AS coaching_responsiveness
+      COALESCE(u.coaching_responsiveness, 'UNKNOWN') AS coaching_responsiveness,
+
+      -- Device signals (for handoff packet and PTI export)
+      u.device_os,
+      u.device_type,
+      u.device_access_mode,
+
+      -- Payment method trajectory (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+      u.first_load_method,
+      u.last_load_method,
+      COALESCE(u.oxxo_load_count, 0) AS oxxo_load_count,
+      COALESCE(u.spei_load_count, 0) AS spei_load_count,
+      COALESCE(u.card_load_count, 0) AS card_load_count,
+      CASE WHEN u.first_spei_load_at IS NOT NULL THEN TRUE ELSE FALSE END AS has_bancarized,
+      CASE WHEN u.first_spei_load_at IS NOT NULL
+        THEN EXTRACT(DAY FROM (u.first_spei_load_at - u.created_at))::INT
+        ELSE NULL
+      END AS bancarization_days,
+
+      -- Geographic + income signals
+      u.colonia,
+      u.declared_income_bucket
 
     FROM users u
     LEFT JOIN pti_trend_30d t
@@ -74,7 +95,10 @@ export async function buildUserContext(
     LEFT JOIN bill_payments bp
       ON bp.telefono = u.telefono
     WHERE u.telefono = ${telefono}
-    GROUP BY u.kyc_full_name, u.pti_score, t.delta_30d, t.trend_label, u.pti_breakdown, u.coaching_responsiveness
+    GROUP BY u.kyc_full_name, u.pti_score, t.delta_30d, t.trend_label, u.pti_breakdown,
+             u.coaching_responsiveness, u.device_os, u.device_type, u.device_access_mode,
+             u.first_load_method, u.last_load_method, u.oxxo_load_count, u.spei_load_count,
+             u.card_load_count, u.first_spei_load_at, u.created_at, u.colonia, u.declared_income_bucket
     LIMIT 1
   `);
 
@@ -129,5 +153,20 @@ export async function buildUserContext(
     financial_literacy_score,
     modules_unlocked,
     coaching_responsiveness: String(r.coaching_responsiveness ?? "UNKNOWN"),
+    // Device signals
+    device_os:             r.device_os   ? String(r.device_os)   : undefined,
+    device_type:           r.device_type ? String(r.device_type) : undefined,
+    device_access_mode:    r.device_access_mode ? String(r.device_access_mode) : undefined,
+    // Payment method trajectory
+    first_load_method:     r.first_load_method ? String(r.first_load_method) : undefined,
+    last_load_method:      r.last_load_method  ? String(r.last_load_method)  : undefined,
+    oxxo_load_count:       Number(r.oxxo_load_count ?? 0),
+    spei_load_count:       Number(r.spei_load_count ?? 0),
+    card_load_count:       Number(r.card_load_count ?? 0),
+    has_bancarized:        Boolean(r.has_bancarized),
+    bancarization_days:    r.bancarization_days != null ? Number(r.bancarization_days) : null,
+    // Geographic + income
+    colonia:               r.colonia               as string | null ?? null,
+    declared_income_bucket: r.declared_income_bucket as string | null ?? null,
   };
 }

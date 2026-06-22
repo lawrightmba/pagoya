@@ -261,6 +261,19 @@ router.get("/stats", async (_req: Request, res: Response) => {
 // ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
 router.all(/^\/admin/, adminAuth);
 
+// POST /api/admin/backfill-payment-counters — one-time backfill for existing users
+// Only updates users where all three load counters are 0 (gate prevents overwrites)
+router.post("/admin/backfill-payment-counters", async (_req: Request, res: Response) => {
+  try {
+    const { backfillPaymentMethodCounters } = await import("../services/loadMethodCounters.js");
+    await backfillPaymentMethodCounters(db as Parameters<typeof backfillPaymentMethodCounters>[0]);
+    res.json({ ok: true, message: "Backfill complete — check server logs for details." });
+  } catch (err) {
+    logger.error({ err }, "admin/backfill-payment-counters: failed");
+    res.status(500).json({ error: "Backfill failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {

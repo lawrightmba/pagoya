@@ -1,0 +1,13 @@
+This is a clean, well-executed pre-flight. The agent found the real landmines — spei_in, the wallets.user_id telefono inconsistency, and the missing view. Good catches all. A few inputs before you proceed:
+1. The pagoScore.ts redundancy is fine, but needs a comment
+The agent is right that the counters are denormalization of what pagoScore already computes. The risk is drift — pagoScore queries live transactions, but the cached columns could fall out of sync if a wallet credit handler fails silently. I'd add one comment in the counter UPDATE block: // Keep in sync with pagoScore.ts lines 177-186 so future you knows where to look. No architectural change needed.
+2. declared_income_bucket timing — Module 2 is right, but add a NULL guard
+The Module 2 ask is the correct moment contextually. Just make sure the follow-up message only fires once — gate it on declared_income_bucket IS NULL both at send time AND when the inbound parser writes the response, so a user who ignores the question doesn't get re-asked every time they interact with Paula.
+3. colonia backfill scope question
+The backfill from street_team only covers rep-referred users. Web-organic signups won't have it until 3B ships. That's fine — just make sure the pti_export_safe view handles colonia IS NULL gracefully rather than excluding those rows. Confirm the view uses LEFT JOIN logic or a simple column reference that allows nulls.
+4. handoff_data JSONB — one addition to the payload spec
+Add bancarization_days to the handoff packet: the number of days between created_at and first_spei_load_at. A partner seeing "this user went from cash-only to SPEI in 47 days" is more compelling than just the boolean has_bancarized. Simple derived field, compute it at handoff trigger time.
+5. Minor: RIGHT(..., 10) normalization is fragile for edge cases
+If any telefono in users is stored as 10 digits and any wallets.user_id is stored as a full E.164 with country code, RIGHT(10) works. But if someone stored a 7-digit local number anywhere, it breaks silently. In the backfill function, add a WHERE LENGTH(RIGHT(wallets.user_id, 10)) = 10 AND LENGTH(RIGHT(users.telefono, 10)) = 10 guard so bad rows log a warning rather than producing false matches.
+
+Nothing blocking. Proceed with those notes folded in — #4 (bancarization_days in handoff payload) is the only one worth adding to the prompt before you run it. The rest are either comments or guards the agent can handle in-flight.

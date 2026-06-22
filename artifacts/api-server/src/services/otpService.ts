@@ -1,8 +1,9 @@
 import twilio from "twilio";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
+import { parseDevice } from "./deviceParser.js";
 
 // ─── Twilio Verify client ──────────────────────────────────────────────────────
 const twilioClient = twilio(
@@ -156,6 +157,93 @@ export async function verifyOTP(
   } catch (err) {
     logger.error({ err, phone }, "otpService.verifyOTP: error");
     return { verified: false, reason: "invalid" };
+  }
+}
+
+// ─── writeDeviceProfile ────────────────────────────────────────────────────────
+// Called from an HTTP route handler AFTER successful OTP verification so it has
+// access to req.headers['user-agent'] and req.headers['x-pwa-launch'].
+//
+// Only writes device profile on FIRST login (device_first_seen_at IS NULL).
+// Subsequent calls update device if BOTH os AND model changed (device switch).
+// PWA upgrade (browser→pwa) silently updates access_mode only — no log entry.
+//
+// TODO: Call this from the web OTP-verify route handler:
+//   const ua = req.headers['user-agent'] ?? '';
+//   const isPwa = req.headers['x-pwa-launch'] === '1';
+//   writeDeviceProfile(phone, ua, isPwa).catch(() => {});
+export async function writeDeviceProfile(
+  phone: string,
+  userAgent: string,
+  isPwa: boolean,
+): Promise<void> {
+  const profile = parseDevice(userAgent, isPwa);
+  const tel = normalizeForDb(phone);
+
+  try {
+    // First login — write full profile only if not already set
+    await db.execute(sql`
+      INSERT INTO user_device_log (user_id, device_os, device_os_version, device_model, device_type, device_access_mode, change_reason)
+      SELECT id, ${profile.os}, ${profile.osVersion}, ${profile.model}, ${profile.type}, ${profile.accessMode}, 'initial'
+      FROM users
+      WHERE telefono = ${tel}
+        AND device_first_seen_at IS NULL
+    `);
+
+    const firstSet = await db.execute(sql`
+      UPDATE users SET
+        device_os            = ${profile.os},
+        device_os_version    = ${profile.osVersion},
+        device_model         = ${profile.model},
+        device_type          = ${profile.type},
+        device_access_mode   = ${profile.accessMode},
+        device_first_seen_at = NOW(),
+        device_updated_at    = NOW()
+      WHERE telefono = ${tel}
+        AND device_first_seen_at IS NULL
+      RETURNING id
+    `);
+
+    if ((firstSet.rows?.length ?? 0) > 0) {
+      logger.info({ phone: tel, os: profile.os, model: profile.model }, "writeDeviceProfile: initial profile written");
+      return;
+    }
+
+    // Subsequent logins — detect device switch (both os AND model changed)
+    const changed = await db.execute(sql`
+      UPDATE users SET
+        device_os            = ${profile.os},
+        device_os_version    = ${profile.osVersion},
+        device_model         = ${profile.model},
+        device_type          = ${profile.type},
+        device_access_mode   = ${profile.accessMode},
+        device_updated_at    = NOW()
+      WHERE telefono = ${tel}
+        AND device_first_seen_at IS NOT NULL
+        AND device_os    IS DISTINCT FROM ${profile.os}
+        AND device_model IS DISTINCT FROM ${profile.model}
+      RETURNING id
+    `);
+
+    if ((changed.rows?.length ?? 0) > 0) {
+      await db.execute(sql`
+        INSERT INTO user_device_log (user_id, device_os, device_os_version, device_model, device_type, device_access_mode, change_reason)
+        SELECT id, ${profile.os}, ${profile.osVersion}, ${profile.model}, ${profile.type}, ${profile.accessMode}, 'update'
+        FROM users WHERE telefono = ${tel}
+      `);
+      logger.info({ phone: tel, os: profile.os, model: profile.model }, "writeDeviceProfile: device change logged");
+      return;
+    }
+
+    // PWA upgrade only (browser → pwa, no log entry needed)
+    if (profile.accessMode === "pwa") {
+      await db.execute(sql`
+        UPDATE users SET device_access_mode = 'pwa', device_updated_at = NOW()
+        WHERE telefono = ${tel} AND device_access_mode = 'browser'
+      `);
+    }
+  } catch (err) {
+    logger.error({ err, phone: tel }, "writeDeviceProfile: failed (non-fatal)");
   }
 }
 

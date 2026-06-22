@@ -10,6 +10,7 @@ import {
 import { creditWallet, getOrCreateWallet } from "../wallet/services/wallet.js";
 import { createCardOrder } from "../wallet/lib/conekta.js";
 import { logger } from "../lib/logger.js";
+import { updateLoadMethodCounters } from "../services/loadMethodCounters.js";
 
 const router = Router();
 
@@ -173,6 +174,8 @@ router.post("/charge-and-save", async (req: Request, res: Response) => {
 
       if (cardOrder.status === "paid") {
         await creditWallet(wallet.id, amtNum, tx.id);
+        // Update load method counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+        updateLoadMethodCounters(db, telefono, "card").catch(() => {});
         const [walletRow] = await db
           .select({ balanceMxn: walletsTable.balanceMxn })
           .from(walletsTable)
@@ -230,6 +233,8 @@ router.post("/charge-and-save", async (req: Request, res: Response) => {
 
     if (chargeResult.status === "paid") {
       await creditWallet(wallet.id, amtNum, tx.id);
+      // Update load method counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+      updateLoadMethodCounters(db, telefono, "card").catch(() => {});
     }
 
     await db.insert(savedCardsTable).values({
@@ -384,6 +389,8 @@ router.post("/:id/charge", async (req: Request, res: Response) => {
 
     if (chargeResult.status === "paid") {
       await creditWallet(wallet.id, amtNum, tx.id);
+      // Update load method counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+      updateLoadMethodCounters(db, card.userTelefono, "card").catch(() => {});
       const [walletRow] = await db
         .select({ balanceMxn: walletsTable.balanceMxn })
         .from(walletsTable)

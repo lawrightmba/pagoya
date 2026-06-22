@@ -21,6 +21,7 @@ import { captureUserProfile } from "../../services/profiles.js";
 import { earnPoints } from "../../services/loyalty.js";
 import { logger } from "../../lib/logger.js";
 import { sendWhatsApp } from "../../lib/whatsapp.js";
+import { updateLoadMethodCounters } from "../../services/loadMethodCounters.js";
 
 const router: IRouter = Router();
 
@@ -142,6 +143,10 @@ router.post("/load/card", async (req: Request, res: Response) => {
     if (cardOrder.status === "paid") {
       await creditWallet(tx.walletId, amt, tx.id);
 
+      // Update load method trajectory counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+      const _telefono = req.session?.telefono as string | undefined;
+      if (_telefono) updateLoadMethodCounters(db, _telefono, "card").catch(() => {});
+
       // Rep commission (non-blocking) — 5 MXN per card top-up, 7-day hold
       if (rep_code) {
         db.select({ id: repsTable.id })
@@ -251,6 +256,10 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
         // ── Card top-up (sync paid already handled in route; this covers async 3DS) ──
         if (tx.type === "load_card" || meta.type === "card_topup") {
           await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
+          // Update load method counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+          getUserTelefonoByWalletId(tx.walletId)
+            .then(tel => updateLoadMethodCounters(db, tel, "card"))
+            .catch(() => {});
           logger.info(
             { conektaOrderId, walletId: tx.walletId, source: "card" },
             "wallet: card_topup credited via webhook",
@@ -262,6 +271,8 @@ export async function handleConektaWebhook(req: Request, res: Response): Promise
         await creditWallet(tx.walletId, parseFloat(tx.amountMxn), tx.id);
 
         const telefono = await getUserTelefonoByWalletId(tx.walletId);
+        // Update load method counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+        updateLoadMethodCounters(db, telefono, "oxxo").catch(() => {});
         const newBalance = await getBalance(telefono);
 
         const msg =

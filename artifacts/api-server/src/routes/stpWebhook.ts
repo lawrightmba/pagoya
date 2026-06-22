@@ -25,6 +25,7 @@ import { getOrCreateWallet, creditWallet } from "../wallet/services/wallet.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 import { generateCepUrl, checkStpAccount } from "../services/stpService.js";
+import { updateLoadMethodCounters } from "../services/loadMethodCounters.js";
 
 // ── Signature verification ─────────────────────────────────────────────────
 function verifyStpSignature(rawBody: Buffer, signatureHeader: string | undefined): boolean {
@@ -217,6 +218,9 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
 
     // Tag payment_source for OXXO→digital migration signal in PTI scoring
     db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'spei' WHERE id = ${tx.id}`).catch(() => {});
+
+    // Update load method trajectory counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
+    updateLoadMethodCounters(db, telefono, "spei").catch(() => {});
 
     // WhatsApp confirmation — include CEP link for official receipt
     const cepLine = cepUrl
