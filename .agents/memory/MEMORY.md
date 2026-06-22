@@ -1,8 +1,8 @@
 - [WhatsApp agent architecture](whatsapp-agent.md) — inbound webhook live, session store in-memory, calls /api/agent/chat internally
-- [Tomorrow growth sprint](tomorrow-growth-sprint.md) — three growth wedges queued for next session
+- [Growth sprint complete](tomorrow-growth-sprint.md) — all 3 wedges shipped + colonia backfill + bill discovery personalization + referral share card + win-back 30d
 - [Web signup bonus architecture](web-signup-bonus.md) — ref_code optional, defaults "WEB"; velocity check bypassed for WEB; signup_source field tracks web_organic vs rep_referral
 - [DB migrations](db-migrations.md) — drizzle-kit push broken; always use direct SQL via executeSql; schema file is lib/db/src/schema/users.ts
-- [Command center seed keys](command-center-seeds.md) — current key is ck_defaults_ph0_v4 (p0-01–p0-35); bump key + date each session when adding new Phase 0 items
+- [Win-back cron](winback-cron.md) — winbackCron.ts; eligibility: 30d old + activation_nudge_24h_sent_at IS NOT NULL + 0 real payments; backfill ran June 2026 for 5 existing users; paula_messages trigger_type='winback_30d'; admin route POST /api/admin/run-winback
 - [Signup bonus $150 rollout](signup-bonus-150.md) — bonus_amount=150 in DB; bonus_fraud_flags table live; BonusBanner v2 session key; BillPaySelector shows banner if balance>0 and no completed payments; PaymentSuccess shows first-payment celebration; Home hero badge $150; Register CTA "$150 MXN"; Bienvenida: no back-block, green primary CTA, trust checklist; OXXO complaint handler in whatsapp-agent
 - [Paula payment initiation](paula-payment-initiation.md) — 2FA flow via pendingPayment in session; agentChat returns pendingPayment in response body; whatsapp-agent intercepts sí/no before forwarding to agent
 - [PWA push notifications](pwa-push.md) — VAPID keys in env vars; push_subscriptions table; web-push in api-server; sw.js + manifest.json in pagoya/public; usePushNotifications hook; fires after bill payment confirmed
