@@ -1,0 +1,31 @@
+Here are the rewrites. Drop-in ready.
+
+newUserGreeting — Message 1
+¡Hola! 👋 Soy *Paula*, tu asistente de PagoYa.
+
+Te ayudo a pagar CFE, Telmex, agua, recargas y más — todo aquí en WhatsApp, sin cuenta bancaria ni filas. Tu saldo lo cargas en efectivo en cualquier OXXO y queda disponible al instante.
+
+¿Me dices tu *nombre completo* para crear tu cuenta gratis?
+
+newUserGreeting — Message 2
+Delete this message entirely. Everything essential is in Message 1. The STP/Banxico security explanation is good content but wrong moment — it's answering a question the user hasn't asked yet. Move it to an FAQ handler that Paula fires if someone asks "¿es seguro?" or "¿cómo funciona?". That way it serves users who need the reassurance without slowing down users who are ready to register.
+
+registrationSuccess — bonus active
+✅ *¡Listo, ${firstName}!* Tu cuenta PagoYa está activa.
+
+🎁 Te cargamos *$150 MXN* de regalo — úsalos ahora mismo para pagar tu CFE, Telmex, agua o recargar tu celular, sin ir al OXXO primero.
+
+¿Qué servicio quieres pagar?
+
+What changed and why:
+OriginalRewriteReason"Bienvenido/a"Removed entirelyEliminated, Paula introduces herself instead6 paragraph blocks3 sentencesWhatsApp attention spanMessage 2 (STP/Banxico)Deleted, moved to FAQWrong moment — answers unasked questionDividers ──────────RemovedSystem printout feel📱 Número registrado: +${phone}RemovedUser knows their own number👤 Nombre: ${rawName}RemovedRedundant — Paula just used their nameFeature bullet list (CFE/Netflix/SPEI)RemovedCognitive overload at wrong moment"Para cargar saldo escribe SALDO"RemovedIrrelevant — they have $150 MXN already"¿En qué te ayudo hoy?"→ "¿Qué servicio quieres pagar?"Specific CTA drives action; open question invites drift"billetera""saldo"Consistency — saldo wins
+
+One note on the FAQ handler for Message 2:
+The STP/Banxico copy is genuinely good trust-building content — don't throw it away. Wire it as a response to any of these intents:
+
+"¿es seguro?"
+"¿cómo funciona?"
+"¿qué es PagoYa?"
+"¿puedo confiar?"
+
+That content earns its place when the user asks for it. As an unsolicited second message during registration it's friction.

@@ -48,80 +48,53 @@ const m = {
     ? "Sorry, I had a problem creating your account. Please try again in a moment."
     : "Lo siento, tuve un problema al crear tu cuenta. Por favor intenta de nuevo en un momento.",
 
-  registrationSuccess: (lang: Lang, firstName: string, phoneKey: string, rawName: string, bonusAmount: number) => {
-    const bonusLine = bonusAmount > 0
-      ? (lang === "en"
-        ? `\n\n🎁 *Welcome bonus!* We loaded *$${bonusAmount.toFixed(0)} MXN* into your wallet as a welcome gift.\nYou can use it right now to pay CFE, Telmex, top up your phone, or any service — no OXXO visit required first.`
-        : `\n\n🎁 *¡Bonus de bienvenida!* Cargamos *$${bonusAmount.toFixed(0)} MXN* en tu billetera como regalo de bienvenida.\nPuedes usarlos *ahora mismo* para pagar tu CFE, Telmex, recargar tu celular, o cualquier servicio — sin necesidad de ir al OXXO primero.`)
-      : "";
+  registrationSuccess: (lang: Lang, firstName: string, _phoneKey: string, _rawName: string, bonusAmount: number) => {
     if (lang === "en") {
+      if (bonusAmount > 0) {
+        return (
+          `✅ *Done, ${firstName}!* Your PagoYa account is active.\n\n` +
+          `🎁 We loaded *$${bonusAmount.toFixed(0)} MXN* as a welcome gift — use it right now to pay CFE, Telmex, water, or top up your phone, no OXXO visit needed first.\n\n` +
+          `What service do you want to pay?`
+        );
+      }
       return (
-        `✅ *Done, ${firstName}! Your PagoYa account is active.*\n` +
-        `──────────────────\n` +
-        `📱 Registered number: +${phoneKey.replace(/\D/g, "")}\n` +
-        `👤 Name: ${rawName}${bonusLine}\n` +
-        `──────────────────\n\n` +
-        `With PagoYa you can:\n` +
-        `💡 Pay CFE electricity, Telmex, water, gas, and more\n` +
-        `📱 Top up any mobile phone\n` +
-        `🎮 Buy gift cards (Netflix, Amazon, etc.)\n` +
-        `🏦 Transfer to any bank via SPEI\n\n` +
-        `To add funds, type *BALANCE* and I'll explain how.\n` +
-        `How can I help you today?`
+        `✅ *Done, ${firstName}!* Your PagoYa account is active.\n\n` +
+        `You can pay CFE, Telmex, water, top up any phone, and more — right here in WhatsApp.\n\n` +
+        `What service do you want to pay?`
+      );
+    }
+    if (bonusAmount > 0) {
+      return (
+        `✅ *¡Listo, ${firstName}!* Tu cuenta PagoYa está activa.\n\n` +
+        `🎁 Te cargamos *$${bonusAmount.toFixed(0)} MXN* de regalo — úsalos ahora mismo para pagar tu CFE, Telmex, agua o recargar tu celular, sin ir al OXXO primero.\n\n` +
+        `¿Qué servicio quieres pagar?`
       );
     }
     return (
-      `✅ *¡Listo, ${firstName}! Tu cuenta PagoYa está activa.*\n` +
-      `──────────────────\n` +
-      `📱 Número registrado: +${phoneKey.replace(/\D/g, "")}\n` +
-      `👤 Nombre: ${rawName}${bonusLine}\n` +
-      `──────────────────\n\n` +
-      `Con PagoYa puedes:\n` +
-      `💡 Pagar CFE, Telmex, agua, gas y más\n` +
-      `📱 Recargar cualquier celular\n` +
-      `🎮 Comprar gift cards (Netflix, Steam, etc.)\n` +
-      `🏦 Transferir a cualquier banco por SPEI\n\n` +
-      `Para cargar saldo escribe *SALDO* y te explico cómo.\n` +
-      `¿En qué te ayudo hoy?`
+      `✅ *¡Listo, ${firstName}!* Tu cuenta PagoYa está activa.\n\n` +
+      `Puedes pagar CFE, Telmex, agua, recargar cualquier celular y más — aquí mismo en WhatsApp.\n\n` +
+      `¿Qué servicio quieres pagar?`
     );
   },
 
-  // Returns [msg1, msg2] — send msg2 with a 2.5s typing pause after msg1
-  newUserGreeting: (lang: Lang, firstName: string): [string, string] => {
-    const greet = firstName
-      ? (lang === "en" ? `Hello, ${firstName}!` : `¡Hola, ${firstName}!`)
-      : (lang === "en" ? "Hello!" : "¡Hola!");
+  newUserGreeting: (lang: Lang, _firstName: string): string => {
     if (lang === "en") {
-      return [
-        `${greet} 👋 Welcome to *PagoYa*!\n\n` +
-        `I'm *Paula*, your personal payments assistant. You can ask me anything — I'm here to help! For example:\n` +
-        `_"Paula, I need to pay my CFE electricity bill"_ — and I'll handle it right here in this chat.\n\n` +
-        `PagoYa lets you make *bill payments, mobile top-ups, gift cards, and bank transfers* — all from WhatsApp, without needing a bank account.\n\n` +
-        `🏦 *How does your money work?*\n` +
-        `Your balance lives in a *PagoYa Digital Wallet*. To fund it, deposit cash at any OXXO store nationwide using a code we give you — available instantly.`,
-
-        `🔒 *Is it safe?*\n` +
-        `Yes. Every payment travels through *STP (Sistema de Transferencias y Pagos)*, the official network of the *Bank of Mexico (Banxico)*. It's the same system used by Banamex and BBVA — your payments carry an official folio ID.\n\n` +
-        `📋 *What do you need to register?*\n` +
-        `Just your name. No tax ID, no proof of address, no bank account required.\n\n` +
-        `To create your free account right now, could you tell me your *full name*?`,
-      ];
+      return (
+        `👋 Hi! I'm *Paula*, your PagoYa assistant.\n\n` +
+        `I help you pay CFE, Telmex, water, mobile top-ups and more — right here in WhatsApp, no bank account needed. Load cash at any OXXO and it's available instantly.\n\n` +
+        `What's your *full name* so I can create your free account?`
+      );
     }
-    return [
-      `${greet} 👋 ¡Bienvenido/a a *PagoYa*!\n\n` +
-      `Soy *Paula*, tu asistente personal de pagos. Puedes preguntarme lo que quieras — ¡estoy aquí para ayudarte! Por ejemplo:\n` +
-      `_"Paula, necesito pagar mi recibo de CFE"_ — y lo resolvemos aquí mismo en este chat.\n\n` +
-      `PagoYa te permite hacer *pagos de servicios, recargas, gift cards y transferencias bancarias* — todo desde WhatsApp, sin necesidad de cuenta bancaria.\n\n` +
-      `🏦 *¿Cómo funciona tu dinero?*\n` +
-      `Tu saldo vive en una *Cartera Digital PagoYa*. Para cargarla, depositas en efectivo en cualquier OXXO del país usando un código que te damos — disponible al instante.`,
-
-      `🔒 *¿Es seguro?*\n` +
-      `Sí. Todos los movimientos de dinero viajan por *STP (Sistema de Transferencias y Pagos)*, la red oficial del *Banco de México* (Banxico). Es el mismo sistema que usan Banamex y BBVA — tus pagos quedan respaldados con folio oficial.\n\n` +
-      `📋 *¿Qué necesitas para registrarte?*\n` +
-      `Solo tu nombre. No pedimos RFC, no pedimos comprobante de domicilio, no pedimos cuenta bancaria.\n\n` +
-      `Para crear tu cuenta gratis ahora mismo, ¿me puedes decir tu *nombre completo*?`,
-    ];
+    return (
+      `¡Hola! 👋 Soy *Paula*, tu asistente de PagoYa.\n\n` +
+      `Te ayudo a pagar CFE, Telmex, agua, recargas y más — todo aquí en WhatsApp, sin cuenta bancaria ni filas. Tu saldo lo cargas en efectivo en cualquier OXXO y queda disponible al instante.\n\n` +
+      `¿Me dices tu *nombre completo* para crear tu cuenta gratis?`
+    );
   },
+
+  securityFAQ: (lang: Lang): string => lang === "en"
+    ? `🔒 *Yes, it's safe.*\n\nEvery payment goes through *STP (Sistema de Transferencias y Pagos)* — the Bank of Mexico's official payment network, the same one used by Banamex and BBVA. Your payments carry an official folio ID.\n\nNo bank account needed. Just your name to register.`
+    : `🔒 *Sí, es seguro.*\n\nTodos los pagos viajan por *STP (Sistema de Transferencias y Pagos)* — la red oficial del Banco de México, la misma que usan Banamex y BBVA. Tus pagos quedan respaldados con folio oficial.\n\nNo necesitas cuenta bancaria. Solo tu nombre para registrarte.`,
 
   repGreeting: (lang: Lang, firstName: string) => {
     if (lang === "en") {
@@ -694,10 +667,21 @@ router.post("/", async (req: Request, res: Response) => {
     if (session.awaitingName) {
       const rawName = userMessage.trim();
 
-      // Detect off-topic questions mid-registration — answer via Claude, then re-ask for name
+      // Detect off-topic questions mid-registration — answer, then re-ask for name
       const QUESTION_RE = /^(qué|que|cómo|como|cuánto|cuanto|cuál|cual|para qué|para que|por qué|por que|cuándo|cuando|dónde|donde|es que|puedo|pueden|hay|tiene|tienes|sirve|funciona|cuanto vale|cuánto vale|cuánto cuesta|cuanto cuesta|qué es|que es|cómo funciona|como funciona|no entiendo|no sé|a qué|a que|gratis|cobr|carg|deposit)/i;
       if (QUESTION_RE.test(rawName)) {
-        // Route to Claude but keep awaitingName=true — registration resumes after answer
+        const reAsk = lang === "en"
+          ? `\n\nWhenever you're ready, just tell me your *full name* (first name + last name) to create your account.`
+          : `\n\nCuando quieras, solo dime tu *nombre completo* (nombre y apellido) para crear tu cuenta.`;
+
+        // Security / trust questions — use pre-written copy, skip Claude
+        const SECURITY_RE = /\b(seguro|confiable|confiar|fraude|robar|hackear|es seguro|qué es pagoya|que es pagoya|cómo funciona|como funciona|stp|banxico|legitim|real|verdad|estafa|scam)\b/i;
+        if (SECURITY_RE.test(rawName)) {
+          await sendWhatsApp(phoneKey, m.securityFAQ(lang) + reAsk);
+          return;
+        }
+
+        // All other questions — route to Claude
         try {
           const agentRes = await fetch(`http://localhost:${port}/api/agent/chat`, {
             method: "POST",
@@ -706,9 +690,6 @@ router.post("/", async (req: Request, res: Response) => {
           });
           if (agentRes.ok) {
             const { reply } = await agentRes.json() as { reply: string };
-            const reAsk = lang === "en"
-              ? `\n\nWhenever you're ready, just tell me your *full name* (first name + last name) to create your account.`
-              : `\n\nCuando quieras, solo dime tu *nombre completo* (nombre y apellido) para crear tu cuenta.`;
             await sendWhatsApp(phoneKey, reply + reAsk);
             return;
           }
@@ -736,10 +717,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (!registered) {
       saveSession(phoneKey, { awaitingName: true });
       const firstName = (profileName || "").split(" ")[0] || "";
-      const [greet1, greet2] = m.newUserGreeting(lang, firstName);
-      await sendWhatsApp(phoneKey, greet1);
-      await new Promise(r => setTimeout(r, 2500));
-      await sendWhatsApp(phoneKey, greet2);
+      await sendWhatsApp(phoneKey, m.newUserGreeting(lang, firstName));
       return;
     }
 
