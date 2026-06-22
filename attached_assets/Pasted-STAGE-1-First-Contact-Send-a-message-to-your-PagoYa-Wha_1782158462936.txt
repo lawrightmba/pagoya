@@ -1,0 +1,98 @@
+STAGE 1 — First Contact
+Send a message to your PagoYa WhatsApp number. Any message — "hola", "1", a random word.
+Verify:
+
+ Paula responds within 5 seconds
+ The greeting message is warm and plain Spanish — not robotic
+ It's clear what PagoYa is from the first message alone — a stranger should understand without prior context
+ The next step is obvious — Paula tells them exactly what to do or ask
+
+Note the exact text of Paula's first response here. We'll review the copy together.
+
+STAGE 2 — Name Collection
+Provide a first name when prompted.
+Verify:
+
+ Paula acknowledges the name and uses it immediately in the next message
+ The transition to the next step (colonia) feels natural, not like a form
+ If you send something unexpected (a number, a long sentence, punctuation) — does Paula handle it gracefully or break
+
+
+STAGE 3 — Colonia Capture
+When Paula asks for colonia, try two scenarios:
+Scenario A — type a valid colonia name (e.g. "Versalles")
+
+ Paula accepts it and confirms
+ It saves correctly — you can verify with SELECT colonia FROM users WHERE telefono LIKE '%[last 4 digits]%';
+
+Scenario B — type "saltar"
+
+ Paula acknowledges the skip gracefully — no error, no confusion
+ Flow continues normally to account creation
+
+
+STAGE 4 — Account Creation Confirmation
+Verify:
+
+ Paula confirms the account is created with a clear, friendly message
+ The $150 MXN signup bonus is mentioned and the amount is correct
+ Paula explains what to do next — not assumed knowledge
+ The confirmation message doesn't contain any placeholder text, broken variables, or {{nombre}} literals
+
+
+STAGE 5 — 10-Minute Activation Nudge
+Wait 10-12 minutes without doing anything.
+Verify:
+
+ Nudge arrives within the window
+ Copy is distinct from the account creation message — doesn't feel like a duplicate
+ There is a clear action — Paula tells them specifically what to do
+ If you respond to the nudge, Paula picks up the conversation naturally
+
+
+STAGE 6 — First Bill Payment
+Attempt to pay a bill through WhatsApp. Use CFE or Telmex as the test case — the most common services in your target colonia.
+Verify:
+
+ Paula understands the intent from a natural message ("quiero pagar mi CFE")
+ The reference number prompt is clear — a user who has never done this knows what to enter
+ The payment confirmation step shows the amount, service, fee ($25 MXN), and total clearly
+ Paula confirms success with a receipt that includes all relevant details
+ The app download upsell arrives approximately 2 seconds after the receipt — not before, not missing
+ The upsell message feels like a natural next step, not an ad
+
+
+STAGE 7 — Edge Cases
+Test these specifically because they're where real users break:
+Wrong reference number — enter an invalid CFE reference
+
+ Paula catches the error cleanly
+ Error message is in plain Spanish, not a technical string
+ User knows exactly what to do next
+
+Insufficient wallet balance — attempt a payment with zero balance
+
+ Paula explains the situation clearly
+ Instructions for loading via OXXO are simple and actionable
+ No dead ends — there is always a next step
+
+Random message mid-flow — during the registration sequence, send "cuánto cuesta" or "qué es esto"
+
+ Paula answers the question and returns to the flow
+ The registration state is preserved — they don't have to start over
+
+Numeric reply outside a menu — send "2" with no active menu
+
+ Paula does not trigger income intercept or colonia backfill
+ Response is sensible given the context
+
+
+STAGE 8 — Copy Quality Check
+As you go through every message, flag any that:
+
+Use English words unnecessarily
+Feel translated rather than written in Spanish
+Are longer than 3 sentences (WhatsApp messages should be short)
+Use financial jargon a market vendor wouldn't know
+Have inconsistent tone — some messages feel warm, others feel like system output
+

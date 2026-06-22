@@ -74,13 +74,25 @@ export async function sendActivationNudge(userId: number): Promise<{
     const firstName = (user.kycFullName ?? "").split(" ")[0].trim() || "amigo";
     const phone = normalizePhone(user.telefono);
 
+    // Fetch live bonus amount from config so copy is always accurate
+    let bonusDisplay = "$150 MXN";
+    try {
+      const configR = await db.execute(
+        drizzleSql`SELECT bonus_amount, is_active FROM signup_bonus_config WHERE id = 1 LIMIT 1`
+      );
+      const cfg = configR.rows[0] as { bonus_amount?: string; is_active?: boolean } | undefined;
+      if (cfg?.is_active && cfg.bonus_amount) {
+        bonusDisplay = `$${parseFloat(cfg.bonus_amount).toFixed(0)} MXN`;
+      }
+    } catch { /* use default */ }
+
     const message =
-      `Hola ${firstName} 👋 Tu billetera PagoYa ya está lista.\n\n` +
-      `Tienes $25 MXN disponibles ahora mismo 💰\n\n` +
-      `Paga tu CFE, Telmex, Izzi o cualquier servicio en segundos — ` +
-      `sin banco, sin filas.\n\n` +
-      `👉 pagoyamx.com/pagar\n\n` +
-      `¿Preguntas? Responde aquí y te ayudamos.`;
+      `Hola ${firstName} 👋 Tu cuenta PagoYa ya está activa.\n\n` +
+      `Tienes *${bonusDisplay} de bienvenida* en tu billetera ahora mismo 🎁\n\n` +
+      `Úsalos para pagar tu CFE, Telmex, Izzi o recargar tu celular — ` +
+      `sin banco, sin filas, en segundos.\n\n` +
+      `¿Quieres pagar algo? Solo dime el servicio aquí mismo.\n` +
+      `¿Preguntas? Responde y te ayudo.`;
 
     // ── 5. Send via Twilio ─────────────────────────────────────────────────
     await sendWhatsApp(phone, message);

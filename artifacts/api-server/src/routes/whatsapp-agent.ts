@@ -425,7 +425,7 @@ function mapSiprelError(error: string, serviceName: string): string {
   const e = error.toUpperCase();
   // Wallet pre-check — insufficient balance
   if (e.includes("INSUFFICIENT_BALANCE") || e.includes("SALDO INSUFICIENTE")) {
-    return "Tu cartera PagoYa no tiene saldo suficiente. Carga saldo y vuelve a intentar.";
+    return "Tu cartera PagoYa no tiene saldo suficiente.\n\nPara cargar en OXXO: escribe *SALDO* y te mando el código de depósito al instante. También puedes cargar con tarjeta o transferencia SPEI.\n\nEscribe *SALDO* y continuamos.";
   }
   // SIPREL error 2 — CFE / biller account not found
   if (e.includes("DESTINATION_UNAVAILABLE")) {
@@ -652,6 +652,27 @@ router.post("/", async (req: Request, res: Response) => {
     if (session.awaitingColonia && session.pendingRegistration) {
       const coloniaRaw = userMessage.trim();
       const skip = /^(saltar|skip|no|omitir|ninguna|nada|-)$/i.test(coloniaRaw);
+
+      // If the message looks like a question, answer it via Claude then re-ask for colonia
+      const QUESTION_RE_COL = /^(qué|que|cómo|como|cuánto|cuanto|cuál|cual|para qué|para que|por qué|por que|cuándo|cuando|dónde|donde|es que|puedo|pueden|hay|tiene|tienes|sirve|funciona|cuanto vale|cuánto vale|cuánto cuesta|cuanto cuesta|qué es|que es|cómo funciona|como funciona|no entiendo|no sé|gratis|cobr|carg|deposit)/i;
+      if (!skip && QUESTION_RE_COL.test(coloniaRaw)) {
+        try {
+          const agentRes = await fetch(`http://localhost:${port}/api/agent/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: userMessage, telefono: `+${phoneKey}`, history: session.conversationHistory, profileName: session.profileName ?? profileName ?? null, lang }),
+          });
+          if (agentRes.ok) {
+            const { reply } = await agentRes.json() as { reply: string };
+            const reAsk = lang === "en"
+              ? `\n\nJust one last thing — which *neighborhood* do you live in? (Or type "skip" to continue.)`
+              : `\n\nNada más dime — ¿en qué *colonia* vives? (O escribe "saltar" para continuar.)`;
+            await sendWhatsApp(phoneKey, reply + reAsk);
+            return;
+          }
+        } catch { /* fall through to normal colonia handling */ }
+      }
+
       const colonia = skip ? undefined : coloniaRaw.slice(0, 100);
       const { name } = session.pendingRegistration;
       saveSession(phoneKey, { awaitingColonia: false, pendingRegistration: undefined });
@@ -672,6 +693,28 @@ router.post("/", async (req: Request, res: Response) => {
     // Step 2: we already asked for name — this message IS the name
     if (session.awaitingName) {
       const rawName = userMessage.trim();
+
+      // Detect off-topic questions mid-registration — answer via Claude, then re-ask for name
+      const QUESTION_RE = /^(qué|que|cómo|como|cuánto|cuanto|cuál|cual|para qué|para que|por qué|por que|cuándo|cuando|dónde|donde|es que|puedo|pueden|hay|tiene|tienes|sirve|funciona|cuanto vale|cuánto vale|cuánto cuesta|cuanto cuesta|qué es|que es|cómo funciona|como funciona|no entiendo|no sé|a qué|a que|gratis|cobr|carg|deposit)/i;
+      if (QUESTION_RE.test(rawName)) {
+        // Route to Claude but keep awaitingName=true — registration resumes after answer
+        try {
+          const agentRes = await fetch(`http://localhost:${port}/api/agent/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: userMessage, telefono: `+${phoneKey}`, history: session.conversationHistory, profileName: session.profileName ?? profileName ?? null, lang }),
+          });
+          if (agentRes.ok) {
+            const { reply } = await agentRes.json() as { reply: string };
+            const reAsk = lang === "en"
+              ? `\n\nWhenever you're ready, just tell me your *full name* (first name + last name) to create your account.`
+              : `\n\nCuando quieras, solo dime tu *nombre completo* (nombre y apellido) para crear tu cuenta.`;
+            await sendWhatsApp(phoneKey, reply + reAsk);
+            return;
+          }
+        } catch { /* fall through to normal name validation */ }
+      }
+
       if (rawName.length < 2 || rawName.length > 80 || /\d/.test(rawName)) {
         await sendWhatsApp(phoneKey, m.invalidName(lang));
         return;
