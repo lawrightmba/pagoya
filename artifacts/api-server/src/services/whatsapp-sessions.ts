@@ -25,6 +25,9 @@ export interface WhatsAppSession {
   pendingWithdrawal: PendingWithdrawalSession | null;
   pendingP2P: PendingP2PSession | null;
   awaitingName?: boolean;
+  // Wedge 1: colonia capture step (fires after name is confirmed)
+  awaitingColonia?: boolean;
+  pendingRegistration?: { name: string };
   lang: "es" | "en";
 }
 

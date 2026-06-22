@@ -11,6 +11,8 @@ import {
   type PendingPaymentRow,
 } from "../services/pendingPaymentService.js";
 import { creditSignupBonus } from "../services/signupBonusService.js";
+import { scheduleNudge } from "../services/nudgeService.js";
+import { scheduleReferralNudgeIfEligible } from "../services/lifecycleNudgeService.js";
 import { logger } from "../lib/logger.js";
 
 // ── Language detection ────────────────────────────────────────────────────────
@@ -238,6 +240,10 @@ const m = {
     );
   },
 
+  askColonia: (lang: Lang) => lang === "en"
+    ? `Great! One quick question — which *neighborhood (colonia)* do you live in?\n\nThis helps us personalize your experience. (You can type "skip" to continue without it.)`
+    : `¡Perfecto! Una pregunta rápida — ¿en qué *colonia* vives?\n\nEsto nos ayuda a personalizar tu experiencia. (Escribe "saltar" si prefieres no decirlo.)`,
+
   ambiguousPayment: (lang: Lang) => lang === "en"
     ? "Please reply *YES* to confirm or *CANCEL* to cancel the payment."
     : "Por favor responde *SÍ* para confirmar o *CANCELAR* para cancelar el pago.",
@@ -330,6 +336,7 @@ async function isRegistered(phoneKey: string): Promise<boolean> {
 async function registerWhatsAppUser(
   phoneKey: string,
   name: string,
+  colonia?: string,
 ): Promise<{ userId: number; bonusAmount: number }> {
   const clean = phoneKey.replace(/\D/g, "").slice(-10);
 
@@ -364,6 +371,12 @@ async function registerWhatsAppUser(
       WHERE telefono = ${clean}
         AND (kyc_full_name IS NULL OR kyc_full_name = '')
     `);
+  }
+
+  // Write colonia if captured (fire-and-forget — never blocks registration)
+  if (colonia) {
+    db.execute(drizzleSql`UPDATE users SET colonia = ${colonia.trim()} WHERE telefono = ${clean}`)
+      .catch(() => {});
   }
 
   // Create wallet (idempotent)
@@ -635,6 +648,27 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // ── New-user registration flow ───────────────────────────────────────────
+    // Step 3: colonia submitted — finish registration
+    if (session.awaitingColonia && session.pendingRegistration) {
+      const coloniaRaw = userMessage.trim();
+      const skip = /^(saltar|skip|no|omitir|ninguna|nada|-)$/i.test(coloniaRaw);
+      const colonia = skip ? undefined : coloniaRaw.slice(0, 100);
+      const { name } = session.pendingRegistration;
+      saveSession(phoneKey, { awaitingColonia: false, pendingRegistration: undefined });
+      try {
+        const { userId, bonusAmount } = await registerWhatsAppUser(phoneKey, name, colonia);
+        const firstName = name.split(" ")[0];
+        await sendWhatsApp(phoneKey, m.registrationSuccess(lang, firstName, phoneKey, name, bonusAmount));
+        // Wedge 1 — fire 10-min activation nudge
+        scheduleNudge(userId);
+      } catch (err) {
+        logger.error({ err, phoneKey }, "whatsapp-agent: registration failed (colonia step)");
+        await sendWhatsApp(phoneKey, m.registrationError(lang));
+        saveSession(phoneKey, { awaitingColonia: true, pendingRegistration: session.pendingRegistration });
+      }
+      return;
+    }
+
     // Step 2: we already asked for name — this message IS the name
     if (session.awaitingName) {
       const rawName = userMessage.trim();
@@ -648,16 +682,9 @@ router.post("/", async (req: Request, res: Response) => {
         await sendWhatsApp(phoneKey, m.invalidNameTooShort(lang));
         return;
       }
-      saveSession(phoneKey, { awaitingName: false });
-      try {
-        const { bonusAmount } = await registerWhatsAppUser(phoneKey, rawName);
-        const firstName = rawName.split(" ")[0];
-        await sendWhatsApp(phoneKey, m.registrationSuccess(lang, firstName, phoneKey, rawName, bonusAmount));
-      } catch (err) {
-        logger.error({ err, phoneKey }, "whatsapp-agent: registration failed");
-        await sendWhatsApp(phoneKey, m.registrationError(lang));
-        saveSession(phoneKey, { awaitingName: true });
-      }
+      // Name confirmed — ask for colonia before completing registration
+      saveSession(phoneKey, { awaitingName: false, awaitingColonia: true, pendingRegistration: { name: rawName } });
+      await sendWhatsApp(phoneKey, m.askColonia(lang));
       return;
     }
 
@@ -728,6 +755,36 @@ router.post("/", async (req: Request, res: Response) => {
         if (result.ok) {
           const folio = result.confirmationCode ?? "—";
           await sendWhatsApp(phoneKey, m.paymentSuccess(lang, pending, folio, nowMx));
+
+          // ── Post-payment growth hooks (fire-and-forget) ───────────────────
+          void (async () => {
+            try {
+              const clean10 = phoneKey.replace(/\D/g, "").slice(-10);
+              const pr = await db.execute(drizzleSql`
+                SELECT u.id, COUNT(bp.id)::int AS payment_count
+                FROM users u
+                LEFT JOIN bill_payments bp ON bp.telefono = u.telefono
+                WHERE u.telefono = ${clean10}
+                GROUP BY u.id LIMIT 1
+              `);
+              const info = pr.rows[0] as { id: number; payment_count: number } | undefined;
+              if (info) {
+                // Wedge 3 — viral referral loop (fires 60 min later, gated on ≥3 payments)
+                scheduleReferralNudgeIfEligible(info.id);
+
+                // Wedge 1 — first-payment app download upsell (2 s after success)
+                if (info.payment_count === 1) {
+                  await sleep(2_000);
+                  await sendWhatsApp(phoneKey, lang === "en"
+                    ? `🎉 That was your *first payment* with PagoYa!\n\nDownload the app to track your payment history and build your financial profile: *pagoyamx.com* ✨`
+                    : `🎉 ¡Ese fue tu *primer pago* con PagoYa!\n\nDescarga la app para ver tu historial y construir tu perfil financiero: *pagoyamx.com* ✨`
+                  );
+                }
+              }
+            } catch (err) {
+              logger.error({ err }, "whatsapp-agent: post-payment hooks failed (non-fatal)");
+            }
+          })();
         } else {
           const incCode = `ERR-${Date.now().toString(36).toUpperCase().slice(-8)}`;
           await sendWhatsApp(phoneKey, m.paymentFailed(lang, pending, incCode, mapSiprelError(result.error ?? "", pending.serviceName)));

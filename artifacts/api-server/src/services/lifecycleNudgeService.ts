@@ -308,6 +308,83 @@ export function scheduleReferralNudgeIfEligible(userId: number): void {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NUDGE 4 — 24-Hour Activation Sweep
+// Trigger: account created 24h–7d ago, 0 real payments, never sent this nudge
+// Cron: every 3 hours
+// More conversational than the 10-min nudge — Paula speaks directly
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendActivation24hNudge(userId: number): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
+    const user = r.rows[0] as Record<string, unknown> | undefined;
+    if (!user) return { sent: false, reason: "user_not_found" };
+
+    // Skip test accounts
+    if (user.is_test_account) return { sent: false, reason: "test_account" };
+
+    // Only users created between 24h and 7 days ago
+    const createdAt = new Date(user.created_at as string);
+    const ageHours = (Date.now() - createdAt.getTime()) / 3_600_000;
+    if (ageHours < 24) return { sent: false, reason: "too_new" };
+    if (ageHours > 7 * 24) return { sent: false, reason: "too_old" };
+
+    // Dedup — never send twice
+    if (user.activation_nudge_24h_sent_at) return { sent: false, reason: "already_sent" };
+
+    // Skip if user already made a real payment
+    const telefono = user.telefono as string;
+    const realCount = await getRealPaymentCount(telefono);
+    if (realCount > 0) return { sent: false, reason: "already_paid" };
+
+    const firstName = ((user.kyc_full_name as string) ?? "").split(" ")[0].trim() || "amigo";
+    const phone = normalizePhone(telefono);
+
+    const message =
+      `Hola ${firstName} 👋 Soy Paula, tu asistente en PagoYa.\n\n` +
+      `¿Te ayudo a pagar tu CFE, Telmex o cualquier servicio ahora mismo?\n\n` +
+      `Solo dime qué necesitas pagar — lo resolvemos aquí en WhatsApp, ` +
+      `sin banco, sin filas, sin descargar nada. 💬\n\n` +
+      `_Responde con el nombre del servicio y tu número de contrato — ` +
+      `y en 2 minutos está pagado._`;
+
+    await sendWhatsApp(phone, message);
+    await db.execute(drizzleSql`UPDATE users SET activation_nudge_24h_sent_at = NOW() WHERE id = ${userId}`);
+    logger.info({ userId, ageHours: Math.round(ageHours) }, "lifecycle: 24h activation nudge sent");
+    return { sent: true };
+  } catch (err) {
+    logger.error({ err, userId }, "lifecycle: 24h activation nudge failed");
+    return { sent: false, reason: "send_error" };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cron: 24h Activation Sweep — every 3 hours
+// ─────────────────────────────────────────────────────────────────────────────
+export function startActivation24hNudgeCron(): void {
+  const INTERVAL_MS = 3 * 60 * 60 * 1000;
+  const run = async () => {
+    logger.info("lifecycle-cron: 24h-activation sweep starting");
+    const r = await db.execute(drizzleSql`
+      SELECT id FROM users
+      WHERE activation_nudge_24h_sent_at IS NULL
+        AND created_at < NOW() - INTERVAL '24 hours'
+        AND created_at > NOW() - INTERVAL '7 days'
+        AND (is_test_account IS NULL OR is_test_account = false)
+      ORDER BY created_at DESC
+    `).catch(() => ({ rows: [] as unknown[] }));
+    let sent = 0;
+    for (const row of r.rows) {
+      const result = await sendActivation24hNudge((row as { id: number }).id);
+      if (result.sent) sent++;
+    }
+    logger.info({ sent }, "lifecycle-cron: 24h-activation sweep complete");
+  };
+  run().catch(() => {});
+  setInterval(() => run().catch(() => {}), INTERVAL_MS);
+  logger.info("lifecycle-cron: 24h-activation cron registered (every 3h)");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Cron: Low Balance — every 6 hours
 // ─────────────────────────────────────────────────────────────────────────────
 export function startLowBalanceNudgeCron(): void {
