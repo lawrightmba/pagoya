@@ -109,7 +109,7 @@ const m = {
       `¡Hola${firstName ? ` ${firstName}` : ""}! Bienvenido/a a PagoYa 👋\n` +
       `Soy Paula, la asistente oficial de PagoYa Technologies — empresa mexicana de pagos digitales.\n\n` +
       `¿En qué te puedo ayudar hoy?\n` +
-      `Escribe *PAGAR* para pagar un servicio, o *SALDO* para consultar tu cartera.`
+      `Escribe *PAGAR* para pagar un servicio, o *SALDO* para consultar tu saldo.`
     );
   },
 
@@ -146,12 +146,12 @@ const m = {
     : `⏳ Conectando con ${serviceName}...`,
 
   paymentSending: (lang: Lang) => lang === "en"
-    ? `🔄 Sending your payment through SIPREL / STP...`
-    : `🔄 Enviando tu pago a través de SIPREL / STP...`,
+    ? `🔄 Processing your payment...`
+    : `🔄 Procesando tu pago...`,
 
   paymentProcessing: (lang: Lang, serviceName: string) => lang === "en"
-    ? `⏱️ Still processing your payment with ${serviceName}.\nSIPREL is confirming with the STP network. One more moment.`
-    : `⏱️ Seguimos procesando tu pago con ${serviceName}.\nSIPREL está confirmando con la red STP. Un momento más.`,
+    ? `⏱️ Still connecting with ${serviceName}. One more moment.`
+    : `⏱️ Conectando con ${serviceName}, un momento más.`,
 
   paymentSuccess: (lang: Lang, pending: PendingPaymentRow, folio: string, nowMx: string) => {
     if (lang === "en") {
@@ -161,7 +161,7 @@ const m = {
         `Service: ${pending.serviceName}\n` +
         `Amount: $${pending.monto.toFixed(2)} MXN\n` +
         `Fee: $${pending.fee.toFixed(2)} MXN\n` +
-        `SIPREL Folio: ${folio}\n` +
+        `Confirmation Folio: ${folio}\n` +
         `Date: ${nowMx}\n` +
         `──────────────────\n` +
         `Your payment is backed by STP/SPEI — the Bank of Mexico's payment system.\n` +
@@ -174,7 +174,7 @@ const m = {
       `Servicio: ${pending.serviceName}\n` +
       `Monto: $${pending.monto.toFixed(2)} MXN\n` +
       `Comisión: $${pending.fee.toFixed(2)} MXN\n` +
-      `Folio SIPREL: ${folio}\n` +
+      `Folio de confirmación: ${folio}\n` +
       `Fecha: ${nowMx}\n` +
       `──────────────────\n` +
       `Tu pago está respaldado por STP/SPEI — sistema de pagos del Banco de México.\n` +
@@ -206,7 +206,7 @@ const m = {
       `Estado: No completado\n` +
       `Código: ${incCode}\n` +
       `──────────────────\n` +
-      `⚠️ Tu dinero NO fue deducido de tu cartera.\n` +
+      `⚠️ Tu saldo NO fue deducido.\n` +
       `Saldo actual: $${pending.walletBalance.toFixed(2)} MXN ✓\n` +
       `Causa: ${cause}\n\n` +
       `Escribe *AYUDA* para hablar con soporte, o intenta de nuevo.`
@@ -430,13 +430,13 @@ function mapSiprelError(error: string, serviceName: string): string {
   }
   // 60-second polling timeout (timedOut path returns success:true / status:"pending", handled separately)
   if (e.includes("TIMED OUT") || e.includes("TIMEOUT") || e.includes("60 S")) {
-    return "SIPREL tardó demasiado en confirmar. Es posible que el pago esté en proceso — espera 5 min y revisa tu historial antes de reintentar.";
+    return "El proveedor tardó demasiado en confirmar. Es posible que el pago esté en proceso — espera 5 min y revisa tu historial antes de reintentar.";
   }
   // Network / fetch error
   if (e.includes("NETWORK") || e.includes("FETCH") || e.includes("CONEXIÓN") || e.includes("CONNECTION")) {
     return "Error de conexión al procesar. Intenta de nuevo en unos segundos.";
   }
-  return "Error técnico al procesar el pago. Tu cartera no fue afectada.";
+  return "Error técnico al procesar el pago. Tu saldo no fue afectado.";
 }
 
 const REP_CODE_PATTERN = /\b([A-Z]{2,4}-\d{2})\b/i;
@@ -492,7 +492,7 @@ function buildConfirmationMessage(pending: PendingPaymentRow, lang: Lang = "es")
     ? (lang === "en" ? `\n📋 Reference: ${pending.referencia}` : `\n📋 Referencia: ${pending.referencia}`)
     : "";
 
-  const method = pending.paymentMethod ?? (lang === "en" ? "PagoYa Wallet" : "Cartera PagoYa");
+  const method = pending.paymentMethod ?? (lang === "en" ? "PagoYa Balance" : "Saldo PagoYa");
 
   if (lang === "en") {
     return (
@@ -503,7 +503,7 @@ function buildConfirmationMessage(pending: PendingPaymentRow, lang: Lang = "es")
       `\n💰 Amount: $${pending.monto.toFixed(2)} MXN` +
       `\n💳 Total charge: ${feeNote}` +
       `\n👛 Method: ${method} (Balance: $${pending.walletBalance.toFixed(2)} MXN)` +
-      `\n🏦 Payment network: SIPREL / STP` +
+      `\n🏦 Payment network: STP (Bank of Mexico)` +
       `\n──────────────────\n\n` +
       `Confirm this payment?\n` +
       `Reply *YES* to continue or *CANCEL* to cancel.`
@@ -517,7 +517,7 @@ function buildConfirmationMessage(pending: PendingPaymentRow, lang: Lang = "es")
     `\n💰 Monto: $${pending.monto.toFixed(2)} MXN` +
     `\n💳 Cargo total: ${feeNote}` +
     `\n👛 Método: ${method} (Saldo: $${pending.walletBalance.toFixed(2)} MXN)` +
-    `\n🏦 Red de pago: SIPREL / STP` +
+    `\n🏦 Red de pago: STP (Banco de México)` +
     `\n──────────────────\n\n` +
     `¿Confirmar este pago?\n` +
     `Responde *SÍ* para continuar o *CANCELAR* para cancelar.`
@@ -1174,7 +1174,7 @@ router.post("/", async (req: Request, res: Response) => {
         telefono:      pendingPayment.telefono,
         fee:           pendingPayment.fee ?? 25,
         walletBalance: pendingPayment.walletBalance ?? 0,
-        paymentMethod: pendingPayment.paymentMethod ?? "Cartera PagoYa",
+        paymentMethod: pendingPayment.paymentMethod ?? "Saldo PagoYa",
       });
 
       // Fetch the staged row to build the structured message

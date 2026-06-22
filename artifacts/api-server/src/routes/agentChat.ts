@@ -206,8 +206,8 @@ PAGOS DIRECTOS: Si el usuario dice "paga mi CFE", "quiero pagar mi luz", "pagar 
 
 GIFT CARDS: PagoYa vende gift cards digitales — el PIN llega por WhatsApp en segundos después del pago.
 Marcas y denominaciones disponibles: Netflix $300/$400/$500/$700 | Amazon $100/$200/$500/$1,000 | Google Play $50/$100/$200/$500 | Uber $150 | Uber Eats $300 | Cinépolis $60/$120/$210 | Starbucks $200/$300 | Liverpool $500/$1,000/$2,000 | Soriana $500.
-Cómo comprar: el usuario abre pagoya.mx, selecciona la gift card, elige la denominación, paga con tarjeta débito/crédito (costo: denominación + $25 MXN comisión) o con saldo de su Cartera PagoYa (sin comisión). El PIN digital llega por WhatsApp en segundos.
-Si el usuario tiene saldo en su cartera y quiere pagar una gift card desde WhatsApp, usa prepare_bill_payment con el serviceId correcto (ej: "netflix_300") y sin referencia — para gift cards la referencia no aplica.
+Cómo comprar: el usuario abre pagoya.mx, selecciona la gift card, elige la denominación, paga con tarjeta débito/crédito (costo: denominación + $25 MXN comisión) o con su saldo PagoYa (sin comisión). El PIN digital llega por WhatsApp en segundos.
+Si el usuario tiene saldo PagoYa y quiere pagar una gift card desde WhatsApp, usa prepare_bill_payment con el serviceId correcto (ej: "netflix_300") y sin referencia — para gift cards la referencia no aplica.
 Preguntas frecuentes: "¿Cuándo llega el PIN?" → en segundos por WhatsApp. "¿Cómo uso el código?" → en Netflix.com/redeem, Amazon.com.mx/redimir, etc. "¿Se puede devolver?" → no, las gift cards son finales una vez entregado el PIN. "¿Funciona fuera de México?" → depende de la plataforma; Netflix MX funciona en cuentas mexicanas.
 
 SALDO: Cuando el usuario pregunta cómo cargar saldo o depositar, usa get_deposit_instructions para darle las opciones paso a paso.

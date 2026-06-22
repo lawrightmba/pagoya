@@ -69,6 +69,31 @@ interface RepRow {
   referralTotal: string;
 }
 
+interface RepStatRow {
+  id: string;
+  name: string;
+  phone: string;
+  repCode: string;
+  status: string;
+  joined: string;
+  signup_count: number;
+  converted_count: number;
+  commission_total: string;
+  commission_pending: string;
+  last_activity: string | null;
+}
+
+interface RepUserRow {
+  id: number;
+  name: string | null;
+  phone: string;
+  colonia: string | null;
+  registered: string;
+  payment_count: number;
+  payment_volume: string;
+  last_payment: string | null;
+}
+
 interface KitResult {
   repCode: string;
   referralLink: string;
@@ -146,7 +171,7 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte">("investor");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte" | "reps">("investor");
 
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
 
@@ -171,6 +196,87 @@ export default function AdminDashboard() {
   const [expandedTicket, setExpandedTicket] = useState<number | null>(null);
   const [replyText, setReplyText] = useState<Record<number, string>>({});
   const [replySending, setReplySending] = useState<number | null>(null);
+
+  // ── Rep Management state ───────────────────────────────────────────────────
+  const [repStats, setRepStats] = useState<RepStatRow[]>([]);
+  const [repStatsLoading, setRepStatsLoading] = useState(false);
+  const [repStatsError, setRepStatsError] = useState("");
+  const [expandedRepCode, setExpandedRepCode] = useState<string | null>(null);
+  const [repUsers, setRepUsers] = useState<Record<string, RepUserRow[]>>({});
+  const [repUsersLoading, setRepUsersLoading] = useState<Record<string, boolean>>({});
+  const [repKitOpen, setRepKitOpen] = useState(false);
+  const [repKitName, setRepKitName] = useState("");
+  const [repKitPhone, setRepKitPhone] = useState("");
+  const [repKitColonia, setRepKitColonia] = useState(COLONIAS[0]);
+  const [repKitLoading, setRepKitLoading] = useState(false);
+  const [repKitError, setRepKitError] = useState("");
+  const [repKitResult, setRepKitResult] = useState<KitResult | null>(null);
+  const [statusToggling, setStatusToggling] = useState<string | null>(null);
+
+  const loadRepStats = useCallback(async () => {
+    if (!adminKey.trim()) return;
+    setRepStatsLoading(true);
+    setRepStatsError("");
+    try {
+      const r = await fetch("/api/reps/admin/list", { headers: { "x-admin-key": adminKey } });
+      if (!r.ok) { setRepStatsError(`Error ${r.status}`); return; }
+      const d = await r.json();
+      setRepStats(d.reps ?? []);
+    } catch { setRepStatsError("Error de red"); }
+    finally { setRepStatsLoading(false); }
+  }, [adminKey]);
+
+  useEffect(() => { if (tab === "reps") loadRepStats(); }, [tab, loadRepStats]);
+
+  async function loadRepUsers(repCode: string) {
+    if (repUsers[repCode] !== undefined) return;
+    setRepUsersLoading(prev => ({ ...prev, [repCode]: true }));
+    try {
+      const r = await fetch(`/api/reps/admin/${encodeURIComponent(repCode)}/users`, { headers: { "x-admin-key": adminKey } });
+      if (r.ok) {
+        const d = await r.json();
+        setRepUsers(prev => ({ ...prev, [repCode]: d.users ?? [] }));
+      }
+    } catch { /* silent */ }
+    finally { setRepUsersLoading(prev => ({ ...prev, [repCode]: false })); }
+  }
+
+  async function toggleRepStatus(id: string, currentStatus: string) {
+    setStatusToggling(id);
+    try {
+      const newStatus = currentStatus === "active" ? "inactive" : "active";
+      const r = await fetch(`/api/reps/admin/${encodeURIComponent(id)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (r.ok) {
+        setRepStats(prev => prev.map(rep => rep.id === id ? { ...rep, status: newStatus } : rep));
+      }
+    } catch { /* silent */ }
+    finally { setStatusToggling(null); }
+  }
+
+  async function handleRepKitSubmit() {
+    if (!repKitName.trim() || !repKitPhone.trim()) { setRepKitError("Ingresa nombre y teléfono."); return; }
+    setRepKitLoading(true);
+    setRepKitError("");
+    try {
+      const r = await fetch("/api/reps/admin/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: repKitName.trim(), phone: repKitPhone.trim(), colonia: repKitColonia }),
+      });
+      const data = await r.json() as KitResult & { error?: string };
+      if (!r.ok) { setRepKitError(data.error ?? `Error ${r.status}`); return; }
+      setRepKitResult(data);
+      setRepKitName("");
+      setRepKitPhone("");
+      setRepKitColonia(COLONIAS[0]);
+      await loadRepStats();
+    } catch { setRepKitError("Error de red."); }
+    finally { setRepKitLoading(false); }
+  }
 
   const loadSupportTickets = useCallback(async (statusFilter = supportFilter) => {
     if (!adminKey.trim()) return;
@@ -475,11 +581,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : "Soporte"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : tab === "reps" ? "Rep Management" : "Soporte"}
           </div>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["investor", "ops", "landlords", "compliance", "soporte"] as const).map((t) => (
+            {(["investor", "ops", "reps", "landlords", "compliance", "soporte"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -497,7 +603,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : "🎧 Soporte"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "reps" ? "👥 Reps" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : "🎧 Soporte"}
               </button>
             ))}
           </div>
@@ -2076,6 +2182,227 @@ export default function AdminDashboard() {
         )}
 
         {/* ══════════════ SOPORTE TAB ══════════════ */}
+        {/* ══════════════ REP MANAGEMENT TAB ══════════════ */}
+        {tab === "reps" && (
+          <div>
+            {!adminKey.trim() && (
+              <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#F59E0B", textTransform: "uppercase" }}>
+                  Ingresa tu Admin Key arriba para ver datos en vivo
+                </div>
+              </div>
+            )}
+
+            {/* ── Summary strip ── */}
+            {repStats.length > 0 && (() => {
+              const totalReps   = repStats.filter(r => r.status === "active").length;
+              const totalRec    = repStats.reduce((s, r) => s + Number(r.signup_count), 0);
+              const totalConv   = repStats.reduce((s, r) => s + Number(r.converted_count), 0);
+              const totalComm   = repStats.reduce((s, r) => s + parseFloat(r.commission_total ?? "0"), 0);
+              const convPct     = totalRec > 0 ? ((totalConv / totalRec) * 100).toFixed(0) : "0";
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
+                  {[
+                    { label: "Reps Activos",     value: String(totalReps),  color: "#e8f0f7" },
+                    { label: "Usuarios Reclutados", value: String(totalRec), color: "#1D9E75" },
+                    { label: `Convertidos (${convPct}%)`, value: String(totalConv), color: "#39A935" },
+                    { label: "Comisiones Totales", value: `$${totalComm.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, color: "#6366F1" },
+                  ].map(card => (
+                    <div key={card.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 800, color: card.color, marginBottom: 4, fontFamily: "'Space Mono', monospace" }}>{card.value}</div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>{card.label}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Leaderboard panel ── */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden", marginBottom: 24 }}>
+
+              {/* Panel header + Add Rep button */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+                  Reps · Leaderboard
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={loadRepStats} disabled={repStatsLoading} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.25)", borderRadius: 20, padding: "3px 10px", cursor: "pointer", opacity: repStatsLoading ? 0.5 : 1 }}>
+                    ↻ Actualizar
+                  </button>
+                  <button onClick={() => { setRepKitOpen(o => !o); setRepKitResult(null); setRepKitError(""); }} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", fontWeight: 700, color: repKitOpen ? "#F59E0B" : "#1D9E75", background: repKitOpen ? "rgba(245,158,11,0.1)" : "rgba(29,158,117,0.12)", border: `1px solid ${repKitOpen ? "rgba(245,158,11,0.35)" : "rgba(29,158,117,0.35)"}`, borderRadius: 20, padding: "3px 12px", cursor: "pointer" }}>
+                    {repKitOpen ? "✕ Cerrar" : "+ Agregar Rep"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Create Rep form */}
+              {repKitOpen && (
+                <div style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(29,158,117,0.04)" }}>
+                  {repKitResult ? (
+                    <div style={{ background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.3)", borderRadius: 10, padding: 16 }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#39A935", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>✅ Rep Creado</div>
+                      {([["Código", repKitResult.repCode], ["Link", repKitResult.referralLink], ["Email", repKitResult.email], ["Contraseña inicial", repKitResult.initialPassword]] as [string, string][]).map(([l, v]) => (
+                        <div key={l} style={{ display: "flex", gap: 8, marginBottom: 5 }}>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "#5a7080", minWidth: 110, textTransform: "uppercase" }}>{l}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#e8f0f7", wordBreak: "break-all" }}>{v}</div>
+                        </div>
+                      ))}
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", color: "#5a7080", marginTop: 8 }}>WhatsApp enviado ✓</div>
+                      <button onClick={() => setRepKitResult(null)} style={{ marginTop: 10, fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#1D9E75", background: "rgba(29,158,117,0.12)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: 20, padding: "3px 12px", cursor: "pointer" }}>+ Crear otro</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#1D9E75", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nuevo Rep — Kit de Onboarding</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                        {[
+                          { label: "Nombre completo", val: repKitName, set: setRepKitName, ph: "Ej. María García" },
+                          { label: "WhatsApp (10 dígitos)", val: repKitPhone, set: setRepKitPhone, ph: "3221234567" },
+                        ].map(({ label, val, set, ph }) => (
+                          <div key={label}>
+                            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>{label}</div>
+                            <input value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", color: "#e8f0f7", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }} />
+                          </div>
+                        ))}
+                        <div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", marginBottom: 4, textTransform: "uppercase" }}>Colonia</div>
+                          <select value={repKitColonia} onChange={e => setRepKitColonia(e.target.value)}
+                            style={{ width: "100%", background: "#0A2540", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "8px 10px", color: "#e8f0f7", fontFamily: "'Space Mono', monospace", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" }}>
+                            {COLONIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      {repKitError && <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#E21A0A", marginBottom: 8 }}>{repKitError}</div>}
+                      <button onClick={handleRepKitSubmit} disabled={repKitLoading}
+                        style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", fontWeight: 700, color: "#fff", background: repKitLoading ? "rgba(29,158,117,0.4)" : "#1D9E75", border: "none", borderRadius: 8, padding: "9px 20px", cursor: repKitLoading ? "not-allowed" : "pointer" }}>
+                        {repKitLoading ? "Creando…" : "Generar Kit y Enviar WhatsApp"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Table header */}
+              {!repStatsLoading && repStats.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 96px 100px 96px 80px 72px", gap: 0, padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  {["REP", "RECL.", "CONV.", "COMISIÓN", "PENDIENTE", "ACTIVIDAD", ""].map(h => (
+                    <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", letterSpacing: "0.07em", textTransform: "uppercase" }}>{h}</div>
+                  ))}
+                </div>
+              )}
+
+              {repStatsLoading && (
+                <div style={{ padding: "32px 20px", textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080" }}>Cargando reps…</div>
+              )}
+              {repStatsError && (
+                <div style={{ padding: 16, fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#E21A0A" }}>{repStatsError}</div>
+              )}
+              {!repStatsLoading && repStats.length === 0 && !repStatsError && (
+                <div style={{ padding: "32px 20px", textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080" }}>
+                  Sin reps registrados. Haz clic en "+ Agregar Rep" para comenzar.
+                </div>
+              )}
+
+              {/* Rep rows */}
+              {repStats.map(rep => {
+                const convPct = Number(rep.signup_count) > 0
+                  ? ((Number(rep.converted_count) / Number(rep.signup_count)) * 100).toFixed(0)
+                  : "0";
+                const commTotal = parseFloat(rep.commission_total ?? "0");
+                const commPend  = parseFloat(rep.commission_pending ?? "0");
+                const isExpanded = expandedRepCode === rep.repCode;
+                const isActive = rep.status === "active";
+
+                return (
+                  <div key={rep.id}>
+                    {/* Rep summary row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 96px 100px 96px 80px 72px", gap: 0, padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center", opacity: isActive ? 1 : 0.5 }}>
+                      {/* Name + code */}
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#e8f0f7" }}>{rep.name}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#1D9E75" }}>{rep.repCode}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{rep.phone} · {rep.joined}</div>
+                      </div>
+                      {/* Recruited */}
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", fontWeight: 700, color: "#e8f0f7", textAlign: "center" }}>{rep.signup_count}</div>
+                      {/* Converted */}
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", fontWeight: 700, color: Number(rep.converted_count) > 0 ? "#39A935" : "#5a7080" }}>{rep.converted_count}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{convPct}%</div>
+                      </div>
+                      {/* Commission total */}
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", fontWeight: 700, color: "#6366F1" }}>
+                        ${commTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </div>
+                      {/* Commission pending */}
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#F59E0B" }}>
+                        {commPend > 0 ? `$${commPend.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"}
+                      </div>
+                      {/* Last activity */}
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: rep.last_activity ? "#1D9E75" : "#5a7080" }}>
+                        {rep.last_activity ?? "—"}
+                      </div>
+                      {/* Action buttons */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <button
+                          onClick={() => {
+                            const next = isExpanded ? null : rep.repCode;
+                            setExpandedRepCode(next);
+                            if (next) loadRepUsers(next);
+                          }}
+                          style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#39A935", background: "transparent", border: "1px solid rgba(57,169,53,0.25)", borderRadius: 12, padding: "2px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                          {isExpanded ? "▲ Cerrar" : "▼ Usuarios"}
+                        </button>
+                        <button
+                          onClick={() => toggleRepStatus(rep.id, rep.status)}
+                          disabled={statusToggling === rep.id}
+                          style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: isActive ? "#E21A0A" : "#39A935", background: "transparent", border: `1px solid ${isActive ? "rgba(232,42,10,0.25)" : "rgba(57,169,53,0.25)"}`, borderRadius: 12, padding: "2px 8px", cursor: "pointer", opacity: statusToggling === rep.id ? 0.5 : 1 }}>
+                          {isActive ? "Pausar" : "Activar"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded user list */}
+                    {isExpanded && (
+                      <div style={{ background: "rgba(0,0,0,0.25)", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "12px 16px" }}>
+                        {repUsersLoading[rep.repCode] && (
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080" }}>Cargando usuarios…</div>
+                        )}
+                        {!repUsersLoading[rep.repCode] && (repUsers[rep.repCode] ?? []).length === 0 && (
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080" }}>Sin usuarios reclutados aún.</div>
+                        )}
+                        {!repUsersLoading[rep.repCode] && (repUsers[rep.repCode] ?? []).length > 0 && (
+                          <div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 72px 80px", gap: 0, marginBottom: 6 }}>
+                              {["USUARIO", "COLONIA", "PAGOS", "VOL.", "ÚLTIMO PAGO"].map(h => (
+                                <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+                              ))}
+                            </div>
+                            {(repUsers[rep.repCode] ?? []).map(u => (
+                              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 72px 80px", gap: 0, padding: "5px 0", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                                <div>
+                                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#e8f0f7" }}>{u.name ?? "—"}</div>
+                                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{u.phone}</div>
+                                </div>
+                                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080" }}>{u.colonia ?? "—"}</div>
+                                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: Number(u.payment_count) > 0 ? "#39A935" : "#5a7080", fontWeight: Number(u.payment_count) > 0 ? 700 : 400 }}>{u.payment_count}</div>
+                                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#1D9E75" }}>
+                                  {Number(u.payment_volume) > 0 ? `$${parseFloat(u.payment_volume).toLocaleString("es-MX", { minimumFractionDigits: 0 })}` : "—"}
+                                </div>
+                                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{u.last_payment ?? <span style={{ color: "#F59E0B" }}>sin pagos</span>}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {tab === "soporte" && (
           <div>
             {!adminKey.trim() && (

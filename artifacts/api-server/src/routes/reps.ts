@@ -2,9 +2,15 @@ import { Router, type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
+import { sql as drizzleSql } from "drizzle-orm";
 import { db, repsTable } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+
+const ADMIN_KEY = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY ?? "";
+function isAdmin(req: Request): boolean {
+  return !!ADMIN_KEY && req.headers["x-admin-key"] === ADMIN_KEY;
+}
 
 const router = Router();
 
@@ -164,6 +170,91 @@ router.post("/admin/create", async (req: Request, res: Response) => {
     } else {
       res.status(500).json({ error: "Error al crear el rep." });
     }
+  }
+});
+
+// GET /api/reps/admin/list
+// All reps with live stats: signup_count, converted_count, commission totals, last_activity
+router.get("/admin/list", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(401).json({ error: "No autorizado." }); return; }
+  try {
+    const rows = await db.execute(drizzleSql`
+      SELECT
+        r.id,
+        r.name,
+        r.phone,
+        r.rep_code      AS "repCode",
+        r.status,
+        TO_CHAR(r.created_at AT TIME ZONE 'America/Mexico_City', 'Mon DD, YYYY') AS joined,
+        (SELECT COUNT(*)::int  FROM users u WHERE u.signup_ref_code = r.rep_code)                               AS signup_count,
+        (SELECT COUNT(*)::int  FROM users u WHERE u.signup_ref_code = r.rep_code
+          AND EXISTS (SELECT 1 FROM bill_payments bp WHERE bp.telefono = u.phone AND bp.status = 'confirmed'))  AS converted_count,
+        COALESCE((SELECT SUM(c.amount) FROM rep_commissions c WHERE c.rep_id = r.id), 0)::numeric               AS commission_total,
+        COALESCE((SELECT SUM(c.amount) FROM rep_commissions c WHERE c.rep_id = r.id AND c.status = 'pending'), 0)::numeric AS commission_pending,
+        (SELECT TO_CHAR(MAX(bp.created_at) AT TIME ZONE 'America/Mexico_City', 'Mon DD HH24:MI')
+           FROM bill_payments bp
+           JOIN  users u ON u.phone = bp.telefono
+           WHERE u.signup_ref_code = r.rep_code AND bp.status = 'confirmed')                                    AS last_activity
+      FROM reps r
+      ORDER BY signup_count DESC, r.created_at ASC
+    `);
+    res.json({ reps: rows.rows });
+  } catch (err) {
+    logger.error({ err }, "reps: admin/list failed");
+    res.status(500).json({ error: "Error al obtener reps." });
+  }
+});
+
+// GET /api/reps/admin/:repCode/users
+// All users recruited by a specific rep, with payment stats
+router.get("/admin/:repCode/users", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(401).json({ error: "No autorizado." }); return; }
+  const { repCode } = req.params;
+  try {
+    const rows = await db.execute(drizzleSql`
+      SELECT
+        u.id,
+        u.name,
+        u.phone,
+        u.colonia,
+        TO_CHAR(u.created_at AT TIME ZONE 'America/Mexico_City', 'Mon DD, YYYY') AS registered,
+        (SELECT COUNT(*)::int   FROM bill_payments bp WHERE bp.telefono = u.phone AND bp.status = 'confirmed')           AS payment_count,
+        COALESCE((SELECT SUM(bp.monto) FROM bill_payments bp WHERE bp.telefono = u.phone AND bp.status = 'confirmed'), 0)::numeric AS payment_volume,
+        (SELECT TO_CHAR(MAX(bp.created_at) AT TIME ZONE 'America/Mexico_City', 'Mon DD')
+           FROM bill_payments bp WHERE bp.telefono = u.phone AND bp.status = 'confirmed')                                AS last_payment
+      FROM users u
+      WHERE u.signup_ref_code = ${repCode}
+      ORDER BY u.created_at DESC
+    `);
+    res.json({ users: rows.rows, repCode });
+  } catch (err) {
+    logger.error({ err, repCode }, "reps: admin/:repCode/users failed");
+    res.status(500).json({ error: "Error al obtener usuarios del rep." });
+  }
+});
+
+// PATCH /api/reps/admin/:id/status
+// Toggle rep status: active <-> inactive
+router.patch("/admin/:id/status", async (req: Request, res: Response) => {
+  if (!isAdmin(req)) { res.status(401).json({ error: "No autorizado." }); return; }
+  const { id } = req.params;
+  const { status } = req.body as { status?: string };
+  if (!status || !["active", "inactive"].includes(status)) {
+    res.status(400).json({ error: "Status debe ser 'active' o 'inactive'." });
+    return;
+  }
+  try {
+    const [updated] = await db
+      .update(repsTable)
+      .set({ status })
+      .where(eq(repsTable.id, id))
+      .returning({ id: repsTable.id, name: repsTable.name, status: repsTable.status });
+    if (!updated) { res.status(404).json({ error: "Rep no encontrado." }); return; }
+    logger.info({ id, status }, "reps: status updated");
+    res.json(updated);
+  } catch (err) {
+    logger.error({ err }, "reps: admin/status failed");
+    res.status(500).json({ error: "Error al actualizar status." });
   }
 });
 
