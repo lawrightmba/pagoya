@@ -1,0 +1,33 @@
+Clean sprint. Phase 1 complete, Phase 2 wired, Paula income collection live. A few things to close before you call this done:
+1. writeDeviceProfile TODO — needs wiring
+The TODO comment in otpService.ts is the one loose end. The OTP verification route is where first-login device capture fires. Find the route handler that calls verifyOtp() or processes the OTP confirmation POST — it needs:
+typescriptconst ua = req.headers['user-agent'] || '';
+const isPwa = req.headers['x-pwa-launch'] === '1';
+await writeDeviceProfile(userPhone, ua, isPwa);
+This is probably in routes/auth.ts or wherever /api/auth/verify-otp lives. One-line addition after the OTP success block. Without this, device columns stay NULL for all new registrations.
+2. Backfill — run it now
+Before live users accumulate, run the backfill so historical load method data populates:
+POST /api/admin/backfill-payment-counters
+Header: X-Admin-Key: [your key]
+Confirm the response logs how many users were backfilled vs skipped. Check one known user:
+sqlSELECT telefono, first_load_method, oxxo_load_count, 
+       spei_load_count, first_spei_load_at 
+FROM users 
+WHERE first_load_method IS NOT NULL 
+LIMIT 5;
+3. buildUserContext bug fix — verify Paula isn't silently broken
+The bp.service_type → bp.service_name fix is significant. That was crashing the Paula trigger batch silently — meaning any Paula message that depended on recent bill payment context was firing with incomplete data. Now that it's fixed, confirm the trigger batch runs clean:
+sqlSELECT COUNT(*), trigger_type, status 
+FROM paula_trigger_log 
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY trigger_type, status;
+If you see a spike in successful triggers post-deploy, that's the backlog clearing.
+4. pti_export_safe view — spot check the 20 columns
+sqlSELECT column_name 
+FROM information_schema.columns 
+WHERE table_name = 'pti_export_safe';
+Confirm has_bancarized (boolean), bancarization_days (integer), device_os, device_type, device_access_mode, first_load_method, last_load_method, oxxo_load_count, spei_load_count, card_load_count are all present. These are the columns you'll reference in every B2B PTI data card and partner pitch.
+5. Income collection — one edge case to verify
+The double NULL guard protects against re-asking, but confirm the intercept block in whatsapp-agent.ts doesn't accidentally swallow a legitimate numeric reply (e.g., a user typing "2" for something else) right after the income trigger fires. The check should be:
+typescriptlastTriggerType === 'income_collection' && declared_income_bucket === null
+Both conditions required. If you only check one, you'll mis-parse unrelated numeric replies.

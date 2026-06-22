@@ -3,7 +3,7 @@ import { eq, and, count, sum } from "drizzle-orm";
 import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
 import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
-import { generateOTP, verifyOTP, clearOTP } from "../services/otpService.js";
+import { generateOTP, verifyOTP, clearOTP, writeDeviceProfile } from "../services/otpService.js";
 import { issueWelcomeTokens } from "../services/loyalty.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -145,6 +145,13 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
       res.status(400).json({ verified: false, reason: otpResult.reason });
       return;
     }
+
+    // ── 2b. Capture device fingerprint (fire-and-forget, never blocks) ────
+    // Writes device_os, device_type, device_model, device_access_mode to users.
+    // Also logs to user_device_log. Silently swallowed on any error.
+    const _ua = (req.headers["user-agent"] as string | undefined) ?? "";
+    const _isPwa = req.headers["x-pwa-launch"] === "1";
+    writeDeviceProfile(pending.phone, _ua, _isPwa).catch(() => {});
 
     // ── 3. Rep velocity check (BLOCK does not abort — continue) ───────────
     const velocity = await checkRepVelocity(pending.ref_code);
