@@ -97,10 +97,17 @@ async function checkPtiMilestones(
           `).catch(() => {});
         }
         // Credit wallet cash bonus (Élite+ only)
+        // Must update BOTH wallet_transactions (ledger history) AND wallets.balance_mxn (live balance).
+        // Inserting only into wallet_transactions without updating balance_mxn leaves the spendable
+        // balance unchanged — the user would see the credit in history but couldn't spend it.
         if (m.mxn > 0) {
           await db.execute(sql`
             INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
             VALUES (${telefono}, 'PTI_REWARD', ${m.mxn}, 'confirmed', ${`Premio PTI: ${m.label}`}, NOW())
+          `).catch(() => {});
+          await db.execute(sql`
+            UPDATE wallets SET balance_mxn = balance_mxn + ${m.mxn}, updated_at = NOW()
+            WHERE user_id = ${telefono}
           `).catch(() => {});
         }
         // Mark uncelebrated so the app shows the celebration modal on next open

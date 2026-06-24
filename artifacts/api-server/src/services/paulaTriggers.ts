@@ -367,7 +367,13 @@ export async function evaluateTriggersForUser(
         db.execute(sql`
           INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
           VALUES (${telefono}, 'PTI_REWARD', 300, 'confirmed', 'Premio PTI: Perfil Listo', NOW())
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet credit failed"));
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet_transactions insert failed"));
+
+        // Update live balance — wallet_transactions alone does not move balance_mxn
+        db.execute(sql`
+          UPDATE wallets SET balance_mxn = balance_mxn + 300, updated_at = NOW()
+          WHERE user_id = ${telefono}
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallets balance update failed"));
 
         db.execute(sql`
           UPDATE users SET pti_uncelebrated_milestone = 'ready' WHERE telefono = ${telefono}

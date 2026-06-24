@@ -165,16 +165,23 @@ router.post("/pay", async (req: Request, res: Response) => {
     freeTxTokenValid = true;
   }
 
-  // Check user's free_bill_credits (PTI milestone rewards) — waives the platform fee
-  // Takes priority over wallet balance check; consumed atomically inside the DB transaction.
+  // Check user's free_bill_credits (PTI milestone rewards) — waives the platform fee.
+  // Rate-limited to ONE credit per calendar day so users feel the reward across multiple sessions
+  // rather than burning all credits in a single day. Consumed atomically inside the DB transaction.
   let useFreeBillCredit = false;
   if (!freeTxTokenValid) {
     try {
       const creditRow = await db.execute(
-        sql`SELECT free_bill_credits FROM users WHERE telefono = ${telefono} LIMIT 1`,
+        sql`SELECT free_bill_credits, last_free_credit_used_date
+            FROM users WHERE telefono = ${telefono} LIMIT 1`,
       );
-      const credits = Number((creditRow.rows[0] as Record<string, unknown> | undefined)?.free_bill_credits ?? 0);
-      if (credits > 0) useFreeBillCredit = true;
+      const row = creditRow.rows[0] as Record<string, unknown> | undefined;
+      const credits = Number(row?.free_bill_credits ?? 0);
+      const lastUsed = row?.last_free_credit_used_date
+        ? String(row.last_free_credit_used_date).slice(0, 10)
+        : null;
+      const today = new Date().toISOString().slice(0, 10);
+      if (credits > 0 && lastUsed !== today) useFreeBillCredit = true;
     } catch {
       // Non-fatal — proceed without credit
     }
@@ -408,11 +415,13 @@ router.post("/pay", async (req: Request, res: Response) => {
         );
       }
 
-      // PTI milestone free_bill_credit consumption (decrement by 1, guarded against going negative)
+      // PTI milestone free_bill_credit consumption — decrement by 1, stamp today's date.
+      // The date guard (checked at pre-validation above) ensures max 1 credit per calendar day.
       if (useFreeBillCredit) {
         await tx.execute(
           sql`UPDATE users
-              SET free_bill_credits = free_bill_credits - 1
+              SET free_bill_credits = free_bill_credits - 1,
+                  last_free_credit_used_date = CURRENT_DATE
               WHERE telefono = ${telefono} AND free_bill_credits > 0`,
         );
       }
