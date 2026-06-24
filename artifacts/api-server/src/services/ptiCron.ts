@@ -68,10 +68,10 @@ const PTI_MILESTONES = [
     msg: () =>
       `💎 *Élite — top 5% de usuarios PagoYa*\n\n` +
       `Con *85 puntos* tu perfil financiero está en un nivel donde los socios financieros empiezan a fijarse.\n\n` +
-      `Te acreditamos *3 pagos gratis + $50 MXN* directo a tu billetera.\n\n` +
+      `Te acreditamos *3 pagos gratis + $150 MXN* directo a tu billetera.\n\n` +
       `_Estás construyendo algo real. Pronto habrá noticias._`,
     freeBillCredits: 3,
-    mxn: 50,
+    mxn: 150,
   },
 ];
 

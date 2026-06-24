@@ -179,13 +179,13 @@ const MILESTONE_META: Record<string, {
   elite: {
     label: "Élite", emoji: "💎", tier: "Élite",
     unlocks: "Módulo 5 + perfil en radar de socios financieros",
-    freeBillCredits: 3, mxn: 50,
+    freeBillCredits: 3, mxn: 150,
     tagline: "Top 5%. Estás construyendo algo real.",
   },
   ready: {
     label: "Perfil Listo", emoji: "🚀", tier: "Élite",
     unlocks: "Tu expediente financiero está listo — socios financieros podrían estar interesados en tu perfil",
-    freeBillCredits: 5, mxn: 100,
+    freeBillCredits: 5, mxn: 300,
     tagline: "Meses de pagos puntuales te trajeron aquí. Esto es lo que construiste.",
   },
 };
