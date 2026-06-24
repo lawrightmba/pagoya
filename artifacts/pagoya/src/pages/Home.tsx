@@ -192,8 +192,9 @@ export default function Home() {
       deferredPrompt.current = e as Event & { prompt: () => void };
     };
     window.addEventListener("beforeinstallprompt", handler);
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 768;
     const timer = setTimeout(() => {
-      if (deferredPrompt.current) setShowPwaSheet(true);
+      if (deferredPrompt.current && isMobile) setShowPwaSheet(true);
     }, 30000);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
@@ -373,10 +374,11 @@ export default function Home() {
             style={{
               fontSize: "12px", fontWeight: 700, color: "white",
               border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: "999px",
-              padding: "4px 10px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
+              padding: "4px 12px", background: "rgba(255,255,255,0.12)", cursor: "pointer",
+              letterSpacing: "0.5px",
             }}
           >
-            {es ? "EN" : "ES"}
+            {es ? "🇺🇸 EN" : "🇲🇽 ES"}
           </button>
         </div>
       </header>
