@@ -76,6 +76,7 @@ import FluvialVallarta from "@/pages/colonias/FluvialVallarta";
 import LasJuntasVallarta from "@/pages/colonias/LasJuntasVallarta";
 import ZonaRomanticaVallarta from "@/pages/colonias/ZonaRomanticaVallarta";
 import MarinaVallarta from "@/pages/colonias/MarinaVallarta";
+import EmployerOnePager from "@/pages/EmployerOnePager";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
 
@@ -177,6 +178,8 @@ function Router() {
       <Route path="/ruleta" component={SpinWheel} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/atencion" component={Atencion} />
+      <Route path="/employer">{() => <EmployerOnePager defaultLang="en" />}</Route>
+      <Route path="/empresa">{() => <EmployerOnePager defaultLang="es" />}</Route>
       <Route path="/r/:repCode">
         {(params: { repCode: string }) => {
           useEffect(() => {
@@ -193,10 +196,11 @@ function Router() {
 function AppShell() {
   const [location] = useLocation();
   const isVincularBanco = location === "/vincular-banco";
-  // BottomNav hidden only on full-screen onboarding flows
-  const hideBottomNav = isVincularBanco;
-  // SupportChat (Paula) shown everywhere except vincular-banco
-  const hideSupportChat = isVincularBanco;
+  const isPublicOnePager = location === "/employer" || location === "/empresa";
+  // BottomNav hidden on full-screen onboarding flows and public standalone pages
+  const hideBottomNav = isVincularBanco || isPublicOnePager;
+  // SupportChat (Paula) hidden on same
+  const hideSupportChat = isVincularBanco || isPublicOnePager;
   return (
     <>
       <Router />
