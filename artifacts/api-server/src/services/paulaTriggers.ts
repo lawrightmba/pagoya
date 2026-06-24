@@ -465,15 +465,17 @@ export async function evaluateTriggersForUser(
   // ── FREE_CREDIT_NUDGE — reminds users of unused credits sitting idle 3+ days ──
   // Condition: credits > 0 AND not used today or in last 3 days AND 7-day message cooldown
   const creditNudgeRow = await db.execute(sql`
-    SELECT free_bill_credits, last_free_credit_used_date
+    SELECT free_bill_credits, last_free_credit_used_date, pti_uncelebrated_milestone
     FROM users WHERE telefono = ${telefono} LIMIT 1
   `);
   const cnr = creditNudgeRow.rows[0] as Record<string, unknown> | undefined;
   const freeCredits = Number(cnr?.free_bill_credits ?? 0);
-  if (freeCredits > 0) {
+  const hasPendingCelebration = cnr?.pti_uncelebrated_milestone != null;
+  if (freeCredits > 0 && !hasPendingCelebration) {
     const lastUsed = cnr?.last_free_credit_used_date
       ? new Date(cnr.last_free_credit_used_date as string)
       : null;
+    // Returns Infinity when null (new user who has never used a credit) — correctly satisfies >= 3
     const daysSinceUsed = lastUsed
       ? (Date.now() - lastUsed.getTime()) / 86_400_000
       : Infinity;

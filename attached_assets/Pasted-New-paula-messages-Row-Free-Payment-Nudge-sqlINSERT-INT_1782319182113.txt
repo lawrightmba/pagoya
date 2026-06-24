@@ -1,0 +1,189 @@
+New paula_messages Row — Free Payment Nudge
+sqlINSERT INTO paula_messages (
+  trigger_key,
+  template,
+  cooldown_hours,
+  active,
+  created_at
+) VALUES (
+  'FREE_CREDIT_NUDGE',
+  '💳 {{first_name}}, tienes {{free_bill_credits}} pago(s) gratis esperándote.\n\nLa próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. No tienes que hacer nada extra.\n\nEs tuyo. Úsalo.',
+  168,
+  true,
+  NOW()
+);
+Cooldown is 168 hours (7 days) — matches the send condition, prevents double-fire if the cron overlaps.
+
+Trigger Condition Logic
+This runs inside the existing Paula trigger evaluation loop (every 6 hours). Add it as a new condition block:
+typescript// FREE_CREDIT_NUDGE
+if (
+  user.free_bill_credits > 0 &&
+  user.pti_uncelebrated_milestone === null && // don't fire during celebration pending state
+  daysSince(user.last_free_credit_used_date) >= 3 &&
+  !hasRecentMessage(user.id, 'FREE_CREDIT_NUDGE', 168) // check paula_send_queue / paula_inbound_log
+) {
+  await enqueuePaulaMessage(user.id, 'FREE_CREDIT_NUDGE', {
+    first_name: user.first_name,
+    free_bill_credits: user.free_bill_credits
+  });
+}
+Helper clarifications:
+
+daysSince(date) — returns Infinity if last_free_credit_used_date is null (new user who has never used a credit), which satisfies >= 3 and correctly fires
+hasRecentMessage() — queries paula_send_queue for any row with matching user_id + trigger_key sent within the last 168 hours, including DEAD rows (don't re-nudge failed sends)
+pti_uncelebrated_milestone === null guard — prevents the nudge firing on the same night a tier celebration is pending, which would create two competing WhatsApp messages
+
+
+Priority Order in Trigger Evaluation
+Add FREE_CREDIT_NUDGE after milestone triggers but before any generic engagement messages:
+1. READINESS_HARD
+2. PTI milestone messages (Bronce → Élite)
+3. FREE_CREDIT_NUDGE   ← insert here
+4. Streak reminders / literacy prompts
+This ensures a user who just hit Élite tonight gets the milestone message first. The nudge fires on a subsequent evaluation cycle 3+ days later when credits are sitting unused.
+
+Edge Cases to Confirm Before Deploy
+ScenarioExpected behaviorUser earns credits and uses one same daydaysSince = 0, nudge suppressedUser has credits, celebration pendingpti_uncelebrated_milestone guard blocks nudgeUser hits READY, gets 5 credits, ignores themNudge fires day 3, then again day 10 if still unusedUser is at 0 creditsFirst condition fails, no evaluationlast_free_credit_used_date is NULLdaysSince returns Infinity, nudge fires correctly
+
+Smoke Test Checklist Post-Deploy
+
+ Insert a test user with free_bill_credits = 2, last_free_credit_used_date = 4 days ago, no recent FREE_CREDIT_NUDGE in queue — confirm message enqueues
+ Same user with pti_uncelebrated_milestone = 'elite' — confirm nudge does NOT enqueue
+ Same user with a FREE_CREDIT_NUDGE row in paula_send_queue from 5 days ago — confirm nudge does NOT re-enqueue (cooldown active)
+ Same user with FREE_CREDIT_NUDGE row from 8 days ago — confirm nudge DOES re-enqueue (cooldown expired)
+ User with free_bill_credits = 0 — confirm no evaluation
+
+Ready to paste directly into a Replit Agent prompt. Want the full agent prompt wrapped around this spec?You said: yes need full replit agent prompt wrapped around specyes need full replit agent prompt wrapped around spec11:29 AMClaude responded: Here it is:Here it is:
+
+Replit Agent Prompt — FREE_CREDIT_NUDGE Paula Trigger
+You are working inside the PagoYa codebase (TypeScript / Express 5 / PostgreSQL / Drizzle ORM / Twilio WhatsApp). Do not modify any existing functionality. Add only what is specified below.
+
+---
+
+PRE-FLIGHT CHECKS — run these before touching any file:
+
+1. Confirm `paula_messages` table has columns: trigger_key, template, cooldown_hours, active, created_at
+2. Confirm `users` table has columns: free_bill_credits, last_free_credit_used_date, pti_uncelebrated_milestone, first_name
+3. Confirm the Paula trigger evaluation loop exists and runs every 6 hours — locate the file (likely ptiCron.ts or paulaTriggers.ts) and identify exactly where new trigger condition blocks are added
+4. Confirm `hasRecentMessage()` or equivalent cooldown-check function exists and identify its exact signature
+5. Confirm `enqueuePaulaMessage()` or equivalent exists and identify its exact signature
+6. Do NOT proceed if any of the above are missing — report what's missing instead
+
+---
+
+TASK 1 — Insert new paula_messages row
+
+Run the following SQL exactly as written. Do not alter column names or values:
+
+INSERT INTO paula_messages (
+  trigger_key,
+  template,
+  cooldown_hours,
+  active,
+  created_at
+) VALUES (
+  'FREE_CREDIT_NUDGE',
+  '💳 {{first_name}}, tienes {{free_bill_credits}} pago(s) gratis esperándote.\n\nLa próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. No tienes que hacer nada extra.\n\nEs tuyo. Úsalo.',
+  168,
+  true,
+  NOW()
+);
+
+Verify the row was inserted by running:
+SELECT * FROM paula_messages WHERE trigger_key = 'FREE_CREDIT_NUDGE';
+
+---
+
+TASK 2 — Add trigger condition block to Paula evaluation loop
+
+Locate the file containing the Paula trigger evaluation loop (runs every 6 hours). Find the section where per-user trigger conditions are evaluated.
+
+Add the following block AFTER all PTI milestone triggers (Bronce, Plata, Oro, Élite) and BEFORE any streak reminder or literacy prompt triggers:
+
+// FREE_CREDIT_NUDGE
+if (
+  user.free_bill_credits > 0 &&
+  user.pti_uncelebrated_milestone === null &&
+  daysSince(user.last_free_credit_used_date) >= 3 &&
+  !hasRecentMessage(user.id, 'FREE_CREDIT_NUDGE', 168)
+) {
+  await enqueuePaulaMessage(user.id, 'FREE_CREDIT_NUDGE', {
+    first_name: user.first_name,
+    free_bill_credits: user.free_bill_credits
+  });
+}
+
+IMPORTANT implementation notes:
+- daysSince(date) must return Infinity when date is null — this correctly fires the nudge for users who have never used a credit
+- hasRecentMessage() must check paula_send_queue for any row matching user_id + trigger_key within the last 168 hours, INCLUDING rows with DEAD status
+- The pti_uncelebrated_milestone === null guard is mandatory — do not remove it. It prevents the nudge firing on the same night a tier celebration is pending
+- Use the exact function signatures already present in the codebase — do not invent new helper functions
+
+---
+
+TASK 3 — Verify trigger priority order
+
+After inserting the new block, confirm the trigger evaluation order in the file reads:
+
+1. READINESS_HARD
+2. PTI milestone messages (Bronce → Plata → Oro → Élite)
+3. FREE_CREDIT_NUDGE   ← new
+4. Streak reminders / literacy prompts / any other engagement triggers
+
+If the order differs, reorder to match the above. Show the final order in your completion report.
+
+---
+
+TASK 4 — Smoke tests (run all 5, report pass/fail for each)
+
+Use direct DB inserts to create test users or update existing test records. Clean up test data after each check.
+
+TEST 1 — Happy path fires
+Insert or update a test user with:
+  free_bill_credits = 2
+  last_free_credit_used_date = NOW() - INTERVAL '4 days'
+  pti_uncelebrated_milestone = NULL
+  No FREE_CREDIT_NUDGE row in paula_send_queue within last 168 hours
+Trigger the evaluation loop manually for this user.
+EXPECTED: FREE_CREDIT_NUDGE row appears in paula_send_queue for this user.
+
+TEST 2 — Celebration pending blocks nudge
+Same user but set pti_uncelebrated_milestone = 'elite'
+Trigger evaluation.
+EXPECTED: No FREE_CREDIT_NUDGE row enqueued.
+
+TEST 3 — Active cooldown blocks nudge
+Same user (pti_uncelebrated_milestone = NULL) but insert a FREE_CREDIT_NUDGE row in paula_send_queue with sent_at = NOW() - INTERVAL '5 days'
+Trigger evaluation.
+EXPECTED: No new FREE_CREDIT_NUDGE row enqueued (cooldown active, 5 days < 7 days).
+
+TEST 4 — Expired cooldown allows nudge
+Same setup but set existing FREE_CREDIT_NUDGE sent_at = NOW() - INTERVAL '8 days'
+Trigger evaluation.
+EXPECTED: New FREE_CREDIT_NUDGE row enqueued (cooldown expired, 8 days > 7 days).
+
+TEST 5 — Zero credits blocks nudge
+Set free_bill_credits = 0
+Trigger evaluation.
+EXPECTED: No FREE_CREDIT_NUDGE row enqueued.
+
+---
+
+DO NOT:
+- Modify any existing paula_messages rows
+- Change the PTI scoring logic, nightly cron timing, or 2-minute send queue processor
+- Alter the Mustache variable rendering logic
+- Touch wallet_transactions, wallets, or pti_score_history tables
+- Modify the WhatsApp inbound webhook or agent
+
+---
+
+COMPLETION REPORT — return all of the following:
+
+1. Pre-flight check results (all 5 confirmed or blockers identified)
+2. SQL insert confirmation (show SELECT result)
+3. The exact code block added and the file path + line number where it was inserted
+4. Final trigger priority order as it appears in the file
+5. Smoke test results — PASS or FAIL for each of the 5 tests with a one-line explanation
+6. Any deviations from this spec and why
