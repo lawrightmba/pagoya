@@ -185,17 +185,24 @@ export default function Home() {
   }, []);
 
   // ── PWA install prompt (S3.6) ─────────────────────────────────────────────
+  // Capture the deferred prompt globally so Bienvenida (post-registration) can
+  // trigger it at the right moment. Home only shows it as a long-timeout fallback
+  // for existing users who never saw the registration flow.
   useEffect(() => {
     if (localStorage.getItem("pwa_prompt_dismissed") === "1") return;
     const handler = (e: Event) => {
       e.preventDefault();
-      deferredPrompt.current = e as Event & { prompt: () => void };
+      const prompt = e as Event & { prompt: () => void };
+      deferredPrompt.current = prompt;
+      // Store globally so Bienvenida can access it after registration
+      (window as Window & { __pwaPrompt?: typeof prompt }).__pwaPrompt = prompt;
     };
     window.addEventListener("beforeinstallprompt", handler);
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    // Long fallback (10 min) for existing users who skip registration
     const timer = setTimeout(() => {
       if (deferredPrompt.current && isMobile) setShowPwaSheet(true);
-    }, 30000);
+    }, 600000);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       clearTimeout(timer);

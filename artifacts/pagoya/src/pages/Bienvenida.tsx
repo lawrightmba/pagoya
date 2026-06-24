@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
+
+type DeferredPrompt = Event & { prompt: () => void };
+declare global {
+  interface Window { __pwaPrompt?: DeferredPrompt; }
+}
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -22,6 +27,25 @@ export default function Bienvenida() {
   const [balanceError, setBalanceError] = useState(false);
   const [waNumber, setWaNumber]       = useState<string | null>(null);
   const [marking, setMarking]         = useState(false);
+
+  // ── PWA install prompt ────────────────────────────────────────────────────
+  const [showPwaCard, setShowPwaCard] = useState(false);
+  const pwaPromptRef = useRef<DeferredPrompt | null>(null);
+
+  useEffect(() => {
+    if (localStorage.getItem("pwa_prompt_dismissed") === "1") return;
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (!isMobile) return;
+    // Fire 1.5s after the welcome screen renders — user has seen their balance
+    const timer = setTimeout(() => {
+      const prompt = window.__pwaPrompt;
+      if (prompt) {
+        pwaPromptRef.current = prompt;
+        setShowPwaCard(true);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
 
   // Guard: if no phone in storage, or welcome_shown already true → go home
@@ -323,6 +347,69 @@ export default function Bienvenida() {
               </svg>
               💬 Paga con Paula por WhatsApp
             </a>
+          )}
+
+          {/* ── PWA install card ─────────────────────────────────────────── */}
+          {showPwaCard && (
+            <div style={{
+              background: "rgba(29,158,117,0.08)",
+              border: "1.5px solid rgba(29,158,117,0.30)",
+              borderRadius: "16px",
+              padding: "16px 18px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}>
+              <span style={{ fontSize: "28px", flexShrink: 0 }}>📲</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: "0 0 2px", fontSize: "14px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
+                  Agrégala a tu pantalla de inicio
+                </p>
+                <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.50)", lineHeight: 1.4 }}>
+                  Acceso instantáneo sin abrir el navegador
+                </p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", flexShrink: 0 }}>
+                <button
+                  onClick={() => {
+                    if (pwaPromptRef.current) pwaPromptRef.current.prompt();
+                    setShowPwaCard(false);
+                  }}
+                  style={{
+                    background: "#1D9E75",
+                    border: "none",
+                    borderRadius: "10px",
+                    color: "#fff",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    padding: "8px 14px",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Instalar
+                </button>
+                <button
+                  onClick={() => {
+                    try { localStorage.setItem("pwa_prompt_dismissed", "1"); } catch { /* ignore */ }
+                    setShowPwaCard(false);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "rgba(255,255,255,0.30)",
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    padding: "2px",
+                    fontFamily: "inherit",
+                    textAlign: "center",
+                  }}
+                >
+                  No gracias
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Ghost continue link */}
