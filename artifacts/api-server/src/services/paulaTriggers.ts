@@ -355,6 +355,24 @@ export async function evaluateTriggersForUser(
         await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
         fired++;
 
+        // Credit READY rewards: 5 free bill payments + $100 MXN wallet credit
+        // These are the largest rewards in the system — reserved for file-ready users only.
+        // The lender handoff happens on the back end; user only sees "your profile is ready".
+        db.execute(sql`
+          UPDATE users
+          SET free_bill_credits = free_bill_credits + 5
+          WHERE telefono = ${telefono}
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY free_bill_credits credit failed"));
+
+        db.execute(sql`
+          INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
+          VALUES (${telefono}, 'PTI_REWARD', 100, 'confirmed', 'Premio PTI: Perfil Listo', NOW())
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet credit failed"));
+
+        db.execute(sql`
+          UPDATE users SET pti_uncelebrated_milestone = 'ready' WHERE telefono = ${telefono}
+        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY uncelebrated_milestone set failed"));
+
         // Populate handoff_data JSONB on paula_pending_handoffs for lending partner packet
         // bancarization_days = days from account creation to first SPEI load — most compelling B2B signal
         db.execute(sql`

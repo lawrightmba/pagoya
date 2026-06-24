@@ -5,6 +5,7 @@ import { usePayment } from "@/context/PaymentContext";
 import WalletBalanceWidget from "@/components/WalletBalanceWidget";
 import PTIScoreCard from "@/components/PTIScoreCard";
 import PTIIntroModal from "@/components/PTIIntroModal";
+import PTIMilestoneModal from "@/components/PTIMilestoneModal";
 import AutofillInput from "@/components/AutofillInput";
 import BillerTicker from "@/components/BillerTicker";
 import PaulaHint from "@/components/PaulaHint";
@@ -132,6 +133,35 @@ export default function Home() {
   }
 
   const showPushBanner = push.supported && !push.subscribed && !pushDismissed && !!storedPhone && push.permission !== "denied";
+
+  // ── PTI milestone celebration modal ──────────────────────────────────────
+  const [ptiMilestone, setPtiMilestone] = useState<null | {
+    slug: string; label: string; emoji: string; tier: string;
+    unlocks: string; freeBillCredits: number; mxn: number; tagline: string;
+    free_bill_credits_balance: number;
+  }>(null);
+
+  useEffect(() => {
+    if (!storedPhone) return;
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/pti/uncelebrated?telefono=${encodeURIComponent(storedPhone)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { milestone: typeof ptiMilestone } | null) => {
+        if (d?.milestone) setPtiMilestone(d.milestone);
+      })
+      .catch(() => {});
+  }, [storedPhone]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleMilestoneDismiss() {
+    setPtiMilestone(null);
+    if (!storedPhone) return;
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/pti/celebrate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telefono: storedPhone }),
+    }).catch(() => {});
+  }
 
   // ── PTI intro modal (first-time score intro) ──────────────────────────────
   const [showPTIIntro, setShowPTIIntro] = useState(false);
@@ -277,7 +307,10 @@ export default function Home() {
           animation: rypFlipIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
         }
       `}</style>
-      {showPTIIntro && storedPhone && (
+      {ptiMilestone && (
+        <PTIMilestoneModal milestone={ptiMilestone} onDismiss={handleMilestoneDismiss} />
+      )}
+      {!ptiMilestone && showPTIIntro && storedPhone && (
         <PTIIntroModal telefono={storedPhone} onDismiss={handlePTIIntroDismiss} />
       )}
       <Helmet>

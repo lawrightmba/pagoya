@@ -151,4 +151,93 @@ router.get("/trend/:telefono", async (req: Request, res: Response): Promise<void
   }
 });
 
+// ── GET /api/pti/uncelebrated?telefono=xxx ────────────────────────────────────
+// Returns the pending milestone celebration data if the user has one, or null.
+// Called by Home.tsx on load to decide whether to show the confetti modal.
+const MILESTONE_META: Record<string, {
+  label: string; emoji: string; tier: string;
+  unlocks: string; freeBillCredits: number; mxn: number; tagline: string;
+}> = {
+  bronce: {
+    label: "Bronce", emoji: "🥉", tier: "Bronce",
+    unlocks: "Historial financiero activo + Módulo 1 de educación financiera",
+    freeBillCredits: 1, mxn: 0,
+    tagline: "Tu historial está registrado. Paga a tiempo y sigue creciendo.",
+  },
+  plata: {
+    label: "Plata", emoji: "🥈", tier: "Plata",
+    unlocks: "Módulo 2 de educación financiera + racha de pagos visible en la app",
+    freeBillCredits: 2, mxn: 0,
+    tagline: "Tu consistencia ya te diferencia. El historial trabaja para ti.",
+  },
+  oro: {
+    label: "Oro", emoji: "🥇", tier: "Oro",
+    unlocks: "Módulos 3–4 + desglose PTI completo visible en la app",
+    freeBillCredits: 3, mxn: 0,
+    tagline: "Top 25% de usuarios PagoYa. Lo que viene vale la pena.",
+  },
+  elite: {
+    label: "Élite", emoji: "💎", tier: "Élite",
+    unlocks: "Módulo 5 + perfil en radar de socios financieros",
+    freeBillCredits: 3, mxn: 50,
+    tagline: "Top 5%. Estás construyendo algo real.",
+  },
+  ready: {
+    label: "Perfil Listo", emoji: "🚀", tier: "Élite",
+    unlocks: "Tu expediente financiero está listo — socios financieros podrían estar interesados en tu perfil",
+    freeBillCredits: 5, mxn: 100,
+    tagline: "Meses de pagos puntuales te trajeron aquí. Esto es lo que construiste.",
+  },
+};
+
+router.get("/uncelebrated", async (req: Request, res: Response): Promise<void> => {
+  const telefono = req.query.telefono as string | undefined;
+  if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
+
+  try {
+    const { db } = await import("@workspace/db");
+    const row = await db.execute(sql`
+      SELECT pti_uncelebrated_milestone, free_bill_credits
+      FROM users WHERE telefono = ${telefono} LIMIT 1
+    `);
+    const r = row.rows[0] as Record<string, unknown> | undefined;
+    if (!r || !r.pti_uncelebrated_milestone) {
+      res.json({ milestone: null });
+      return;
+    }
+    const slug = r.pti_uncelebrated_milestone as string;
+    const meta = MILESTONE_META[slug];
+    if (!meta) { res.json({ milestone: null }); return; }
+
+    res.json({
+      milestone: {
+        slug,
+        ...meta,
+        free_bill_credits_balance: Number(r.free_bill_credits ?? 0),
+      },
+    });
+  } catch (err) {
+    logger.error({ err, telefono }, "pti: GET /uncelebrated failed");
+    res.status(500).json({ error: "Error" });
+  }
+});
+
+// ── POST /api/pti/celebrate ───────────────────────────────────────────────────
+// Marks the pending milestone as celebrated so the modal doesn't show again.
+router.post("/celebrate", async (req: Request, res: Response): Promise<void> => {
+  const { telefono } = req.body as { telefono?: string };
+  if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
+
+  try {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      UPDATE users SET pti_uncelebrated_milestone = NULL WHERE telefono = ${telefono}
+    `);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err, telefono }, "pti: POST /celebrate failed");
+    res.status(500).json({ error: "Error" });
+  }
+});
+
 export default router;

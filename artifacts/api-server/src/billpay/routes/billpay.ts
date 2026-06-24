@@ -165,8 +165,23 @@ router.post("/pay", async (req: Request, res: Response) => {
     freeTxTokenValid = true;
   }
 
-  // Fee is waived when a valid free-transaction token is supplied
-  const effectiveFee = freeTxTokenValid ? "0.00" : PLATFORM_FEE_MXN;
+  // Check user's free_bill_credits (PTI milestone rewards) — waives the platform fee
+  // Takes priority over wallet balance check; consumed atomically inside the DB transaction.
+  let useFreeBillCredit = false;
+  if (!freeTxTokenValid) {
+    try {
+      const creditRow = await db.execute(
+        sql`SELECT free_bill_credits FROM users WHERE telefono = ${telefono} LIMIT 1`,
+      );
+      const credits = Number((creditRow.rows[0] as Record<string, unknown> | undefined)?.free_bill_credits ?? 0);
+      if (credits > 0) useFreeBillCredit = true;
+    } catch {
+      // Non-fatal — proceed without credit
+    }
+  }
+
+  // Fee is waived when a valid free-transaction token or PTI milestone credit is applied
+  const effectiveFee = (freeTxTokenValid || useFreeBillCredit) ? "0.00" : PLATFORM_FEE_MXN;
 
   // ── Step 1: Wallet balance pre-check (no DB writes yet) ─────────────────────
   let walletId: string | null = null;
@@ -376,7 +391,7 @@ router.post("/pay", async (req: Request, res: Response) => {
         });
       }
 
-      // 3d. Free-tx token consumption — atomic with the payment insert above
+      // 3d. Free credit consumption — atomic with the payment insert above
       if (freeTxTokenValid && free_tx_token) {
         // Remove the token from the array so it cannot be reused
         await tx.execute(
@@ -384,13 +399,21 @@ router.post("/pay", async (req: Request, res: Response) => {
               SET redemption_tokens = array_remove(redemption_tokens, ${free_tx_token})
               WHERE phone = ${telefono}`,
         );
-        // Audit row in loyalty_transactions (table not in Drizzle schema — raw SQL)
         await tx.execute(
           sql`INSERT INTO loyalty_transactions
                 (account_id, phone, type, points, balance_after, description, payment_ref)
               SELECT id, phone, 'token_consumed', 0, points_balance,
                      'Free transaction token applied', ${String(paymentId)}
               FROM loyalty_accounts WHERE phone = ${telefono} LIMIT 1`,
+        );
+      }
+
+      // PTI milestone free_bill_credit consumption (decrement by 1, guarded against going negative)
+      if (useFreeBillCredit) {
+        await tx.execute(
+          sql`UPDATE users
+              SET free_bill_credits = free_bill_credits - 1
+              WHERE telefono = ${telefono} AND free_bill_credits > 0`,
         );
       }
     });

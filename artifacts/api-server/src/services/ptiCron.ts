@@ -21,53 +21,57 @@ import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 import { runPaulaTriggerBatch } from "./paulaTriggers.js";
 import { processSendQueue } from "./paulaSendQueue.js";
 
-// ── PTI milestone definitions (Cialdini: Reciprocity + Commitment) ────────────
-// Unexpected rewards at threshold crossings — never announced in advance.
-// Points/cash credited silently so the WhatsApp message feels like a genuine gift.
+// ── PTI milestone definitions (Tala philosophy: the reward is progress, not a prize)
+// "Paga a tiempo y crece" — each tier unlocks access, not just a gift.
+// Free bill credits = $25 MXN of real platform value, fully on-platform, zero cash-out risk.
 const PTI_MILESTONES = [
   {
     threshold: 30,
-    label: "Bronce Establecido",
-    msg: (tel: string) =>
-      `🌱 *Tu confianza PagoYa creció*\n\n` +
-      `Alcanzaste *30 puntos de confianza* — estás construyendo un historial sólido.\n\n` +
-      `Te regalamos *15 puntos* como reconocimiento. ¡Sigue así!\n\n` +
-      `_PagoYa — construyendo contigo._`,
-    points: 15,
+    label: "Bronce",
+    slug: "bronce",
+    msg: () =>
+      `🥉 *Subiste a Bronce*\n\n` +
+      `Con *30 puntos* ya tienes historial real. Cada pago que haces queda registrado y suma a tu perfil financiero.\n\n` +
+      `Te acreditamos *1 pago de servicio gratis* — úsalo cuando quieras.\n\n` +
+      `_Paga a tiempo y sigue creciendo._`,
+    freeBillCredits: 1,
     mxn: 0,
   },
   {
     threshold: 50,
-    label: "Nivel Plata",
-    msg: (tel: string) =>
-      `⭐ *¡Increíble progreso!*\n\n` +
-      `Tu puntaje de confianza llegó a *50* — eres usuario Plata.\n\n` +
-      `Te enviamos *$10 MXN* directo a tu billetera como reconocimiento.\n\n` +
-      `_Este saldo ya está disponible en tu cuenta._`,
-    points: 0,
-    mxn: 10,
+    label: "Plata",
+    slug: "plata",
+    msg: () =>
+      `🥈 *Llegaste a Plata*\n\n` +
+      `*50 puntos* — tu consistencia de pago ya empieza a diferenciarte. Las instituciones financieras valoran exactamente esto.\n\n` +
+      `Te acreditamos *2 pagos de servicio gratis* como reconocimiento.\n\n` +
+      `_Tu historial está trabajando para ti._`,
+    freeBillCredits: 2,
+    mxn: 0,
   },
   {
     threshold: 70,
-    label: "Top 25%",
-    msg: (tel: string) =>
-      `🏅 *Eres de los mejores usuarios PagoYa*\n\n` +
-      `Con *70 puntos de confianza* estás en el top 25% de nuestra comunidad.\n\n` +
-      `Te regalamos *25 puntos* por tu disciplina de pago.\n\n` +
-      `Próximamente desbloquearás acceso a adelantos y mejores límites.`,
-    points: 25,
+    label: "Oro",
+    slug: "oro",
+    msg: () =>
+      `🥇 *Nivel Oro — top 25% de usuarios PagoYa*\n\n` +
+      `*70 puntos* es un perfil sólido. Llevas meses demostrando que pagas a tiempo — eso vale.\n\n` +
+      `Te acreditamos *3 pagos de servicio gratis* + ya puedes ver tu desglose PTI completo en la app.\n\n` +
+      `_Sigue así — lo que viene vale la pena._`,
+    freeBillCredits: 3,
     mxn: 0,
   },
   {
     threshold: 85,
     label: "Élite",
-    msg: (tel: string) =>
-      `🏆 *Usuario élite PagoYa*\n\n` +
-      `Tu puntaje de *85 puntos* te pone entre el top 5% de nuestra comunidad.\n\n` +
-      `Te enviamos *$20 MXN* de regalo y te ponemos en lista de acceso anticipado a crédito PagoYa.\n\n` +
-      `_Gracias por confiar en nosotros._`,
-    points: 0,
-    mxn: 20,
+    slug: "elite",
+    msg: () =>
+      `💎 *Élite — top 5% de usuarios PagoYa*\n\n` +
+      `Con *85 puntos* tu perfil financiero está en un nivel donde los socios financieros empiezan a fijarse.\n\n` +
+      `Te acreditamos *3 pagos gratis + $50 MXN* directo a tu billetera.\n\n` +
+      `_Estás construyendo algo real. Pronto habrá noticias._`,
+    freeBillCredits: 3,
+    mxn: 50,
   },
 ];
 
@@ -84,23 +88,28 @@ async function checkPtiMilestones(
     // Crossed this threshold for the first time (was below, now at or above)
     if (prevScore < m.threshold && newScore >= m.threshold) {
       try {
-        // Credit loyalty points
-        if (m.points > 0) {
+        // Credit free bill payments (platform fee waivers — $25 MXN value each)
+        if (m.freeBillCredits > 0) {
           await db.execute(sql`
-            INSERT INTO loyalty_transactions (telefono, points, type, description, created_at)
-            VALUES (${telefono}, ${m.points}, 'earn', ${`Milestone PTI: ${m.label}`}, NOW())
+            UPDATE users
+            SET free_bill_credits = free_bill_credits + ${m.freeBillCredits}
+            WHERE telefono = ${telefono}
           `).catch(() => {});
         }
-        // Credit wallet cash
+        // Credit wallet cash bonus (Élite+ only)
         if (m.mxn > 0) {
           await db.execute(sql`
             INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
             VALUES (${telefono}, 'PTI_REWARD', ${m.mxn}, 'confirmed', ${`Premio PTI: ${m.label}`}, NOW())
           `).catch(() => {});
         }
-        // Send WhatsApp — unexpected = strongest reciprocity trigger
-        await sendWhatsApp(telefono, m.msg(telefono));
-        logger.info({ telefono, milestone: m.label, prevScore, newScore }, "pti-milestone: reward sent");
+        // Mark uncelebrated so the app shows the celebration modal on next open
+        await db.execute(sql`
+          UPDATE users SET pti_uncelebrated_milestone = ${m.slug} WHERE telefono = ${telefono}
+        `).catch(() => {});
+        // Send WhatsApp — unexpected gift = strongest reciprocity moment
+        await sendWhatsApp(telefono, m.msg());
+        logger.info({ telefono, milestone: m.label, prevScore, newScore, freeBillCredits: m.freeBillCredits, mxn: m.mxn }, "pti-milestone: reward sent");
       } catch (err) {
         logger.error({ err, telefono, milestone: m.label }, "pti-milestone: reward failed");
       }
