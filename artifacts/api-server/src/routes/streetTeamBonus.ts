@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { assignNextLndCode } from "./landlords.js";
 import { eq, and, count, sum } from "drizzle-orm";
 import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
 import { scheduleNudge } from "../services/nudgeService.js";
@@ -21,6 +22,7 @@ declare module "express-session" {
       colonia: string;
       ref_code: string;
       landlord_ref?: string;
+      is_generic_landlord?: boolean;
     };
   }
 }
@@ -106,6 +108,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
 
     // ── 3. Store registration payload in session ───────────────────────────
     const landlordRef = (req.body as { landlord_ref?: string }).landlord_ref?.trim() || undefined;
+    const isGenericLandlord = !!(req.body as { is_generic_landlord?: boolean }).is_generic_landlord;
 
     req.session.pending_bonus_registration = {
       name: name.trim(),
@@ -115,6 +118,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       colonia: colonia.trim(),
       ref_code: refCodeResolved,
       landlord_ref: landlordRef,
+      is_generic_landlord: isGenericLandlord || undefined,
     };
 
     // ── 4. Return OTP challenge ────────────────────────────────────────────
@@ -204,6 +208,17 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
           ),
         ).catch((err: unknown) => {
           logger.warn({ err, landlordRef: pending.landlord_ref, phone: pending.phone }, "streetTeamBonus: landlord tag failed (non-fatal)");
+        });
+      }
+
+      // ── Generic landlord self-registration: auto-assign LND code ─────────
+      if (pending.is_generic_landlord) {
+        assignNextLndCode({
+          telefono: pending.phone,
+          full_name: pending.name,
+          whatsapp: pending.phone,
+        }).catch((err: unknown) => {
+          logger.warn({ err, phone: pending.phone }, "streetTeamBonus: generic landlord LND assignment failed (non-fatal)");
         });
       }
     } catch (err) {

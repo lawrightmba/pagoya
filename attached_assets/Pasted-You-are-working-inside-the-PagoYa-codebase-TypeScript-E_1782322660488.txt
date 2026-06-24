@@ -1,0 +1,135 @@
+You are working inside the PagoYa codebase (TypeScript / Express 5 / PostgreSQL / Drizzle ORM). Do not modify any existing functionality. Add only what is specified below.
+
+---
+
+PRE-FLIGHT CHECKS — run these before touching any file:
+
+1. Locate the /registro route handler — identify the exact file and line number where the ref param is read from the query string
+2. Confirm the landlords table exists and has columns for: ref_code, telefono (or user identifier), created_at — report the actual column names
+3. Confirm how LND ref codes are currently generated — is there a sequence, a max() query, or a separate counter table? Report the exact mechanism
+4. Confirm whether the /registro route currently branches on ref param starting with 'LND' — show the exact condition as it exists in the file
+5. Confirm PostHog is instrumented on the /registro route or its frontend component — identify where the tracking call is made
+6. Do NOT proceed if any of the above are missing — report what is missing instead
+
+---
+
+TASK 1 — Add LANDLORD as a recognized generic ref seed
+
+In the /registro route handler, locate the condition that checks whether the ref param starts with 'LND'. Add 'LANDLORD' as a recognized generic entry point that triggers the same landlord onboarding branch.
+
+The logic should read as follows:
+
+const refParam = req.query.ref as string | undefined;
+const tipoParam = req.query.tipo as string | undefined;
+
+const isLandlordFlow =
+  (refParam && refParam.startsWith('LND')) ||
+  refParam === 'LANDLORD' ||
+  tipoParam === 'propietario';
+
+If isLandlordFlow is true → route into the landlord onboarding flow exactly as an LND-prefixed ref would today. No other behavior changes.
+
+If isLandlordFlow is false → standard tenant registration flow, unchanged.
+
+---
+
+TASK 2 — Auto-assign next available LND code on landlord registration completion
+
+When a new landlord completes registration via the generic entry point (ref=LANDLORD or tipo=propietario — i.e. they did NOT arrive with a specific LND00X code), auto-generate and assign the next available LND code.
+
+Use the existing LND code generation mechanism identified in pre-flight check #3. The new code must be assigned atomically — use a transaction to prevent two simultaneous registrations claiming the same code.
+
+Implementation pattern:
+
+async function assignNextLndCode(db, landlordId): Promise<string> {
+  return await db.transaction(async (tx) => {
+    // Use existing generation mechanism — do not invent a new one
+    // Lock the row or sequence to prevent race condition
+    const nextCode = await getNextLndCode(tx); // replace with actual mechanism
+    await tx.update(landlords)
+      .set({ ref_code: nextCode })
+      .where(eq(landlords.id, landlordId));
+    return nextCode;
+  });
+}
+
+After assignment, send a WhatsApp confirmation to the landlord containing their unique referral link:
+
+"🏠 ¡Bienvenido a PagoYa, [nombre]! Tu enlace de referido está listo:
+https://pagoyamx.com/registro?ref=[LND_CODE]
+Compártelo con tus inquilinos — ganas $150 MXN por cada uno que se registre y pague. ¿Tienes preguntas? Responde este mensaje."
+
+Use the existing sendWhatsApp() function and existing message formatting conventions. Do not create a new notification type.
+
+---
+
+TASK 3 — Preserve UTM parameters through registration flow
+
+The email CTA will use this URL:
+https://pagoyamx.com/registro?tipo=propietario&utm_source=brevo&utm_campaign=landlord-touch2
+
+Confirm that utm_source and utm_campaign query params are currently passed through to PostHog on the /registro route. If they are not, add the following PostHog capture call at the point where the registration form is first rendered:
+
+posthog.capture('landlord_registration_start', {
+  utm_source: req.query.utm_source || null,
+  utm_campaign: req.query.utm_campaign || null,
+  ref: refParam || null,
+  tipo: tipoParam || null
+});
+
+And on successful registration completion:
+
+posthog.capture('landlord_registration_complete', {
+  utm_source: utm_source || null,
+  utm_campaign: utm_campaign || null,
+  lnd_code: assignedCode
+});
+
+Persist utm_source and utm_campaign in the session or as local variables so they are available at completion time — do not re-read from query string at completion since the params will be gone by then.
+
+If PostHog tracking already captures these params, confirm it and skip this task.
+
+---
+
+TASK 4 — Smoke tests (run all 5, report pass/fail for each)
+
+TEST 1 — Generic LANDLORD ref routes to landlord flow
+Send a test request to /registro?ref=LANDLORD
+EXPECTED: isLandlordFlow = true, landlord onboarding branch entered
+
+TEST 2 — tipo=propietario routes to landlord flow
+Send a test request to /registro?tipo=propietario
+EXPECTED: isLandlordFlow = true, landlord onboarding branch entered
+
+TEST 3 — Existing LND00X ref still works
+Send a test request to /registro?ref=LND001
+EXPECTED: isLandlordFlow = true, existing behavior unchanged, no new code assigned (code already present)
+
+TEST 4 — Standard tenant flow unchanged
+Send a test request to /registro with no ref or tipo param
+EXPECTED: isLandlordFlow = false, standard tenant registration flow entered
+
+TEST 5 — LND code auto-assigned on generic registration completion
+Complete a test landlord registration via /registro?tipo=propietario
+EXPECTED: Next available LND code assigned atomically in landlords table, WhatsApp confirmation sent with correct referral link, PostHog landlord_registration_complete event fired with lnd_code populated
+
+---
+
+DO NOT:
+- Modify any existing LND00X landlord flows or referral tracking
+- Change the tenant registration flow in any way
+- Alter wallet_transactions, wallets, pti_score_history, or paula_messages tables
+- Modify the WhatsApp inbound webhook or Paula trigger engine
+- Invent new database tables or columns unless pre-flight reveals the landlords table is missing a required column, in which case report it and wait for instruction
+
+---
+
+COMPLETION REPORT — return all of the following:
+
+1. Pre-flight check results — all 6 confirmed or blockers identified, including actual landlords table column names and LND code generation mechanism
+2. Exact file path and line number where isLandlordFlow condition was inserted
+3. Exact file path and line number where assignNextLndCode() was added
+4. WhatsApp confirmation message — show the rendered example with a sample LND code
+5. PostHog tracking — confirmed existing or show what was added
+6. Smoke test results — PASS or FAIL for each of the 5 tests with a one-line explanation
+7. Any deviations from this spec and why

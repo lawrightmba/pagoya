@@ -29,6 +29,57 @@ async function generateLandlordCode(): Promise<string> {
   return "LND" + String(num + 1).padStart(3, "0");
 }
 
+export async function assignNextLndCode(params: {
+  telefono: string;
+  full_name: string;
+  whatsapp?: string;
+}): Promise<string> {
+  const { telefono, full_name, whatsapp } = params;
+
+  await db.execute(sql`BEGIN`);
+  let landlordCode: string;
+  try {
+    await db.execute(sql`LOCK TABLE landlords IN SHARE ROW EXCLUSIVE MODE`);
+
+    const result = await db.execute(
+      sql`SELECT landlord_code FROM landlords
+          WHERE landlord_code ~ '^LND[0-9]+$'
+          ORDER BY CAST(SUBSTRING(landlord_code FROM 4) AS INTEGER) DESC
+          LIMIT 1`,
+    );
+    if (result.rows.length === 0) {
+      landlordCode = "LND001";
+    } else {
+      const last = (result.rows[0] as { landlord_code: string }).landlord_code;
+      const num = parseInt(last.replace("LND", ""), 10);
+      landlordCode = "LND" + String(num + 1).padStart(3, "0");
+    }
+
+    const referralLink = `https://pagoyamx.com/registro?ref=${landlordCode}`;
+    const firstName = full_name.trim().split(" ")[0] || full_name.trim();
+
+    await db.execute(
+      sql`INSERT INTO landlords (landlord_code, full_name, email, whatsapp, units, city, referral_link)
+          VALUES (${landlordCode}, ${full_name.trim()}, ${""}, ${whatsapp ?? null}, 0, ${"Auto-registro"}, ${referralLink})
+          ON CONFLICT DO NOTHING`,
+    );
+
+    await db.execute(sql`COMMIT`);
+
+    sendWhatsApp(
+      telefono,
+      `🏠 ¡Bienvenido a PagoYa, ${firstName}! Tu enlace de referido está listo:\nhttps://pagoyamx.com/registro?ref=${landlordCode}\nCompártelo con tus inquilinos — ganas $150 MXN por cada uno que se registre y pague. ¿Tienes preguntas? Responde este mensaje.`,
+    ).catch(() => {});
+
+    logger.info({ landlordCode, telefono }, "landlords: auto-assigned LND code on generic registration");
+    return landlordCode;
+  } catch (err) {
+    await db.execute(sql`ROLLBACK`).catch(() => {});
+    logger.error({ err, telefono }, "landlords: assignNextLndCode failed");
+    throw err;
+  }
+}
+
 // POST /api/landlords/register
 router.post("/register", async (req: Request, res: Response) => {
   const { full_name, email, whatsapp, units, city, notes } = req.body as {

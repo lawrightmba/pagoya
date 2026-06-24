@@ -150,6 +150,7 @@ export default function Register() {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [repId, setRepId] = useState<string | null>(null);
   const [refCode, setRefCode] = useState<string | null>(null);
+  const [tipoParam, setTipoParam] = useState<string | null>(null);
 
   // ── Field-level errors ────────────────────────────────────────────────────
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
@@ -187,6 +188,7 @@ export default function Register() {
   useEffect(() => {
     setRepId(getQueryParam("rep"));
     setRefCode(getQueryParam("ref"));
+    setTipoParam(getQueryParam("tipo"));
   }, []);
 
   // ── Fetch WhatsApp number when success screen shown ───────────────────────
@@ -233,15 +235,21 @@ export default function Register() {
   const handleColoniaBlur = () => setFieldError("colonia", validateColonia(colonia));
 
   // ── Build form payload ────────────────────────────────────────────────────
-  const isLandlordRef = refCode?.startsWith("LND") ?? false;
+  const isLandlordFlow =
+    (refCode !== null && refCode.startsWith("LND")) ||
+    refCode === "LANDLORD" ||
+    tipoParam === "propietario";
+
+  const hasSpecificLndCode = refCode !== null && refCode.startsWith("LND");
 
   const buildPayload = () => ({
     name: name.trim(),
     phone: combinedPhone,
     city,
     colonia,
-    ref_code: isLandlordRef ? "" : (refCode ?? ""),
-    ...(isLandlordRef ? { landlord_ref: refCode } : {}),
+    ref_code: isLandlordFlow ? "" : (refCode ?? ""),
+    ...(hasSpecificLndCode ? { landlord_ref: refCode } : {}),
+    ...(!hasSpecificLndCode && isLandlordFlow ? { is_generic_landlord: true } : {}),
     ...(repId ? { repId } : {}),
     ...(recoveryEmail.trim() ? { recoveryEmail: recoveryEmail.trim() } : {}),
   });
