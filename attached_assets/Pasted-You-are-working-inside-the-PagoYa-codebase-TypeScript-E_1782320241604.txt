@@ -1,0 +1,180 @@
+You are working inside the PagoYa codebase (TypeScript / Express 5 / PostgreSQL / Drizzle ORM / Twilio WhatsApp). Do not modify any existing functionality. Add only what is specified below.
+
+---
+
+PRE-FLIGHT CHECKS — run these before touching any file:
+
+1. Confirm `paula_messages` table has columns: trigger_key, template, cooldown_hours, active, created_at
+2. Confirm `paula_pending_handoffs` table has columns: user_id, status, consented_at, declined_at
+3. Confirm `whatsapp-agent.ts` has an existing SÍ intercept block that checks for a pending handoff row and a readiness_hard trigger in the last 7 days
+4. Confirm `enqueuePaulaMessage()` exists — identify its exact signature and whether it supports a priority or immediate flag
+5. Confirm `READINESS_HARD` trigger key exists in `paula_messages` and the Step 1 message is already live
+6. Do NOT proceed if any of the above are missing — report what is missing instead
+
+---
+
+TASK 1 — Update READINESS_HARD Step 1 message in paula_messages
+
+Find the existing row WHERE trigger_key = 'READINESS_HARD' and update the template to exactly the following. Do not alter any other columns:
+
+UPDATE paula_messages
+SET template = '🏆 {{first_name}}, llegaste.
+
+Mes tras mes, pago tras pago — construiste algo real.
+
+✅ PTI {{pti_score}} — nivel excelente
+✅ {{streak_days}} días consecutivos
+✅ {{service_count}} tipos de servicios pagados
+✅ {{literacy_modules}} módulos completados
+
+Tu recompensa: 5 pagos gratis + $300 MXN ya en tu billetera. Son tuyos, sin condiciones.
+
+Sigues siendo parte de PagoYa — esto no cambia nada de lo que ya tienes aquí.
+
+Con un perfil como el tuyo, algunas personas empiezan a calificar para opciones más grandes: financiamiento, seguros, cosas que antes no estaban disponibles. Paula encontró algo que podría interesarte.
+
+¿Te cuento? Responde SÍ o NO — sin compromiso.'
+WHERE trigger_key = 'READINESS_HARD';
+
+Verify with:
+SELECT trigger_key, template FROM paula_messages WHERE trigger_key = 'READINESS_HARD';
+
+---
+
+TASK 2 — Insert READINESS_HARD_STEP2 into paula_messages
+
+Run the following SQL exactly as written:
+
+INSERT INTO paula_messages (
+  trigger_key,
+  template,
+  cooldown_hours,
+  active,
+  created_at
+) VALUES (
+  'READINESS_HARD_STEP2',
+  '{{first_name}}, esto es grande. 🚀
+
+La mayoría de personas que empiezan a usar PagoYa nunca llegan aquí. Tú sí.
+
+Lo que se abre con un perfil como el tuyo:
+💳 Primer microcrédito formal — sin historial bancario previo
+🛡️ Cobertura básica de seguro — opciones que antes no estaban disponibles
+📈 Condiciones mejores de las que encontrarías por tu cuenta
+
+Todo desde PagoYa. Sin salir de aquí, sin empezar de cero en otro lado.
+
+En los próximos días Paula te trae los detalles. Sigue usando tus pagos gratis — te los ganaste.',
+  0,
+  true,
+  NOW()
+);
+
+Verify with:
+SELECT trigger_key, cooldown_hours, active FROM paula_messages WHERE trigger_key = 'READINESS_HARD_STEP2';
+
+---
+
+TASK 3 — Update SÍ intercept block in whatsapp-agent.ts
+
+Locate the existing SÍ intercept block that handles handoff consent. It should already be setting status = 'consented' on the paula_pending_handoffs row.
+
+Inside that block, immediately AFTER the status update, add the Step 2 send. The exact implementation depends on whether enqueuePaulaMessage supports an immediate/priority flag:
+
+OPTION A — if enqueuePaulaMessage supports a priority or immediate flag:
+
+await db.update(paulaPendingHandoffs)
+  .set({ status: 'consented', consented_at: new Date() })
+  .where(eq(paulaPendingHandoffs.userId, user.id));
+
+await enqueuePaulaMessage(user.id, 'READINESS_HARD_STEP2', {
+  first_name: user.first_name
+}, { priority: 'immediate' });
+
+OPTION B — if enqueuePaulaMessage does not support immediate dispatch, use a direct Twilio send instead:
+
+await db.update(paulaPendingHandoffs)
+  .set({ status: 'consented', consented_at: new Date() })
+  .where(eq(paulaPendingHandoffs.userId, user.id));
+
+const step2 = await db.query.paulaMessages.findFirst({
+  where: eq(paulaMessages.triggerKey, 'READINESS_HARD_STEP2')
+});
+
+if (step2) {
+  const rendered = renderTemplate(step2.template, {
+    first_name: user.first_name
+  });
+  await twilioClient.messages.create({
+    from: process.env.TWILIO_WHATSAPP_NUMBER,
+    to: `whatsapp:${user.phone}`,
+    body: rendered
+  });
+}
+
+Use whichever option matches the existing codebase pattern. Do not invent a new dispatch mechanism. The goal is that Step 2 arrives within seconds of the user replying SÍ — not after the standard 2-minute queue delay.
+
+IMPORTANT: Step 2 must only ever fire once per user. The existing consented_at timestamp on paula_pending_handoffs serves as the guard — before sending, confirm status is currently 'pending' not already 'consented'. If status is already 'consented', skip the send entirely.
+
+---
+
+TASK 4 — Confirm NO and 30-day re-ask logic is unchanged
+
+Do not modify the NO intercept block. Confirm it still:
+- Sets status = 'declined', declined_at = NOW()
+- Sends the warm hold message: "Perfecto, no hay prisa. Cuando estés lista, aquí estaremos. Sigue usando PagoYa normal — tus pagos gratis ya están activos."
+- The 30-day re-ask resets status to 'pending' and re-fires READINESS_HARD Step 1
+
+Report the current state of this logic without changing it.
+
+---
+
+TASK 5 — Smoke tests (run all 6, report pass/fail for each)
+
+TEST 1 — Step 1 template verified
+Query paula_messages WHERE trigger_key = 'READINESS_HARD'.
+EXPECTED: Template contains '¿Te cuento?' and 'Sin salir de aquí' and '$300 MXN ya en tu billetera'.
+
+TEST 2 — Step 2 row exists and is active
+Query paula_messages WHERE trigger_key = 'READINESS_HARD_STEP2'.
+EXPECTED: Row exists, active = true, cooldown_hours = 0.
+
+TEST 3 — SÍ triggers Step 2, status updates to consented
+Simulate a SÍ reply from a test user with a pending handoff row.
+EXPECTED: paula_pending_handoffs status = 'consented', consented_at is set, Step 2 message sent or enqueued immediately.
+
+TEST 4 — Double SÍ guard works
+Simulate a second SÍ reply from the same user whose status is already 'consented'.
+EXPECTED: Step 2 does NOT fire again.
+
+TEST 5 — NO sets declined status and sends warm hold
+Simulate a NO reply from a test user with a pending handoff row.
+EXPECTED: status = 'declined', declined_at is set, warm hold message sent.
+
+TEST 6 — 30-day re-ask resets correctly
+Set a test user's declined_at to NOW() - INTERVAL '31 days'.
+Trigger the evaluator manually.
+EXPECTED: status resets to 'pending', READINESS_HARD Step 1 re-enqueues.
+
+---
+
+DO NOT:
+- Modify any existing paula_messages rows other than READINESS_HARD template
+- Change the PTI scoring logic, nightly cron timing, or 2-minute send queue processor
+- Alter the Mustache variable rendering logic
+- Touch wallet_transactions, wallets, or pti_score_history tables
+- Modify FREE_CREDIT_NUDGE or any other trigger key
+- Add any new database tables or columns
+
+---
+
+COMPLETION REPORT — return all of the following:
+
+1. Pre-flight check results — all 6 confirmed or blockers identified
+2. READINESS_HARD template update confirmed — show SELECT result
+3. READINESS_HARD_STEP2 insert confirmed — show SELECT result
+4. Which dispatch option was used for Step 2 (A or B) and why
+5. Confirmation that the double-send guard is in place
+6. NO and 30-day re-ask logic — current state confirmed unchanged
+7. Smoke test results — PASS or FAIL for each of the 6 tests with a one-line explanation
+8. Any deviations from this spec and why

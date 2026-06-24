@@ -970,18 +970,39 @@ router.post("/", async (req: Request, res: Response) => {
       if (handoffR.rows.length > 0) {
         const msgNorm = userMessage.trim();
         if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
-          await db.execute(sql`
+          // Double-send guard: UPDATE only succeeds if status is still 'pending'
+          const consentResult = await db.execute(sql`
             UPDATE paula_pending_handoffs
-            SET status = 'consented'
+            SET status = 'consented', consented_at = NOW()
             WHERE telefono = ${phoneKey} AND status = 'pending'
+            RETURNING id
           `);
-          await sendWhatsApp(
-            phoneKey,
-            `✅ *¡Perfecto!* Tu perfil ya fue registrado para revisión.\n\n` +
-            `Un asesor de microcrédito se comunicará contigo en los próximos días. ` +
-            `Mientras tanto, sigue construyendo tu historial — cada pago suma. 💪\n\n` +
-            `Cualquier duda, aquí estoy.`
-          );
+          if (consentResult.rows.length === 0) {
+            // Already consented — silently ignore to prevent Step 2 double-send
+            return;
+          }
+
+          // Fetch Step 2 template and user's name for immediate send (Option B — no queue delay)
+          const [step2R, userNameR] = await Promise.all([
+            db.execute(sql`
+              SELECT template_es FROM paula_messages
+              WHERE trigger_type = 'readiness_hard_step2' AND active = true
+              LIMIT 1
+            `),
+            db.execute(sql`
+              SELECT kyc_full_name FROM users WHERE telefono = ${phoneKey} LIMIT 1
+            `),
+          ]);
+
+          const step2Template = (step2R.rows[0] as Record<string, string> | undefined)?.template_es;
+          const fullName = (userNameR.rows[0] as Record<string, string> | undefined)?.kyc_full_name ?? "";
+          const firstName = fullName.split(" ")[0] ?? fullName;
+
+          if (step2Template && firstName) {
+            const step2Msg = step2Template.replace(/\{\{nombre\}\}/g, firstName);
+            await sendWhatsApp(phoneKey, step2Msg);
+          }
+
           return;
         }
         if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
