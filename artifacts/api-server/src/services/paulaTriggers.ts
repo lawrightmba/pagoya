@@ -65,6 +65,8 @@ export const TRIGGER = {
   READINESS_HARD:        "readiness_hard",
   // Gap report — below APPROACHING threshold, at least one payment
   NOT_YET_GAP_REPORT:    "not_yet_gap_report",
+  // Reward nudge — reminds users of unused free bill credits (7-day cooldown)
+  FREE_CREDIT_NUDGE:     "free_credit_nudge",
 } as const;
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
@@ -424,16 +426,61 @@ export async function evaluateTriggersForUser(
 
     } else {
       // NOT_YET — PTI < 70, largest cohort. 30-day cadence gap report.
-      // Names their single closest gap so every message is actionable, not generic.
       if (!(await onCooldown(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, templates))) {
-        const enrichedCtx: UserContext = {
-          ...ctx,
-          streak_days: readiness.streakDays,
-          top_gap:     readiness.topGapLabel,
-        };
+        const enrichedCtx: UserContext = { ...ctx, streak_days: readiness.streakDays, top_gap: readiness.topGapLabel };
         await fireTrigger(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, enrichedCtx, templates);
         fired++;
       }
+    }
+
+    // READINESS_HARD re-ask: user previously declined, 30+ days ago — give them a second chance.
+    // Bypasses the 9999-day standard cooldown by checking declined_at directly.
+    if (readiness.status === "READY") {
+      const declinedRow = await db.execute(sql`
+        SELECT declined_at FROM paula_pending_handoffs
+        WHERE telefono = ${telefono} AND status = 'declined'
+          AND declined_at <= NOW() - INTERVAL '30 days'
+        LIMIT 1
+      `);
+      if (declinedRow.rows.length > 0) {
+        // Reset to pending so the re-ask can fire and the SÍ/NO gate works again
+        await db.execute(sql`
+          UPDATE paula_pending_handoffs
+          SET status = 'pending', declined_at = NULL
+          WHERE telefono = ${telefono} AND status = 'declined'
+        `);
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days:          readiness.streakDays,
+          bill_diversity:       readiness.billDiversity,
+          literacy_score:       ctx.financial_literacy_score,
+          partner_display_name: readiness.partnerDisplayName,
+        };
+        await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
+        fired++;
+      }
+    }
+  }
+
+  // ── FREE_CREDIT_NUDGE — reminds users of unused credits sitting idle 3+ days ──
+  // Condition: credits > 0 AND not used today or in last 3 days AND 7-day message cooldown
+  const creditNudgeRow = await db.execute(sql`
+    SELECT free_bill_credits, last_free_credit_used_date
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const cnr = creditNudgeRow.rows[0] as Record<string, unknown> | undefined;
+  const freeCredits = Number(cnr?.free_bill_credits ?? 0);
+  if (freeCredits > 0) {
+    const lastUsed = cnr?.last_free_credit_used_date
+      ? new Date(cnr.last_free_credit_used_date as string)
+      : null;
+    const daysSinceUsed = lastUsed
+      ? (Date.now() - lastUsed.getTime()) / 86_400_000
+      : Infinity;
+    if (daysSinceUsed >= 3 && !(await onCooldown(db, telefono, TRIGGER.FREE_CREDIT_NUDGE, templates))) {
+      const enrichedCtx: UserContext = { ...ctx, free_bill_credits: freeCredits };
+      await fireTrigger(db, telefono, TRIGGER.FREE_CREDIT_NUDGE, enrichedCtx, templates);
+      fired++;
     }
   }
 

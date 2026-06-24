@@ -952,6 +952,54 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Lender handoff consent intercept (DB-backed) ─────────────────────────
+    // Fires when user replies SÍ/NO to the READINESS_HARD message.
+    // Requires: pending handoff row + a readiness_hard trigger sent in last 7 days.
+    {
+      const handoffR = await db.execute(sql`
+        SELECT ph.id
+        FROM paula_pending_handoffs ph
+        JOIN paula_trigger_log ptl
+          ON ptl.telefono = ${phoneKey}
+          AND ptl.trigger_type = 'readiness_hard'
+          AND ptl.created_at >= NOW() - INTERVAL '7 days'
+        WHERE ph.telefono = ${phoneKey}
+          AND ph.status = 'pending'
+        LIMIT 1
+      `);
+      if (handoffR.rows.length > 0) {
+        const msgNorm = userMessage.trim();
+        if (STRICT_CONFIRM_PATTERN.test(msgNorm)) {
+          await db.execute(sql`
+            UPDATE paula_pending_handoffs
+            SET status = 'consented'
+            WHERE telefono = ${phoneKey} AND status = 'pending'
+          `);
+          await sendWhatsApp(
+            phoneKey,
+            `✅ *¡Perfecto!* Tu perfil ya fue registrado para revisión.\n\n` +
+            `Un asesor de microcrédito se comunicará contigo en los próximos días. ` +
+            `Mientras tanto, sigue construyendo tu historial — cada pago suma. 💪\n\n` +
+            `Cualquier duda, aquí estoy.`
+          );
+          return;
+        }
+        if (STRICT_CANCEL_PATTERN.test(msgNorm)) {
+          await db.execute(sql`
+            UPDATE paula_pending_handoffs
+            SET status = 'declined', declined_at = NOW()
+            WHERE telefono = ${phoneKey} AND status = 'pending'
+          `);
+          await sendWhatsApp(
+            phoneKey,
+            `Entendido. Cuando estés listo, aquí estaremos.\n\n` +
+            `Sigue pagando a tiempo — tu historial seguirá creciendo y las opciones seguirán abiertas. 💬`
+          );
+          return;
+        }
+      }
+    }
+
     // ── Pending withdrawal confirmation intercept (session-backed) ───────────
     const pendingW = session.pendingWithdrawal;
     if (pendingW && Date.now() < pendingW.expiresAt) {

@@ -1,0 +1,39 @@
+n the opt-in conflict — gate the handoff on SÍ.
+This is the right call both ethically and legally. Under LFPDPPP, sharing a user's financial profile with a third-party credit partner without explicit consent is a compliance exposure, not just a trust problem. The fact that the WhatsApp agent already intercepts yes/no means the technical lift is minimal. The handoff packet being pre-built is fine — just don't transmit it until SÍ is received. NO should pause and let Paula follow up in 30 days.
+Tightened versions of both messages:
+
+💎 Élite
+
+💎 Élite — top 5% de usuarios PagoYa
+Con 85 puntos tu perfil financiero está en un nivel donde los socios financieros empiezan a fijarse.
+Tu recompensa: 3 pagos gratis + $150 MXN ya en tu billetera. Úsalos cuando quieras.
+Sigue así. Pronto habrá noticias.
+
+Changes: "directo a tu billetera" → "ya en tu billetera" (confirms it's there now, not coming). Dropped the abstract "estás construyendo algo real" — the numbers already say that.
+
+🚀 Perfil Listo
+
+🏆 {first_name}, lo lograste.
+Construiste un perfil crediticio real desde cero:
+
+✅ PTI {pti_score} — nivel excelente
+
+✅ {streak_days} días de pagos consecutivos
+
+✅ {service_count} tipos de servicios pagados
+
+✅ {literacy_modules} módulos completados
+Tu recompensa por llegar aquí: 5 pagos gratis + $300 MXN ya en tu billetera.
+Tu perfil es exactamente lo que buscan las instituciones de microcrédito formal. ¿Te gustaría que exploráramos opciones juntos?
+Responde SÍ para que te conectemos, o NO si prefieres esperar.
+
+Changes: Rewards named upfront before the ask. "¿Te conectáramos con una institución?" → "exploráramos opciones juntos" — Paula stays in the relationship, the institution is implied not foregrounded. SÍ/NO framing makes the choice feel low-pressure.
+
+🔔 New: Free Payment Nudge
+Trigger condition: free_bill_credits > 0 AND last_free_credit_used_date is 3+ days ago AND user has not received this message in the last 7 days.
+
+💳 {first_name}, tienes {free_bill_credits} pago(s) gratis esperándote.
+La próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. No tienes que hacer nada extra.
+Es tuyo. Úsalo.
+
+Three things this message does right: names the exact credit count, removes any redemption anxiety ("no tienes que hacer nada extra"), and ends with a two-word close that feels like permission not a push.
