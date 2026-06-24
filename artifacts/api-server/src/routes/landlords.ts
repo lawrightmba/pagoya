@@ -66,12 +66,14 @@ export async function assignNextLndCode(params: {
 
     await db.execute(sql`COMMIT`);
 
-    sendWhatsApp(
-      telefono,
-      `🏠 ¡Bienvenido a PagoYa, ${firstName}! Tu enlace de referido está listo:\nhttps://pagoyamx.com/registro?ref=${landlordCode}\nCompártelo con tus inquilinos — ganas $150 MXN por cada uno que se registre y pague. ¿Tienes preguntas? Responde este mensaje.`,
-    ).catch(() => {});
+    const referralMsg = `🏠 ¡Bienvenido a PagoYa, ${firstName}! Tu enlace de referido está listo:\nhttps://pagoyamx.com/registro?ref=${landlordCode}\nCompártelo con tus inquilinos — ganas $150 MXN por cada uno que se registre y pague. ¿Tienes preguntas? Responde este mensaje.`;
+    try {
+      await sendWhatsApp(telefono, referralMsg);
+      logger.info({ landlordCode, telefono }, "landlords: auto-assigned LND code, WhatsApp sent");
+    } catch (waErr) {
+      logger.warn({ waErr, landlordCode, telefono }, "landlords: LND code assigned but WhatsApp send failed");
+    }
 
-    logger.info({ landlordCode, telefono }, "landlords: auto-assigned LND code on generic registration");
     return landlordCode;
   } catch (err) {
     await db.execute(sql`ROLLBACK`).catch(() => {});
