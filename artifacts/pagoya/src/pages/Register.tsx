@@ -160,14 +160,36 @@ export default function Register() {
   // ── Screen state ──────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>("form");
 
+  // Capture UTM params + referrer on first load and stash in sessionStorage
   useEffect(() => {
-    if (screen === "success" && typeof window !== "undefined" && typeof (window as any).gtag === "function") {
-      (window as any).gtag("event", "sign_up", {
-        method: "PagoYa",
-        event_category: "engagement",
-        event_label: "registration_complete",
-      });
+    const params = new URLSearchParams(window.location.search);
+    const utm: Record<string, string> = {};
+    ["utm_source", "utm_campaign", "utm_medium", "utm_content", "ref"].forEach(k => {
+      const v = params.get(k);
+      if (v) utm[k] = v;
+    });
+    if (Object.keys(utm).length) sessionStorage.setItem("pagoya_utm", JSON.stringify(utm));
+    if (document.referrer && !sessionStorage.getItem("pagoya_referrer")) {
+      sessionStorage.setItem("pagoya_referrer", document.referrer);
     }
+  }, []);
+
+  // Fire GA4 sign_up conversion with full attribution context
+  useEffect(() => {
+    if (screen !== "success") return;
+    if (typeof window === "undefined" || typeof (window as any).gtag !== "function") return;
+    const utm = JSON.parse(sessionStorage.getItem("pagoya_utm") ?? "{}");
+    const referrer = sessionStorage.getItem("pagoya_referrer") ?? "";
+    (window as any).gtag("event", "sign_up", {
+      method: "PagoYa",
+      event_category: "engagement",
+      event_label: "registration_complete",
+      utm_source:   utm.utm_source   ?? (referrer ? "referral" : "direct"),
+      utm_campaign: utm.utm_campaign ?? "",
+      utm_medium:   utm.utm_medium   ?? "",
+      source_page:  referrer,
+      ref_code:     utm.ref          ?? getQueryParam("ref") ?? "",
+    });
   }, [screen]);
 
   const [submitting, setSubmitting] = useState(false);

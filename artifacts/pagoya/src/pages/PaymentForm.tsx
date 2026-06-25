@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { usePayment } from "@/context/PaymentContext";
@@ -43,6 +43,16 @@ export default function PaymentForm() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // GA4: fire view_item when user lands on /pagar
+  useEffect(() => {
+    if (typeof (window as any).gtag !== "function") return;
+    (window as any).gtag("event", "view_item", {
+      event_category: "engagement",
+      item_name: "bill_payment",
+      item_category: servicioParam ?? "general",
+    });
+  }, []);
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!form.empresa.trim()) newErrors.empresa = "Requerido";
@@ -61,6 +71,16 @@ export default function PaymentForm() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
+    }
+    // GA4: user filled the form and hit submit — high-intent signal
+    if (typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "begin_checkout", {
+        event_category: "ecommerce",
+        empresa: form.empresa,
+        categoria: form.categoria,
+        value: parseFloat(form.monto) || 0,
+        currency: "MXN",
+      });
     }
     setPaymentData(form);
     navigate("/revisar");
