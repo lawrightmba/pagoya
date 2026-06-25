@@ -50,14 +50,22 @@ export default function PagarTelmexVallarta() {
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "56px 20px 40px", textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📞</div>
         <h1 style={{ fontSize: "clamp(26px,6vw,38px)", fontWeight: 900, color: "#fff", lineHeight: 1.15, margin: "0 0 14px", letterSpacing: "-0.02em" }}>
-          Pago de Telmex en Puerto Vallarta
+          Pagar Telmex en Puerto Vallarta
         </h1>
-        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.78)", lineHeight: 1.6, margin: "0 0 28px", maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
-          Internet · Teléfono fijo · Paquetes Telmex — desde tu celular, sin filas, sin sucursal.
-          Disponible en toda la zona de Puerto Vallarta y Bahía de Banderas.
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.78)", lineHeight: 1.6, margin: "0 0 16px", maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
+          Paga tu recibo de internet o teléfono Telmex desde tu celular — sin filas, sin sucursal,
+          sin cuenta bancaria. Disponible en toda la zona de Puerto Vallarta y Bahía de Banderas.
         </p>
+
+        {/* Local trust bar */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+          {["📍 Emiliano Zapata", "📍 Versalles", "📍 Pitillal", "📍 Fluvial Vallarta", "📍 Zona Romántica"].map(c => (
+            <span key={c} style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.07)", borderRadius: 20, padding: "4px 10px" }}>{c}</span>
+          ))}
+        </div>
+
         <button
-          onClick={() => navigate(`${BASE_URL}/register`)}
+          onClick={() => navigate("/register")}
           style={{
             background: "#00C875", color: "#003d26", border: "none",
             borderRadius: 999, padding: "14px 36px", fontSize: 16,
@@ -69,6 +77,17 @@ export default function PagarTelmexVallarta() {
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 10 }}>
           $25 MXN por pago · Folio de comprobante al instante · Sin cuenta de banco
         </p>
+
+        {/* Physical alternative note to match broad intent */}
+        <div style={{ marginTop: 20, background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", textAlign: "left" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>
+            ¿Prefieres pagar en efectivo hoy mismo?
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+            Carga saldo en cualquier OXXO de Vallarta y paga Telmex al instante desde PagoYa —
+            sin necesitar tarjeta ni cuenta de banco. El recibo de pago llega a tu WhatsApp.
+          </p>
+        </div>
       </div>
 
       {/* Bill Calculator */}

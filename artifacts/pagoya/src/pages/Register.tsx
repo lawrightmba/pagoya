@@ -159,6 +159,17 @@ export default function Register() {
 
   // ── Screen state ──────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>("form");
+
+  useEffect(() => {
+    if (screen === "success" && typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "sign_up", {
+        method: "PagoYa",
+        event_category: "engagement",
+        event_label: "registration_complete",
+      });
+    }
+  }, [screen]);
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 

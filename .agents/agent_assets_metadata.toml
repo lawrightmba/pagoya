@@ -329,3 +329,9 @@ id = "bBALOayF4WgnPT791MVva"
 uri = "file://.local/exports/pagoya-founder-overview-june2026.txt"
 type = "text"
 title = "PagoYa — Founder Overview & Product State (June 2026)"
+
+[[outputs]]
+id = "ALIEBPHbGDCu0BvnvAhgq"
+uri = "file://.local/exports/pagoya-seo-conversion-plan-june2026.txt"
+type = "text"
+title = "PagoYa — SEO & Conversion Action Plan (June 2026)"
