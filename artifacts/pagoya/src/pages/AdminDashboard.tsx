@@ -337,7 +337,7 @@ export default function AdminDashboard() {
     setComplianceLoading(true);
     setComplianceError("");
     try {
-      const r = await fetch(`${BASE_URL}/api/admin/compliance-summary`, { headers: { "x-admin-key": adminKey } });
+      const r = await fetch(`${window.location.origin}/api/admin/compliance-summary`, { headers: { "x-admin-key": adminKey } });
       if (!r.ok) { setComplianceError(`${r.status}`); return; }
       setComplianceData(await r.json());
     } catch { setComplianceError("Network error"); }
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
     setLandlordLoading(true);
     setLandlordError("");
     try {
-      const r = await fetch(`${BASE_URL}/api/landlords`, { headers: { "x-admin-key": adminKey } });
+      const r = await fetch(`${window.location.origin}/api/landlords`, { headers: { "x-admin-key": adminKey } });
       if (!r.ok) { setLandlordError(`${r.status}`); return; }
       const d = await r.json();
       setLandlords(d.landlords ?? []);
@@ -377,7 +377,7 @@ export default function AdminDashboard() {
     setAddLoading(true);
     setAddError("");
     try {
-      const r = await fetch(`${BASE_URL}/api/landlords/register`, {
+      const r = await fetch(`${window.location.origin}/api/landlords/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...addForm, units: parseInt(addForm.units) || 1 }),

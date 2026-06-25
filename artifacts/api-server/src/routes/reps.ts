@@ -188,12 +188,12 @@ router.get("/admin/list", async (req: Request, res: Response) => {
         TO_CHAR(r.created_at AT TIME ZONE 'America/Mexico_City', 'Mon DD, YYYY') AS joined,
         (SELECT COUNT(*)::int  FROM users u WHERE u.signup_ref_code = r.rep_code)                               AS signup_count,
         (SELECT COUNT(*)::int  FROM users u WHERE u.signup_ref_code = r.rep_code
-          AND EXISTS (SELECT 1 FROM bill_payments bp WHERE bp.telefono = u.phone AND bp.status = 'confirmed'))  AS converted_count,
+          AND EXISTS (SELECT 1 FROM bill_payments bp WHERE bp.telefono = u.telefono AND bp.status = 'confirmed'))  AS converted_count,
         COALESCE((SELECT SUM(c.amount) FROM rep_commissions c WHERE c.rep_id = r.id), 0)::numeric               AS commission_total,
         COALESCE((SELECT SUM(c.amount) FROM rep_commissions c WHERE c.rep_id = r.id AND c.status = 'pending'), 0)::numeric AS commission_pending,
         (SELECT TO_CHAR(MAX(bp.created_at) AT TIME ZONE 'America/Mexico_City', 'Mon DD HH24:MI')
            FROM bill_payments bp
-           JOIN  users u ON u.phone = bp.telefono
+           JOIN  users u ON u.telefono = bp.telefono
            WHERE u.signup_ref_code = r.rep_code AND bp.status = 'confirmed')                                    AS last_activity
       FROM reps r
       ORDER BY signup_count DESC, r.created_at ASC
