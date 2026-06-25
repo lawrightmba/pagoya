@@ -607,6 +607,67 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+
+          {/* ── Persistent admin key row ── */}
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>🔑 Admin Key:</span>
+            <input
+              value={adminKey}
+              onChange={(e) => {
+                setAdminKey(e.target.value);
+                localStorage.setItem("pagoya_admin_key", e.target.value);
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter") loadInvestorMetrics(); }}
+              placeholder="Ingresa ADMIN_TOKEN…"
+              type="password"
+              style={{
+                flex: 1,
+                minWidth: 160,
+                background: "rgba(255,255,255,0.05)",
+                border: adminKey.trim() ? "1px solid rgba(57,169,53,0.4)" : "1px solid rgba(245,158,11,0.5)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                color: "#e8f0f7",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.9rem",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={() => { localStorage.setItem("pagoya_admin_key", adminKey); loadInvestorMetrics(); }}
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "0.85rem",
+                color: "#fff",
+                background: "#39A935",
+                border: "none",
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              Aplicar
+            </button>
+            {adminKey.trim() && (
+              <button
+                onClick={() => { setAdminKey(""); localStorage.removeItem("pagoya_admin_key"); }}
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: "0.85rem",
+                  color: "#94a3b8",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ══════════════ INVESTOR METRICS TAB ══════════════ */}

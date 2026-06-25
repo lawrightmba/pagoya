@@ -884,22 +884,17 @@ router.get("/admin/revenue", async (_req: Request, res: Response) => {
 // Returns user registration counts grouped by colonia
 router.get("/admin/colonia-breakdown", async (_req: Request, res: Response) => {
   try {
-    const rows = await db
-      .select({
-        colonia: usersTable.colonia,
-        count: sql<string>`COUNT(*)`,
-      })
-      .from(usersTable)
-      .groupBy(usersTable.colonia)
-      .orderBy(sql`COUNT(*) DESC`);
-
-    const total = rows.reduce((s, r) => s + parseInt(r.count ?? "0"), 0);
+    const result = await db.execute(
+      sql`SELECT colonia, COUNT(*)::int AS count FROM users GROUP BY colonia ORDER BY COUNT(*) DESC`,
+    );
+    const rows = result.rows as { colonia: string | null; count: number }[];
+    const total = rows.reduce((s, r) => s + (r.count ?? 0), 0);
     res.json({
       total,
       breakdown: rows.map((r) => ({
         colonia: r.colonia ?? "—",
-        count: parseInt(r.count ?? "0"),
-        pct: total > 0 ? Math.round((parseInt(r.count ?? "0") / total) * 100) : 0,
+        count: r.count ?? 0,
+        pct: total > 0 ? Math.round(((r.count ?? 0) / total) * 100) : 0,
       })),
     });
   } catch (err: unknown) {
