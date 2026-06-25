@@ -1,8 +1,16 @@
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 
 export default function PagarAguaMonterrey() {
   const [, navigate] = useLocation();
+  const [showSticky, setShowSticky] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowSticky(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -108,6 +116,16 @@ export default function PagarAguaMonterrey() {
           Pagar ahora
         </button>
       </nav>
+
+      {/* Sticky bottom CTA — appears after user scrolls past hero */}
+      {showSticky && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,37,64,0.97)", borderTop: "1px solid rgba(29,158,117,0.4)", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(10px)" }}>
+          <p style={{ color: "white", fontWeight: 700, fontSize: "14px", margin: 0 }}>💧 Paga tu SADM ahora</p>
+          <button onClick={() => navigate("/pagar")} style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "20px", padding: "10px 22px", fontWeight: 800, fontSize: "14px", cursor: "pointer" }}>
+            Pagar SADM →
+          </button>
+        </div>
+      )}
 
       {/* Hero */}
       <section style={{ padding: "56px 24px 40px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">

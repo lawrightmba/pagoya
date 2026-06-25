@@ -65,6 +65,10 @@ import PagarCFEDesdeUSA from "@/pages/PagarCFEDesdeUSA";
 import SpinWheel from "@/pages/SpinWheel";
 import PagarAguaVallarta from "@/pages/PagarAguaVallarta";
 import PagarTelmexVallarta from "@/pages/PagarTelmexVallarta";
+import PagarCFEVallarta from "@/pages/PagarCFEVallarta";
+import PagarInternetVallarta from "@/pages/PagarInternetVallarta";
+import PagarAguaTijuana from "@/pages/PagarAguaTijuana";
+import PagarPredialVallarta from "@/pages/PagarPredialVallarta";
 import PagarIzziVallarta from "@/pages/PagarIzziVallarta";
 import PagarTelcelVallarta from "@/pages/PagarTelcelVallarta";
 import PagarTotalPlayVallarta from "@/pages/PagarTotalPlayVallarta";
@@ -162,6 +166,10 @@ function Router() {
       <Route path="/pagar-agua-guadalajara" component={PagarAguaGuadalajara} />
       <Route path="/pagar-agua-vallarta" component={PagarAguaVallarta} />
       <Route path="/pagar-telmex-vallarta" component={PagarTelmexVallarta} />
+      <Route path="/pagar-cfe-vallarta" component={PagarCFEVallarta} />
+      <Route path="/pagar-internet-vallarta" component={PagarInternetVallarta} />
+      <Route path="/pagar-agua-tijuana" component={PagarAguaTijuana} />
+      <Route path="/pagar-predial-vallarta" component={PagarPredialVallarta} />
       <Route path="/pagar-izzi-vallarta" component={PagarIzziVallarta} />
       <Route path="/pagar-telcel-vallarta" component={PagarTelcelVallarta} />
       <Route path="/pagar-totalplay-vallarta" component={PagarTotalPlayVallarta} />
