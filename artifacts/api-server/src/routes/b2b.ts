@@ -216,7 +216,7 @@ router.get("/cohort", async (req: Request, res: Response) => {
         total_cohorts: data.length,
         k_anonymity_min: K_ANON_MIN,
         note: `Cohorts with fewer than ${K_ANON_MIN} users are suppressed.`,
-        model_version: "v2.1-4dim",
+        model_version: "v3.0-granular",
         generated_at: new Date().toISOString(),
       },
     });
@@ -251,7 +251,12 @@ router.get("/user/:hashed_id", async (req: Request, res: Response) => {
         pti_score, pti_score_band,
         pr_score, bc_score, ed_score, cf_score,
         model_version,
-        TO_CHAR(score_month, 'YYYY-MM') AS score_month
+        TO_CHAR(score_month, 'YYYY-MM') AS score_month,
+        pti_b2b_score, pti_trajectory,
+        avg_monthly_load_amount, load_amount_stddev, income_regularity_score,
+        dominant_payday_window, payday_consistency,
+        monthly_bill_obligations, wallet_load_to_bill_ratio, essential_bill_ratio,
+        platform_tenure_days, active_months, longest_gap_days
       FROM pti_export_safe
       WHERE hashed_user_id = ${hashed_id}
       LIMIT 1
@@ -333,7 +338,12 @@ router.post("/batch", async (req: Request, res: Response) => {
         pti_score, pti_score_band,
         pr_score, bc_score, ed_score, cf_score,
         model_version,
-        TO_CHAR(score_month, 'YYYY-MM') AS score_month
+        TO_CHAR(score_month, 'YYYY-MM') AS score_month,
+        pti_b2b_score, pti_trajectory,
+        avg_monthly_load_amount, load_amount_stddev, income_regularity_score,
+        dominant_payday_window, payday_consistency,
+        monthly_bill_obligations, wallet_load_to_bill_ratio, essential_bill_ratio,
+        platform_tenure_days, active_months, longest_gap_days
       FROM pti_export_safe
       WHERE hashed_user_id = ANY(${validIds}::text[])
     `);

@@ -473,10 +473,30 @@ export async function computePTIForAllUsers(): Promise<void> {
       const txCount = Number((txRow.rows[0] as Record<string,unknown>)?.tx_count ?? 0);
 
       if (txCount >= 1) {
+        // Fetch trajectory for v3 trend message
+        const trajRow = await db.execute(sql`
+          SELECT pti_trajectory, pti_b2b_score FROM users
+          WHERE telefono = ${telefono} LIMIT 1
+        `);
+        const tr = trajRow.rows[0] as Record<string, unknown> | undefined;
+        const trajectory  = String(tr?.pti_trajectory ?? 'stable');
+        const b2bScore    = Number(tr?.pti_b2b_score  ?? 0);
+
+        const trajectoryLine = trajectory === 'rising'
+          ? `📈 *Tu puntaje está subiendo* — vas por buen camino.`
+          : trajectory === 'falling'
+          ? `⚠️ *Tu puntaje bajó este período* — pagar en las próximas semanas te ayudará a recuperarlo.`
+          : `➡️ Tu puntaje se mantiene estable.`;
+
+        const b2bLine = b2bScore >= 500
+          ? `\n🏦 Tu perfil financiero equivale a *${b2bScore}/850 puntos* en escala de crédito.`
+          : '';
+
         const tip = buildImprovementTip(bd);
         const msg =
           `📊 *Tu PagoYa Trust Index se actualizó*\n\n` +
           `Tu puntaje: *${bd.total}/100 — ${label}* ${tier === "excelente" ? "🏆" : tier === "bueno" ? "✅" : "📈"}\n\n` +
+          `${trajectoryLine}${b2bLine}\n\n` +
           `${tip}\n\n` +
           `Ver tu puntaje: pagoyamx.com/inicio`;
         await sendWhatsApp(telefono, msg).catch(() => {});
@@ -491,6 +511,247 @@ export async function computePTIForAllUsers(): Promise<void> {
   }
 
   logger.info(`[PTI Monthly] Complete: ${updated} users updated, ${errors} errors — ${Date.now() - startedAt}ms`);
+}
+
+// ─── PTI v3.0 — Granular Data Capture + Trend Layer ──────────────────────────
+//
+// Runs nightly (after computePagoScore) for every active user.
+// Computes P0/P1 aggregate signals, trend vectors from pti_trend_snapshots,
+// and the B2B score (350–850 scale). All results written to users.* and a
+// new pti_trend_snapshots row.
+//
+// Wallet load queries MUST join through wallets (no direct telefono on wt):
+//   wallet_transactions wt JOIN wallets w ON w.id = wt.wallet_id
+//   WHERE w.user_id = telefono
+export async function computePTIv3Signals(telefono: string): Promise<void> {
+  const { db } = await import("@workspace/db");
+
+  try {
+    // ── 3A: Load amount stats (avg + stddev) — last 90 days ──────────────
+    const loadStatsRow = await db.execute(sql`
+      SELECT
+        COUNT(*)::int                                         AS load_count,
+        COALESCE(AVG(wt.amount_mxn::numeric), 0)::numeric    AS avg_load,
+        COALESCE(STDDEV(wt.amount_mxn::numeric), 0)::numeric AS load_stddev,
+        COALESCE(SUM(wt.amount_mxn::numeric), 0)::numeric    AS total_loads_90d
+      FROM wallet_transactions wt
+      JOIN wallets w ON w.id = wt.wallet_id
+      WHERE w.user_id = ${telefono}
+        AND wt.type IN ('load_oxxo', 'load_spei', 'load_card', 'spei_in')
+        AND wt.status = 'confirmed'
+        AND wt.created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const lsr          = loadStatsRow.rows[0] as Record<string, unknown>;
+    const loadCount    = Number(lsr?.load_count    ?? 0);
+    const avgLoad      = Number(lsr?.avg_load      ?? 0);
+    const loadStddev   = Number(lsr?.load_stddev   ?? 0);
+    const totalLoads90 = Number(lsr?.total_loads_90d ?? 0);
+
+    // Income regularity score (0–100): coefficient of variation, lower = more regular
+    let incomeRegularityScore = 0;
+    if (loadCount >= 2 && avgLoad > 0) {
+      const cv = loadStddev / avgLoad;
+      if      (cv <= 0.10) incomeRegularityScore = 100;
+      else if (cv <= 0.25) incomeRegularityScore = 80;
+      else if (cv <= 0.50) incomeRegularityScore = 60;
+      else if (cv <= 1.00) incomeRegularityScore = 40;
+      else                 incomeRegularityScore = 20;
+    } else if (loadCount === 1) {
+      incomeRegularityScore = 30;
+    }
+
+    // ── 3B: Monthly bill obligations + load-to-bill ratio — last 90 days ─
+    const billObligRow = await db.execute(sql`
+      SELECT COALESCE(SUM(monto::numeric), 0) / 3.0 AS monthly_obligations
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+        AND created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const monthlyObligations = Number(
+      (billObligRow.rows[0] as Record<string, unknown>)?.monthly_obligations ?? 0
+    );
+    const walletLoadToBillRatio = monthlyObligations > 0
+      ? Math.round((totalLoads90 / (monthlyObligations * 3)) * 100) / 100
+      : 0;
+
+    // ── 3C: Essential bill ratio — last 90 days ───────────────────────────
+    const essentialRow = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE
+          LOWER(COALESCE(service_name, empresa, '')) LIKE ANY(ARRAY[
+            '%cfe%','%agua%','%gas%','%predial%','%electricidad%','%luz%'
+          ])
+        )::float / NULLIF(COUNT(*), 0) AS essential_ratio
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+        AND created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const essentialRatio = Number(
+      (essentialRow.rows[0] as Record<string, unknown>)?.essential_ratio ?? 0
+    );
+
+    // ── 3D: Payday window (dominant load day-of-month) + consistency ──────
+    const paydayRow = await db.execute(sql`
+      SELECT
+        MODE() WITHIN GROUP (
+          ORDER BY EXTRACT(DAY FROM wt.created_at)
+        )::int                                                       AS dominant_day,
+        COALESCE(STDDEV(EXTRACT(DAY FROM wt.created_at)), 15)::numeric AS day_stddev
+      FROM wallet_transactions wt
+      JOIN wallets w ON w.id = wt.wallet_id
+      WHERE w.user_id = ${telefono}
+        AND wt.type IN ('load_oxxo', 'load_spei', 'load_card', 'spei_in')
+        AND wt.status = 'confirmed'
+        AND wt.created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const pdr             = paydayRow.rows[0] as Record<string, unknown>;
+    const dominantPayDay  = Number(pdr?.dominant_day ?? 0);
+    const paydayDayStddev = Number(pdr?.day_stddev   ?? 15);
+
+    let dominantPaydayWindow = 'unknown';
+    if (loadCount >= 2) {
+      if      (dominantPayDay >= 1  && dominantPayDay <= 7)  dominantPaydayWindow = '1-7';
+      else if (dominantPayDay >= 8  && dominantPayDay <= 15) dominantPaydayWindow = '8-15';
+      else if (dominantPayDay >= 16 && dominantPayDay <= 20) dominantPaydayWindow = '16-20';
+      else if (dominantPayDay >= 21)                         dominantPaydayWindow = '21-31';
+    }
+
+    let paydayConsistency = 0;
+    if (loadCount >= 2) {
+      if      (paydayDayStddev <= 2)  paydayConsistency = 100;
+      else if (paydayDayStddev <= 5)  paydayConsistency = 80;
+      else if (paydayDayStddev <= 8)  paydayConsistency = 60;
+      else if (paydayDayStddev <= 12) paydayConsistency = 40;
+      else                            paydayConsistency = 20;
+    }
+
+    // ── 3E: Platform tenure + active months + longest payment gap ─────────
+    const tenureRow = await db.execute(sql`
+      SELECT EXTRACT(DAY FROM NOW() - created_at)::int AS tenure_days
+      FROM users WHERE telefono = ${telefono} LIMIT 1
+    `);
+    const tenureDays = Number(
+      (tenureRow.rows[0] as Record<string, unknown>)?.tenure_days ?? 0
+    );
+
+    const activeMonthsRow = await db.execute(sql`
+      SELECT COUNT(DISTINCT DATE_TRUNC('month', created_at))::int AS active_months
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+    `);
+    const activeMonths = Number(
+      (activeMonthsRow.rows[0] as Record<string, unknown>)?.active_months ?? 0
+    );
+
+    const gapRow = await db.execute(sql`
+      SELECT COALESCE(MAX(
+        EXTRACT(DAY FROM lead_date - created_at)
+      )::int, 0) AS longest_gap
+      FROM (
+        SELECT
+          created_at,
+          LEAD(created_at) OVER (ORDER BY created_at) AS lead_date
+        FROM bill_payments
+        WHERE telefono = ${telefono}
+          AND status IN ('completed','success','completed_ok','confirmed')
+      ) gaps
+      WHERE lead_date IS NOT NULL
+    `);
+    const longestGapDays = Number(
+      (gapRow.rows[0] as Record<string, unknown>)?.longest_gap ?? 0
+    );
+
+    // ── 3F: Trend layer — velocity + trajectory from pti_trend_snapshots ──
+    const userRow = await db.execute(sql`
+      SELECT id, pti_score, pti_breakdown FROM users
+      WHERE telefono = ${telefono} LIMIT 1
+    `);
+    const ur = userRow.rows[0] as Record<string, unknown> | undefined;
+    if (!ur) return;
+
+    const userId   = Number(ur.id);
+    const ptiTotal = Number(ur.pti_score ?? 0);
+    const ptiBreakdown = ur.pti_breakdown as Record<string, unknown> | null;
+
+    const prevSnapsRow = await db.execute(sql`
+      SELECT pti_total, computed_at
+      FROM pti_trend_snapshots
+      WHERE user_id = ${userId}
+      ORDER BY computed_at DESC
+      LIMIT 3
+    `);
+    const prevSnaps = prevSnapsRow.rows as Array<Record<string, unknown>>;
+
+    const snap30 = prevSnaps[0];
+    const snap60 = prevSnaps[1];
+    const snap90 = prevSnaps[2];
+
+    const trend30d = snap30 ? ptiTotal - Number(snap30.pti_total ?? ptiTotal) : 0;
+    const trend60d = snap60 ? ptiTotal - Number(snap60.pti_total ?? ptiTotal) : trend30d;
+    const trend90d = snap90 ? ptiTotal - Number(snap90.pti_total ?? ptiTotal) : trend60d;
+
+    // Velocity = average weekly point change over last ~30 days
+    const velocity = snap30 ? Math.round((trend30d / 4) * 100) / 100 : 0;
+
+    let trajectory = 'stable';
+    if      (trend30d >= 5)  trajectory = 'rising';
+    else if (trend30d <= -5) trajectory = 'falling';
+
+    // ── 3G: B2B score — ROUND(350 + (pti/100)*500), floor 350, ceiling 850 ─
+    const ptiB2bScore = Math.max(350, Math.min(850,
+      Math.round(350 + (ptiTotal / 100.0) * 500)
+    ));
+
+    // ── 3H: Write aggregate signals to users + insert trend snapshot ───────
+    await db.execute(sql`
+      UPDATE users SET
+        avg_monthly_load_amount   = ${Math.round(avgLoad * 100) / 100},
+        load_amount_stddev        = ${Math.round(loadStddev * 100) / 100},
+        income_regularity_score   = ${incomeRegularityScore},
+        monthly_bill_obligations  = ${Math.round(monthlyObligations * 100) / 100},
+        wallet_load_to_bill_ratio = ${walletLoadToBillRatio},
+        essential_bill_ratio      = ${Math.round(essentialRatio * 100) / 100},
+        dominant_payday_window    = ${dominantPaydayWindow},
+        payday_consistency        = ${paydayConsistency},
+        platform_tenure_days      = ${tenureDays},
+        active_months             = ${activeMonths},
+        longest_gap_days          = ${longestGapDays},
+        pti_b2b_score             = ${ptiB2bScore},
+        pti_trajectory            = ${trajectory}
+      WHERE telefono = ${telefono}
+    `);
+
+    // Insert trend snapshot — extract dimension scores from stored breakdown JSON
+    await db.execute(sql`
+      INSERT INTO pti_trend_snapshots
+        (user_id, computed_at, pti_total,
+         payment_reliability, behavioral_consistency, engagement_depth, cash_flow_stability,
+         trend_30d, trend_60d, trend_90d, trajectory, velocity, pti_b2b_score)
+      VALUES (
+        ${userId},
+        NOW(),
+        ${ptiTotal},
+        ${ptiBreakdown ? Number((ptiBreakdown as any)?.payment_reliability?.score ?? 0) : 0},
+        ${ptiBreakdown ? Number((ptiBreakdown as any)?.behavioral_consistency?.score ?? 0) : 0},
+        ${ptiBreakdown ? Number((ptiBreakdown as any)?.engagement_depth?.score ?? 0) : 0},
+        ${ptiBreakdown ? Number((ptiBreakdown as any)?.cashflow_stability?.score ?? 0) : 0},
+        ${trend30d},
+        ${trend60d},
+        ${trend90d},
+        ${trajectory},
+        ${velocity},
+        ${ptiB2bScore}
+      )
+    `).catch(err => logger.warn({ err, telefono }, "pti-v3: trend snapshot insert failed"));
+
+    logger.info({ telefono, ptiB2bScore, trajectory, trend30d }, "pti-v3: signals computed");
+
+  } catch (err) {
+    logger.error({ err, telefono }, "pti-v3: computePTIv3Signals failed");
+  }
 }
 
 function buildImprovementTip(bd: PTIBreakdown): string {

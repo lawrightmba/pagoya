@@ -484,6 +484,31 @@ router.post("/pay", async (req: Request, res: Response) => {
 
   // ── Step 4: Non-blocking side effects (transaction already committed) ─────────
 
+  // PTI v3: capture payment metadata — fire-and-forget, never blocks response
+  const paymentChannelVal = paymentSource === "wallet" ? "wallet_credit" : "oxxo";
+  db.execute(sql`
+    UPDATE bill_payments SET
+      payment_initiation    = 'self',
+      payment_completeness  = 'full',
+      payment_channel       = ${paymentChannelVal},
+      bill_priority_tier    = CASE
+        WHEN LOWER(COALESCE(service_name, empresa, '')) LIKE ANY(ARRAY[
+          '%cfe%','%agua%','%gas%','%predial%','%electricidad%','%luz%'
+        ]) THEN 'essential'
+        WHEN LOWER(COALESCE(service_name, empresa, '')) LIKE ANY(ARRAY[
+          '%telmex%','%izzi%','%telcel%','%at&t%','%movistar%',
+          '%internet%','%telefon%','%megacable%','%axtel%'
+        ]) THEN 'connectivity'
+        ELSE 'discretionary'
+      END,
+      payment_quality_score = LEAST(10,
+        2                                                                  -- self-initiation
+        + 2                                                                -- full completeness (default)
+        + CASE WHEN ${paymentChannelVal} = 'spei' THEN 1 ELSE 0 END       -- SPEI channel bonus
+      )
+    WHERE id = ${paymentId}
+  `).catch(() => {});
+
   // Rep commission — 5 MXN per confirmed bill payment, 7-day hold
   if (effectiveRepId) {
     const holdUntil = new Date();

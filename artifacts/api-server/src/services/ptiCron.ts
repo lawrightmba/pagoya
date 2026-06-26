@@ -16,7 +16,7 @@ import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-import { computePTIForAllUsers } from "./pti.js";
+import { computePTIForAllUsers, computePTIv3Signals } from "./pti.js";
 import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 import { runPaulaTriggerBatch } from "./paulaTriggers.js";
 import { processSendQueue } from "./paulaSendQueue.js";
@@ -366,6 +366,9 @@ export async function runNightlyPtiBatch(): Promise<void> {
         const result = await computePagoScore(telefono);
         await takeFinancialSnapshot(telefono);
         await updatePaymentStreak(telefono);
+
+        // PTI v3: compute granular signals + trend layer (fire-and-forget — never blocks batch)
+        computePTIv3Signals(telefono).catch(() => {});
 
         // Check for milestone crossings — sends WhatsApp + credits rewards (non-blocking)
         if (result && result.pagoScore !== prevScore) {

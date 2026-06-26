@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PagoYa Trust Index — Data Card v2.1</title>
+<title>PagoYa Trust Index — Data Card v3.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,6 +18,7 @@
   .header-meta { text-align: right; font-size: 10px; color: #6b7280; line-height: 1.8; }
   .header-meta strong { color: #374151; }
   .badge { display: inline-block; background: #00C875; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; }
+  .badge-new { display: inline-block; background: #6366f1; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 10px; letter-spacing: 0.5px; vertical-align: middle; }
   .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
   .dim-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
   .dim-card .dim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -33,17 +34,25 @@
   .code { font-family: 'Courier New', monospace; font-size: 10px; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; color: #1a1a2e; }
   .note { background: #fefce8; border-left: 3px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #78350f; margin: 10px 0; }
   .info { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #1e40af; margin: 10px 0; }
+  .new-section { background: #f5f3ff; border-left: 3px solid #6366f1; padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #3730a3; margin: 10px 0; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 10px 0; }
+  .signal-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; }
+  .signal-card .sig-label { font-size: 10px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 3px; }
+  .signal-card .sig-name { font-size: 11px; font-weight: 600; color: #0a0a23; margin-bottom: 3px; }
+  .signal-card .sig-desc { font-size: 10px; color: #6b7280; line-height: 1.5; }
   .score-bar { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 11px; }
   .score-bar .label { min-width: 90px; font-weight: 500; }
   .score-bar .bar { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
   .score-bar .fill { height: 100%; border-radius: 3px; }
   .score-bar .pts { min-width: 40px; text-align: right; color: #6b7280; }
+  .b2b-scale { display: flex; gap: 0; margin: 10px 0; border-radius: 6px; overflow: hidden; font-size: 10px; }
+  .b2b-band { flex: 1; padding: 6px 4px; text-align: center; font-weight: 600; }
   footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between; }
   @media print {
     body { padding: 20px 24px; }
     h2 { page-break-before: auto; }
-    .dim-grid { page-break-inside: avoid; }
+    .dim-grid, .three-col { page-break-inside: avoid; }
   }
 </style>
 </head>
@@ -52,14 +61,16 @@
 <div class="header">
   <div>
     <div style="font-size:10px;font-weight:600;color:#6b7280;letter-spacing:1px;margin-bottom:4px;">PRODUCT METHODOLOGY DOCUMENT</div>
-    <h1>PagoYa Trust Index <span class="badge">PTI</span></h1>
+    <h1>PagoYa Trust Index <span class="badge">PTI</span> <span class="badge-new">v3.0</span></h1>
     <div style="font-size:11px;color:#6b7280;margin-top:4px;">Alternative behavioral credit data for the underbanked population of Mexico</div>
   </div>
   <div class="header-meta">
-    <div><strong>Model Version</strong> v2.1-4dim</div>
+    <div><strong>Model Version</strong> v3.0-granular</div>
     <div><strong>Effective Date</strong> June 2026</div>
-    <div><strong>Score Range</strong> 0 – 100</div>
-    <div><strong>Refresh Cycle</strong> Monthly (1st, 3:00 AM MX)</div>
+    <div><strong>PTI Score Range</strong> 0 – 100</div>
+    <div><strong>B2B Score Range</strong> 350 – 850</div>
+    <div><strong>Score Refresh</strong> Monthly (1st, 3:00 AM MX)</div>
+    <div><strong>Signal Refresh</strong> Nightly (2:00 AM MX)</div>
     <div><strong>Coverage</strong> PagoYa registered users, MX</div>
   </div>
 </div>
@@ -71,11 +82,14 @@
 <p style="margin-top:8px;">
   The PTI does not use: bureau data, bank account data, employment records, income declarations, or demographic surveys. All inputs are observed, not self-reported.
 </p>
+<div class="new-section">
+  <strong>v3.0 additions:</strong> Granular payment metadata (priority tier, quality score, channel), income regularity signals (load amount variance, payday window detection), obligation ratio, 30/60/90-day trend vectors, and a 350–850 B2B score mapped to conventional credit-score scale.
+</div>
 <div class="note">
   <strong>Regulatory basis:</strong> Data collection and scoring are performed under the user's explicit consent captured at registration, in compliance with Mexico's Ley para Regular las Instituciones de Tecnología Financiera (Ley Fintech, 2018) and the Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).
 </div>
 
-<h2>2. Score Architecture — 4 Dimensions</h2>
+<h2>2. Score Architecture — 4 Dimensions (PTI 0–100)</h2>
 
 <div class="dim-grid">
   <div class="dim-card">
@@ -139,23 +153,81 @@
   </div>
 </div>
 
-<h2>3. Score Tiers</h2>
+<h2>3. B2B Score — 350–850 Scale <span class="badge-new">NEW v3.0</span></h2>
+<p>The B2B Score is a linear projection of the PTI (0–100) onto a conventional credit-score scale familiar to lenders and risk teams.</p>
+<p style="margin-top:6px;"><strong>Formula:</strong> <span class="code">ROUND(350 + (pti_total / 100.0) × 500)</span> &nbsp;|&nbsp; Floor: 350 &nbsp;|&nbsp; Ceiling: 850</p>
+
+<div class="b2b-scale" style="margin-top:10px;">
+  <div class="b2b-band" style="background:#f1f5f9;color:#6b7280;">350–449<br/><span style="font-weight:400;font-size:9px;">Iniciando</span></div>
+  <div class="b2b-band" style="background:#fef9c3;color:#92400e;">450–549<br/><span style="font-weight:400;font-size:9px;">En proceso</span></div>
+  <div class="b2b-band" style="background:#dcfce7;color:#166534;">550–649<br/><span style="font-weight:400;font-size:9px;">Bueno</span></div>
+  <div class="b2b-band" style="background:#bbf7d0;color:#14532d;">650–749<br/><span style="font-weight:400;font-size:9px;">Sólido</span></div>
+  <div class="b2b-band" style="background:#00C875;color:#fff;">750–850<br/><span style="font-weight:400;font-size:9px;">Excelente</span></div>
+</div>
+
 <table>
-  <tr><th>Tier Label</th><th>Score Range</th><th>Interpretation</th></tr>
-  <tr><td>Excelente</td><td>80 – 100</td><td>Strong behavioral history; consistent payments; active engagement across all dimensions</td></tr>
-  <tr><td>Bueno</td><td>60 – 79</td><td>Reliable payment pattern; moderate session and wallet activity</td></tr>
-  <tr><td>En proceso</td><td>40 – 59</td><td>Developing history; some payment activity but inconsistent patterns</td></tr>
-  <tr><td>Iniciando</td><td>0 – 39</td><td>Insufficient behavioral history for strong inference; typically new users (&lt;30 days)</td></tr>
+  <tr><th>PTI</th><th>B2B Score</th><th>Interpretation for lender</th></tr>
+  <tr><td>0</td><td>350</td><td>No behavioral history yet — new user, no signals available</td></tr>
+  <tr><td>20</td><td>450</td><td>Early history forming; limited payment data</td></tr>
+  <tr><td>40</td><td>550</td><td>Developing pattern; some consistency emerging</td></tr>
+  <tr><td>60</td><td>650</td><td>Reliable payer; consistent engagement across multiple dimensions</td></tr>
+  <tr><td>80</td><td>750</td><td>Strong behavioral credit profile; proactive, multi-service, high engagement</td></tr>
+  <tr><td>100</td><td>850</td><td>Exceptional — top percentile; all dimensions near-maximum</td></tr>
 </table>
 
-<h2>4. Anonymization &amp; Privacy Model</h2>
+<h2>4. Granular Signals — v3.0 <span class="badge-new">NEW</span></h2>
+<p>These signals are computed nightly and included in the <span class="code">/api/b2b/user/:hashed_id</span> response alongside the PTI and B2B scores.</p>
+
+<div class="three-col">
+  <div class="signal-card">
+    <div class="sig-label">Income Signals</div>
+    <div class="sig-name">Load Amount Statistics</div>
+    <div class="sig-desc"><span class="code">avg_monthly_load_amount</span> — mean wallet top-up per month (90-day window)<br/><span class="code">load_amount_stddev</span> — std-dev of load amounts<br/><span class="code">income_regularity_score</span> — 0–100; coefficient of variation (lower CV = higher score)</div>
+  </div>
+  <div class="signal-card">
+    <div class="sig-label">Payday Detection</div>
+    <div class="sig-name">Load Timing Pattern</div>
+    <div class="sig-desc"><span class="code">dominant_payday_window</span> — day-of-month cluster: 1-7, 8-15, 16-20, 21-31<br/><span class="code">payday_consistency</span> — 0–100 score; std-dev of load day-of-month across 90 days</div>
+  </div>
+  <div class="signal-card">
+    <div class="sig-label">Obligation Signals</div>
+    <div class="sig-name">Bill Obligation Profile</div>
+    <div class="sig-desc"><span class="code">monthly_bill_obligations</span> — avg monthly bill spend (MXN, 90d)<br/><span class="code">wallet_load_to_bill_ratio</span> — loads ÷ obligations; &gt;1.0 = surplus capacity<br/><span class="code">essential_bill_ratio</span> — share of bills that are CFE / agua / gas / predial</div>
+  </div>
+  <div class="signal-card">
+    <div class="sig-label">Payment Quality</div>
+    <div class="sig-name">Per-Transaction Scoring</div>
+    <div class="sig-desc"><span class="code">payment_quality_score</span> — 0–10 per transaction: +2 self-initiated, +2 full amount, +1 SPEI channel<br/><span class="code">bill_priority_tier</span> — essential / connectivity / discretionary<br/><span class="code">payment_channel</span> — wallet_credit / oxxo / spei</div>
+  </div>
+  <div class="signal-card">
+    <div class="sig-label">Tenure Signals</div>
+    <div class="sig-name">Platform Engagement History</div>
+    <div class="sig-desc"><span class="code">platform_tenure_days</span> — days since registration<br/><span class="code">active_months</span> — distinct calendar months with ≥1 confirmed payment<br/><span class="code">longest_gap_days</span> — longest consecutive gap between payments</div>
+  </div>
+  <div class="signal-card">
+    <div class="sig-label">Trend Layer</div>
+    <div class="sig-name">Score Velocity &amp; Trajectory</div>
+    <div class="sig-desc"><span class="code">pti_trajectory</span> — rising / stable / falling (based on 30d delta ≥±5pts)<br/><span class="code">trend_30d / 60d / 90d</span> — point change vs. prior snapshots<br/><span class="code">velocity</span> — avg pts/week over last 30 days</div>
+  </div>
+</div>
+
+<h2>5. Score Tiers</h2>
+<table>
+  <tr><th>Tier Label</th><th>PTI Range</th><th>B2B Score</th><th>Interpretation</th></tr>
+  <tr><td>Excelente</td><td>80 – 100</td><td>750 – 850</td><td>Strong behavioral history; consistent payments; active engagement across all dimensions</td></tr>
+  <tr><td>Bueno</td><td>60 – 79</td><td>650 – 749</td><td>Reliable payment pattern; moderate session and wallet activity</td></tr>
+  <tr><td>En proceso</td><td>40 – 59</td><td>550 – 649</td><td>Developing history; some payment activity but inconsistent patterns</td></tr>
+  <tr><td>Iniciando</td><td>0 – 39</td><td>350 – 549</td><td>Insufficient behavioral history for strong inference; typically new users (&lt;30 days)</td></tr>
+</table>
+
+<h2>6. Anonymization &amp; Privacy Model</h2>
 <div class="two-col">
   <div>
     <h3>Per-User Export (<span class="code">pti_export_safe</span>)</h3>
     <ul>
       <li>The phone number (telefono) is <strong>never returned</strong> in any API response</li>
       <li>Each user is identified only by a <strong>hashed_user_id</strong> = SHA-256(telefono + proprietary salt), a deterministic 64-character hex string</li>
-      <li>Dimension scores (PR, BC, ED, CF) and colonia label are included</li>
+      <li>Dimension scores (PR, BC, ED, CF), B2B score, trajectory, and all granular v3.0 signals are included</li>
       <li>Partners supply their own hashed_user_id mapping, obtained via a separate consent-gated matching process</li>
     </ul>
   </div>
@@ -173,7 +245,7 @@
   <strong>Plain language:</strong> k-anonymity means any data point you receive represents at least 5 real users. It is impossible to reverse-engineer an individual's data from a cohort response.
 </div>
 
-<h2>5. API Endpoints</h2>
+<h2>7. API Endpoints</h2>
 <table>
   <tr><th>Endpoint</th><th>Method</th><th>Returns</th><th>Rate Limit</th></tr>
   <tr>
@@ -183,11 +255,11 @@
   </tr>
   <tr>
     <td>/api/b2b/user/:hashed_id</td><td>GET</td>
-    <td>Single-user PTI scores by hashed_user_id. Returns all 4 dimension scores + tier + model version.</td>
+    <td>Single-user export: PTI scores (4 dimensions), B2B score (350–850), trajectory, all 12 granular v3.0 signals, model version, score month.</td>
   </tr>
   <tr>
     <td>/api/b2b/batch</td><td>POST</td>
-    <td>Bulk lookup by array of hashed_user_ids. Max 500 per request. Body: <span class="code">{ hashed_user_ids: string[] }</span></td>
+    <td>Bulk lookup by array of hashed_user_ids. Max 500 per request. Same fields as /user/:hashed_id. Body: <span class="code">{ hashed_user_ids: string[] }</span></td>
   </tr>
   <tr>
     <td>/api/b2b/audit</td><td>GET</td>
@@ -196,26 +268,28 @@
 </table>
 <p>All endpoints require the <span class="code">x-api-key</span> HTTP header. TLS required (HTTPS only in production).</p>
 
-<h2>6. Model Versioning</h2>
+<h2>8. Model Versioning</h2>
 <p>
-  Every score record carries a <strong>model_version</strong> field (current: <span class="code">v2.1-4dim</span>). When the scoring formula changes materially — new signals added, weights adjusted, dimension structure changed — the version string is incremented and a migration note is published. Partners should filter by model_version when comparing scores across time periods.
+  Every score record carries a <strong>model_version</strong> field (current: <span class="code">v3.0-granular</span>). When the scoring formula changes materially — new signals added, weights adjusted, dimension structure changed — the version string is incremented and a migration note is published. Partners should filter by model_version when comparing scores across time periods.
 </p>
 <table>
   <tr><th>Version</th><th>Date</th><th>Change</th></tr>
   <tr><td>v1.0-flat</td><td>Q4 2025</td><td>Initial 7-component flat model</td></tr>
   <tr><td>v2.0-4dim</td><td>May 2026</td><td>Restructured to 4 dimensions (PR/BC/ED/CF); added pagoScore behavioral signals table</td></tr>
   <tr><td>v2.1-4dim</td><td>June 2026</td><td>5 new signals: Paula interaction depth, push engagement, signup utilization speed, P2P network activity, high-value intent index</td></tr>
+  <tr><td>v3.0-granular</td><td>June 2026</td><td>Granular data capture layer: payment quality score, bill priority tier, payment channel; income regularity (load CV, payday window); obligation ratio; essential bill ratio; tenure signals; 30/60/90-day trend vectors; B2B score 350–850</td></tr>
 </table>
 
-<h2>7. Data Freshness</h2>
+<h2>9. Data Freshness</h2>
 <ul>
-  <li><strong>Score refresh:</strong> Monthly batch on the 1st of each month at 3:00 AM Mexico City time</li>
-  <li><strong>On-demand:</strong> Scores recompute automatically after any behavioral event (payment, login, P2P transfer)</li>
-  <li><strong>API latency:</strong> Reads from a pre-computed column (<span class="code">users.pti_score</span>) — typical response time &lt;100ms</li>
-  <li><strong>Historical depth:</strong> Score signals computed from all-time history for PR/ED; 30–90 day windows for BC/CF</li>
+  <li><strong>PTI score refresh:</strong> Monthly batch on the 1st of each month at 3:00 AM Mexico City time</li>
+  <li><strong>v3.0 granular signals:</strong> Nightly batch at 2:00 AM Mexico City time — income regularity, payday window, obligation ratio, trend vectors, B2B score</li>
+  <li><strong>Payment metadata:</strong> Captured at transaction time (payment_quality_score, bill_priority_tier, payment_channel stamped immediately post-confirmation)</li>
+  <li><strong>API latency:</strong> Reads from pre-computed columns — typical response time &lt;100ms</li>
+  <li><strong>Historical depth:</strong> PR/ED signals use all-time history; BC/CF use 30–90 day windows; trend vectors require ≥2 nightly snapshots</li>
 </ul>
 
-<h2>8. Partner Onboarding</h2>
+<h2>10. Partner Onboarding</h2>
 <p>To receive API access, a partner must provide:</p>
 <ol style="padding-left:18px;margin:8px 0;">
   <li><strong>Organization name and legal entity</strong></li>
@@ -230,7 +304,7 @@
 </div>
 
 <footer>
-  <span>PagoYa Trust Index — Data Card v2.1 &nbsp;|&nbsp; Confidential &amp; Proprietary &nbsp;|&nbsp; PagoYa Mexico S.A. de C.V.</span>
+  <span>PagoYa Trust Index — Data Card v3.0 &nbsp;|&nbsp; Confidential &amp; Proprietary &nbsp;|&nbsp; PagoYa Mexico S.A. de C.V.</span>
   <span>pagoyamx.com &nbsp;|&nbsp; datos@pagoyamx.com</span>
 </footer>
 

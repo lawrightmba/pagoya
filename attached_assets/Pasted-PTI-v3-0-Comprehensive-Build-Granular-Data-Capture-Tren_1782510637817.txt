@@ -1,0 +1,414 @@
+PTI v3.0 — Comprehensive Build
+Granular Data Capture + Trend Layer + Score Format + P0/P1 B2B Signals
+
+═══════════════════════════════════════════════════════════
+PRE-FLIGHT — READ SCHEMA BEFORE TOUCHING ANYTHING
+═══════════════════════════════════════════════════════════
+
+Run and report the exact output of each query before writing
+any code. Do not assume column names.
+
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'users' ORDER BY column_name;
+
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'bill_payments' ORDER BY column_name;
+
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'wallet_transactions' ORDER BY column_name;
+
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'pti_behavioral_signals' ORDER BY column_name;
+
+SELECT DISTINCT type FROM wallet_transactions LIMIT 50;
+
+SELECT DISTINCT payment_method FROM bill_payments LIMIT 50;
+
+Locate the PTI nightly cron file (likely lib/services/pti.ts or 
+similar). Read it fully and report its path before proceeding.
+
+Locate the pti_export_safe view definition and report it.
+
+Report all findings. Then proceed section by section in order.
+Do not skip sections. Do not combine sections.
+
+═══════════════════════════════════════════════════════════
+SECTION 1 — SCHEMA MIGRATIONS (all nullable, backward compat)
+═══════════════════════════════════════════════════════════
+
+--- 1A. bill_payments table — payment granularity columns ---
+
+ALTER TABLE bill_payments
+  ADD COLUMN IF NOT EXISTS days_before_due INTEGER,
+  ADD COLUMN IF NOT EXISTS payment_initiation VARCHAR(20),
+    -- values: 'self' | 'paula_nudge' | 'push_notif' | 'sms'
+  ADD COLUMN IF NOT EXISTS payment_completeness VARCHAR(10),
+    -- values: 'full' | 'partial' | 'overpay'
+  ADD COLUMN IF NOT EXISTS payment_channel VARCHAR(20),
+    -- values: 'oxxo' | 'spei' | 'wallet_credit'
+  ADD COLUMN IF NOT EXISTS session_to_pay_mins INTEGER,
+    -- minutes from WhatsApp session open to payment complete
+  ADD COLUMN IF NOT EXISTS bill_amount DECIMAL(10,2),
+    -- billed amount from biller
+  ADD COLUMN IF NOT EXISTS payment_quality_score INTEGER;
+    -- 0-10, computed at insert per rubric below
+
+--- 1B. users table — P0/P1 aggregate signal columns ---
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS avg_monthly_load_amount DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS load_amount_stddev DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS income_regularity_score INTEGER,
+    -- 0-10, derived from wallet load timing consistency
+  ADD COLUMN IF NOT EXISTS income_source VARCHAR(30),
+    -- 'hotel_employee' | 'informal' | 'business_owner' 
+    -- | 'remittance' | 'unknown'
+  ADD COLUMN IF NOT EXISTS monthly_bill_obligations DECIMAL(10,2),
+    -- avg monthly sum of recurring bills (rolling 90d / 3)
+  ADD COLUMN IF NOT EXISTS wallet_load_to_bill_ratio DECIMAL(5,2),
+    -- avg monthly load ÷ avg monthly bills
+  ADD COLUMN IF NOT EXISTS essential_bill_ratio DECIMAL(5,2),
+    -- % of payments that are essential utilities
+  ADD COLUMN IF NOT EXISTS dominant_payday_window VARCHAR(10),
+    -- 'early'(1-7) | 'mid'(8-15) | 'late'(16-23) | 'end'(24-31)
+  ADD COLUMN IF NOT EXISTS payday_consistency DECIMAL(5,2),
+    -- % of loads within 3 days of dominant_payday_window
+  ADD COLUMN IF NOT EXISTS platform_tenure_days INTEGER,
+    -- days since registered_at, recomputed nightly
+  ADD COLUMN IF NOT EXISTS active_months INTEGER,
+    -- count of calendar months with at least 1 transaction
+  ADD COLUMN IF NOT EXISTS longest_gap_days INTEGER,
+    -- longest streak of days with zero activity
+  ADD COLUMN IF NOT EXISTS pti_b2b_score INTEGER,
+    -- 350 + (pti_score / 100) * 500, rounded, stored at cron time
+  ADD COLUMN IF NOT EXISTS pti_trajectory VARCHAR(10);
+    -- 'rising' | 'stable' | 'declining' | 'new'
+
+--- 1C. New table: pti_trend_snapshots ---
+
+CREATE TABLE IF NOT EXISTS pti_trend_snapshots (
+  id                      SERIAL PRIMARY KEY,
+  user_id                 INTEGER NOT NULL,
+  computed_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  pti_total               INTEGER,
+  payment_reliability     INTEGER,
+  behavioral_consistency  INTEGER,
+  engagement_depth        INTEGER,
+  cash_flow_stability     INTEGER,
+  trend_30d               INTEGER,
+    -- delta vs snapshot closest to 30 days ago
+  trend_60d               INTEGER,
+  trend_90d               INTEGER,
+  trajectory              VARCHAR(10),
+    -- 'rising' | 'stable' | 'declining' | 'new'
+  velocity                DECIMAL(5,2),
+    -- points per week rate of change (trend_30d / 4.3)
+  pti_b2b_score           INTEGER
+    -- 350 + (pti_total / 100) * 500
+);
+
+CREATE INDEX IF NOT EXISTS idx_pti_trend_user_computed 
+  ON pti_trend_snapshots(user_id, computed_at DESC);
+
+--- 1D. bill_payments: add bill_priority_tier column ---
+
+ALTER TABLE bill_payments
+  ADD COLUMN IF NOT EXISTS bill_priority_tier VARCHAR(15);
+    -- 'essential' | 'connectivity' | 'discretionary'
+
+Confirm all migrations ran successfully before Section 2.
+
+═══════════════════════════════════════════════════════════
+SECTION 2 — PAYMENT QUALITY SCORE (computed at insert)
+═══════════════════════════════════════════════════════════
+
+In the bill payment insert handler, after a successful payment
+is confirmed, compute and store payment_quality_score (0–10)
+and bill_priority_tier using these exact rules:
+
+PAYMENT QUALITY SCORE RUBRIC (0-10):
+  +3  days_before_due >= 3 (paid 3+ days early)
+  +2  days_before_due >= 0 AND days_before_due < 3 (on time)
+  +0  days_before_due < 0 (late — negative days_before_due)
+  +2  payment_initiation = 'self' (no nudge required)
+  +1  payment_initiation IN ('paula_nudge','push_notif','sms')
+  +2  payment_completeness = 'full' (amount_paid >= bill_amount * 0.95)
+  +1  payment_completeness = 'overpay'
+  +0  payment_completeness = 'partial'
+  +1  payment_channel = 'spei' (bancarization signal)
+  +0  payment_channel IN ('oxxo','wallet_credit')
+  Cap total at 10.
+
+BILL PRIORITY TIER RULES:
+  'essential'     — biller category IN (CFE, agua, gas, predial)
+  'connectivity'  — biller category IN (Telmex, Izzi, Telcel, 
+                    internet, telefonia)
+  'discretionary' — everything else
+
+If bill_amount is not available from the biller API response,
+set payment_completeness = 'full' as the safe default.
+
+If payment_initiation is not passed by the calling route,
+default to 'self'.
+
+═══════════════════════════════════════════════════════════
+SECTION 3 — PTI NIGHTLY CRON UPGRADES
+═══════════════════════════════════════════════════════════
+
+Open the existing PTI cron file identified in pre-flight.
+Add the following computations to the nightly run FOR EACH USER.
+Preserve all existing PTI v2.1 signal logic exactly.
+These are additive only — do not remove or alter existing signals.
+
+--- 3A. P0 Signal: Income Regularity ---
+
+From wallet_transactions (loads only, last 90 days):
+
+avg_monthly_load_amount:
+  SUM(load amounts) / 3  (3 months)
+
+load_amount_stddev:
+  STDDEV of individual load amounts over 90 days
+  If fewer than 3 loads: set to NULL
+
+income_regularity_score (0-10):
+  stddev_to_avg_ratio = load_amount_stddev / avg_monthly_load_amount
+  ratio < 0.15  → score 10  (very stable)
+  ratio < 0.30  → score 8
+  ratio < 0.50  → score 6
+  ratio < 0.75  → score 4
+  ratio >= 0.75 → score 2
+  NULL loads    → score 0
+
+--- 3B. P0 Signal: Obligation Ratio ---
+
+monthly_bill_obligations:
+  SUM of bill_payments.amount_paid WHERE created_at >= NOW()-90d
+  divided by 3
+
+wallet_load_to_bill_ratio:
+  avg_monthly_load_amount / monthly_bill_obligations
+  If monthly_bill_obligations = 0: set to NULL
+
+--- 3C. P0 Signal: Essential Bill Ratio ---
+
+essential_bill_ratio:
+  COUNT(payments WHERE bill_priority_tier = 'essential') /
+  COUNT(all payments) over lifetime
+  Result as decimal 0.00–1.00
+  If no payments: set to NULL
+
+--- 3D. P1 Signal: Payday Window Consistency ---
+
+From wallet_transactions (loads only, last 90 days),
+extract DAY OF MONTH for each load:
+
+dominant_payday_window:
+  Count loads per window:
+    early = day 1-7
+    mid   = day 8-15
+    late  = day 16-23
+    end   = day 24-31
+  Assign window with highest count.
+  Tie: prefer earliest window.
+
+payday_consistency:
+  % of loads where day_of_month is within 3 days of the
+  center of dominant_payday_window:
+    early center = 4
+    mid center   = 12
+    late center  = 20
+    end center   = 28
+  Result as decimal 0.00–1.00
+
+--- 3E. P1 Signal: Platform Tenure Derived Fields ---
+
+platform_tenure_days:
+  DATE_PART('day', NOW() - registered_at)
+
+active_months:
+  COUNT(DISTINCT DATE_TRUNC('month', created_at))
+  FROM bill_payments WHERE user_id = ?
+
+longest_gap_days:
+  Find the maximum gap in days between consecutive 
+  bill_payments.created_at dates for this user.
+  If fewer than 2 payments: set to NULL.
+
+--- 3F. Trend Layer: pti_trend_snapshots insert ---
+
+After computing the current PTI score for each user,
+query pti_trend_snapshots for this user's history:
+
+  prior_30d = row WHERE computed_at <= NOW()-29d 
+              ORDER BY computed_at DESC LIMIT 1
+  prior_60d = row WHERE computed_at <= NOW()-59d 
+              ORDER BY computed_at DESC LIMIT 1
+  prior_90d = row WHERE computed_at <= NOW()-89d 
+              ORDER BY computed_at DESC LIMIT 1
+
+Compute:
+  trend_30d = current_pti_total - prior_30d.pti_total 
+              (NULL if no prior_30d row)
+  trend_60d = current_pti_total - prior_60d.pti_total
+  trend_90d = current_pti_total - prior_90d.pti_total
+
+  trajectory:
+    IF fewer than 30 days since registered_at → 'new'
+    ELSE IF trend_30d > 5  → 'rising'
+    ELSE IF trend_30d < -5 → 'declining'
+    ELSE                   → 'stable'
+    IF trend_30d IS NULL   → 'new'
+
+  velocity:
+    trend_30d / 4.3  (points per week)
+    NULL if trend_30d IS NULL
+
+--- 3G. Score Format: B2B Translation ---
+
+pti_b2b_score:
+  ROUND(350 + (pti_total / 100.0) * 500)
+  Floor: 350 (even if pti_total = 0)
+  Ceiling: 850 (even if pti_total > 100)
+
+--- 3H. Write all new fields ---
+
+After computing all of the above, write back to users table
+in a single UPDATE per user:
+
+UPDATE users SET
+  avg_monthly_load_amount   = [computed],
+  load_amount_stddev        = [computed],
+  income_regularity_score   = [computed],
+  monthly_bill_obligations  = [computed],
+  wallet_load_to_bill_ratio = [computed],
+  essential_bill_ratio      = [computed],
+  dominant_payday_window    = [computed],
+  payday_consistency        = [computed],
+  platform_tenure_days      = [computed],
+  active_months             = [computed],
+  longest_gap_days          = [computed],
+  pti_b2b_score             = [computed],
+  pti_trajectory            = [computed]
+WHERE id = [user_id];
+
+Then INSERT into pti_trend_snapshots:
+
+INSERT INTO pti_trend_snapshots (
+  user_id, computed_at, pti_total,
+  payment_reliability, behavioral_consistency,
+  engagement_depth, cash_flow_stability,
+  trend_30d, trend_60d, trend_90d,
+  trajectory, velocity, pti_b2b_score
+) VALUES ([all computed values]);
+
+═══════════════════════════════════════════════════════════
+SECTION 4 — B2B EXPORT VIEW UPDATE
+═══════════════════════════════════════════════════════════
+
+Open the existing pti_export_safe view. 
+Add these fields to the SELECT list (all anonymized,
+no PII — these are aggregate behavioral fields only):
+
+  u.pti_b2b_score,
+  u.pti_trajectory,
+  u.income_regularity_score,
+  u.wallet_load_to_bill_ratio,
+  u.essential_bill_ratio,
+  u.dominant_payday_window,
+  u.payday_consistency,
+  u.platform_tenure_days,
+  u.active_months,
+  u.load_amount_stddev
+
+Do NOT add: income_source, avg_monthly_load_amount,
+longest_gap_days, or any field that could re-identify
+a user in a small cohort.
+
+Also update the /api/b2b/user/:hash endpoint response
+to include all newly added view fields.
+
+═══════════════════════════════════════════════════════════
+SECTION 5 — PTI DATA CARD UPDATE (/api/b2b/docs/data-card)
+═══════════════════════════════════════════════════════════
+
+Update the public PTI Data Card page to reflect v3.0.
+Change the model version label from v2.1 to v3.0.
+
+Add a new section "Score Formats" with this content:
+
+  Consumer Score:  0–100  (user-facing, reward ladder)
+  B2B Score:       350–850 (lender-facing, FICO-range format)
+  Formula:         350 + (consumer_score / 100) × 500
+
+Add a new section "Behavioral Context Signals" listing:
+  - Income Regularity Score (0-10)
+  - Wallet Load-to-Bill Ratio
+  - Essential Bill Ratio
+  - Dominant Payday Window
+  - Payday Consistency
+  - Platform Tenure (days)
+  - Active Months
+  - PTI Trajectory (Rising / Stable / Declining / New)
+
+Add a model note:
+  "PTI v3.0 scores are heuristic behavioral rankings within
+  the PagoYa cohort. Bureau-correlated validation is 
+  planned for Q1 2027 via lender pilot program."
+
+═══════════════════════════════════════════════════════════
+SECTION 6 — PAULA TRAJECTORY MESSAGE
+═══════════════════════════════════════════════════════════
+
+In the PTI score response sent to Paula / WhatsApp,
+add trajectory messaging after the score display:
+
+  IF trajectory = 'rising':
+    "📈 Tu puntaje subió {trend_30d} puntos este mes. 
+     ¡Vas muy bien!"
+
+  IF trajectory = 'stable':
+    "➡️ Tu puntaje se mantiene estable. Sigue pagando 
+     puntualmente para subir de nivel."
+
+  IF trajectory = 'declining':
+    "📉 Tu puntaje bajó {Math.abs(trend_30d)} puntos 
+     este mes. Paga tus servicios a tiempo para 
+     recuperarlo."
+
+  IF trajectory = 'new':
+    "🌱 Estás construyendo tu historial. En 30 días 
+     verás tu primera tendencia."
+
+  IF trend_30d IS NULL: show 'new' message.
+
+═══════════════════════════════════════════════════════════
+ACCEPTANCE CRITERIA — verify ALL before closing
+═══════════════════════════════════════════════════════════
+
+□ All new columns exist on bill_payments and users tables
+□ pti_trend_snapshots table created with index
+□ payment_quality_score (0-10) computed and stored on a 
+  test payment insert
+□ bill_priority_tier correctly tags CFE as 'essential'
+  and Telmex as 'connectivity'
+□ PTI cron runs without error on existing users
+□ pti_trend_snapshots receives one row per user per run
+□ pti_b2b_score for a user with pti_score=80 = 750
+□ pti_b2b_score for a user with pti_score=0 = 350
+□ pti_b2b_score for a user with pti_score=100 = 850
+□ pti_trajectory populated on users table after cron
+□ pti_export_safe view returns new fields without error
+□ /api/b2b/user/:hash response includes pti_b2b_score
+  and pti_trajectory
+□ /api/b2b/docs/data-card shows v3.0 and new sections
+□ Paula trajectory message appears in WhatsApp PTI reply
+□ All existing PTI v2.1 signals and scores unchanged
+□ TypeScript compiles with zero errors
+□ No existing tests broken
+
+Report pass/fail on each criterion before closing.
