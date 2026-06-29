@@ -1,0 +1,53 @@
+What the data is telling us
+The geo breakdown is the most revealing signal. US users at 72.9% of active users vs. Mexico at 16.7% — but Mexico has a 66.67% engagement rate vs. the US at only 32.06%, and Mexicans average 1 minute 1 second of engagement vs. 30 seconds for US users. Mexico users who find you are deeply interested. US users are browsing but not converting. That's the trust gap in action.
+Council Bluffs, Iowa showing 117 active users — almost certainly diaspora research traffic, people wiring money home or paying bills for family. They're landing, looking, and leaving. They don't trust you yet.
+The /register page had 21 views but 17 unique users spent 1 minute 1 second there — that's the longest engagement of any page. People are reading the registration page like a contract. They want to trust you before they sign up.
+The AI Assistant channel appearing (ChatGPT referrals) validates the GEO stack — people are asking AI about bill payment options and finding PagoYa. That channel will grow and it rewards authority content.
+
+The Two-Pronged Strategy: Authority First → Conversion Second
+Think of it as a 30-day authority build running in parallel with a lighter-touch CTA layer. The ratio should be roughly 80% trust / 20% CTA.
+
+Pillar 1 — LinkedIn Articles (Authority & B2B Signal)
+LinkedIn serves double duty: it builds your personal brand as the expert (which feeds the investor narrative for FI in September) and it positions PagoYa as a serious company. These should be published under your name, not the company page, because people trust founders more than brands.
+Article cadence: 2 per month, ~600–900 words each
+Article 1: "Why 40 million Mexicans can't pay their CFE bill online — and what that means for the US diaspora"
+This establishes the market problem with specificity. No pitch. Just data and insight. End with a single soft line: "We built PagoYa because we lived this problem."
+Article 2: "What a PTI score actually measures — and why FICO doesn't work for cash-economy workers"
+This plants your B2B data licensing narrative early, positions you as a thought leader for lenders and fintechs, and speaks directly to the Nova Credit comparison you're developing for FI. This one can end with a CTA to the waitlist or an investor inquiry link.
+Article 3 (Month 2): "5 things I learned running bill payments in Puerto Vallarta for 5 years"
+Personal, specific, credibility-building. This is the one that gets shared by expats, operators, and Mexico market followers.
+
+Pillar 2 — Facebook Posts (Community Trust)
+Your Mexico engagement rate tells you there's a warm audience there. Facebook is where that audience lives — WhatsApp groups, colonia groups, diaspora groups. The strategy here is hyper-local and educational, not promotional.
+Cadence: 3 posts per week
+Type A — Micro-education (2x/week)
+Short, useful, shareable. No PagoYa branding in the first line.
+Examples:
+
+"¿Sabías que puedes pagar tu recibo de CFE aunque no tengas cuenta bancaria? Aquí te explicamos cómo…" (then explain the OXXO/cash reality, then introduce PagoYa as one option at the end)
+"Pagar agua en Monterrey sin ir al banco: 3 opciones que funcionan en 2026"
+"Tu familia en México no tiene Clabe? Esto es lo que pueden hacer"
+
+The SEO pages you already built — /pagar-agua-monterrey/, /pagar-cfe-cdmx/, /pagar-telmex-vallarta — these should each become a Facebook post. You've already done the content work; distribute it.
+Type B — Social proof / story (1x/week)
+When you get your first real user paying a bill through PagoYa, that's a post. A screenshot of a successful transaction (anonymized), a WhatsApp message from a user saying it worked — these are worth more than any ad spend. The form_start events (25 in the data) suggest people are getting close. When the first conversion happens, document it immediately.
+
+Pillar 3 — "Explainer" Content That Crosses Both Channels
+There are three pieces of content that would perform across LinkedIn, Facebook, and even get picked up by AI assistants (feeding your ChatGPT referral channel):
+"The Unbanked Bill Payer's Guide to Mexico" — a comprehensive resource page on the PagoYa site that consolidates everything: how to pay CFE without a bank account, SADM Monterrey, SIAPA Guadalajara, Telmex options, etc. This becomes the linkable asset that earns referral traffic and AI citations. Your existing SEO pages are the chapters; this is the table of contents.
+A simple FAQ video (60–90 seconds, Spanish) — just you or someone on camera answering "¿Cómo funciona PagoYa?" in plain language. Facebook native video gets organic reach. LinkedIn video gets professional credibility. You don't need production quality — authenticity is the point.
+The PTI explainer — a one-pager or short post explaining what a PTI score is in plain language. This positions PagoYa as the company that invented a new way to measure financial trustworthiness for people the system ignores. That's a powerful narrative.
+
+The CTA Layer (The 20%)
+Every piece of authority content should have exactly one next step — and it should be the lowest-friction thing possible given where the user is in their trust journey.
+For cold audiences (US diaspora, first visit): "¿Tienes preguntas? Escríbenos por WhatsApp" — not register, not sign up. Just talk to us.
+For warm audiences (return visitors, Mexico users): "Crea tu cuenta gratis en 2 minutos" with the $150 MXN signup bonus front and center.
+For the /register page specifically — given people are spending 1 minute there reading it — add a single trust element you probably don't have yet: a plain-language explainer of exactly what happens after you register, what PagoYa does with your information, and what you don't need (no bank account, no credit history, no minimum balance). Address the objection before they bounce.
+
+30-Day Action Sequence
+Week 1: Publish LinkedIn Article 1. Write 3 Facebook micro-education posts based on your existing SEO pages. Add the trust copy to /register.
+Week 2: Facebook posts continue. Begin drafting the "Unbanked Bill Payer's Guide" resource page.
+Week 3: Publish LinkedIn Article 2 (PTI/B2B framing). Film the 60-second WhatsApp/Facebook video.
+Week 4: Push the resource page live. Evaluate which Facebook post got the most organic reach and double down on that format. Review GA4 for /register engagement time change.
+
+The quote is right — trust is the currency. Your GA4 data shows you have visitors who want to trust you, particularly in Mexico where engagement time is double what US users give you. The content strategy above is essentially how you earn that trust in public, so by the time someone hits /register, the decision is already made.
