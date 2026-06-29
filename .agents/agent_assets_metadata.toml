@@ -335,3 +335,9 @@ id = "ALIEBPHbGDCu0BvnvAhgq"
 uri = "file://.local/exports/pagoya-seo-conversion-plan-june2026.txt"
 type = "text"
 title = "PagoYa — SEO & Conversion Action Plan (June 2026)"
+
+[[outputs]]
+id = "YsZ3gZ5DLXU30D_l3hw5U"
+uri = "file://attached_assets/linkedin-article-1.txt"
+type = "text"
+title = "LinkedIn Article 1 — Ready to Publish"
