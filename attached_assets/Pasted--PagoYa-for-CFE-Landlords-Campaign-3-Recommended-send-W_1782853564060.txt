@@ -1,0 +1,60 @@
+# PagoYa for CFE → Landlords — Campaign #3
+**Recommended send: Wed July 1 or Thu July 2, 9–11am local**
+
+---
+
+## Subject Line (A/B Test)
+
+**Variant A — Descriptive style (matches #1's winning pattern, 62.71% open rate):**
+> ✅ Gana $150 pesos por cada inquilino — Programa de referidos PagoYa ya tiene primeros ganadores
+
+**Variant B — Descriptive + proof/specificity (new angle, still long-form):**
+> 💰 [Nombre] ganó $450 pesos esta semana — así funciona el programa de referidos PagoYa
+
+If your list size allows a true split, send A to half and B to half. If not, go with **Variant A** — it most closely replicates the proven #1 subject structure while folding in a "first winners" hook that #1 and #2 didn't have.
+
+---
+
+## Email Body
+
+**Asunto:** (insert chosen subject line above)
+
+---
+
+Hola [Nombre],
+
+El programa de referidos de PagoYa ya está generando comisiones reales para propietarios como tú en Puerto Vallarta.
+
+**Así de simple funciona:**
+
+Cuando uno de tus inquilinos paga su recibo de CFE en línea a través de PagoYa, tú ganas **$150 pesos** — automáticamente, sin papeleo, depositado directo a tu cuenta.
+
+> 💡 Ejemplo real: Con solo 3 inquilinos activos, un propietario ganó **$450 pesos** este mes — sin hacer nada más que compartir un enlace.
+
+**¿Por qué tus inquilinos lo van a usar?**
+- Pagan su CFE desde WhatsApp, sin filas ni apps complicadas
+- Pueden pagar en efectivo en cualquier OXXO si no tienen cuenta bancaria
+- Reciben confirmación inmediata
+
+**Tu siguiente paso (toma 2 minutos):**
+
+👉 **[Empieza a ganar ahora →]** (botón/link a /rep-signup o landing correspondiente)
+
+Entre más inquilinos compartas, más ganas. No hay límite.
+
+Cualquier duda, responde directo a este correo — te contesto yo mismo.
+
+Saludos,
+Lloyd Wright
+PagoYa | info@pagoyamx.com
+
+---
+
+## Notes on what changed vs. #1 and #2
+
+1. **CTA is now concrete and singular** — one clear button/link instead of an abstract pitch. Both prior emails had weak/no clicks (0% and 3.23% CTR) despite strong opens, so this is the main fix.
+2. **Concrete peso example included** ("$450 pesos esta semana") — addresses the "abstract value prop" gap identified after #2.
+3. **Subject reverts to the longer, descriptive style** that actually outperformed the punchier version (62.71% vs 50% open rate) — testing whether that holds as a real pattern or was a one-off.
+4. **No re-send to fatigued segment** — make sure this only goes to the cleaned 77-contact list (or fewer, after your latest prune), not back to anyone who already received #1 within the last 7 days without at least this gap.
+
+Want me to also draft a short SMS/WhatsApp follow-up version for the same send, since I noticed some contacts in your list have SMS enabled alongside email?
