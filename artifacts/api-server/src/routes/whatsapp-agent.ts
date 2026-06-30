@@ -28,6 +28,27 @@ function detectLang(msg: string): "es" | "en" {
   return ENGLISH_STRONG.test(msg) ? "en" : "es";
 }
 
+// ── Paula message topic classifier ───────────────────────────────────────────
+// Classifies each inbound Paula message into a topic bucket.
+// Powers users.financial_curiosity_index (proactive / total ratio in PTI v4.0).
+// Buckets: savings_goal | pti_inquiry | balance_check | bill_lookup | complaint | cost_inquiry | other
+function classifyPaulaMessage(body: string): string {
+  const b = body.toLowerCase().trim();
+  if (/ahorro|ahorrar|guardar dinero|meta|objetivo|presupuesto|budget|ahorros/.test(b))
+    return "savings_goal";
+  if (/puntaje|pti|score|calificaci|confianza|historial financiero|credito|trust index/.test(b))
+    return "pti_inquiry";
+  if (/saldo|cuanto tengo|balance|mi dinero|mi billetera|cuánto me queda/.test(b))
+    return "balance_check";
+  if (/pagar|pago|servicio|cfe|agua|telmex|recibo|luz|predial|gas|internet|telefono|factura/.test(b))
+    return "bill_lookup";
+  if (/queja|problema|error|fallo|no funciona|no puedo|no me deja|mal|ayuda urgente/.test(b))
+    return "complaint";
+  if (/cuanto cuesta|comisi|cobro|fee|cargo|costo|tarifa/.test(b))
+    return "cost_inquiry";
+  return "other";
+}
+
 // Explicit language-switch commands — work at any point in the conversation
 const SWITCH_TO_ENGLISH = /^(english|switch to english|in english|en inglés|en english|speak english|habla inglés)\s*[!.]*$/i;
 const SWITCH_TO_SPANISH = /^(español|en español|spanish|habla español|switch to spanish|en español por favor)\s*[!.]*$/i;
@@ -541,13 +562,15 @@ router.post("/", async (req: Request, res: Response) => {
   })();
 
   // Paula inbound log — fire-and-forget, same pattern as paula_interaction events
+  // topic_category powers financial_curiosity_index in PTI v4.0 (proactive/total ratio)
   db.execute(sql`
-    INSERT INTO paula_inbound_log (telefono, received_at, message_body, message_length)
+    INSERT INTO paula_inbound_log (telefono, received_at, message_body, message_length, topic_category)
     VALUES (
       ${phoneKey},
       NOW(),
       ${userMessage ?? null},
-      ${userMessage ? userMessage.length : null}
+      ${userMessage ? userMessage.length : null},
+      ${classifyPaulaMessage(userMessage ?? '')}
     )
   `).catch(() => {}); // never block the response on log failure
 

@@ -47,7 +47,7 @@ export interface PTIBreakdown {
   account_age?:         { score: number; days: number;   max: number };
 }
 
-export const PTI_MODEL_VERSION = "v2.1-4dim";
+export const PTI_MODEL_VERSION = "v4.0-behavioral";
 
 export function getPTITier(score: number): { tier: string; color: string; label: string } {
   if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };
@@ -62,22 +62,39 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const { db } = await import("@workspace/db");
 
   // ══════════════════════════════════════════════════════════════════════════
-  // DIMENSION 1: PAYMENT RELIABILITY — max 30pts
+  // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 1a. Payment streak — max 20pts (1pt per consecutive month, cap 20)
+  // Fetch pre-computed v4.0 behavioral signals (written nightly by computePTIv3Signals)
+  const v4SignalsRow = await db.execute(sql`
+    SELECT
+      COALESCE(advance_payment_days_avg,   0) AS advance_days,
+      COALESCE(self_initiated_ratio,       0) AS self_ratio,
+      COALESCE(payment_amount_volatility,  1) AS amount_cv,
+      COALESCE(financial_curiosity_index,  0) AS curiosity_idx,
+      COALESCE(device_consistency_score,   0) AS device_score,
+      COALESCE(recovery_score,             0) AS recovery_sc
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const v4s            = v4SignalsRow.rows[0] as Record<string,unknown>;
+  const advanceDays    = Number(v4s?.advance_days  ?? 0);
+  const selfRatio      = Number(v4s?.self_ratio     ?? 0);
+  const amountCV       = Number(v4s?.amount_cv      ?? 1);
+  const curiosityIndex = Number(v4s?.curiosity_idx  ?? 0);
+  const deviceScore    = Number(v4s?.device_score   ?? 0);
+
+  // 1a. Payment streak — max 13pts (reduced from 20 to accommodate advance_days + self_initiated)
   const streakRow = await db.execute(sql`
     SELECT COALESCE(consecutive_payment_months, 0) AS streak_months
     FROM users WHERE telefono = ${telefono} LIMIT 1
   `);
   const streakMonths = Number((streakRow.rows[0] as Record<string,unknown>)?.streak_months ?? 0);
-  const paymentStreakScore = Math.min(20, streakMonths);
+  const paymentStreakScore = Math.min(13, streakMonths);
 
-  // 1b. Payment day consistency — max 10pts
-  // Low std-dev across payment DOMs = proactive, scheduled payer.
+  // 1b. Payment day consistency — max 4pts (reduced; advance_payment_days is a stronger signal)
   const domRow = await db.execute(sql`
     SELECT
-      COUNT(*)::int                                         AS pay_count,
+      COUNT(*)::int                                               AS pay_count,
       COALESCE(STDDEV(EXTRACT(DAY FROM created_at)), 15)::numeric AS dom_stddev,
       MODE() WITHIN GROUP (ORDER BY EXTRACT(DAY FROM created_at))::int AS dominant_day
     FROM bill_payments
@@ -91,22 +108,40 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const dominantDay = Number(domR?.dominant_day ?? 0);
   let payDayConsistency = 0;
   if (payCount >= 3) {
-    if      (domStddev <= 2)  payDayConsistency = 10;
-    else if (domStddev <= 5)  payDayConsistency = 7;
-    else if (domStddev <= 8)  payDayConsistency = 4;
-    else if (domStddev <= 12) payDayConsistency = 2;
+    if      (domStddev <= 2)  payDayConsistency = 4;
+    else if (domStddev <= 5)  payDayConsistency = 3;
+    else if (domStddev <= 8)  payDayConsistency = 2;
+    else if (domStddev <= 12) payDayConsistency = 1;
   }
 
-  const prScore = paymentStreakScore + payDayConsistency;
+  // 1c. Advance payment days — max 8pts (NEW v4.0 — strongest single PR signal)
+  // How many days BEFORE the due date does the user pay on average?
+  // Proactive payer (5+ days early) vs. reactive (day-of or late).
+  let advancePayScore = 0;
+  if      (advanceDays >= 7) advancePayScore = 8;
+  else if (advanceDays >= 4) advancePayScore = 6;
+  else if (advanceDays >= 2) advancePayScore = 4;
+  else if (advanceDays >= 0) advancePayScore = 2; // day-of — still reliable
+
+  // 1d. Self-initiated ratio — max 5pts (NEW v4.0)
+  // Ratio of payments the user opened themselves vs. triggered by a Paula reminder.
+  // A user who pays without being reminded is significantly more creditworthy.
+  let selfInitScore = 0;
+  if      (selfRatio >= 0.9) selfInitScore = 5;
+  else if (selfRatio >= 0.7) selfInitScore = 4;
+  else if (selfRatio >= 0.5) selfInitScore = 3;
+  else if (selfRatio >= 0.3) selfInitScore = 1;
+
+  const prScore = paymentStreakScore + payDayConsistency + advancePayScore + selfInitScore;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 2: BEHAVIORAL CONSISTENCY — max 20pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 2a. Session cadence — max 5pts (reduced from 8 to make room for new signals)
+  // 2a. Session cadence — max 3pts (reduced from 5)
   const loginRow = await db.execute(sql`
     SELECT
-      COUNT(DISTINCT DATE(created_at))::int                      AS login_days,
+      COUNT(DISTINCT DATE(created_at))::int                        AS login_days,
       COALESCE(STDDEV(EXTRACT(HOUR FROM created_at)), 12)::numeric AS hour_std
     FROM user_events
     WHERE telefono = ${telefono}
@@ -117,79 +152,84 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const loginDays30 = Number(lr?.login_days ?? 0);
   const hourStd     = Number(lr?.hour_std   ?? 12);
   let sessionCadenceScore = 0;
-  if      (loginDays30 >= 20) sessionCadenceScore = 5;
-  else if (loginDays30 >= 12) sessionCadenceScore = 4;
-  else if (loginDays30 >= 6)  sessionCadenceScore = 3;
-  else if (loginDays30 >= 2)  sessionCadenceScore = 1;
-  if (loginDays30 >= 4 && hourStd <= 3) sessionCadenceScore = Math.min(5, sessionCadenceScore + 1);
+  if      (loginDays30 >= 20) sessionCadenceScore = 3;
+  else if (loginDays30 >= 12) sessionCadenceScore = 2;
+  else if (loginDays30 >= 4)  sessionCadenceScore = 1;
 
-  // 2b. Game & mission engagement — max 5pts (reduced from 7)
+  // 2b. Routine score composite — max 3pts (NEW v4.0)
+  // Normalizes login-hour variance + payment DOM variance into one routine stability signal.
+  // Low combined variance = structured daily/monthly habits = financial discipline proxy.
+  let routineScore = 0;
+  {
+    const hourNorm = Math.max(0, 1 - hourStd / 12);       // 0→1: lower hour std = higher
+    const domNorm  = Math.max(0, 1 - domStddev / 15);     // 0→1: lower DOM std = higher
+    const routineRaw = (hourNorm + domNorm) / 2;
+    if      (routineRaw >= 0.70) routineScore = 3;
+    else if (routineRaw >= 0.50) routineScore = 2;
+    else if (routineRaw >= 0.30) routineScore = 1;
+  }
+
+  // 2c. Game & mission engagement — max 3pts (reduced from 5)
   const gameRow = await db.execute(sql`
     SELECT
-      COALESCE((SELECT COUNT(*)::int FROM scratch_card_plays WHERE telefono = ${telefono} AND play_date > CURRENT_DATE - 30), 0) AS scratch_plays,
-      COALESCE((SELECT COUNT(*)::int FROM spin_results      WHERE telefono = ${telefono} AND created_at > NOW() - INTERVAL '30 days'), 0) AS spin_plays,
+      COALESCE((SELECT COUNT(*)::int FROM scratch_card_plays    WHERE telefono = ${telefono} AND play_date > CURRENT_DATE - 30), 0) AS scratch_plays,
+      COALESCE((SELECT COUNT(*)::int FROM spin_results          WHERE telefono = ${telefono} AND spun_at > NOW() - INTERVAL '30 days'), 0) AS spin_plays,
       COALESCE((SELECT COUNT(*)::int FROM user_mission_progress WHERE telefono = ${telefono} AND completed_at IS NOT NULL), 0) AS missions_done
   `);
   const gr = gameRow.rows[0] as Record<string,unknown>;
-  const scratchPlays  = Number(gr?.scratch_plays ?? 0);
-  const spinPlays     = Number(gr?.spin_plays    ?? 0);
-  const missionsDone  = Number(gr?.missions_done ?? 0);
+  const scratchPlays    = Number(gr?.scratch_plays ?? 0);
+  const spinPlays       = Number(gr?.spin_plays    ?? 0);
+  const missionsDone    = Number(gr?.missions_done ?? 0);
   const totalEngagement = scratchPlays + spinPlays + (missionsDone * 2);
   let gameEngagementScore = 0;
-  if      (totalEngagement >= 20) gameEngagementScore = 5;
-  else if (totalEngagement >= 10) gameEngagementScore = 4;
-  else if (totalEngagement >= 4)  gameEngagementScore = 2;
-  else if (totalEngagement >= 1)  gameEngagementScore = 1;
+  if      (totalEngagement >= 20) gameEngagementScore = 3;
+  else if (totalEngagement >= 8)  gameEngagementScore = 2;
+  else if (totalEngagement >= 2)  gameEngagementScore = 1;
 
-  // 2c. Wallet load rhythm — max 3pts (reduced from 5)
+  // 2d. Wallet load rhythm — max 2pts (reduced from 3)
   const loadRhythmRow = await db.execute(sql`
     SELECT
-      COUNT(*)::int                                         AS load_count,
-      COALESCE(STDDEV(EXTRACT(EPOCH FROM created_at) / 86400.0), 30)::numeric AS load_day_std
-    FROM wallet_transactions
-    WHERE telefono = ${telefono}
-      AND type IN ('load_card','load_oxxo','spei_in')
-      AND status = 'confirmed'
-      AND created_at > NOW() - INTERVAL '90 days'
+      COUNT(*)::int                                                         AS load_count,
+      COALESCE(STDDEV(EXTRACT(EPOCH FROM wt.created_at) / 86400.0), 30)::numeric AS load_day_std
+    FROM wallet_transactions wt
+    JOIN wallets w ON wt.wallet_id = w.id
+    WHERE w.user_id = ${telefono}
+      AND wt.type IN ('load_card','load_oxxo','spei_in','load_spei','spei_in')
+      AND wt.status = 'confirmed'
+      AND wt.created_at > NOW() - INTERVAL '90 days'
   `);
   const rhr = loadRhythmRow.rows[0] as Record<string,unknown>;
-  const loadCount30 = Number(rhr?.load_count ?? 0);
+  const loadCount30 = Number(rhr?.load_count   ?? 0);
   const loadDayStd  = Number(rhr?.load_day_std ?? 30);
   let loadRhythmScore = 0;
   if (loadCount30 >= 3) {
-    if      (loadDayStd <= 3)  loadRhythmScore = 3;
-    else if (loadDayStd <= 7)  loadRhythmScore = 2;
-    else                       loadRhythmScore = 1;
+    if      (loadDayStd <= 3) loadRhythmScore = 2;
+    else if (loadDayStd <= 7) loadRhythmScore = 1;
   }
 
-  // 2d. Paula WhatsApp interaction depth — max 4pts (NEW v2.1)
-  // Measures engagement with the AI assistant: bill queries, balance checks, 2FA completions.
+  // 2e. Paula WhatsApp interaction depth — max 3pts (reduced from 4)
   const paulaRow = await db.execute(sql`
     SELECT
-      COUNT(*) FILTER (WHERE event_type = 'paula_interaction')::int     AS interactions,
-      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_confirmed')::int   AS confirmed_2fa,
-      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_declined')::int    AS declined_2fa
+      COUNT(*) FILTER (WHERE event_type = 'paula_interaction')::int   AS interactions,
+      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_confirmed')::int AS confirmed_2fa,
+      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_declined')::int  AS declined_2fa
     FROM user_events
     WHERE telefono = ${telefono}
       AND event_type IN ('paula_interaction', 'paula_2fa_confirmed', 'paula_2fa_declined')
       AND created_at > NOW() - INTERVAL '30 days'
   `);
   const pr2 = paulaRow.rows[0] as Record<string,unknown>;
-  const paulaInteractions = Number(pr2?.interactions   ?? 0);
-  const confirmed2fa      = Number(pr2?.confirmed_2fa  ?? 0);
-  const declined2fa       = Number(pr2?.declined_2fa   ?? 0);
-  // Interaction volume + 2FA success rate bonus
+  const paulaInteractions = Number(pr2?.interactions  ?? 0);
+  const confirmed2fa      = Number(pr2?.confirmed_2fa ?? 0);
+  const declined2fa       = Number(pr2?.declined_2fa  ?? 0);
   let paulaScore = 0;
-  if      (paulaInteractions >= 15) paulaScore = 3;
-  else if (paulaInteractions >= 6)  paulaScore = 2;
-  else if (paulaInteractions >= 2)  paulaScore = 1;
-  // 2FA completion bonus: high confirmation rate = trust signal
+  if      (paulaInteractions >= 15) paulaScore = 2;
+  else if (paulaInteractions >= 4)  paulaScore = 1;
   if (confirmed2fa >= 2 && (declined2fa === 0 || confirmed2fa / (confirmed2fa + declined2fa) >= 0.7)) {
-    paulaScore = Math.min(4, paulaScore + 1);
+    paulaScore = Math.min(3, paulaScore + 1);
   }
 
-  // 2e. Push notification engagement — max 3pts (NEW v2.1)
-  // Users who open push notifications are more habitual — higher retention signal.
+  // 2f. Push notification engagement — max 2pts (reduced from 3)
   const pushRow = await db.execute(sql`
     SELECT COUNT(*)::int AS push_opens
     FROM user_events
@@ -199,17 +239,26 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   `);
   const pushOpens = Number((pushRow.rows[0] as Record<string,unknown>)?.push_opens ?? 0);
   let pushScore = 0;
-  if      (pushOpens >= 8) pushScore = 3;
-  else if (pushOpens >= 4) pushScore = 2;
-  else if (pushOpens >= 1) pushScore = 1;
+  if      (pushOpens >= 6) pushScore = 2;
+  else if (pushOpens >= 2) pushScore = 1;
 
-  const bcScore = sessionCadenceScore + gameEngagementScore + loadRhythmScore + paulaScore + pushScore;
+  // 2g. Financial curiosity index — max 4pts (NEW v4.0)
+  // Ratio of proactive Paula topics (savings goals, PTI score inquiries, budgeting)
+  // to total Paula messages. Curiosity-driven users plan further ahead.
+  let curiosityScore = 0;
+  if      (curiosityIndex >= 0.20) curiosityScore = 4;
+  else if (curiosityIndex >= 0.10) curiosityScore = 3;
+  else if (curiosityIndex >= 0.05) curiosityScore = 2;
+  else if (curiosityIndex >= 0.02) curiosityScore = 1;
+
+  const bcScore = sessionCadenceScore + routineScore + gameEngagementScore + loadRhythmScore
+                + paulaScore + pushScore + curiosityScore;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 3: ENGAGEMENT DEPTH — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 3a. Biller diversity — max 8pts (reduced from 10 to make room for signup speed)
+  // 3a. Biller diversity — max 6pts (reduced to accommodate device consistency)
   const billerRow = await db.execute(sql`
     SELECT COUNT(DISTINCT service_id)::int AS biller_count
     FROM bill_payments
@@ -217,7 +266,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
       AND status IN ('completed','success','completed_ok','confirmed')
   `);
   const billerCount = Number((billerRow.rows[0] as Record<string,unknown>)?.biller_count ?? 0);
-  const billerDiversityScore = Math.min(8, billerCount * 2);
+  const billerDiversityScore = Math.min(6, Math.floor(billerCount * 1.5));
 
   // 3b. KYC verified — max 10pts
   const kycRow = await db.execute(sql`
@@ -235,7 +284,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // Utility % signals responsible service prioritization.
   const categoryRow = await db.execute(sql`
     SELECT
-      COUNT(*) FILTER (WHERE empresa ILIKE ANY(ARRAY['%cfe%','%luz%','%agua%','%sacmex%','%seapal%','%gas%','%naturgy%']))::float
+      COUNT(*) FILTER (WHERE COALESCE(service_name,'') ILIKE ANY(ARRAY['%cfe%','%luz%','%agua%','%sacmex%','%seapal%','%gas%','%naturgy%']))::float
         / NULLIF(COUNT(*), 0) AS utility_ratio
     FROM bill_payments
     WHERE telefono = ${telefono}
@@ -257,9 +306,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const intentClicks = Number((intentRow.rows[0] as Record<string,unknown>)?.intent_clicks ?? 0);
   if (intentClicks >= 1) spendCategoryScore = Math.min(4, spendCategoryScore + 1);
 
-  // 3d. Signup bonus utilization speed — max 3pts (NEW v2.1)
-  // Hours from registration to first completed payment.
-  // Fast utilization = immediate financial intent, not just bonus-hunting.
+  // 3d. Signup utilization speed — max 2pts (reduced from 3)
   const speedRow = await db.execute(sql`
     SELECT
       EXTRACT(EPOCH FROM (MIN(bp.created_at) - u.created_at)) / 3600 AS hours_to_first_payment
@@ -272,29 +319,37 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const hoursToFirst = Number((speedRow.rows[0] as Record<string,unknown>)?.hours_to_first_payment ?? null);
   let signupSpeedScore = 0;
   if (!isNaN(hoursToFirst) && hoursToFirst > 0) {
-    if      (hoursToFirst <= 6)   signupSpeedScore = 3;
-    else if (hoursToFirst <= 24)  signupSpeedScore = 2;
+    if      (hoursToFirst <= 12)  signupSpeedScore = 2;
     else if (hoursToFirst <= 72)  signupSpeedScore = 1;
   }
 
-  const edScore = billerDiversityScore + kycScore + spendCategoryScore + signupSpeedScore;
+  // 3e. Device consistency — max 3pts (NEW v4.0)
+  // How long the user has maintained the same device. Stability signal: same device
+  // for 90+ days means the user is not transient or frequently re-registering.
+  // Sourced from users.device_consistency_score (nightly computed from device_first_seen_at)
+  let deviceConsistencyScore = 0;
+  if      (deviceScore >= 80) deviceConsistencyScore = 3;
+  else if (deviceScore >= 50) deviceConsistencyScore = 2;
+  else if (deviceScore >= 20) deviceConsistencyScore = 1;
+
+  const edScore = billerDiversityScore + kycScore + spendCategoryScore + signupSpeedScore + deviceConsistencyScore;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 4: CASH-FLOW STABILITY — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 4a. Wallet balance — max 10pts (reduced from 12)
+  // 4a. Wallet balance — max 9pts (reduced from 10)
   const balanceRow = await db.execute(sql`
     SELECT COALESCE(balance_mxn, 0) AS balance
     FROM wallets WHERE user_id = ${telefono} LIMIT 1
   `);
   const currentBalance = Number((balanceRow.rows[0] as Record<string,unknown>)?.balance ?? 0);
   let walletScore = 0;
-  if      (currentBalance >= 500) walletScore = 10;
-  else if (currentBalance >= 200) walletScore = 7;
+  if      (currentBalance >= 500) walletScore = 9;
+  else if (currentBalance >= 200) walletScore = 6;
   else if (currentBalance >= 50)  walletScore = 3;
 
-  // 4b. Load/spend ratio (last 90 days) — max 7pts (reduced from 8)
+  // 4b. Load/spend ratio (last 90 days) — max 5pts (reduced from 7)
   const ratioRow = await db.execute(sql`
     SELECT
       COALESCE((
@@ -321,14 +376,22 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   let loadSpendScore = 0;
   if (totalLoads > 0 && totalSpend > 0) {
     loadSpendRatio = totalLoads / totalSpend;
-    if      (loadSpendRatio >= 1.0) loadSpendScore = 7;
-    else if (loadSpendRatio >= 0.7) loadSpendScore = 5;
-    else if (loadSpendRatio >= 0.4) loadSpendScore = 3;
+    if      (loadSpendRatio >= 1.0) loadSpendScore = 5;
+    else if (loadSpendRatio >= 0.7) loadSpendScore = 3;
+    else if (loadSpendRatio >= 0.4) loadSpendScore = 1;
   }
 
-  // 4c. P2P network activity — max 3pts (NEW v2.1)
-  // Wallet-to-wallet transfers signal financial network embeddedness.
-  // Sender_telefono is stored via wallets.user_id JOIN; type = 'transfer_send'.
+  // 4c. Payment amount volatility — max 4pts (NEW v4.0)
+  // Low coefficient of variation across biller amounts = stable, predictable obligations.
+  // High volatility = irregular income or irregular discipline — negative signal.
+  // Sourced from users.payment_amount_volatility (nightly computed from bill_payments)
+  let volatilityScore = 0;
+  if      (amountCV <= 0.10) volatilityScore = 4; // very consistent
+  else if (amountCV <= 0.25) volatilityScore = 3;
+  else if (amountCV <= 0.50) volatilityScore = 2;
+  else if (amountCV <= 1.00) volatilityScore = 1;
+
+  // 4d. P2P network activity — max 3pts
   const p2pRow = await db.execute(sql`
     SELECT
       COUNT(DISTINCT wt.id)::int AS send_count,
@@ -348,18 +411,18 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   else if (p2pSendCount >= 3 && p2pRecipientCount >= 2) p2pScore = 2;
   else if (p2pSendCount >= 1)                           p2pScore = 1;
 
-  // 4d. Account age — max 5pts
+  // 4e. Account age — max 4pts (reduced from 5)
   const ageRow = await db.execute(sql`
     SELECT EXTRACT(EPOCH FROM (NOW() - created_at)) / 86400 AS days_old
     FROM users WHERE telefono = ${telefono} LIMIT 1
   `);
   const daysOld = Number((ageRow.rows[0] as Record<string,unknown>)?.days_old ?? 0);
   let accountAgeScore = 0;
-  if      (daysOld >= 90) accountAgeScore = 5;
+  if      (daysOld >= 90) accountAgeScore = 4;
   else if (daysOld >= 30) accountAgeScore = 3;
-  else if (daysOld >= 7)  accountAgeScore = 2;
+  else if (daysOld >= 7)  accountAgeScore = 1;
 
-  const cfScore = walletScore + loadSpendScore + p2pScore + accountAgeScore;
+  const cfScore = walletScore + loadSpendScore + volatilityScore + p2pScore + accountAgeScore;
 
   // ── Total ─────────────────────────────────────────────────────────────────
   const total = Math.min(100, prScore + bcScore + edScore + cfScore);
@@ -369,47 +432,53 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     payment_reliability: {
       score: prScore, max: 30, label: "Fiabilidad de Pago",
       components: {
-        payment_streak:           { score: paymentStreakScore, max: 20, value: streakMonths },
-        payment_day_consistency:  { score: payDayConsistency,  max: 10, value: dominantDay },
+        payment_streak:          { score: paymentStreakScore, max: 13, value: streakMonths },
+        payment_day_consistency: { score: payDayConsistency,  max: 4,  value: dominantDay },
+        advance_payment_days:    { score: advancePayScore,    max: 8,  value: Math.round(advanceDays * 10) / 10 },
+        self_initiated_ratio:    { score: selfInitScore,      max: 5,  value: Math.round(selfRatio * 100) },
       },
     },
     behavioral_consistency: {
       score: bcScore, max: 20, label: "Consistencia de Comportamiento",
       components: {
-        session_cadence:            { score: sessionCadenceScore, max: 5, value: loginDays30 },
-        game_engagement:            { score: gameEngagementScore, max: 5, value: totalEngagement },
-        wallet_load_rhythm:         { score: loadRhythmScore,     max: 3, value: loadCount30 },
-        paula_interaction_depth:    { score: paulaScore,          max: 4, value: paulaInteractions },
-        push_notification_engagement: { score: pushScore,         max: 3, value: pushOpens },
+        session_cadence:              { score: sessionCadenceScore, max: 3, value: loginDays30 },
+        routine_score:                { score: routineScore,        max: 3, value: Math.round((1 - hourStd / 12) * 100) },
+        game_engagement:              { score: gameEngagementScore, max: 3, value: totalEngagement },
+        wallet_load_rhythm:           { score: loadRhythmScore,     max: 2, value: loadCount30 },
+        paula_interaction_depth:      { score: paulaScore,          max: 3, value: paulaInteractions },
+        push_notification_engagement: { score: pushScore,           max: 2, value: pushOpens },
+        financial_curiosity_index:    { score: curiosityScore,      max: 4, value: Math.round(curiosityIndex * 100) },
       },
     },
     engagement_depth: {
       score: edScore, max: 25, label: "Profundidad de Uso",
       components: {
-        biller_diversity:       { score: billerDiversityScore, max: 8,  value: billerCount },
-        kyc_verified:           { score: kycScore,             max: 10, value: kycVerified },
-        spend_category_mix:     { score: spendCategoryScore,   max: 4,  value: Math.round(utilityRatio * 100) },
-        signup_utilization_speed: { score: signupSpeedScore,   max: 3,  value: isNaN(hoursToFirst) ? 0 : Math.floor(hoursToFirst) },
+        biller_diversity:         { score: billerDiversityScore,    max: 6,  value: billerCount },
+        kyc_verified:             { score: kycScore,                max: 10, value: kycVerified },
+        spend_category_mix:       { score: spendCategoryScore,      max: 4,  value: Math.round(utilityRatio * 100) },
+        signup_utilization_speed: { score: signupSpeedScore,        max: 2,  value: isNaN(hoursToFirst) ? 0 : Math.floor(hoursToFirst) },
+        device_consistency:       { score: deviceConsistencyScore,  max: 3,  value: deviceScore },
       },
     },
     cashflow_stability: {
       score: cfScore, max: 25, label: "Estabilidad de Flujo",
       components: {
-        wallet_balance:     { score: walletScore,    max: 10, value: currentBalance },
-        load_spend_ratio:   { score: loadSpendScore, max: 7,  value: Math.round(loadSpendRatio * 100) / 100 },
-        p2p_network_activity: { score: p2pScore,     max: 3,  value: p2pSendCount },
-        account_age:        { score: accountAgeScore, max: 5, value: Math.floor(daysOld) },
+        wallet_balance:           { score: walletScore,     max: 9, value: currentBalance },
+        load_spend_ratio:         { score: loadSpendScore,  max: 5, value: Math.round(loadSpendRatio * 100) / 100 },
+        payment_amount_volatility:{ score: volatilityScore, max: 4, value: Math.round(amountCV * 100) / 100 },
+        p2p_network_activity:     { score: p2pScore,        max: 3, value: p2pSendCount },
+        account_age:              { score: accountAgeScore, max: 4, value: Math.floor(daysOld) },
       },
     },
     total,
     model_version: PTI_MODEL_VERSION,
-    // Legacy flat fields
-    payment_streak:   { score: paymentStreakScore, months: streakMonths, max: 20 },
-    biller_diversity: { score: billerDiversityScore, count: billerCount, max: 8 },
+    // Legacy flat fields (backward compat)
+    payment_streak:   { score: paymentStreakScore, months: streakMonths, max: 13 },
+    biller_diversity: { score: billerDiversityScore, count: billerCount, max: 6 },
     kyc_verified:     { score: kycScore, verified: kycVerified, max: 10 },
-    wallet_balance:   { score: walletScore, avg_balance_mxn: currentBalance, max: 10 },
-    load_spend_ratio: { score: loadSpendScore, ratio: Math.round(loadSpendRatio * 100) / 100, max: 7 },
-    account_age:      { score: accountAgeScore, days: Math.floor(daysOld), max: 5 },
+    wallet_balance:   { score: walletScore, avg_balance_mxn: currentBalance, max: 9 },
+    load_spend_ratio: { score: loadSpendScore, ratio: Math.round(loadSpendRatio * 100) / 100, max: 5 },
+    account_age:      { score: accountAgeScore, days: Math.floor(daysOld), max: 4 },
   };
 
   // ── Persist to users table ────────────────────────────────────────────────
@@ -579,7 +648,7 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
     const essentialRow = await db.execute(sql`
       SELECT
         COUNT(*) FILTER (WHERE
-          LOWER(COALESCE(service_name, empresa, '')) LIKE ANY(ARRAY[
+          LOWER(COALESCE(service_name, '')) LIKE ANY(ARRAY[
             '%cfe%','%agua%','%gas%','%predial%','%electricidad%','%luz%'
           ])
         )::float / NULLIF(COUNT(*), 0) AS essential_ratio
@@ -705,7 +774,117 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
       Math.round(350 + (ptiTotal / 100.0) * 500)
     ));
 
-    // ── 3H: Write aggregate signals to users + insert trend snapshot ───────
+    // ── 3I: Advance payment days avg — proactive vs reactive payer ───────────
+    const advanceRow = await db.execute(sql`
+      SELECT COALESCE(AVG(days_before_due::numeric), 0)::numeric AS avg_advance
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+        AND days_before_due IS NOT NULL
+        AND created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const advancePayDays = Number(
+      (advanceRow.rows[0] as Record<string,unknown>)?.avg_advance ?? 0
+    );
+
+    // ── 3J: Self-initiated ratio — self-started vs reminder-triggered ─────
+    const selfInitRow = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE payment_initiation = 'self')::float
+          / NULLIF(COUNT(*), 0) AS self_ratio
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+        AND payment_initiation IS NOT NULL
+        AND created_at >= NOW() - INTERVAL '90 days'
+    `);
+    const selfInitRatio = Number(
+      (selfInitRow.rows[0] as Record<string,unknown>)?.self_ratio ?? 0
+    );
+
+    // ── 3K: Payment amount volatility — CV across billers ────────────────
+    // Low CV = consistent amounts = stable income and predictable obligations.
+    const volRow = await db.execute(sql`
+      SELECT COALESCE(AVG(
+        CASE WHEN biller_avg > 0 THEN biller_std / biller_avg ELSE 1 END
+      ), 1)::numeric AS avg_cv
+      FROM (
+        SELECT
+          COALESCE(service_name, service_id) AS biller,
+          COALESCE(STDDEV(monto::numeric), 0)         AS biller_std,
+          COALESCE(AVG(monto::numeric), 1)            AS biller_avg
+        FROM bill_payments
+        WHERE telefono = ${telefono}
+          AND status IN ('completed','success','completed_ok','confirmed')
+          AND created_at >= NOW() - INTERVAL '90 days'
+        GROUP BY COALESCE(service_name, service_id)
+        HAVING COUNT(*) >= 2
+      ) billers
+    `);
+    const payAmountCV = Math.min(2, Number(
+      (volRow.rows[0] as Record<string,unknown>)?.avg_cv ?? 1
+    ));
+
+    // ── 3L: Recovery score — return rate after payment gaps ──────────────
+    // After any gap of 30+ days between payments, did the user return and pay?
+    // Recovery rate = recovered_gaps / total_gaps (0–100 scale)
+    const gapRecovRow = await db.execute(sql`
+      WITH payment_gaps AS (
+        SELECT
+          created_at AS pay_date,
+          LEAD(created_at) OVER (ORDER BY created_at) AS next_pay_date,
+          EXTRACT(DAY FROM LEAD(created_at) OVER (ORDER BY created_at) - created_at) AS gap_days
+        FROM bill_payments
+        WHERE telefono = ${telefono}
+          AND status IN ('completed','success','completed_ok','confirmed')
+      )
+      SELECT
+        COUNT(*) FILTER (WHERE gap_days >= 30)::float       AS total_gaps,
+        COUNT(*) FILTER (WHERE gap_days >= 30 AND gap_days <= 60)::float AS recovered_gaps
+      FROM payment_gaps
+      WHERE gap_days IS NOT NULL
+    `);
+    const gapR        = gapRecovRow.rows[0] as Record<string,unknown>;
+    const totalGaps   = Number(gapR?.total_gaps    ?? 0);
+    const recovGaps   = Number(gapR?.recovered_gaps ?? 0);
+    const recovRate   = totalGaps > 0 ? recovGaps / totalGaps : 1; // no gaps = perfect
+    const recovScore  = Math.round(recovRate * 100);
+
+    // ── 3M: Financial curiosity index — proactive Paula topics ────────────
+    // Ratio of savings/PTI questions to total Paula messages.
+    // Sourced from paula_inbound_log.topic_category (classified by classifyPaulaMessage)
+    const curiosityRow = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE topic_category IN ('savings_goal','pti_inquiry'))::float
+          / NULLIF(COUNT(*), 0) AS curiosity_idx
+      FROM paula_inbound_log
+      WHERE telefono = ${telefono}
+        AND topic_category IS NOT NULL
+        AND received_at >= NOW() - INTERVAL '90 days'
+    `);
+    const finCuriosityIndex = Number(
+      (curiosityRow.rows[0] as Record<string,unknown>)?.curiosity_idx ?? 0
+    );
+
+    // ── 3N: Device consistency score — same device tenure ────────────────
+    // How long the current device has been in use (device_first_seen_at).
+    // Long-tenured device = stable identity, not transient.
+    const deviceRow = await db.execute(sql`
+      SELECT
+        EXTRACT(DAY FROM NOW() - COALESCE(device_first_seen_at, NOW()))::int AS device_days
+      FROM users WHERE telefono = ${telefono} LIMIT 1
+    `);
+    const deviceDays = Number(
+      (deviceRow.rows[0] as Record<string,unknown>)?.device_days ?? 0
+    );
+    let devConsistScore = 0;
+    if      (deviceDays >= 120) devConsistScore = 100;
+    else if (deviceDays >= 90)  devConsistScore = 80;
+    else if (deviceDays >= 60)  devConsistScore = 60;
+    else if (deviceDays >= 30)  devConsistScore = 40;
+    else if (deviceDays >= 7)   devConsistScore = 20;
+
+    // ── 3H: Write ALL aggregate signals to users + insert trend snapshot ──
     await db.execute(sql`
       UPDATE users SET
         avg_monthly_load_amount   = ${Math.round(avgLoad * 100) / 100},
@@ -720,7 +899,13 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
         active_months             = ${activeMonths},
         longest_gap_days          = ${longestGapDays},
         pti_b2b_score             = ${ptiB2bScore},
-        pti_trajectory            = ${trajectory}
+        pti_trajectory            = ${trajectory},
+        advance_payment_days_avg  = ${Math.round(advancePayDays * 100) / 100},
+        self_initiated_ratio      = ${Math.round(selfInitRatio * 10000) / 10000},
+        payment_amount_volatility = ${Math.round(payAmountCV * 10000) / 10000},
+        recovery_score            = ${recovScore},
+        financial_curiosity_index = ${Math.round(finCuriosityIndex * 10000) / 10000},
+        device_consistency_score  = ${devConsistScore}
       WHERE telefono = ${telefono}
     `);
 
