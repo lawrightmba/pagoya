@@ -320,7 +320,13 @@
   <tr><td>v2.0-4dim</td><td>May 2026</td><td>Restructured to 4 dimensions (PR/BC/ED/CF); added pagoScore behavioral signals table</td></tr>
   <tr><td>v2.1-4dim</td><td>June 2026</td><td>5 new signals: Paula interaction depth, push engagement, signup utilization speed, P2P network activity, high-value intent index</td></tr>
   <tr><td>v3.0-granular</td><td>June 2026</td><td>Granular data capture layer: payment quality score, bill priority tier, payment channel; income regularity (load CV, payday window); obligation ratio; essential bill ratio; tenure signals; 30/60/90-day trend vectors; B2B score 350–850</td></tr>
-  <tr style="background:#f5f3ff;"><td>v4.0-behavioral</td><td>June 2026</td><td><strong>7 new behavioral signals:</strong> advance_payment_days (PR+8), self_initiated_ratio (PR+5), routine_score composite (BC+3), financial_curiosity_index (BC+4), payment_amount_volatility (CF+4), device_consistency_score (ED+3), recovery_score (pre-computed nightly). Weight rebalancing across all 4 dimensions. Paula WhatsApp topic classification (7 buckets) powering curiosity index.</td></tr>
+  <tr style="background:#f5f3ff;"><td>v4.0-behavioral</td><td>2026-06-30</td><td>
+    <strong>7 new behavioral signals:</strong> advance_payment_days (PR+8), self_initiated_ratio (PR+5), routine_score composite (BC+3), financial_curiosity_index (BC+4), payment_amount_volatility (CF+4), device_consistency_score (ED+3, internal-only), recovery_score (exported, not scored). PR streak cap 20→13; day-consistency cap 10→4.<br/>
+    <strong>Anti-gaming / cold-start fixes:</strong> advance_payment_days, self_initiated_ratio, and payment_amount_volatility now require payCount ≥ 3/2 respectively — zero-history users no longer receive phantom points from COALESCE defaults.<br/>
+    <strong>Privacy fix:</strong> device_consistency_score removed from pti_export_safe B2B view (LFPDPPP — device fingerprinting requires separate consent treatment). Remains in internal PTI computation.<br/>
+    <strong>Paula topic classifier:</strong> 7-bucket WhatsApp message classification at ingest; powers financial_curiosity_index.<br/>
+    <strong>Migration dry-run (n=9):</strong> 0 READY gate crossings, 0 tier changes. Avg delta −3.5 pts. See CHANGELOG.md for full detail.
+  </td></tr>
 </table>
 
 <h2>9. Data Freshness</h2>
