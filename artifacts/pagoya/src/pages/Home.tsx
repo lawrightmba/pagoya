@@ -517,6 +517,11 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════
+            PRIDE / DIASPORA CTA
+        ══════════════════════════════════════════════════════ */}
+        <HeroPrideCTA lang={lang} />
+
+        {/* ══════════════════════════════════════════════════════
             C. BILLER TICKER
             Pass dark=true so pills use semi-transparent white bg
             Fade mask updated inside BillerTicker via dark prop
@@ -802,11 +807,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* ══════════════════════════════════════════════════════
-            PRIDE / DIASPORA CTA
-        ══════════════════════════════════════════════════════ */}
-        <HeroPrideCTA lang={lang} />
 
         {/* ══════════════════════════════════════════════════════
             GIFT CARDS — extracted to GiftCardSection component
