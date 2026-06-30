@@ -1,0 +1,61 @@
+## Replit Agent Prompt — Ticker Trim, Prize Teaser Move, Visual Section Breaks
+
+PRE-FLIGHT (run first):
+1. Locate the homepage component and confirm current section order:
+   A. Nav bar
+   B. Hero block (dark green gradient)
+   NEW. HeroPrideCTA (dark green, one shade darker)
+   C. Biller ticker (green) — currently shows 8 billers: Renta, CFE, Telcel, Telmex, [transport icon], Tenencia, Totalplay, AT&T, Recarga
+   D-0. Grand prize teaser ("Premio Mayor del Mes — $2,000 MXN — 0 participantes")
+   D. Raspa y Gana scratch card (dark green)
+   E. Autofill input + "Pagar ahora" + trust pills + trust bar (white)
+   F. Gift Cards Digitales (feature carousel, white)
+2. Confirm this matches current state and report back before making changes.
+
+DO NOT edit api-server/public/. All site files go through artifacts/pagoya/public/ per the established symlink pattern.
+
+---
+
+### Task 1 — Trim the biller ticker
+
+Reduce the default visible biller ticker to the 5 highest-frequency billers: **CFE, Agua, Telcel, Recarga, Renta**.
+
+Add a "Ver más" expand control at the end of the visible ticker row that reveals the remaining billers (Telmex, transport, Tenencia, Totalplay, AT&T) inline or in an expanded row, without navigating away from the homepage.
+
+Confirm with a quick check whether biller frequency data exists anywhere (e.g. bill_payments service_name counts) to validate this 5-biller selection is actually the right "top 5" — if real usage data is available, use it to pick the 5 instead of the suggested list above, and report back which 5 were used and why.
+
+---
+
+### Task 2 — Move the prize teaser
+
+Move the "Premio Mayor del Mes" block (D-0) from its current position (between the biller ticker and the scratch card, both above the white functional zone) to **after section F** (below the Gift Cards Digitales carousel), or later.
+
+Rationale: this section currently sits directly beneath HeroPrideCTA's trust/identity messaging, and the gamified tone ("0 participantes," prize amount) competes with that message rather than reinforcing it. Moving it past the functional payment zone keeps the top of the page focused on trust + utility, and surfaces the gamification once a user is already engaged.
+
+No copy or styling changes to this block — position only.
+
+---
+
+### Task 3 — Break up the green section stack
+
+Currently sections B (hero), HeroPrideCTA, C (ticker), and D (scratch card, after D-0 moves) are four consecutive green-toned sections with only subtle shade stepping between them — this reads as one long undifferentiated block rather than distinct moments.
+
+Implement rounded-corner white/light divider insets between section transitions, similar to the rounded white cutout pattern used at the very top of the page (the white rounded shape that caps the nav bar before the hero gradient begins). Specifically:
+
+- Insert a small rounded white/cream inset (8–16px curve, full-width) at the transition between **B (hero) and HeroPrideCTA**
+- Insert the same treatment between **HeroPrideCTA and C (biller ticker)**
+- Insert the same treatment between **C (biller ticker) and D (scratch card)**, after D-0 is moved out
+
+This should NOT mean switching any of these sections to a white background — keep all the green gradients exactly as shipped. The white insets act as a visual "this section ended, a new one begins" cue without disrupting the color identity of the page or diluting the emotional weight of HeroPrideCTA.
+
+If the rounded-inset pattern proves visually awkward at this frequency (3 transitions in a row), as a fallback use a thin horizontal divider line (1–2px, white at 15–20% opacity) at each transition instead — report back which approach was used and why if you deviate from the rounded-inset version.
+
+---
+
+### Final report requested
+
+After implementation, report back:
+1. Confirmed new section order (with D-0 relocated)
+2. Final 5 billers shown by default in the trimmed ticker, and whether real usage data informed the selection
+3. Screenshot or description of how the section-break treatment looks at all three transitions
+4. Any visual regressions

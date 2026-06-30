@@ -439,6 +439,7 @@ export default function Home() {
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
+          borderBottom: "1px solid rgba(255,255,255,0.18)",
         }}>
           <h1
             className="hero-h1"
@@ -526,44 +527,9 @@ export default function Home() {
             Pass dark=true so pills use semi-transparent white bg
             Fade mask updated inside BillerTicker via dark prop
         ══════════════════════════════════════════════════════ */}
-        <section style={{ padding: "0 0 28px", marginTop: "0", background: "#008A52" }}>
+        <section style={{ padding: "0 0 28px", marginTop: "0", background: "#008A52", borderBottom: "1px solid rgba(255,255,255,0.18)" }}>
           <BillerTicker small dark fadeColor="#008A52" />
         </section>
-
-        {/* ══════════════════════════════════════════════════════
-            D-0. GRAND PRIZE TEASER (S3.4)
-        ══════════════════════════════════════════════════════ */}
-        {grandPrize && (
-          <section style={{ padding: "12px 20px 0", background: "#008A52" }}>
-            <button
-              onClick={() => navigate("/juegos?tab=premio")}
-              style={{
-                width: "100%", display: "flex", alignItems: "center",
-                gap: "14px", padding: "16px 18px",
-                background: "#004F2D", border: "none",
-                borderRadius: "16px", cursor: "pointer",
-                boxShadow: "0 4px 18px rgba(0,0,0,0.28)",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ fontSize: "28px", flexShrink: 0 }}>🏆</span>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px" }}>
-                  {es ? "Premio Mayor del Mes" : "Monthly Grand Prize"}
-                </p>
-                <p style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#FF9A3C", lineHeight: 1.1 }}>
-                  ${grandPrize.prize_amount.toLocaleString("es-MX")} MXN
-                </p>
-                <p style={{ margin: "3px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.50)" }}>
-                  {grandPrize.total_entries.toLocaleString("es-MX")} {es ? "participantes" : "entries"}
-                </p>
-              </div>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: "#6EF5B0", flexShrink: 0, whiteSpace: "nowrap" }}>
-                {es ? "Ver sorteo →" : "View draw →"}
-              </span>
-            </button>
-          </section>
-        )}
 
         {/* ══════════════════════════════════════════════════════
             D. 3-STEP HOW TO USE
@@ -816,6 +782,41 @@ export default function Home() {
           onGiftCard={handleGiftCard}
           onNavigateAll={() => navigate("/servicios?categoria=Gift+Cards")}
         />
+
+        {/* ══════════════════════════════════════════════════════
+            D-0. GRAND PRIZE TEASER (moved below gift cards)
+        ══════════════════════════════════════════════════════ */}
+        {grandPrize && (
+          <section style={{ padding: "12px 20px 0", background: "#008A52" }}>
+            <button
+              onClick={() => navigate("/juegos?tab=premio")}
+              style={{
+                width: "100%", display: "flex", alignItems: "center",
+                gap: "14px", padding: "16px 18px",
+                background: "#004F2D", border: "none",
+                borderRadius: "16px", cursor: "pointer",
+                boxShadow: "0 4px 18px rgba(0,0,0,0.28)",
+                textAlign: "left",
+              }}
+            >
+              <span style={{ fontSize: "28px", flexShrink: 0 }}>🏆</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px" }}>
+                  {es ? "Premio Mayor del Mes" : "Monthly Grand Prize"}
+                </p>
+                <p style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#FF9A3C", lineHeight: 1.1 }}>
+                  ${grandPrize.prize_amount.toLocaleString("es-MX")} MXN
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.50)" }}>
+                  {grandPrize.total_entries.toLocaleString("es-MX")} {es ? "participantes" : "entries"}
+                </p>
+              </div>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#6EF5B0", flexShrink: 0, whiteSpace: "nowrap" }}>
+                {es ? "Ver sorteo →" : "View draw →"}
+              </span>
+            </button>
+          </section>
+        )}
 
         <Divider />
 

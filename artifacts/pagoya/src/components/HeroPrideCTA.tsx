@@ -17,6 +17,7 @@ export default function HeroPrideCTA({ lang }: Props) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        borderBottom: "1px solid rgba(255,255,255,0.18)",
       }}
     >
       <h2
