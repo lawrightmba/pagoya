@@ -109,14 +109,15 @@ export default function BillerTicker({
     padding: small ? "5px 14px" : "6px 16px",
     fontSize: small ? "12px" : "13px",
     fontWeight: 700,
-    color: "#FF5C1A",
-    background: "rgba(255,92,26,0.15)",
-    border: "1px solid rgba(255,92,26,0.40)",
+    color: "#FFFFFF",
+    background: "#FF5C1A",
+    border: "none",
     cursor: "pointer",
-    transition: "background 0.15s, border-color 0.15s",
+    transition: "background 0.15s",
     userSelect: "none",
     letterSpacing: "0.01em",
     whiteSpace: "nowrap",
+    boxShadow: "0 2px 8px rgba(255,92,26,0.35)",
   };
 
   return (
@@ -147,7 +148,7 @@ export default function BillerTicker({
         />
         <div
           className="bt-row"
-          style={{ animation: "tickerLeft 20s linear infinite" }}
+          style={{ animation: "tickerLeft 18s linear infinite" }}
         >
           {TICKER_ROW.map((b, i) => (
             <Pill key={`t-${i}`} icon={b.icon} name={b.name} small={small} dark={dark} />
@@ -160,14 +161,8 @@ export default function BillerTicker({
         <button
           onClick={() => setExpanded((v) => !v)}
           style={chipStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,92,26,0.25)";
-            e.currentTarget.style.borderColor = "rgba(255,92,26,0.65)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,92,26,0.15)";
-            e.currentTarget.style.borderColor = "rgba(255,92,26,0.40)";
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#E64E12"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#FF5C1A"; }}
         >
           {expanded
             ? <>Ver menos <span style={{ fontSize: "9px", opacity: 0.65 }}>▴</span></>
