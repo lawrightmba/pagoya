@@ -83,6 +83,11 @@ import MarinaVallarta from "@/pages/colonias/MarinaVallarta";
 import EmployerOnePager from "@/pages/EmployerOnePager";
 import SupportChat from "@/components/SupportChat";
 import BottomNav from "@/components/BottomNav";
+import GlobalFooter from "@/components/GlobalFooter";
+import ComisionesYCargos from "@/pages/ComisionesYCargos";
+import Seguridad from "@/pages/Seguridad";
+import ComoPresentarUnaQueja from "@/pages/ComoPresentarUnaQueja";
+import FAQ from "@/pages/FAQ";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -186,6 +191,10 @@ function Router() {
       <Route path="/ruleta" component={SpinWheel} />
       <Route path="/bienvenida" component={Bienvenida} />
       <Route path="/atencion" component={Atencion} />
+      <Route path="/comisiones-y-cargos" component={ComisionesYCargos} />
+      <Route path="/seguridad" component={Seguridad} />
+      <Route path="/como-presentar-una-queja" component={ComoPresentarUnaQueja} />
+      <Route path="/faq" component={FAQ} />
       <Route path="/employer">{() => <EmployerOnePager defaultLang="en" />}</Route>
       <Route path="/empresa">{() => <EmployerOnePager defaultLang="es" />}</Route>
       <Route path="/r/:repCode">
@@ -212,6 +221,7 @@ function AppShell() {
   return (
     <>
       <Router />
+      {!hideBottomNav && <GlobalFooter />}
       {!hideBottomNav && <BottomNav />}
       {!hideSupportChat && <SupportChat />}
     </>

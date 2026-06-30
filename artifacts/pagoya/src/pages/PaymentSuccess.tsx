@@ -430,6 +430,13 @@ export default function PaymentSuccess() {
             >
               Ir al inicio
             </button>
+
+            <a
+              href="/como-presentar-una-queja"
+              className="block text-center text-xs text-gray-400 underline underline-offset-2 mt-1"
+            >
+              ¿Algo salió mal con este pago?
+            </a>
           </div>
         </div>
       </main>
