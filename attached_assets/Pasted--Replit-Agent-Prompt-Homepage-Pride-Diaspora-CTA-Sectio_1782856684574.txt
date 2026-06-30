@@ -1,0 +1,45 @@
+## Replit Agent Prompt — Homepage Pride/Diaspora CTA Section
+
+PRE-FLIGHT (run first):
+1. Locate the homepage component and confirm the current order: Bienvenida primary CTA ("Paga tu CFE ahora") → [insertion point] → feature carousel / "Everything you can do" equivalent (if built yet).
+2. Confirm whether a secondary hero/CTA section component pattern already exists elsewhere on the site (e.g. how Bienvenida itself is structured) so the new section matches existing spacing, button styling, and breakpoint behavior rather than introducing a one-off pattern.
+3. Report back the homepage component file path and current section order before building.
+
+DO NOT edit api-server/public/. All site files go through artifacts/pagoya/public/ per the established symlink pattern.
+
+---
+
+### Task — Build the Pride/Diaspora CTA section
+
+Placement: directly below the Bienvenida primary CTA, above the feature carousel.
+
+Component naming: `HeroPrideCTA.tsx`
+
+**Content (Spanish, primary):**
+
+> **Aquí o desde lejos, sigues cuidando a los tuyos.**
+> Sin cuenta bancaria. Sin filas. Solo tú, cuidando lo que importa — donde sea que estés.
+> **[Crear cuenta gratis]**
+
+**Content (English, fallback — only render if site has an English path; otherwise Spanish-only is fine since this section is emotionally targeted and shouldn't read as a literal translation):**
+
+> **Here or far away, you're still looking out for your people.**
+> No bank account needed. No lines. Just you, taking care of what matters — wherever you are.
+> **[Create free account]**
+
+**Design notes:**
+- Reuse the visual weight/contrast pattern from the Bienvenida block if one exists (e.g. solid background color block, centered text, single prominent button) — this section should feel like a continuation of the hero, not a new visual zone
+- CTA button should route to the same signup flow as the primary Bienvenida CTA — same destination, this is a reinforcing message, not a separate funnel
+- Keep this section short — headline, one supporting line, one button. No additional copy, no secondary links. The emotional framing does the work; don't dilute it with feature explanation (that's the carousel's job, immediately below)
+
+**Behavioral note for future reference (not part of this build):**
+Since GA4 shows diaspora CFE-from-USA traffic and ChatGPT referral traffic emerging as distinct channels, it may be worth a future A/B test isolating whether this combined framing converts better with domestic vs. diaspora traffic specifically — flagging for a later content sprint, not this task.
+
+---
+
+### Final report requested
+
+After implementation, report back:
+1. Final homepage section order
+2. Whether the English fallback was rendered, and if so, on what condition (e.g. browser locale, URL path)
+3. Confirm the CTA button routes to the same destination as the primary Bienvenida CTA

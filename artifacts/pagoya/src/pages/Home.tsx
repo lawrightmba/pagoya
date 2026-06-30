@@ -14,6 +14,7 @@ import { useTrackEvent, trackEvent } from "@/hooks/useTrackEvent";
 import HowItWorksSection from "@/components/HowItWorksSection";
 import BonusBanner from "@/components/BonusBanner";
 import GiftCardSection from "@/components/GiftCardSection";
+import HeroPrideCTA from "@/components/HeroPrideCTA";
 
 // ─── Language helpers ──────────────────────────────────────────────────────────
 
@@ -801,6 +802,11 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ══════════════════════════════════════════════════════
+            PRIDE / DIASPORA CTA
+        ══════════════════════════════════════════════════════ */}
+        <HeroPrideCTA lang={lang} />
 
         {/* ══════════════════════════════════════════════════════
             GIFT CARDS — extracted to GiftCardSection component
