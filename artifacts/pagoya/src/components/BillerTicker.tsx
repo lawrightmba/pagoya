@@ -26,6 +26,9 @@ const SECONDARY_BILLERS = [
   { icon: "🚰", name: "SACMEX" },
 ];
 
+// Double the primary list for seamless infinite loop
+const TICKER_ROW = [...PRIMARY_BILLERS, ...PRIMARY_BILLERS];
+
 interface PillProps {
   icon: string;
   name: string;
@@ -60,104 +63,131 @@ function Pill({ icon, name, small, dark }: PillProps) {
   );
 }
 
+function StaticPill({ icon, name, small, dark }: PillProps) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: small ? "5px" : "7px",
+        background: dark ? "rgba(255,255,255,0.06)" : "#F5F7FA",
+        border: `1px solid ${dark ? "rgba(255,255,255,0.12)" : "#E2E8F0"}`,
+        borderRadius: "999px",
+        padding: small ? "4px 10px 4px 7px" : "5px 13px 5px 9px",
+        whiteSpace: "nowrap",
+        fontSize: small ? "11px" : "13px",
+        fontWeight: 600,
+        color: dark ? "rgba(255,255,255,0.75)" : "#475569",
+        letterSpacing: "0.01em",
+        flexShrink: 0,
+        userSelect: "none",
+      }}
+    >
+      <span style={{ fontSize: small ? "12px" : "14px" }}>{icon}</span>
+      {name}
+    </span>
+  );
+}
+
 export default function BillerTicker({
   small,
   dark,
-  fadeColor: _fadeColor,
+  fadeColor: propFadeColor,
 }: {
   small?: boolean;
   dark?: boolean;
   fadeColor?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const fadeColor = propFadeColor ?? (dark ? "#0A2540" : "#ffffff");
 
-  const chipBase: React.CSSProperties = {
+  const chipStyle: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
     gap: "4px",
-    border: `1px solid ${dark ? "rgba(255,255,255,0.30)" : "#CBD5E1"}`,
+    border: `1px solid ${dark ? "rgba(255,255,255,0.28)" : "#CBD5E1"}`,
     borderRadius: "999px",
-    padding: small ? "5px 12px" : "6px 14px",
-    fontSize: small ? "12px" : "13px",
+    padding: small ? "4px 11px" : "5px 13px",
+    fontSize: small ? "11px" : "12px",
     fontWeight: 700,
-    color: dark ? "rgba(255,255,255,0.80)" : "#475569",
+    color: dark ? "rgba(255,255,255,0.75)" : "#64748B",
     background: dark ? "rgba(255,255,255,0.06)" : "#F8FAFC",
     cursor: "pointer",
-    flexShrink: 0,
-    transition: "background 0.15s, border-color 0.15s",
+    transition: "background 0.15s",
     userSelect: "none",
     letterSpacing: "0.01em",
     whiteSpace: "nowrap",
+    border: "none" as never,
   };
 
   return (
-    <div style={{ width: "100%", padding: "0 16px" }}>
-      {/* ── Primary row: 5 billers + toggle chip ── */}
+    <div style={{ width: "100%" }}>
+      <style>{`
+        @keyframes tickerLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .bt-row { display: flex; gap: 10px; width: max-content; }
+        .bt-row:hover { animation-play-state: paused !important; }
+      `}</style>
+
+      {/* ── Animated single row of 5 (doubled for loop) ── */}
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px",
-          justifyContent: "center",
-          alignItems: "center",
+          overflow: "hidden",
+          position: "relative",
+          paddingBottom: expanded ? "8px" : "0",
         }}
       >
-        {PRIMARY_BILLERS.map((b) => (
-          <Pill key={b.name} icon={b.icon} name={b.name} small={small} dark={dark} />
-        ))}
-
-        {!expanded && (
-          <button
-            onClick={() => setExpanded(true)}
-            style={chipBase}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = dark
-                ? "rgba(255,255,255,0.14)"
-                : "#F1F5F9";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = dark
-                ? "rgba(255,255,255,0.06)"
-                : "#F8FAFC";
-            }}
-          >
-            Ver más <span style={{ fontSize: "10px", opacity: 0.7 }}>▾</span>
-          </button>
-        )}
+        {/* Fade masks */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(to right, ${fadeColor} 0%, transparent 70px, transparent calc(100% - 70px), ${fadeColor} 100%)`,
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          className="bt-row"
+          style={{ animation: "tickerLeft 18s linear infinite" }}
+        >
+          {TICKER_ROW.map((b, i) => (
+            <Pill key={`t-${i}`} icon={b.icon} name={b.name} small={small} dark={dark} />
+          ))}
+        </div>
       </div>
 
-      {/* ── Expanded: secondary billers + collapse chip ── */}
+      {/* ── Ver más / Ver menos toggle ── */}
+      <div style={{ textAlign: "center", marginTop: "10px" }}>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          style={chipStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = dark ? "rgba(255,255,255,0.13)" : "#F1F5F9";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = dark ? "rgba(255,255,255,0.06)" : "#F8FAFC";
+          }}
+        >
+          {expanded
+            ? <>Ver menos <span style={{ fontSize: "9px", opacity: 0.65 }}>▴</span></>
+            : <>Ver más <span style={{ fontSize: "9px", opacity: 0.65 }}>▾</span></>}
+        </button>
+      </div>
+
+      {/* ── Expanded: remaining 15 billers in a centered wrap ── */}
       {expanded && (
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "8px",
+            gap: "7px",
             justifyContent: "center",
-            alignItems: "center",
-            marginTop: "8px",
+            padding: "10px 16px 4px",
           }}
         >
           {SECONDARY_BILLERS.map((b) => (
-            <Pill key={b.name} icon={b.icon} name={b.name} small={small} dark={dark} />
+            <StaticPill key={b.name} icon={b.icon} name={b.name} small={small} dark={dark} />
           ))}
-
-          <button
-            onClick={() => setExpanded(false)}
-            style={chipBase}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = dark
-                ? "rgba(255,255,255,0.14)"
-                : "#F1F5F9";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = dark
-                ? "rgba(255,255,255,0.06)"
-                : "#F8FAFC";
-            }}
-          >
-            Ver menos <span style={{ fontSize: "10px", opacity: 0.7 }}>▴</span>
-          </button>
         </div>
       )}
     </div>
