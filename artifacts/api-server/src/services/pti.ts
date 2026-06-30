@@ -117,20 +117,27 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // 1c. Advance payment days — max 8pts (NEW v4.0 — strongest single PR signal)
   // How many days BEFORE the due date does the user pay on average?
   // Proactive payer (5+ days early) vs. reactive (day-of or late).
+  // Requires ≥3 confirmed payments to avoid cold-start inflation and gaming
+  // (1-2 early payments on token bills cannot swing the sub-score).
   let advancePayScore = 0;
-  if      (advanceDays >= 7) advancePayScore = 8;
-  else if (advanceDays >= 4) advancePayScore = 6;
-  else if (advanceDays >= 2) advancePayScore = 4;
-  else if (advanceDays >= 0) advancePayScore = 2; // day-of — still reliable
+  if (payCount >= 3) {
+    if      (advanceDays >= 7) advancePayScore = 8;
+    else if (advanceDays >= 4) advancePayScore = 6;
+    else if (advanceDays >= 2) advancePayScore = 4;
+    else if (advanceDays >= 1) advancePayScore = 2; // day-of earns nothing; ≥1 day = reliable
+  }
 
   // 1d. Self-initiated ratio — max 5pts (NEW v4.0)
   // Ratio of payments the user opened themselves vs. triggered by a Paula reminder.
   // A user who pays without being reminded is significantly more creditworthy.
+  // Requires ≥3 payments to prevent gaming via a single unprompted payment.
   let selfInitScore = 0;
-  if      (selfRatio >= 0.9) selfInitScore = 5;
-  else if (selfRatio >= 0.7) selfInitScore = 4;
-  else if (selfRatio >= 0.5) selfInitScore = 3;
-  else if (selfRatio >= 0.3) selfInitScore = 1;
+  if (payCount >= 3) {
+    if      (selfRatio >= 0.9) selfInitScore = 5;
+    else if (selfRatio >= 0.7) selfInitScore = 4;
+    else if (selfRatio >= 0.5) selfInitScore = 3;
+    else if (selfRatio >= 0.3) selfInitScore = 1;
+  }
 
   const prScore = paymentStreakScore + payDayConsistency + advancePayScore + selfInitScore;
 
@@ -384,12 +391,15 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // 4c. Payment amount volatility — max 4pts (NEW v4.0)
   // Low coefficient of variation across biller amounts = stable, predictable obligations.
   // High volatility = irregular income or irregular discipline — negative signal.
-  // Sourced from users.payment_amount_volatility (nightly computed from bill_payments)
+  // Requires ≥2 confirmed payments to prevent the cold-start false-positive
+  // (COALESCE(null,1) would otherwise give 1pt to zero-history users).
   let volatilityScore = 0;
-  if      (amountCV <= 0.10) volatilityScore = 4; // very consistent
-  else if (amountCV <= 0.25) volatilityScore = 3;
-  else if (amountCV <= 0.50) volatilityScore = 2;
-  else if (amountCV <= 1.00) volatilityScore = 1;
+  if (payCount >= 2) {
+    if      (amountCV <= 0.10) volatilityScore = 4; // very consistent
+    else if (amountCV <= 0.25) volatilityScore = 3;
+    else if (amountCV <= 0.50) volatilityScore = 2;
+    else if (amountCV <= 1.00) volatilityScore = 1;
+  }
 
   // 4d. P2P network activity — max 3pts
   const p2pRow = await db.execute(sql`
