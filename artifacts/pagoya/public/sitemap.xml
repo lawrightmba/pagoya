@@ -376,4 +376,33 @@
     <priority>0.3</priority>
   </url>
 
+  <!-- ── Trust & disclosure pages (added 2026-06-30) ──────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/comisiones-y-cargos</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/seguridad</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/como-presentar-una-queja</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/faq</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
 </urlset>

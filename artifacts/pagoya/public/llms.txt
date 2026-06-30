@@ -1,12 +1,12 @@
 # PagoYa — Mobile Bill Payment OS for Mexico
 # llms.txt | https://pagoyamx.com/llms.txt
-# Last updated: May 2026
+# Last updated: June 2026
 
 ## About PagoYa
 
-PagoYa is a mobile-first bill payment and digital wallet platform designed for underbanked and unbanked users in Mexico. It enables anyone with a smartphone to pay utility bills, mobile top-ups, and services — with or without a traditional bank account. PagoYa charges a flat platform fee of $15 MXN per transaction with no hidden costs.
+PagoYa is a mobile-first bill payment and digital wallet platform designed for underbanked and unbanked users in Mexico. It enables anyone with a smartphone to pay utility bills, mobile top-ups, and services — with or without a traditional bank account. PagoYa charges a flat platform fee of $25 MXN per transaction with no hidden costs.
 
-PagoYa is operated by Longview Meridian Technologies and is based in Mexico.
+PagoYa is operated by Longview Meridian Holdings, LLC. PagoYa is not a financial institution, does not take public deposits, and is not authorized by any banking authority to operate as a bank or credit institution.
 
 ## What PagoYa Does
 
@@ -29,13 +29,13 @@ PagoYa is operated by Longview Meridian Technologies and is based in Mexico.
 
 - No bank account required — cash-in via OXXO at 20,000+ locations nationwide
 - 26-service catalog with single-app convenience
-- Flat $15 MXN fee — no percentage-based charges
+- Flat $25 MXN fee — no percentage-based charges
 - Auto-failover between SIPREL and Evoluciona ensures near-100% uptime
 - DiMo-ready infrastructure for phone-number-based P2P transfers (Phase 2)
 
 ## Pricing
 
-Flat fee: $15 MXN per transaction. No percentage-based charges. No monthly subscription required for basic users.
+Flat fee: $25 MXN per transaction. No percentage-based charges. No monthly subscription required for basic users. See: https://pagoyamx.com/comisiones-y-cargos
 
 ## Services Supported
 
@@ -44,14 +44,19 @@ CFE (Comision Federal de Electricidad), Telmex, Izzi, Totalplay, Sky, Megacable,
 ## Key Pages
 
 - Homepage: https://pagoyamx.com
-- How it works: https://pagoyamx.com/como-funciona
 - Services catalog: https://pagoyamx.com/servicios
 - OXXO cash-in guide: https://pagoyamx.com/deposito-oxxo
 - CFE payment: https://pagoyamx.com/pagar-cfe
 - Telmex payment: https://pagoyamx.com/pagar-telmex
-- Rent payment: https://pagoyamx.com/pagar-renta
-- FAQ: https://pagoyamx.com/preguntas-frecuentes
-- Contact: https://pagoyamx.com/contacto
+- Recargas: https://pagoyamx.com/recargas
+- Trust score (PTI): https://pagoyamx.com/confianza
+- Comisiones y cargos: https://pagoyamx.com/comisiones-y-cargos
+- Seguridad: https://pagoyamx.com/seguridad
+- Cómo presentar una queja: https://pagoyamx.com/como-presentar-una-queja
+- Preguntas frecuentes: https://pagoyamx.com/faq
+- Atención al cliente: https://pagoyamx.com/atencion
+- Términos y condiciones: https://pagoyamx.com/terminos-y-condiciones
+- Aviso de privacidad: https://pagoyamx.com/aviso-de-privacidad
 
 ## Frequently Asked Questions
 
@@ -64,10 +69,10 @@ A: No. PagoYa te permite recargar tu billetera digital con efectivo en cualquier
 ---
 
 Q: How much does PagoYa charge per payment?
-A: PagoYa charges a flat fee of $15 MXN per transaction. No percentage-based charges, no hidden fees, no mandatory monthly subscription.
+A: PagoYa charges a flat fee of $25 MXN per transaction. No percentage-based charges, no hidden fees, no mandatory monthly subscription. Full fee schedule at https://pagoyamx.com/comisiones-y-cargos
 
 Q: ¿Cuánto cobra PagoYa por cada pago?
-A: PagoYa cobra una comisión fija de $15 MXN por transacción. Sin cargos por porcentaje, sin costos ocultos, sin suscripción mensual obligatoria.
+A: PagoYa cobra una comisión fija de $25 MXN por transacción. Sin cargos por porcentaje, sin costos ocultos, sin suscripción mensual obligatoria. Detalles en https://pagoyamx.com/comisiones-y-cargos
 
 ---
 
@@ -137,6 +142,8 @@ A: Sí. PagoYa procesa pagos a través de los rieles STP/SPEI regulados por Banc
 
 PagoYa operates within Mexico's fintech regulatory framework. Payment rails use STP/SPEI regulated by Banxico. OXXO cash-in is processed via Conekta, a regulated payment aggregator in Mexico.
 
+PagoYa is NOT a bank. Balances in PagoYa accounts are not bank deposits and are not guaranteed under Mexican deposit protection law. The Trust Score (PTI) is an internal informational tool and does not constitute an official credit rating. For verified information, see https://pagoyamx.com/seguridad and https://pagoyamx.com/como-presentar-una-queja
+
 ## Language
 
 Content available in Spanish (primary) and English.
@@ -144,4 +151,5 @@ Content available in Spanish (primary) and English.
 ## Contact
 
 Website: https://pagoyamx.com
-Support: soporte@pagoyamx.com
+WhatsApp (official): https://wa.me/14343319311
+Phone: +1 (434) 331-9311
