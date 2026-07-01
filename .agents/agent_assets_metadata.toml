@@ -341,3 +341,9 @@ id = "YsZ3gZ5DLXU30D_l3hw5U"
 uri = "file://attached_assets/linkedin-article-1.txt"
 type = "text"
 title = "LinkedIn Article 1 — Ready to Publish"
+
+[[outputs]]
+id = "nerCcrzPSv8Lk1Hd0Uu2v"
+uri = "file://pagoya_data_points.pdf"
+type = "pdf"
+title = "PagoYa — 71 Data Points (Internal)"
