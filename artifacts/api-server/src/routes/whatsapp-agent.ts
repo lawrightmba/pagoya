@@ -976,16 +976,11 @@ router.post("/", async (req: Request, res: Response) => {
           `);
 
           if (isRemitYes) {
-            // Retroactively tag existing untagged SPEI-in loads as remittance
-            await db.execute(sql`
-              UPDATE wallet_transactions wt
-              SET load_source_type = 'remittance'
-              FROM wallets w
-              WHERE wt.wallet_id = w.id
-                AND w.telefono = ${phoneKey}
-                AND wt.type = 'spei_in'
-                AND (wt.load_source_type IS NULL OR wt.load_source_type = '')
-            `).catch(() => {});
+            // Self-report applies FORWARD only — receives_remittances flag is set above.
+            // Future SPEI-in loads for this user will be tagged at webhook time with
+            // load_source_type='remittance' and load_source_confidence='self_reported'.
+            // Historical untagged transactions are NOT retroactively changed — a self-report
+            // is evidence about the user, not per-transaction confirmation of past transfers.
 
             await sendWhatsApp(phoneKey,
               `✅ ¡Gracias! Guardamos que recibes apoyos del extranjero.\n\n` +

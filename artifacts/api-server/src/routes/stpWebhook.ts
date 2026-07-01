@@ -219,10 +219,14 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
     // Tag payment_source for OXXO→digital migration signal in PTI scoring
     db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'spei' WHERE id = ${tx.id}`).catch(() => {});
 
-    // ── Remittance classification (Option A + B) ─────────────────────────────
-    // Option A: keyword match on conceptoPago / ordenante free-text fields
-    // Option B: user has self-reported receives_remittances = true via Paula
-    // Either match → tag load_source_type = 'remittance' on this transaction.
+    // ── Remittance classification (Option A + B, with per-method confidence) ───
+    // Option A (keyword_matched): substring match on conceptoPago / ordenante
+    //   at webhook time — per-transaction evidence, higher confidence.
+    // Option B (self_reported): user has declared receives_remittances = true via
+    //   Paula — applies FORWARD only; historical transactions are NOT retroactively
+    //   tagged (self-report is evidence about the user, not each transaction).
+    // When both apply, keyword_matched wins — it is per-transaction confirmation.
+    // load_source_confidence distinguishes the two for downstream field computation.
     const REMITTANCE_KEYWORDS = [
       "remitly", "western union", " wu ", "xoom", "moneygram", "worldremit",
       "wise", "transferwise", "ria ", "pangea", "sendwave", "viamericas",
@@ -234,23 +238,30 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
     const keywordMatch = REMITTANCE_KEYWORDS.some(
       (kw) => conceptoLower.includes(kw) || ordenanteLower.includes(kw),
     );
-    // Check user self-report flag (Option B) — fire-and-forget, non-blocking
+    // Fire-and-forget — check self-report flag, then tag with correct confidence tier
     db.execute(drizzleSql`SELECT receives_remittances FROM users WHERE telefono = ${telefono} LIMIT 1`)
       .then((remitCheck) => {
         const userFlagged =
           (remitCheck.rows[0] as Record<string, unknown> | undefined)
             ?.receives_remittances === true;
-        if (keywordMatch || userFlagged) {
+        // keyword_matched takes precedence over self_reported when both apply
+        const confidence = keywordMatch
+          ? "keyword_matched"
+          : userFlagged
+            ? "self_reported"
+            : null;
+        if (confidence) {
           return db.execute(drizzleSql`
             UPDATE wallet_transactions
-            SET load_source_type = 'remittance'
+            SET load_source_type       = 'remittance',
+                load_source_confidence = ${confidence}
             WHERE id = ${tx.id}
-          `);
-        }
-      })
-      .then(() => {
-        if (keywordMatch) {
-          logger.info({ telefono, claveRastreo, conceptoPago, ordenante }, "stp: tagged as remittance (keyword)");
+          `).then(() => {
+            logger.info(
+              { telefono, claveRastreo, confidence },
+              "stp: tagged as remittance",
+            );
+          });
         }
       })
       .catch(() => {});

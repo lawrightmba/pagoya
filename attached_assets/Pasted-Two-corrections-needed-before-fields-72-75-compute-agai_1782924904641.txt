@@ -1,0 +1,14 @@
+Two corrections needed before fields 72-75 compute against this data.
+
+1. STOP the retroactive blanket-tagging behavior. When a user self-reports receives_remittances = true, do NOT automatically retag all their historical untagged spei_in transactions as load_source_type = 'remittance'. A self-report is evidence about the user, not per-transaction evidence — tagging every past transaction based on it will inflate remittance amount/consistency signals with false positives. 
+
+Instead: self-report (receives_remittances = true) should apply going FORWARD only — tag future spei_in transactions for that user as remittance-eligible, but keep historical untagged transactions as NULL unless they also independently match the Option A keyword detection.
+
+2. Add a provenance/confidence field. Add load_source_confidence (or similar) alongside load_source_type with at minimum these values:
+   - keyword_matched — Option A, matched on conceptoPago/ordenante at webhook time
+   - self_reported — Option B, tagged based on receives_remittances flag with no independent transaction-level confirmation
+   Do not merge these into a single undifferentiated 'remittance' tag. Fields 72-75's computation (and the enrichment_computed_at / data_reliability pattern already used elsewhere in PTI) should be able to distinguish keyword-confirmed remittance data from self-report-inferred data. At minimum, add a reliability breakdown to the CHANGELOG entry so I can see what % of tagged transactions are keyword-confirmed vs. self-report-inferred.
+
+Also — I asked for the STP/Conekta metadata audit (what remittance-related metadata is actually available on inbound SPEI transfers, beyond free-text conceptoPago/ordenante) before building the classification logic, and that wasn't included in this report. Please provide that now: does STP or Conekta expose any structured field indicating transfer purpose/type that we're not currently using, or is free-text keyword matching genuinely the only signal available? I want to know if there's a more reliable data source we're leaving on the table before this ships as final.
+
+Everything else (webhook-time keyword tagging going forward, the Paula self-report flow, 24h scheduling, skip-to-NULL, 9999-day cooldown) is approved as built.
