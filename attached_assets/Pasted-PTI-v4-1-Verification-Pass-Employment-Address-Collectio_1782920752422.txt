@@ -1,0 +1,29 @@
+PTI v4.1 — Verification Pass + Employment/Address Collection Placement
+
+PART 1: VERIFICATION (do this first, report results before Part 2)
+
+1. Cron timeout fix validation:
+   - Do not just confirm the nextRunAt log line. Write a temporary test that calls safeSetTimeout() with a delay >24.8 days (e.g. 40 days in ms) and confirms it actually fires at the correct time — not immediately, not in a loop. Show me the test and its output.
+   - Confirm this fix is applied everywhere setTimeout is used with a computed/dynamic delay in the codebase, not just in the monthly PTI batch. Grep for setTimeout usage and list every call site with delay values that could exceed 24.8 days.
+
+2. Field 82 exclusion validation:
+   - Confirm referral_network_risk_correlation is excluded at the query/serialization layer, not just missing from docs. Show me:
+     a) The pti_export_safe view definition (SQL) — confirm the column is not in the SELECT list
+     b) The B2B API response serializer/schema for every endpoint under /api/b2b/ — confirm the field cannot appear in any response even if the underlying query includes it
+     c) Any admin or internal-only endpoint that DOES expose it, and confirm those endpoints require internal auth, not partner API keys
+   - If you find any path where this field could leak into a partner-facing response, fix it and flag it to me explicitly — do not silently patch and move on.
+
+3. Remittance classification method (fields 72-75):
+   - Before I decide how load_source_type = 'remittance' gets set, show me: is this currently an unset/manual field, or is there an existing heuristic? If none exists, do not invent a classification heuristic yourself — stop and give me 2-3 options (e.g. explicit STP/Conekta transfer-type metadata if available, sender-pattern heuristic, user self-report) with tradeoffs, and wait for my decision before building the tagging logic.
+
+PART 2: EMPLOYMENT & ADDRESS COLLECTION (fields 86-87)
+
+Do NOT add employment_type or address_registered_at to the initial registration/signup flow. Move this collection into Paula's Module 1 flow instead — specifically, as an early conversational prompt Paula asks once a user has completed initial signup and had at least one confirmed payment (to avoid adding friction before someone has proven basic engagement).
+
+Requirements:
+- Check Paula's existing Module 1 template/flow structure before building — reuse the existing Mustache template and message-queue pattern (paula_send_queue) rather than building a new collection mechanism.
+- These are self-reported fields — frame the prompt conversationally (e.g. asking as part of building the user's financial profile within Paula's coaching flow), not as a form field.
+- Fields should remain optional/skippable — do not block Module 1 progression if a user doesn't answer. Log employment_type and address_registered_at as NULL if unanswered, consistent with existing minimum-N/NULL-below-floor conventions elsewhere in PTI.
+- Confirm with me where exactly in Module 1's sequence this fits before building — I want to see the proposed placement (which message, what triggers it) before it ships, since this affects the coaching narrative flow Paula already has.
+
+Report back on Part 1 findings before starting Part 2 build work.
