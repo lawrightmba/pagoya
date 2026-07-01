@@ -219,6 +219,42 @@ export const handleStpWebhook: RequestHandler = async (req, res) => {
     // Tag payment_source for OXXO→digital migration signal in PTI scoring
     db.execute(drizzleSql`UPDATE wallet_transactions SET payment_source = 'spei' WHERE id = ${tx.id}`).catch(() => {});
 
+    // ── Remittance classification (Option A + B) ─────────────────────────────
+    // Option A: keyword match on conceptoPago / ordenante free-text fields
+    // Option B: user has self-reported receives_remittances = true via Paula
+    // Either match → tag load_source_type = 'remittance' on this transaction.
+    const REMITTANCE_KEYWORDS = [
+      "remitly", "western union", " wu ", "xoom", "moneygram", "worldremit",
+      "wise", "transferwise", "ria ", "pangea", "sendwave", "viamericas",
+      "remesa", "remesas", "envio familiar", "envío familiar",
+      "apoyo familiar", "desde usa", "from usa", "desde estados unidos",
+    ];
+    const conceptoLower = (conceptoPago ?? "").toLowerCase();
+    const ordenanteLower = (ordenante ?? "").toLowerCase();
+    const keywordMatch = REMITTANCE_KEYWORDS.some(
+      (kw) => conceptoLower.includes(kw) || ordenanteLower.includes(kw),
+    );
+    // Check user self-report flag (Option B) — fire-and-forget, non-blocking
+    db.execute(drizzleSql`SELECT receives_remittances FROM users WHERE telefono = ${telefono} LIMIT 1`)
+      .then((remitCheck) => {
+        const userFlagged =
+          (remitCheck.rows[0] as Record<string, unknown> | undefined)
+            ?.receives_remittances === true;
+        if (keywordMatch || userFlagged) {
+          return db.execute(drizzleSql`
+            UPDATE wallet_transactions
+            SET load_source_type = 'remittance'
+            WHERE id = ${tx.id}
+          `);
+        }
+      })
+      .then(() => {
+        if (keywordMatch) {
+          logger.info({ telefono, claveRastreo, conceptoPago, ordenante }, "stp: tagged as remittance (keyword)");
+        }
+      })
+      .catch(() => {});
+
     // Update load method trajectory counters (denormalized cache; keep in sync with pagoScore.ts lines 177-186)
     updateLoadMethodCounters(db, telefono, "spei").catch(() => {});
 

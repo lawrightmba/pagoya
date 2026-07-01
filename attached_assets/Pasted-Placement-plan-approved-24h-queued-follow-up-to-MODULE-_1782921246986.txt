@@ -1,0 +1,19 @@
+Placement plan approved — 24h queued follow-up to MODULE_UNLOCK_1, with one change.
+
+Do not use address_registered_at = NOW() as a proxy for address tenure. That measures PagoYa signup date, not time at the user's actual residence — a different signal than what field 87 was designed to capture (someone could have lived at the same address for years before ever signing up). 
+
+Instead, add a second short question to the same follow-up message or a paired follow-up (your call on 1 combined message vs. 2 sequential ones, whichever fits the conversational flow better) asking address tenure directly — e.g. "¿cuánto tiempo llevas viviendo en tu domicilio actual?" with simple bucketed reply options (menos de 6 meses / 6 meses a 2 años / más de 2 años) rather than open text, so whatsapp-agent.ts can parse it the same way as the employment_type reply. Store as address_tenure_days (or a tenure bucket if exact days isn't derivable from a bucketed reply — your call, just don't fabricate precision you don't have).
+
+Everything else in the proposed placement (trigger, 24h gap, skip-to-NULL behavior, employment_type options) is approved as written — proceed.
+
+REMITTANCE CLASSIFICATION (fields 72-75): combine options a and b.
+
+Primary: use explicit STP/Conekta transfer-type metadata to classify load_source_type = 'remittance' wherever that metadata is available and reliable.
+
+Fallback: where explicit metadata is absent or ambiguous, apply a sender-pattern heuristic (e.g. recurring same-sender inbound loads from a US-based or cross-border source) to flag likely remittance-linked loads.
+
+Before building the heuristic, show me: what metadata STP/Conekta actually provides today (confirm what's available vs. what you'd need to request), and a concrete definition of the heuristic's trigger conditions. Do not ship a heuristic silently — I want to see the exact rule.
+
+Add a reliability tag to remittance-classified transactions: metadata-confirmed vs. heuristic-inferred. Surface this distinction in the existing data_reliability field pattern rather than treating both as equally trustworthy — anything relying on remittance signals downstream (avg_remittance_amount_mxn, dominant_remittance_country) should be able to tell which classification method produced the underlying data.
+
+Report back with the metadata audit and proposed heuristic rule before computing fields 72-75.

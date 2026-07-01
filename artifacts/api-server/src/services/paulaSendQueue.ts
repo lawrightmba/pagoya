@@ -27,12 +27,16 @@ export async function enqueueWhatsApp(
   message: string,
   triggerType: string,
   triggerLogId: number | null,
+  delayMinutes = 0,
 ): Promise<number> {
   const r = await db.execute(sql`
     INSERT INTO paula_send_queue
-      (telefono, message, trigger_type, trigger_log_id, status, created_at)
+      (telefono, message, trigger_type, trigger_log_id, status, created_at, scheduled_at)
     VALUES
-      (${telefono}, ${message}, ${triggerType}, ${triggerLogId}, 'PENDING', NOW())
+      (${telefono}, ${message}, ${triggerType}, ${triggerLogId}, 'PENDING', NOW(),
+       CASE WHEN ${delayMinutes} > 0
+            THEN NOW() + (${delayMinutes} || ' minutes')::INTERVAL
+            ELSE NULL END)
     RETURNING id
   `);
   return Number((r.rows[0] as Record<string, unknown>).id);
@@ -47,6 +51,7 @@ export async function processSendQueue(): Promise<void> {
     FROM paula_send_queue
     WHERE status IN ('PENDING', 'FAILED')
       AND attempts < ${MAX_ATTEMPTS}
+      AND (scheduled_at IS NULL OR scheduled_at <= NOW())
     ORDER BY created_at ASC
     LIMIT ${BATCH_SIZE}
     FOR UPDATE SKIP LOCKED

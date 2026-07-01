@@ -28,6 +28,15 @@ import { buildUserContext } from "./buildUserContext.js";
 import { enqueueWhatsApp } from "./paulaSendQueue.js";
 import { evaluateReadiness, getPartnerDisplayName } from "./readinessGate.js";
 
+// ── Remittance profile question (queued 24h after Module 1, intercepts sí/no) ─
+const REMITTANCE_PROFILE_MSG =
+  `💸 *Una pregunta para tu perfil financiero:*\n\n` +
+  `¿Recibes dinero del extranjero de forma regular? (por ejemplo de un familiar en EE.UU. u otro país)\n\n` +
+  `Responde:\n` +
+  `*1* — Sí, recibo remesas o envíos del extranjero\n` +
+  `*2* — No\n\n` +
+  `_Esta información es voluntaria y nos ayuda a mejorar tu perfil. Puedes ignorar este mensaje si prefieres._`;
+
 // ── Income bucket labels (voluntary declaration via standalone follow-up) ──────
 const INCOME_BUCKET_MSG =
   `💡 *Una pregunta rápida:*\n\n` +
@@ -67,6 +76,8 @@ export const TRIGGER = {
   NOT_YET_GAP_REPORT:    "not_yet_gap_report",
   // Reward nudge — reminds users of unused free bill credits (7-day cooldown)
   FREE_CREDIT_NUDGE:     "free_credit_nudge",
+  // Remittance profile — queued after Module 1, intercepts sí/no reply
+  REMITTANCE_PROFILE:    "remittance_profile",
 } as const;
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
@@ -284,6 +295,25 @@ export async function evaluateTriggersForUser(
   ) {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
     fired++;
+    // Remittance profile follow-up — queued 24h after Module 1 fires, once per lifetime.
+    // whatsapp-agent.ts intercepts a 1/2 reply and writes users.receives_remittances.
+    // Combined with Option A (STP webhook keyword detection) for maximum coverage.
+    const remitRow = await db.execute(sql`
+      SELECT receives_remittances FROM users WHERE telefono = ${telefono} LIMIT 1
+    `).catch(() => ({ rows: [] }));
+    const receivesRemittances = (remitRow.rows[0] as Record<string, unknown> | undefined)?.receives_remittances;
+    if (receivesRemittances == null) {
+      const remitLog = await db.execute(sql`
+        INSERT INTO paula_trigger_log
+          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
+        VALUES
+          (${telefono}, 'remittance_profile', '{}'::jsonb, ${REMITTANCE_PROFILE_MSG}, FALSE, NOW())
+        RETURNING id
+      `).catch(() => ({ rows: [{ id: 0 }] }));
+      const remitLogId = Number((remitLog.rows[0] as Record<string, unknown>).id ?? 0);
+      // Schedule 24h out so Module 1 message lands first
+      await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60).catch(() => {});
+    }
   }
 
   // Module 2 unlock: PTI 30–49

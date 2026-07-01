@@ -946,6 +946,64 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Remittance profile reply intercept ───────────────────────────────────
+    // Fires after income-bucket block. Intercepts a 1/2 reply (or sí/no) when:
+    //   (a) users.receives_remittances IS NULL (NULL guard)
+    //   (b) last Paula outbound was trigger_type='remittance_profile'
+    // Sets receives_remittances; also retroactively tags existing untagged SPEI-in
+    // transactions as load_source_type='remittance' when user confirms yes.
+    {
+      const remitMsgTrimmed = userMessage.trim().toLowerCase();
+      const isRemitYes = remitMsgTrimmed === "1" || /^s[ií]$/i.test(remitMsgTrimmed);
+      const isRemitNo  = remitMsgTrimmed === "2" || remitMsgTrimmed === "no";
+
+      if (isRemitYes || isRemitNo) {
+        const remitCheck = await db.execute(sql`
+          SELECT u.receives_remittances,
+                 (SELECT trigger_type FROM paula_trigger_log
+                  WHERE telefono = ${phoneKey}
+                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+          FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
+        `);
+        const remitRow = remitCheck.rows[0] as
+          { receives_remittances: boolean | null; last_trigger: string | null } | undefined;
+
+        if (remitRow && remitRow.receives_remittances == null && remitRow.last_trigger === "remittance_profile") {
+          const flagValue = isRemitYes;
+          await db.execute(sql`
+            UPDATE users SET receives_remittances = ${flagValue}
+            WHERE telefono = ${phoneKey}
+          `);
+
+          if (isRemitYes) {
+            // Retroactively tag existing untagged SPEI-in loads as remittance
+            await db.execute(sql`
+              UPDATE wallet_transactions wt
+              SET load_source_type = 'remittance'
+              FROM wallets w
+              WHERE wt.wallet_id = w.id
+                AND w.telefono = ${phoneKey}
+                AND wt.type = 'spei_in'
+                AND (wt.load_source_type IS NULL OR wt.load_source_type = '')
+            `).catch(() => {});
+
+            await sendWhatsApp(phoneKey,
+              `✅ ¡Gracias! Guardamos que recibes apoyos del extranjero.\n\n` +
+              `Esto enriquece tu perfil financiero y puede ayudarte a acceder a mejores opciones más adelante. 💪\n\n` +
+              `_Paula — tu asesora financiera_`
+            );
+          } else {
+            await sendWhatsApp(phoneKey,
+              `Entendido, gracias por responder. 👍\n\n` +
+              `Seguimos construyendo tu perfil con tus pagos. Cualquier duda, escríbeme.\n\n` +
+              `_Paula — tu asesora financiera_`
+            );
+          }
+          return;
+        }
+      }
+    }
+
     // ── Colonia backfill reply intercept ──────────────────────────────────────
     // Catches replies to the "¿en qué colonia vives?" cron message.
     // Active for 48 h after colonia_asked_at was set, while colonia is still NULL.
