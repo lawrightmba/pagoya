@@ -1,4 +1,4 @@
-import { pgTable, text, serial, numeric, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, numeric, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -25,6 +25,13 @@ export const billPaymentsTable = pgTable("bill_payments", {
   taecelCargoMxn: numeric("taecel_cargo_mxn", { precision: 10, scale: 2 }),
   bolsaType: text("bolsa_type"),
   platformFeeMxn: numeric("platform_fee_mxn", { precision: 10, scale: 2 }).default("15.00"),
+  // Pre-FI enrichment fields (added v3.0)
+  // amount_due_mxn: billed amount from provider (CFE/Telmex only until biller-API pull)
+  amountDueMxn: numeric("amount_due_mxn", { precision: 10, scale: 2 }),
+  // days_from_due: positive = paid early, negative = paid late. NULL if no user_billers row.
+  daysFromDue: integer("days_from_due"),
+  // channel: wallet_balance | card_direct (oxxo_cash reserved for future direct OXXO bill pay)
+  channel: text("channel"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

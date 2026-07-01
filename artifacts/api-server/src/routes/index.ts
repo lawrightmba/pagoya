@@ -261,6 +261,20 @@ router.get("/stats", async (_req: Request, res: Response) => {
 // ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
 router.all(/^\/admin/, adminAuth);
 
+// POST /api/admin/run-enrichment — manually trigger nightly enrichment + monthly seed
+router.post("/admin/run-enrichment", async (_req: Request, res: Response) => {
+  try {
+    const { runNightlyEnrichment, seedExpectedPaymentsForCycle } = await import("../services/enrichmentCron.js");
+    const { seed } = req.body as { seed?: boolean };
+    await runNightlyEnrichment();
+    if (seed) await seedExpectedPaymentsForCycle();
+    res.json({ ok: true, message: "Enrichment run complete — check server logs." });
+  } catch (err) {
+    logger.error({ err }, "admin/run-enrichment: failed");
+    res.status(500).json({ error: "Enrichment failed — check server logs." });
+  }
+});
+
 // POST /api/admin/run-winback — manually trigger 30d win-back sweep (for verification)
 router.post("/admin/run-winback", async (_req: Request, res: Response) => {
   try {

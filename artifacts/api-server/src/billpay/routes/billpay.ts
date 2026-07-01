@@ -348,6 +348,7 @@ router.post("/pay", async (req: Request, res: Response) => {
         taecelCargoMxn: typeof raw?.cargoMxn === "number" ? String(raw.cargoMxn) : null,
         bolsaType: typeof raw?.bolsaType === "string" ? raw.bolsaType : null,
         paymentMethod: paymentSource === "wallet" ? "wallet" : "card",
+        channel: paymentSource === "wallet" ? "wallet_balance" : "card_direct",
         repId: effectiveRepId,
         platformFeeMxn: effectiveFee,
       }).returning({ id: billPaymentsTable.id });
@@ -483,6 +484,20 @@ router.post("/pay", async (req: Request, res: Response) => {
   }
 
   // ── Step 4: Non-blocking side effects (transaction already committed) ─────────
+
+  // Pre-FI enrichment: compute days_from_due from user_billers.payment_day.
+  // Positive = paid early, negative = paid late. Skipped if no user_billers row.
+  db.execute(sql`
+    UPDATE bill_payments bp
+    SET days_from_due = ub.payment_day - EXTRACT(DAY FROM NOW())::int
+    FROM user_billers ub
+    JOIN user_profiles up ON up.id = ub.profile_id
+    WHERE bp.id         = ${paymentId}
+      AND up.phone      = ${telefono}
+      AND ub.biller_id  = ${service.id}
+      AND ub.payment_day IS NOT NULL
+      AND bp.days_from_due IS NULL
+  `).catch(() => {});
 
   // PTI v3: capture payment metadata — fire-and-forget, never blocks response
   const paymentChannelVal = paymentSource === "wallet" ? "wallet_credit" : "oxxo";

@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { siprelBalanceCheck } from "./jobs/siprelBalanceCheck.js";
 import { startNudgePollCron } from "./services/nudgeService.js";
+import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 
 const rawPort = process.env["PORT"];
 
@@ -26,4 +27,5 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   siprelBalanceCheck.start();
   startNudgePollCron();
+  startEnrichmentCrons();
 });
