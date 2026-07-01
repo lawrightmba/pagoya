@@ -171,7 +171,7 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte" | "reps">("investor");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte" | "reps" | "content">("investor");
 
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
 
@@ -581,11 +581,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : tab === "reps" ? "Rep Management" : "Soporte"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : tab === "reps" ? "Rep Management" : tab === "content" ? "Content Calendar" : "Soporte"}
           </div>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["investor", "ops", "reps", "landlords", "compliance", "soporte"] as const).map((t) => (
+            {(["investor", "ops", "reps", "landlords", "compliance", "soporte", "content"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "reps" ? "👥 Reps" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : "🎧 Soporte"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "reps" ? "👥 Reps" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : t === "content" ? "📅 Content" : "🎧 Soporte"}
               </button>
             ))}
           </div>
@@ -2596,6 +2596,170 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {tab === "content" && (() => {
+          const STATUS_COLORS: Record<string, string> = {
+            "posted":    "#39A935",
+            "ready":     "#3B82F6",
+            "scheduled": "#F59E0B",
+            "draft":     "#5a7080",
+          };
+          const posts = [
+            {
+              week: 1, date: "Jul 1, 2026", status: "ready",
+              title: "The Abuela story — article distillation",
+              angle: "Narrative / Hook",
+              copy: `She kept 40 years of OXXO receipts in a drawer.\n\nNever missed a payment. Not once.\n\nHer credit score: zero.\n\nBecause no bureau was looking.\n\nThat's the story of 65 million Mexicans — not because they're unreliable. Because the system wasn't built to see them.\n\nThey pay CFE. They pay Telmex. They pay water bills for family in Monterrey from apartments in Dallas and Chicago. Every month. In cash. At a store that charges them a fee every single time.\n\nThe receipts prove the reliability.\n\nThe bureaus don't care about receipts.\n\nThat gap — between observable reliability and recorded creditworthiness — is one of the largest untapped opportunities in financial services today.\n\nNot just for inclusion. For accuracy.\n\nWe built PagoYa because we lived this problem. Every payment through our platform becomes data that didn't exist before. Behavioral credit data for people the system decided didn't exist.\n\nThe infrastructure can change.\n\nFull piece in the comments — would love to hear from anyone working in financial inclusion, alternative credit, or Latin American markets.\n\n#FinancialInclusion #BehavioralCredit #Fintech #LATAM #AlternativeCredit #Mexico #PredictiveTrustIndex`,
+            },
+            {
+              week: 2, date: "Jul 8, 2026", status: "draft",
+              title: "What $58B in US-MX remittances tells you about creditworthiness",
+              angle: "Data + Insight",
+              copy: `Draft: Lead with the $58B figure. Explain that remittance senders in the US are often supporting family members who pay bills reliably in Mexico — but that reliability is invisible to lenders on both sides of the border. Connect to PagoYa capturing remittance signals as part of the PTI.`,
+            },
+            {
+              week: 3, date: "Jul 15, 2026", status: "draft",
+              title: "The problem with calling it 'financial inclusion'",
+              angle: "Contrarian Take",
+              copy: `Draft: Reframe the narrative — this isn't charity, it's a data accuracy problem. The unbanked aren't excluded because they're risky. They're excluded because the measurement infrastructure doesn't reach them. Accurate data = better underwriting = more lending. Everyone wins.`,
+            },
+            {
+              week: 4, date: "Jul 22, 2026", status: "draft",
+              title: "What 90 behavioral dimensions tell you that a FICO score can't",
+              angle: "Product Education",
+              copy: `Draft: Walk through 4–5 specific PTI signals (payment timing consistency, biller count growth, payday window regularity, remittance inflow pattern) and contrast with what FICO captures. Make it concrete, no jargon.`,
+            },
+            {
+              week: 5, date: "Jul 29, 2026", status: "draft",
+              title: "Why WhatsApp is the world's most underrated financial data layer",
+              angle: "Technology Angle",
+              copy: `Draft: 77M Mexicans already use it daily. Every bill payment conversation is a timestamped behavioral record. Zero install friction means the data universe is the entire phone-owning population, not just app downloaders. Paula turns conversation into credit signal.`,
+            },
+            {
+              week: 6, date: "Aug 5, 2026", status: "draft",
+              title: "Nearshoring created 500K new earners with zero credit files",
+              angle: "Market Timing",
+              copy: `Draft: The US-MX nearshoring boom is creating a new class of formal workers in Monterrey, Saltillo, Guadalajara — people with steady income and zero credit history. They're PagoYa's exact customer. Employer HR benefit channel reaches them at the moment they enter the formal economy.`,
+            },
+            {
+              week: 7, date: "Aug 12, 2026", status: "draft",
+              title: "The woman who paid her electricity bill for 22 years in cash",
+              angle: "Behavioral Data Proof Point",
+              copy: `Draft: Deep dive on payment consistency as a signal. A user who has paid CFE every month for years without a single missed payment is statistically a better credit risk than their absence from the bureau suggests. This is the core thesis made visceral.`,
+            },
+            {
+              week: 8, date: "Aug 19, 2026", status: "draft",
+              title: "Why remittance corridors are behavioral data goldmines",
+              angle: "B2B / Lender Audience",
+              copy: `Draft: Target lenders and investors explicitly. Remittance senders are disproportionately reliable — they're sending money home because they're responsible. The recipients who pay bills from those funds show consistent, predictable behavior. PagoYa captures both sides of that corridor.`,
+            },
+          ];
+
+          return (
+            <div style={{ marginTop: 24 }}>
+              {/* Header row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div style={{ color: "#9CA3AF", fontSize: "0.85rem", fontFamily: "'Space Mono', monospace", marginBottom: 4 }}>
+                    TOPIC FOCUS: Predictive Behavior &amp; Behavioral Credit Data · Post Tuesdays · Link in first comment
+                  </div>
+                  <div style={{ color: "#5a7080", fontSize: "0.8rem", fontFamily: "'Space Mono', monospace" }}>
+                    Text "calendar" to Paula on WhatsApp to pull the current status
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  {[["ready","3B82F6","Ready"],["scheduled","F59E0B","Scheduled"],["posted","39A935","Posted"],["draft","5a7080","Draft"]].map(([s,c,l]) => (
+                    <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.78rem", fontFamily: "'Space Mono', monospace", color: "#9CA3AF" }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: `#${c}` }} />
+                      {l}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Posts */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {posts.map((post) => {
+                  const statusColor = STATUS_COLORS[post.status] ?? "#5a7080";
+                  const statusLabel = post.status.charAt(0).toUpperCase() + post.status.slice(1);
+                  return (
+                    <div key={post.week} style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: `1px solid ${post.status === "ready" ? "rgba(59,130,246,0.3)" : post.status === "posted" ? "rgba(57,169,53,0.3)" : "rgba(255,255,255,0.07)"}`,
+                      borderRadius: 12,
+                      padding: "20px 24px",
+                    }}>
+                      {/* Week header */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            fontFamily: "'Space Mono', monospace",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: 6,
+                            padding: "3px 10px",
+                            color: "#9CA3AF",
+                            letterSpacing: "0.08em",
+                          }}>
+                            W{post.week}
+                          </div>
+                          <div style={{ color: "#5a7080", fontSize: "0.82rem", fontFamily: "'Space Mono', monospace" }}>{post.date}</div>
+                          <div style={{
+                            fontSize: "0.75rem",
+                            fontFamily: "'Space Mono', monospace",
+                            fontWeight: 700,
+                            padding: "3px 10px",
+                            borderRadius: 20,
+                            border: `1px solid ${statusColor}`,
+                            color: statusColor,
+                            letterSpacing: "0.06em",
+                          }}>
+                            {statusLabel}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: "0.75rem",
+                          fontFamily: "'Space Mono', monospace",
+                          color: "#5a7080",
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.07)",
+                          borderRadius: 6,
+                          padding: "3px 10px",
+                        }}>
+                          {post.angle}
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div style={{ fontWeight: 700, fontSize: "1rem", color: "#E5E7EB", marginBottom: 12, lineHeight: 1.4 }}>
+                        {post.title}
+                      </div>
+
+                      {/* Copy */}
+                      <div style={{
+                        fontFamily: "'Space Mono', monospace",
+                        fontSize: "0.78rem",
+                        color: "#5a7080",
+                        lineHeight: 1.7,
+                        whiteSpace: "pre-wrap",
+                        background: "rgba(0,0,0,0.2)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        borderRadius: 8,
+                        padding: "14px 16px",
+                        maxHeight: post.status === "ready" ? "none" : 80,
+                        overflow: post.status === "ready" ? "visible" : "hidden",
+                      }}>
+                        {post.copy}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
       </div>
     </div>
