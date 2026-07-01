@@ -1,0 +1,13 @@
+
+
+1. Individual-level exposure needs a consent gate — this is the biggest one
+Your existing B2B API enforces k-anonymity (k=5) for aggregate lending signal. GET /api/b2b/profile/:telefono is a per-person lookup by phone number — that’s a different legal posture entirely, closer to the READY-handoff consent flow (PTI ≥ 80 + 5 gates) than to the aggregate endpoint. The doc doesn’t specify whether this new endpoint inherits that gate or is open to any profile regardless of consent status. Before this ships, decide explicitly: does a lending partner only get /profile/:telefono for users who’ve cleared the same consent bar as a Paula handoff, or is it broader? This is the one item worth blocking on, not just noting.
+
+2. partial_payment_count has no computation job
+It’s in the Tier 3 API response but Tier 2 only lists D–G; nothing derives it. Should be a straightforward addition once amount_due_mxn is populated (paid amount < amount_due on a given bill_payments row) — but flag that it’ll be NULL for every provider except CFE/Telmex until the biller-API due-date pull (explicitly deferred) happens. Worth stating that limitation in the field itself, not just via data_completeness.
+
+3. No minimum-N gating on statistical fields
+payment_amount_cv and biller_count_slope_90d are “retroactively computable on any user with 3+ payments” — but a coefficient of variation on 3 data points is noise, not signal. Buyers pricing off this will get burned by early volatility that looks meaningful. Add a floor (e.g. N≥8 for cv, N≥3 snapshots for slope) and return NULL below it rather than a misleadingly precise number. data_completeness tells buyers a field is populated, not that it’s reliable — those are different problems and only the first is currently handled.
+
+4. Missed/cured threshold consistency
+expected_payments.missed_at uses a fixed 5-day-overdue rule. Confirm that’s the same lateness definition PTI v3.0 uses elsewhere for scoring (P0/P1 signals, READY gate criteria) — if the scoring engine and this new table use different thresholds for “late,” you’ll get a PTI score and a payment_reliability block that quietly disagree on the same user.
