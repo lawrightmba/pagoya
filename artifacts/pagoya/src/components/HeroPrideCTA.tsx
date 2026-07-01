@@ -56,8 +56,8 @@ export default function HeroPrideCTA({ lang }: Props) {
         onClick={() => navigate("/register")}
         style={{
           fontFamily: "DM Sans, sans-serif",
-          background: "#FFFFFF",
-          color: "#004F2D",
+          background: "linear-gradient(135deg, #F5C842 0%, #E8A800 100%)",
+          color: "#3A2000",
           border: "none",
           borderRadius: "14px",
           padding: "0 28px",
@@ -66,22 +66,33 @@ export default function HeroPrideCTA({ lang }: Props) {
           fontWeight: 800,
           cursor: "pointer",
           letterSpacing: "0.01em",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.22)",
+          boxShadow: "0 4px 20px rgba(232,168,0,0.45)",
           transition: "transform 0.12s, box-shadow 0.12s",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "scale(1.03)";
-          e.currentTarget.style.boxShadow = "0 6px 22px rgba(0,0,0,0.28)";
+          e.currentTarget.style.boxShadow = "0 6px 26px rgba(232,168,0,0.58)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.22)";
+          e.currentTarget.style.boxShadow = "0 4px 20px rgba(232,168,0,0.45)";
         }}
         onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }}
         onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
       >
         {es ? "Crear cuenta gratis" : "Create free account"}
       </button>
+
+      {/* Bonus note — subordinate to CTA, reads as supporting detail */}
+      <p style={{
+        fontFamily: "DM Sans, sans-serif",
+        fontSize: "12px",
+        color: "rgba(255,255,255,0.50)",
+        margin: "14px 0 0",
+        letterSpacing: "0.01em",
+      }}>
+        🎁 {es ? "+$150 MXN de bienvenida incluidos" : "+$150 MXN welcome bonus included"}
+      </p>
     </section>
   );
 }

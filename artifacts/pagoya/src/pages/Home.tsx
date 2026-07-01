@@ -340,12 +340,8 @@ export default function Home() {
           .hero-h1{font-size:40px!important;}
           .hero-steps{flex-direction:row!important;gap:28px!important;}
         }
-        @keyframes bonusPulse {
-          0%,100%{box-shadow:0 0 0 0 rgba(216,90,48,0.0);}
-          50%{box-shadow:0 0 16px 4px rgba(216,90,48,0.30);}
-        }
-        .bonus-strip { animation: bonusPulse 2.8s ease-in-out infinite; transition: filter 0.15s; }
-        .bonus-strip:hover { filter:brightness(1.08); }
+        .bonus-strip { transition: opacity 0.15s; }
+        .bonus-strip:hover { opacity: 0.75; }
       `}</style>
 
       {/* ══════════════════════════════════════════════════════
@@ -470,30 +466,28 @@ export default function Home() {
               : "No lines. No apps. No bank account needed."}
           </p>
 
-          {/* ── HERO BONUS BADGE — visible above fold on every device ── */}
-          <button
+          {/* ── HERO BONUS BADGE — quiet supporting note, not competing headline ── */}
+          <p
+            className="bonus-strip"
             onClick={() => navigate("/register")}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "6px",
-              background: "rgba(255,92,26,0.18)",
-              border: "1px solid rgba(255,92,26,0.55)",
+              gap: "5px",
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.18)",
               borderRadius: "999px",
-              padding: "6px 16px",
-              fontSize: "13px",
-              fontWeight: 700,
-              color: "#FFCFB8",
+              padding: "4px 13px",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.55)",
               cursor: "pointer",
-              marginBottom: "28px",
-              letterSpacing: "0.01em",
-              transition: "background 0.15s",
+              marginBottom: "24px",
+              letterSpacing: "0.02em",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.30)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,92,26,0.18)"; }}
           >
-            🎁&nbsp;{es ? "$150 MXN de bienvenida al registrarte gratis" : "$150 MXN welcome bonus — sign up free"}
-          </button>
+            🎁&nbsp;{es ? "$150 MXN de bienvenida incluidos" : "$150 MXN welcome bonus included"}
+          </p>
 
           {/* ── Live payment counter social proof ─────────────────────── */}
           {paymentCount > 0 && (
