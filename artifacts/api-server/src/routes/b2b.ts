@@ -88,6 +88,25 @@ async function authenticateRequest(req: Request, res: Response): Promise<B2BPart
   }
 }
 
+// ── requirePartner ────────────────────────────────────────────────────────────
+// Throws if the raw API key is missing, invalid, or inactive.
+// Used by routes that need to catch auth failure themselves (loan-outcomes etc.)
+async function requirePartner(rawKey: string): Promise<B2BPartner> {
+  const keyHash = hashApiKey(rawKey);
+  const row = await db.execute(sql`
+    SELECT id, partner_name, purpose_code, allowed_endpoints, rate_limit_rpm, rate_limit_per_day
+    FROM b2b_api_keys
+    WHERE api_key_hash = ${keyHash} AND is_active = true
+    LIMIT 1
+  `);
+  const partner = row.rows[0] as B2BPartner | undefined;
+  if (!partner) throw new Error("Invalid or inactive API key");
+  db.execute(sql`
+    UPDATE b2b_api_keys SET last_used_at = NOW() WHERE api_key_hash = ${keyHash}
+  `).catch(() => {});
+  return partner;
+}
+
 async function writeAuditLog(params: {
   partner_name: string;
   api_key_hash: string;

@@ -73,7 +73,7 @@ async function computePaymentAmountCV(telefono: string): Promise<{
         COALESCE(STDDEV(monto::numeric), 0)            AS stddev_amount
       FROM bill_payments
       WHERE telefono = ${telefono}
-        AND status = ANY(${PAID_STATUSES}::text[])
+        AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
       GROUP BY service_name
       HAVING COUNT(*) >= ${MIN_N_PAYMENT_CV}
     ) sub
@@ -99,12 +99,12 @@ async function computePriorityRank(telefono: string): Promise<{
       COUNT(DISTINCT bp.created_at::date) AS multi_day_count
     FROM bill_payments bp
     WHERE bp.telefono = ${telefono}
-      AND bp.status = ANY(${PAID_STATUSES}::text[])
+      AND bp.status IN ('completed', 'success', 'completed_ok', 'confirmed')
       AND bp.created_at::date IN (
         SELECT created_at::date
         FROM bill_payments
         WHERE telefono = ${telefono}
-          AND status = ANY(${PAID_STATUSES}::text[])
+          AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
         GROUP BY created_at::date
         HAVING COUNT(*) >= 2
       )
@@ -138,7 +138,7 @@ async function computePartialPaymentCount(telefono: string): Promise<{
       COUNT(*) FILTER (WHERE amount_due_mxn IS NOT NULL)::int AS rows_with_due
     FROM bill_payments
     WHERE telefono = ${telefono}
-      AND status = ANY(${PAID_STATUSES}::text[])
+      AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
   `);
   const r = row.rows[0] as Record<string, unknown> | undefined;
   const rowsWithDue = Number(r?.rows_with_due ?? 0);
@@ -173,7 +173,7 @@ async function computeRemittanceSignals(telefono: string): Promise<{
 }> {
   const wallet = await db.execute(sql`
     SELECT w.id FROM wallets w
-    JOIN users u ON u.id = w.user_id
+    JOIN users u ON u.telefono = w.user_id
     WHERE u.telefono = ${telefono}
     LIMIT 1
   `);
@@ -308,14 +308,14 @@ async function computeColoniaClusterRisk(telefono: string): Promise<number | nul
 async function computeReferralNetworkRisk(telefono: string): Promise<number | null> {
   const result = await db.execute(sql`
     WITH ref_source AS (
-      SELECT ref_code FROM users WHERE telefono = ${telefono} LIMIT 1
+      SELECT referral_code FROM users WHERE telefono = ${telefono} LIMIT 1
     ),
     same_chain AS (
       SELECT cp.payment_score
       FROM users u
       JOIN credit_profiles cp ON cp.telefono = u.telefono
-      WHERE u.referred_by = (SELECT ref_code FROM ref_source)
-        AND (SELECT ref_code FROM ref_source) IS NOT NULL
+      WHERE u.signup_ref_code = (SELECT referral_code FROM ref_source)
+        AND (SELECT referral_code FROM ref_source) IS NOT NULL
         AND u.telefono != ${telefono}
         AND cp.payment_score IS NOT NULL
     )
@@ -350,14 +350,14 @@ async function computePaulaSentiment(telefono: string): Promise<{
   trend30d: number | null;
 }> {
   const rows = await db.execute(sql`
-    SELECT body, received_at
+    SELECT message_body, received_at
     FROM paula_inbound_log
     WHERE telefono = ${telefono}
       AND received_at >= NOW() - INTERVAL '90 days'
     ORDER BY received_at ASC
   `);
 
-  const messages = rows.rows as Array<{ body: string; received_at: Date }>;
+  const messages = rows.rows as Array<{ message_body: string; received_at: Date }>;
   if (messages.length < 3) return { score: null, stressFlag: null, trend30d: null };
 
   function scoreMsg(text: string): number {
@@ -372,7 +372,7 @@ async function computePaulaSentiment(telefono: string): Promise<{
   const cutoff30d = now - 30 * 86_400_000;
   const cutoff60d = now - 60 * 86_400_000;
 
-  const scores = messages.map(m => ({ score: scoreMsg(m.body), ts: new Date(m.received_at).getTime() }));
+  const scores = messages.map(m => ({ score: scoreMsg(m.message_body), ts: new Date(m.received_at).getTime() }));
   const allScores = scores.map(s => s.score);
   const avgAll = allScores.reduce((a, b) => a + b, 0) / allScores.length;
 
@@ -419,7 +419,7 @@ async function computeEmploymentStability(telefono: string): Promise<number | nu
 
 // ── Enrichment orchestrator (runs E–M for one user) ───────────────────────────
 
-async function computeEnrichmentForUser(telefono: string): Promise<void> {
+export async function computeEnrichmentForUser(telefono: string): Promise<void> {
   try {
     const [sloperResult, cvResult, rankResult, partialResult,
            remittanceResult, coloniaRisk, referralRisk, sentimentResult, employmentScore,
@@ -583,7 +583,7 @@ export async function updateExpectedPaymentsStatuses(): Promise<void> {
       WHERE ep.status IN ('pending', 'missed')
         AND bp.telefono = ep.telefono
         AND bp.service_name = ep.service_name
-        AND bp.status = ANY(${PAID_STATUSES}::text[])
+        AND bp.status IN ('completed', 'success', 'completed_ok', 'confirmed')
         AND bp.created_at::date BETWEEN ep.expected_date - 7 AND ep.expected_date + 30
         AND ep.bill_payment_id IS NULL
     `);
@@ -645,7 +645,7 @@ export async function runNightlyEnrichment(): Promise<void> {
     const usersRow = await db.execute(sql`
       SELECT DISTINCT telefono
       FROM bill_payments
-      WHERE status = ANY(${PAID_STATUSES}::text[])
+      WHERE status IN ('completed', 'success', 'completed_ok', 'confirmed')
         AND created_at >= NOW() - INTERVAL '180 days'
       ORDER BY telefono
     `);

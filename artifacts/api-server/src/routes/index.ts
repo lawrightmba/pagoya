@@ -262,10 +262,17 @@ router.get("/stats", async (_req: Request, res: Response) => {
 router.all(/^\/admin/, adminAuth);
 
 // POST /api/admin/run-enrichment — manually trigger nightly enrichment + monthly seed
+// Body: { telefono?: string, seed?: boolean }
+// If telefono is provided, runs enrichment for that single user only (faster, for smoke tests).
 router.post("/admin/run-enrichment", async (_req: Request, res: Response) => {
   try {
-    const { runNightlyEnrichment, seedExpectedPaymentsForCycle } = await import("../services/enrichmentCron.js");
-    const { seed } = req.body as { seed?: boolean };
+    const { runNightlyEnrichment, seedExpectedPaymentsForCycle, computeEnrichmentForUser } = await import("../services/enrichmentCron.js");
+    const { seed, telefono } = _req.body as { seed?: boolean; telefono?: string };
+    if (telefono) {
+      await computeEnrichmentForUser(telefono);
+      res.json({ ok: true, message: `Enrichment run complete for ${telefono}.` });
+      return;
+    }
     await runNightlyEnrichment();
     if (seed) await seedExpectedPaymentsForCycle();
     res.json({ ok: true, message: "Enrichment run complete — check server logs." });
