@@ -20,8 +20,8 @@ const columns = [
     heading: "Para propietarios",
     links: [
       { label: "Cobro de renta digital", href: "https://pagoseguromx.com", external: true },
-      { label: "Únete como representante", href: "/rep-register" },
-      { label: "Panel de propietario", href: "/rep-dashboard" },
+      { label: "Únete como representante", href: waLink("Hola, me interesa ser representante de PagoYa"), external: true },
+      { label: "Panel de propietario", href: "/rep-login" },
     ],
   },
   {
