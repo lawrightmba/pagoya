@@ -20,7 +20,7 @@ const columns = [
     heading: "Para propietarios",
     links: [
       { label: "Cobro de renta digital", href: "https://pagoseguromx.com", external: true },
-      { label: "Únete como representante", href: "/rep-login" },
+      { label: "Únete como representante", href: "/rep-register" },
       { label: "Panel de propietario", href: "/rep-dashboard" },
     ],
   },
