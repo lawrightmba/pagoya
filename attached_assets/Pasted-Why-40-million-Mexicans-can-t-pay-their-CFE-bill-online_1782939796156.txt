@@ -1,0 +1,60 @@
+Why 40 million Mexicans can't pay their CFE bill online — and what that means for the US diaspora.
+Lloyd A. Wright, MBA
+Lloyd A. Wright, MBA
+Fintech Founder | Building the Predictive Trust Index | Predictive Credit Data for the World’s Unbanked | Mexico & Emerging Markets | Founders Institute Austin ’26
+
+
+June 30, 2026
+Abuela paid her electricity bill the same way for 40 years.
+
+She'd wake up early, take two buses to the nearest OXXO, stand in line, pay in cash, and keep the paper receipt in a drawer in case there was ever a dispute.
+
+She didn't have a bank account. She didn't have a credit card. She had a phone number and a stack of receipts.
+
+When she died, her drawer was full of them. 
+
+What most people outside Mexico don't understand is that she wasn't an exception. She was the rule.
+
+THE INFRASTRUCTURE GAP NOBODY TALKS ABOUT
+
+Mexico's CFE — the national electric utility — serves over 45 million households. To pay your bill online, officially, you need a debit or credit card linked to a Mexican bank account.
+
+According to the INEGI's most recent national financial inclusion survey, 63% of Mexican adults — roughly 65 million people — do not have a bank account. Not because they don't want one. Because the system wasn't built for them: no permanent address history, no formal employment record, no credit bureau file. No file, no account. No account, no online access.
+
+So they pay at OXXO. They pay at Soriana. They stand in line, pay a service fee, and keep the receipt.
+
+Mexico has approximately 20,000 OXXO stores. That sounds like a lot until you consider there are 2,500 municipalities in the country, many of them rural, many of them hours from the nearest convenience store. And every one of those 20,000 stores charges between $9 and $15 pesos per transaction — a fee that hits the people with the least money the hardest, every single month, forever.
+
+WHAT THIS LOOKS LIKE FROM THE UNITED STATES
+
+There are roughly 40 million Mexican-born immigrants living in the United States. Many of them are still paying bills in Mexico — a mother's water bill in Monterrey, a sister's CFE in Guadalajara, a family home's internet in Vallarta. They find out the bill is due via WhatsApp. They try to pay online. They hit the bank account wall. They call a cousin to go stand in line. The cousin charges them for the favor, or they wire money and pay the remittance fee on top of the OXXO fee.
+
+This is not a niche problem. It is a structural feature of the Mexican financial system that has been operating the same way for decades — and the people it costs the most are the ones who can least afford to pay it.
+
+WHY FINTECH HASN'T FIXED IT
+
+The honest answer is that most fintech is built for people who already have financial infrastructure. App stores require a credit card. SPEI transfers require a CLABE number, which requires a bank account. "Digital wallets" require a debit card to fund them.
+
+Every product layer assumes the one below it already exists. For the 65 million Mexicans at the bottom — the ones who are cash-economy by necessity, not by choice — each of those assumptions is a wall.
+
+There's also the trust problem. A grandmother who has been managing her household finances in cash for 40 years has a rational reason to distrust an app that asks her to enter her personal information into a phone. She's not being technophobic. She's being smart. Trust isn't given to technology. It's earned, slowly, through reliability and transparency.
+
+WHAT BEHAVIORAL DATA ACTUALLY SHOWS
+
+Here's the thing that gets overlooked in every "financial inclusion" conversation: unbanked people are often extremely reliable payers. They pay their CFE bill because the lights go off if they don't. They pay their water bill because they have children. They pay their phone bill because that phone is their connection to work, to family, to everything.
+
+The consistency of those payments — month after month, service after service — tells a creditworthiness story that no bureau captures because no bureau is looking. There is no FICO score for the woman who has paid her electricity bill without fail for 22 years because she paid it in cash at OXXO.
+
+That gap between observable reliability and recorded creditworthiness is one of the most significant opportunities in financial services today. Not just for inclusion — for accuracy.
+
+WHY I'M WRITING THIS
+
+I spent years watching this problem up close in Puerto Vallarta. The people who needed the most help navigating payments were the ones the system had decided didn't exist.
+
+We built PagoYa because we lived this problem — and because we believed the gap between "reliable payer" and "bankable customer" was not an accident of character. It was an accident of infrastructure.
+
+The infrastructure can change.
+
+If this resonates with your work in financial inclusion, alternative credit, or Latin American markets — I'd enjoy the conversation. Connect or DM.
+
+#FinancialInclusion #Fintech #Mexico #LatinoFinance #AlternativeCredit #UnbankedPopulation #LATAM #PuertoVallarta #Guadalajara #CDMX
