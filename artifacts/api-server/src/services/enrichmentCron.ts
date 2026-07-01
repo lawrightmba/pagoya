@@ -148,7 +148,22 @@ async function computePartialPaymentCount(telefono: string): Promise<{
 
 // ── I. Remittance signals (fields 72–75) ─────────────────────────────────────
 // Reads wallet_transactions tagged load_source_type = 'remittance'.
-// Returns NULL for all fields when no remittance transactions exist.
+// Returns NULL for all four fields when fewer than 2 tagged transactions exist.
+//
+// Confidence weighting:
+//   keyword_matched — per-transaction confirmation; full weight
+//   self_reported   — user-level inference, no per-tx confirmation; 0.75 weight on
+//                     avgAmountMxn and a reliability penalty on score fields when
+//                     self_reported rows form the majority of the input set.
+//
+// Regularity (field 72): cadence regularity, not amount CV.
+//   CV of inter-arrival intervals in days. Monthly/biweekly remittances score high
+//   even when amounts vary. Amount-based CV is explicitly NOT used here.
+//
+// Source consistency (field 74): fraction of transactions from the dominant sender.
+//   Sender is parsed from the stored description format:
+//   "SPEI de {ordenante} — clave {claveRastreo}"
+//   High score = user receives from one consistent sender (e.g., always Remitly).
 
 async function computeRemittanceSignals(telefono: string): Promise<{
   regularityScore: number | null;
@@ -166,41 +181,96 @@ async function computeRemittanceSignals(telefono: string): Promise<{
   if (!walletId) return { regularityScore: null, avgAmountMxn: null, sourceConsistency: null, dominantCountry: null };
 
   const rows = await db.execute(sql`
-    SELECT amount_mxn, description, created_at
+    SELECT amount_mxn, description, created_at, load_source_confidence
     FROM wallet_transactions
     WHERE wallet_id = ${walletId as string}
       AND load_source_type = 'remittance'
       AND status = 'confirmed'
-    ORDER BY created_at DESC
+    ORDER BY created_at ASC
     LIMIT 100
   `);
 
-  const txns = rows.rows as Array<{ amount_mxn: string; description: string | null; created_at: Date }>;
+  const txns = rows.rows as Array<{
+    amount_mxn: string;
+    description: string | null;
+    created_at: Date | string;
+    load_source_confidence: string | null;
+  }>;
   if (txns.length < 2) return { regularityScore: null, avgAmountMxn: null, sourceConsistency: null, dominantCountry: null };
 
-  const amounts = txns.map(t => Number(t.amount_mxn));
-  const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-  const stddev = Math.sqrt(amounts.map(a => (a - avg) ** 2).reduce((a, b) => a + b, 0) / amounts.length);
-  const cv = avg > 0 ? stddev / avg : 1;
-  const regularityScore = Math.round(Math.max(0, Math.min(100, (1 - cv) * 100)));
+  const keywordCount = txns.filter(t => t.load_source_confidence === "keyword_matched").length;
+  const selfReportedMajority = keywordCount < txns.length / 2;
 
-  // Source consistency: fraction sharing the same dominant description prefix
-  const descFreq: Record<string, number> = {};
+  // ── Field 73: avg_remittance_amount_mxn ────────────────────────────────────
+  // self_reported rows weighted at 0.75 — user-level signal, not per-tx confirmed.
+  let weightedSum = 0;
+  let weightedN = 0;
   for (const t of txns) {
-    const key = (t.description ?? "unknown").slice(0, 20).toLowerCase();
-    descFreq[key] = (descFreq[key] ?? 0) + 1;
+    const w = t.load_source_confidence === "keyword_matched" ? 1.0 : 0.75;
+    weightedSum += Number(t.amount_mxn) * w;
+    weightedN += w;
   }
-  const topCount = Math.max(...Object.values(descFreq));
-  const sourceConsistency = Math.round((topCount / txns.length) * 100);
+  const avgAmountMxn = weightedN > 0 ? Math.round((weightedSum / weightedN) * 100) / 100 : null;
 
-  // Dominant country: infer from description keywords
-  const allDesc = txns.map(t => (t.description ?? "").toLowerCase()).join(" ");
+  // ── Field 72: remittance_inflow_regularity_score ───────────────────────────
+  // CV of inter-arrival intervals (days). Lower CV = more regular cadence = higher score.
+  // Penalised by 15 pts when self_reported rows are the majority (lower data confidence).
+  const dates = txns
+    .map(t => new Date(t.created_at).getTime())
+    .filter(ts => !isNaN(ts))
+    .sort((a, b) => a - b);
+
+  let regularityScore: number | null = null;
+  if (dates.length >= 2) {
+    const intervals: number[] = [];
+    for (let i = 1; i < dates.length; i++) {
+      intervals.push((dates[i] - dates[i - 1]) / 86_400_000); // ms → days
+    }
+    const meanInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const stdInterval  = Math.sqrt(
+      intervals.map(d => (d - meanInterval) ** 2).reduce((a, b) => a + b, 0) / intervals.length,
+    );
+    const cvInterval = meanInterval > 0 ? stdInterval / meanInterval : 1;
+    let score = Math.round(Math.max(0, Math.min(100, (1 - cvInterval) * 100)));
+    if (selfReportedMajority) score = Math.max(0, score - 15); // reliability penalty
+    regularityScore = score;
+  }
+
+  // ── Field 74: remittance_source_consistency ────────────────────────────────
+  // Fraction of transactions from the dominant sender.
+  // Parses ordenante from the stored description: "SPEI de {ordenante} — clave {id}"
+  const senderFreq: Record<string, number> = {};
+  for (const t of txns) {
+    const desc = t.description ?? "";
+    // Extract sender: text between "SPEI de " and " — clave"
+    const match = desc.match(/^SPEI de (.+?) — clave/i);
+    const senderKey = match ? match[1].trim().toLowerCase() : "unknown";
+    senderFreq[senderKey] = (senderFreq[senderKey] ?? 0) + 1;
+  }
+  const topSenderCount = Math.max(...Object.values(senderFreq));
+  let sourceConsistency = Math.round((topSenderCount / txns.length) * 100);
+  if (selfReportedMajority) sourceConsistency = Math.max(0, sourceConsistency - 10);
+
+  // ── Field 75: dominant_remittance_country ──────────────────────────────────
+  // Inferred from known remittance provider names in the sender field, then
+  // falls back to description keyword scan. NULL when no signal found.
+  const US_PROVIDERS = ["remitly", "western union", "xoom", "moneygram", "worldremit", "wise", "transferwise", "ria", "sendwave", "pangea"];
+  const CA_PROVIDERS = ["transferwise canada", "remitly canada"];
+  const ES_PROVIDERS = ["bizum", "spain", "españa"];
+
+  const allSendersAndDesc = txns
+    .map(t => ((t.description ?? "")).toLowerCase())
+    .join(" ");
+
   let dominantCountry: string | null = null;
-  if (allDesc.includes("usa") || allDesc.includes("estados unidos") || allDesc.includes("us ")) dominantCountry = "US";
-  else if (allDesc.includes("canada")) dominantCountry = "CA";
-  else if (allDesc.includes("españa") || allDesc.includes("spain")) dominantCountry = "ES";
+  if (US_PROVIDERS.some(p => allSendersAndDesc.includes(p))) dominantCountry = "US";
+  else if (CA_PROVIDERS.some(p => allSendersAndDesc.includes(p))) dominantCountry = "CA";
+  else if (ES_PROVIDERS.some(p => allSendersAndDesc.includes(p))) dominantCountry = "ES";
+  else if (allSendersAndDesc.includes("canada")) dominantCountry = "CA";
+  else if (allSendersAndDesc.includes("españa") || allSendersAndDesc.includes("spain")) dominantCountry = "ES";
+  // "usa" / "estados unidos" left out of fallback — too many false positives in concept text
 
-  return { regularityScore, avgAmountMxn: Math.round(avg * 100) / 100, sourceConsistency, dominantCountry };
+  return { regularityScore, avgAmountMxn, sourceConsistency, dominantCountry };
 }
 
 // ── J. Colonia cluster risk (field 81) ────────────────────────────────────────
