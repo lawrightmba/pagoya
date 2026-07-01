@@ -37,6 +37,28 @@ const REMITTANCE_PROFILE_MSG =
   `*2* — No\n\n` +
   `_Esta información es voluntaria y nos ayuda a mejorar tu perfil. Puedes ignorar este mensaje si prefieres._`;
 
+// ── Employment profile question (+24h after Module 1) ─────────────────────────
+const EMPLOYMENT_PROFILE_MSG =
+  `📋 *Una pregunta para tu perfil financiero:*\n\n` +
+  `¿Cómo describes tu situación de trabajo actual?\n\n` +
+  `Responde con el número:\n` +
+  `*1* — Empleo formal con contrato o nómina\n` +
+  `*2* — Trabajo informal o por cuenta propia\n` +
+  `*3* — Trabajo por proyecto / gig / freelance\n` +
+  `*4* — Por el momento sin empleo\n` +
+  `*5* — Prefiero no decir\n\n` +
+  `_Esta información es voluntaria y confidencial. Nos ayuda a conectarte con mejores opciones cuando tu perfil esté listo._`;
+
+// ── Address tenure question (+72h after Module 1) ─────────────────────────────
+const ADDRESS_TENURE_MSG =
+  `🏠 *Última pregunta de tu perfil:*\n\n` +
+  `¿Cuánto tiempo llevas viviendo en tu domicilio actual?\n\n` +
+  `Responde con el número:\n` +
+  `*1* — Menos de 6 meses\n` +
+  `*2* — Entre 6 meses y 2 años\n` +
+  `*3* — Más de 2 años\n\n` +
+  `_Esta información es voluntaria. Nos ayuda a entender mejor tu estabilidad y conectarte con opciones financieras adecuadas._`;
+
 // ── Income bucket labels (voluntary declaration via standalone follow-up) ──────
 const INCOME_BUCKET_MSG =
   `💡 *Una pregunta rápida:*\n\n` +
@@ -78,6 +100,9 @@ export const TRIGGER = {
   FREE_CREDIT_NUDGE:     "free_credit_nudge",
   // Remittance profile — queued after Module 1, intercepts sí/no reply
   REMITTANCE_PROFILE:    "remittance_profile",
+  // Employment + address tenure — queued after Module 1 (+24h / +72h respectively)
+  EMPLOYMENT_PROFILE:    "employment_profile",
+  ADDRESS_TENURE:        "address_tenure",
 } as const;
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
@@ -295,24 +320,49 @@ export async function evaluateTriggersForUser(
   ) {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
     fired++;
-    // Remittance profile follow-up — queued 24h after Module 1 fires, once per lifetime.
-    // whatsapp-agent.ts intercepts a 1/2 reply and writes users.receives_remittances.
-    // Combined with Option A (STP webhook keyword detection) for maximum coverage.
-    const remitRow = await db.execute(sql`
-      SELECT receives_remittances FROM users WHERE telefono = ${telefono} LIMIT 1
+    // ── Three deferred follow-ups queued from Module 1 ─────────────────────
+    // All fire once per lifetime (NULL guard at parse time in whatsapp-agent.ts).
+    // Staggered delays avoid message fatigue and prevent last_trigger conflicts.
+    const m1FollowUpRow = await db.execute(sql`
+      SELECT receives_remittances, employment_type, address_tenure_bucket
+      FROM users WHERE telefono = ${telefono} LIMIT 1
     `).catch(() => ({ rows: [] }));
-    const receivesRemittances = (remitRow.rows[0] as Record<string, unknown> | undefined)?.receives_remittances;
-    if (receivesRemittances == null) {
+    const m1User = (m1FollowUpRow.rows[0] as Record<string, unknown> | undefined) ?? {};
+
+    // +24h — Remittance self-report (Option B; combined with STP keyword Option A)
+    if (m1User.receives_remittances == null) {
       const remitLog = await db.execute(sql`
         INSERT INTO paula_trigger_log
           (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES
-          (${telefono}, 'remittance_profile', '{}'::jsonb, ${REMITTANCE_PROFILE_MSG}, FALSE, NOW())
+        VALUES (${telefono}, 'remittance_profile', '{}'::jsonb, ${REMITTANCE_PROFILE_MSG}, FALSE, NOW())
         RETURNING id
       `).catch(() => ({ rows: [{ id: 0 }] }));
       const remitLogId = Number((remitLog.rows[0] as Record<string, unknown>).id ?? 0);
-      // Schedule 24h out so Module 1 message lands first
       await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60).catch(() => {});
+    }
+
+    // +48h — Employment type (field 88 / employment_stability_score input)
+    if (m1User.employment_type == null) {
+      const empLog = await db.execute(sql`
+        INSERT INTO paula_trigger_log
+          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
+        VALUES (${telefono}, 'employment_profile', '{}'::jsonb, ${EMPLOYMENT_PROFILE_MSG}, FALSE, NOW())
+        RETURNING id
+      `).catch(() => ({ rows: [{ id: 0 }] }));
+      const empLogId = Number((empLog.rows[0] as Record<string, unknown>).id ?? 0);
+      await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", empLogId, 48 * 60).catch(() => {});
+    }
+
+    // +72h — Address tenure (field 87 — actual residence stability, not signup date)
+    if (m1User.address_tenure_bucket == null) {
+      const addrLog = await db.execute(sql`
+        INSERT INTO paula_trigger_log
+          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
+        VALUES (${telefono}, 'address_tenure', '{}'::jsonb, ${ADDRESS_TENURE_MSG}, FALSE, NOW())
+        RETURNING id
+      `).catch(() => ({ rows: [{ id: 0 }] }));
+      const addrLogId = Number((addrLog.rows[0] as Record<string, unknown>).id ?? 0);
+      await enqueueWhatsApp(db, telefono, ADDRESS_TENURE_MSG, "address_tenure", addrLogId, 72 * 60).catch(() => {});
     }
   }
 

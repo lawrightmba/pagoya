@@ -1004,6 +1004,81 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Employment type reply intercept ──────────────────────────────────────
+    // Fires after remittance block. Intercepts a numeric 1–5 reply when:
+    //   (a) users.employment_type IS NULL
+    //   (b) last Paula outbound to this user was trigger_type='employment_profile'
+    {
+      const EMPLOYMENT_MAP: Record<string, string> = {
+        "1": "formal", "2": "informal", "3": "gig", "4": "unemployed", "5": "prefer_not_say",
+      };
+      const empMsgTrimmed = userMessage.trim();
+      const mappedEmployment = EMPLOYMENT_MAP[empMsgTrimmed];
+
+      if (mappedEmployment) {
+        const empCheck = await db.execute(sql`
+          SELECT u.employment_type,
+                 (SELECT trigger_type FROM paula_trigger_log
+                  WHERE telefono = ${phoneKey}
+                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+          FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
+        `);
+        const empRow = empCheck.rows[0] as
+          { employment_type: string | null; last_trigger: string | null } | undefined;
+
+        if (empRow && empRow.employment_type == null && empRow.last_trigger === "employment_profile") {
+          await db.execute(sql`
+            UPDATE users SET employment_type = ${mappedEmployment}
+            WHERE telefono = ${phoneKey}
+          `);
+          await sendWhatsApp(phoneKey,
+            `✅ ¡Gracias! Guardamos tu situación de trabajo.\n\n` +
+            `Seguimos construyendo tu perfil financiero. ¡Cada dato cuenta! 💪\n\n` +
+            `_Paula — tu asesora financiera_`
+          );
+          return;
+        }
+      }
+    }
+
+    // ── Address tenure reply intercept ────────────────────────────────────────
+    // Intercepts a numeric 1–3 reply when:
+    //   (a) users.address_tenure_bucket IS NULL
+    //   (b) last Paula outbound was trigger_type='address_tenure'
+    // Stores actual self-reported residence duration — NOT a proxy for signup date.
+    {
+      const TENURE_MAP: Record<string, string> = {
+        "1": "lt_6m", "2": "6m_2y", "3": "gt_2y",
+      };
+      const addrMsgTrimmed = userMessage.trim();
+      const mappedTenure = TENURE_MAP[addrMsgTrimmed];
+
+      if (mappedTenure) {
+        const addrCheck = await db.execute(sql`
+          SELECT u.address_tenure_bucket,
+                 (SELECT trigger_type FROM paula_trigger_log
+                  WHERE telefono = ${phoneKey}
+                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+          FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
+        `);
+        const addrRow = addrCheck.rows[0] as
+          { address_tenure_bucket: string | null; last_trigger: string | null } | undefined;
+
+        if (addrRow && addrRow.address_tenure_bucket == null && addrRow.last_trigger === "address_tenure") {
+          await db.execute(sql`
+            UPDATE users SET address_tenure_bucket = ${mappedTenure}
+            WHERE telefono = ${phoneKey}
+          `);
+          await sendWhatsApp(phoneKey,
+            `✅ ¡Perfecto! Guardamos el tiempo en tu domicilio actual.\n\n` +
+            `Tu perfil financiero con PagoYa está tomando forma. 🏠\n\n` +
+            `_Paula — tu asesora financiera_`
+          );
+          return;
+        }
+      }
+    }
+
     // ── Colonia backfill reply intercept ──────────────────────────────────────
     // Catches replies to the "¿en qué colonia vives?" cron message.
     // Active for 48 h after colonia_asked_at was set, while colonia is still NULL.
