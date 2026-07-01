@@ -124,8 +124,9 @@ export default function BillerTicker({
     <div style={{ width: "100%" }}>
       <style>{`
         @keyframes tickerLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .bt-row { display: flex; gap: 10px; width: max-content; }
+        .bt-row { display: flex; gap: 0; width: max-content; }
         .bt-row:hover { animation-play-state: paused !important; }
+        .bt-pill { margin-right: 10px; }
       `}</style>
 
       {/* ── Animated single row of 5 (doubled for loop) ── */}
@@ -151,7 +152,9 @@ export default function BillerTicker({
           style={{ animation: "tickerLeft 18s linear infinite" }}
         >
           {TICKER_ROW.map((b, i) => (
-            <Pill key={`t-${i}`} icon={b.icon} name={b.name} small={small} dark={dark} />
+            <span key={`t-${i}`} className="bt-pill">
+              <Pill icon={b.icon} name={b.name} small={small} dark={dark} />
+            </span>
           ))}
         </div>
       </div>
