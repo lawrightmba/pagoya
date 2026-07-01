@@ -10,7 +10,7 @@ const LAYERS = [
   { icon: '🤖', label: 'Paula — AI Agent (Claude)', sub: 'Intent parsing in plain Spanish · 2FA session state · Payment routing logic', color: '#7C5CFC', live: true },
   { icon: '💳', label: 'Payment Rails', sub: 'SIPREL · Conekta · STP · SPEI — 4 live rails, 30+ billers', color: C, live: true },
   { icon: '📄', label: 'Folio Receipt → Twilio WhatsApp', sub: 'Comprobante with unique folio delivered back to user via Twilio', color: TR, live: true, isTwilio: true },
-  { icon: '📊', label: 'PagoYa Trust Index (PTI)', sub: 'Behavioral credit score built from every transaction — the data moat', color: 'rgba(255,255,255,0.7)', live: false },
+  { icon: '📊', label: 'Predictive Trust Index (PTI)', sub: 'Behavioral credit score built from every transaction — the data moat', color: 'rgba(255,255,255,0.7)', live: false },
 ];
 
 export function Scene2Arch() {

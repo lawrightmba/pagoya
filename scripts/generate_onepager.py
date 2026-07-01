@@ -98,7 +98,7 @@ y2 = y + 11
 for item in [
     "WhatsApp chatbot + mobile app: pay any bill in 2 minutes",
     "Load wallet via OXXO cash or SPEI -- zero bank account required",
-    "PagoYa Trust Index (PTI): 7-dimension credit score built from payment behavior",
+    "Predictive Trust Index (PTI): 7-dimension credit score built from payment behavior",
     "$150 MXN sign-up bonus drives rapid activation",
 ]:
     y2 = bullet(14, y2, item) + 1
@@ -133,7 +133,7 @@ pdf.set_line_width(0.4)
 pdf.rect(14, pti_y, 182, 22, "FD")
 
 cell(18, pti_y + 3, 0, 5,
-    "PagoYa Trust Index (PTI) -- Our Underwriting Moat",
+    "Predictive Trust Index (PTI) -- Our Underwriting Moat",
     style="B", size=9, rgb=(0,84,50))
 cell(18, pti_y + 9, 170, 5,
     "7-dimension score (0-100): KYC  *  payment streak  *  biller diversity  *  "

@@ -10,7 +10,7 @@ export interface PagoScoreResult {
   telefono: string;
   pagoScore: number;
   modelVersion: string;
-  // PTI dimensions (PagoYa Trust Index — internal name, user-facing = PagoScore)
+  // PTI dimensions (Predictive Trust Index — internal name, user-facing = PagoScore)
   trajectoryScore: number;   // 30pts — direction of travel
   financialScore: number;    // 25pts — payment discipline & behavior
   routineScore: number;      // 25pts — consistency & stability
@@ -19,7 +19,7 @@ export interface PagoScoreResult {
 }
 
 /**
- * Compute and persist a PagoYa Trust Index (PTI) for a user.
+ * Compute and persist a Predictive Trust Index (PTI) for a user.
  * User-facing label: PagoScore. Internal: PTI.
  *
  * Weight structure (per doc recommendation):

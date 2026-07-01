@@ -9,7 +9,7 @@ const SUMMARY = [
   { label: 'Twilio OTP via WhatsApp', detail: 'Live — phone verification during registration', color: TR },
   { label: 'Claude LLM (Anthropic)', detail: 'Live — intent parsing + 2FA session state', color: '#7C5CFC' },
   { label: '4 payment rails', detail: 'SIPREL · Conekta · STP · SPEI — 30+ billers', color: C },
-  { label: 'PagoYa Trust Index', detail: 'Behavioral credit score from every Twilio message', color: C },
+  { label: 'Predictive Trust Index', detail: 'Behavioral credit score from every Twilio message', color: C },
   { label: 'Twilio Segment', detail: 'Roadmap Q3 2026 — behavioral CDP activation', color: '#7C5CFC' },
 ];
 

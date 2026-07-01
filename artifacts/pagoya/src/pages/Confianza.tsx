@@ -27,9 +27,9 @@ export default function Confianza() {
   return (
     <div style={{ minHeight: "100vh", background: "#004F2D", color: "#FFFFFF", fontFamily: "DM Sans, sans-serif" }}>
       <Helmet>
-        <title>PagoYa Trust Index (PTI) — Metodología de Confianza</title>
+        <title>Predictive Trust Index (PTI) — Metodología de Confianza</title>
         <meta name="description" content="El PTI es el sistema de puntuación conductual de PagoYa. Mide tu historial real en 4 dimensiones y 15 señales — sin consultar el buró de crédito." />
-        <meta property="og:title" content="PagoYa Trust Index (PTI) — Metodología de Confianza" />
+        <meta property="og:title" content="Predictive Trust Index (PTI) — Metodología de Confianza" />
         <meta property="og:description" content="El PTI mide tu historial real en 4 dimensiones y 15 señales — sin consultar el buró de crédito." />
         <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
       </Helmet>
@@ -50,7 +50,7 @@ export default function Confianza() {
 
         {/* Title */}
         <h1 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "clamp(36px, 8vw, 52px)", fontWeight: 900, lineHeight: 1.05, color: "#FFFFFF", marginBottom: "8px" }}>
-          PagoYa Trust Index
+          Predictive Trust Index
         </h1>
         <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "clamp(20px, 5vw, 28px)", fontWeight: 700, color: "#00C875", marginBottom: "36px", letterSpacing: "0.02em" }}>
           PTI
@@ -59,7 +59,7 @@ export default function Confianza() {
         {/* Definition */}
         <div style={{ background: "rgba(0,200,117,0.06)", border: "1px solid rgba(0,200,117,0.18)", borderRadius: "16px", padding: "28px 24px", marginBottom: "40px" }}>
           <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
-            PagoYa Trust Index (PTI) es un <strong style={{ color: "#FFFFFF" }}>sistema de datos alternativos</strong> desarrollado internamente que construye la <strong style={{ color: "#FFFFFF" }}>identidad financiera conductual</strong> de cada usuario a través de{" "}
+            Predictive Trust Index (PTI) es un <strong style={{ color: "#FFFFFF" }}>sistema de datos alternativos</strong> desarrollado internamente que construye la <strong style={{ color: "#FFFFFF" }}>identidad financiera conductual</strong> de cada usuario a través de{" "}
             <strong style={{ color: "#FFFFFF" }}>4 dimensiones</strong> y{" "}
             <strong style={{ color: "#FFFFFF" }}>15 señales individuales</strong> — sin consultar el buró de crédito.
           </p>

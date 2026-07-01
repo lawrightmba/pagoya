@@ -818,6 +818,94 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/b2b/loan-outcomes ───────────────────────────────────────────────
+// Partner-reported loan outcome ingestion for calibration feedback loop.
+// Fields 77–80: loan_outcome_status, loan_outcome_reported_at, outcome_partner_id,
+//               calibration_delta (auto-computed from pti_score_at_time vs actual).
+//
+// Body: { hashed_user_id, loan_outcome_status, pti_score_at_time?, loan_amount_mxn?, loan_originated_at? }
+// Requires x-api-key — partner must have "loan_outcomes" in allowed_endpoints.
+
+router.post("/loan-outcomes", async (req: Request, res: Response) => {
+  const rawKey = (req.headers["x-api-key"] as string | undefined)?.trim();
+  if (!rawKey) return res.status(401).json({ error: "Missing x-api-key header." });
+
+  let partner: B2BPartner;
+  try {
+    partner = await requirePartner(rawKey);
+  } catch {
+    return res.status(403).json({ error: "Invalid or inactive API key." });
+  }
+
+  if (!partner.allowed_endpoints.includes("loan_outcomes") &&
+      !partner.allowed_endpoints.includes("*")) {
+    return res.status(403).json({ error: "This key is not permitted to submit loan outcomes." });
+  }
+
+  const { hashed_user_id, loan_outcome_status, pti_score_at_time, loan_amount_mxn, loan_originated_at } = req.body ?? {};
+
+  if (!hashed_user_id || !loan_outcome_status) {
+    return res.status(400).json({ error: "hashed_user_id and loan_outcome_status are required." });
+  }
+  const validStatuses = ["paid", "default", "delinquent", "current"];
+  if (!validStatuses.includes(loan_outcome_status)) {
+    return res.status(400).json({ error: `loan_outcome_status must be one of: ${validStatuses.join(", ")}` });
+  }
+
+  try {
+    // Verify the hashed_user_id exists
+    const userCheck = await db.execute(sql`
+      SELECT encode(sha256((u.telefono || 'pagoya2026')::bytea), 'hex') AS computed_hash
+      FROM users u
+      WHERE encode(sha256((u.telefono || 'pagoya2026')::bytea), 'hex') = ${hashed_user_id}
+      LIMIT 1
+    `);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: "User not found for the provided hashed_user_id." });
+    }
+
+    // Fetch current PTI for calibration delta (if pti_score_at_time provided)
+    let calibrationDelta: number | null = null;
+    if (pti_score_at_time != null) {
+      const expected_default_rate =
+        pti_score_at_time >= 75 ? 0.03 :
+        pti_score_at_time >= 60 ? 0.08 :
+        pti_score_at_time >= 45 ? 0.18 :
+        pti_score_at_time >= 30 ? 0.30 : 0.50;
+
+      const actual_default = loan_outcome_status === "default" ? 1 : 0;
+      calibrationDelta = Math.round((actual_default - expected_default_rate) * 1000) / 1000;
+    }
+
+    await db.execute(sql`
+      INSERT INTO loan_outcomes (
+        telefono_hashed, loan_outcome_status, loan_outcome_reported_at,
+        outcome_partner_id, calibration_delta, pti_score_at_time,
+        loan_amount_mxn, loan_originated_at
+      ) VALUES (
+        ${hashed_user_id}, ${loan_outcome_status}, NOW(),
+        ${partner.id}, ${calibrationDelta},
+        ${pti_score_at_time ?? null}, ${loan_amount_mxn ?? null},
+        ${loan_originated_at ?? null}
+      )
+    `);
+
+    logger.info(
+      { partner: partner.partner_name, hashed_user_id, loan_outcome_status, calibrationDelta },
+      "b2b/loan-outcomes: outcome ingested"
+    );
+
+    res.json({
+      accepted: true,
+      calibration_delta: calibrationDelta,
+      message: "Loan outcome recorded. calibration_delta is the actual minus expected default rate at PTI band.",
+    });
+  } catch (err) {
+    logger.error({ err }, "b2b/loan-outcomes: ingestion failed");
+    res.status(500).json({ error: "Ingestion failed." });
+  }
+});
+
 // ── GET /api/b2b/docs/data-card ──────────────────────────────────────────────
 // Serves the PTI Data Card HTML — public methodology document, no auth required.
 // Accessible at /api/b2b/docs/data-card (printable to PDF from browser).

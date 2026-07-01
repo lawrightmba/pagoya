@@ -12,7 +12,7 @@ const copy = {
     subheadline: "A zero-cost employee benefit — activated over WhatsApp in minutes.",
     badges: ["💳 Free to join", "📱 Works on WhatsApp", "🏦 No bank required"],
     whatTitle: "What is PagoYa?",
-    whatBody: "PagoYa is a WhatsApp-native financial platform built for working adults in Mexico who are unbanked or underbanked. Employees pay bills, send money, and build a verified financial track record — all from their phone, with no bank account required. Every transaction builds a PagoYa Trust Index (PTI) score — a real-time measure of financial reliability that employees can use to access better financial products over time.",
+    whatBody: "PagoYa is a WhatsApp-native financial platform built for working adults in Mexico who are unbanked or underbanked. Employees pay bills, send money, and build a verified financial track record — all from their phone, with no bank account required. Every transaction builds a Predictive Trust Index (PTI) score — a real-time measure of financial reliability that employees can use to access better financial products over time.",
     whyTitle: "Why Offer PagoYa as an Employee Benefit?",
     whyEmpTitle: "For Your Employees",
     whyEmpBullets: [
@@ -47,7 +47,7 @@ const copy = {
       "For hospitality teams: mention it alongside your IMSS and tips information during orientation",
       "We can provide a co-branded flyer in Spanish with your company name — just ask",
     ],
-    ptiTitle: "The PagoYa Trust Index (PTI) — Building Financial Futures",
+    ptiTitle: "The Predictive Trust Index (PTI) — Building Financial Futures",
     ptiBody: "Every action on PagoYa builds an employee's PTI score — a transparent, 100-point financial health index across four dimensions:",
     ptiDimensions: [
       { emoji: "📈", label: "Trajectory", pts: "30 pts", desc: "Consistency & payment growth over time" },

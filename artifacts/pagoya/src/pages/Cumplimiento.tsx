@@ -68,7 +68,7 @@ export default function Cumplimiento() {
           <div style={{ paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", gap: "6px" }}>
             {([
               ["Clasificación de riesgo", "Cada usuario es clasificado en tier kyc_tier: simplified / standard / enhanced — campo almacenado en la base de datos de usuarios"],
-              ["PTI como dato alternativo", "El PagoYa Trust Index (PTI) enriquece la clasificación conductual de riesgo con 4 dimensiones y 15 señales de comportamiento transaccional"],
+              ["PTI como dato alternativo", "El Predictive Trust Index (PTI) enriquece la clasificación conductual de riesgo con 4 dimensiones y 15 señales de comportamiento transaccional"],
               ["Atribución institucional", "Campo referred_by_institution disponible para pilotos con socios — rastreo desde el primer registro"],
             ] as [string, string][]).map(([l, v]) => (
               <div key={l} style={S.row}><span style={S.label}>{l}</span><span style={S.val}>{v}</span></div>

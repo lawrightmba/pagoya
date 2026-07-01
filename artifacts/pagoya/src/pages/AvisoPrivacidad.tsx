@@ -148,7 +148,7 @@ export default function AvisoPrivacidad() {
               <li>Verificar su identidad al vincular una cuenta bancaria para débito directo.</li>
               <li>Cumplir con obligaciones legales, fiscales y regulatorias aplicables.</li>
               <li>Prevenir fraudes, lavado de dinero y operaciones ilícitas.</li>
-              <li>Generar su <strong style={{ color: "#E2E8F0" }}>PagoYa Trust Index (PTI)</strong> — un perfil conductual de confiabilidad financiera calculado automáticamente a partir de su actividad en la plataforma (historial de pagos, frecuencia de uso, interacciones con el asistente), que puede compartirse con socios financieros bajo su consentimiento expreso, de conformidad con la Ley Fintech 2018.</li>
+              <li>Generar su <strong style={{ color: "#E2E8F0" }}>Predictive Trust Index (PTI)</strong> — un perfil conductual de confiabilidad financiera calculado automáticamente a partir de su actividad en la plataforma (historial de pagos, frecuencia de uso, interacciones con el asistente), que puede compartirse con socios financieros bajo su consentimiento expreso, de conformidad con la Ley Fintech 2018.</li>
             </ul>
             <p style={{ marginBottom: "10px" }}>
               <strong style={{ color: "#E2E8F0" }}>Finalidades secundarias</strong> (puede oponerse sin afectar el servicio):

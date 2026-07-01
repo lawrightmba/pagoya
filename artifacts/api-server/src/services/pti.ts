@@ -1,5 +1,5 @@
 /**
- * PTI Service — PagoYa Trust Index (4-Dimension behavioral credit model)
+ * PTI Service — Predictive Trust Index (4-Dimension behavioral credit model)
  *
  * Four dimensions map directly to the B2B Alternative Data product:
  *   PR — Payment Reliability    (30pts)  strongest signal for lenders
@@ -8,7 +8,7 @@
  *   CF — Cash-Flow Stability    (25pts)  balance management & load patterns
  *
  * Model version: v2.1-4dim
- * User-facing label: PagoYa Trust Index
+ * User-facing label: Predictive Trust Index
  * Internal credit-profile model: pagoScore.ts (separate, B2B-facing)
  *
  * New signals (v2.1):
@@ -573,7 +573,7 @@ export async function computePTIForAllUsers(): Promise<void> {
 
         const tip = buildImprovementTip(bd);
         const msg =
-          `📊 *Tu PagoYa Trust Index se actualizó*\n\n` +
+          `📊 *Tu Predictive Trust Index se actualizó*\n\n` +
           `Tu puntaje: *${bd.total}/100 — ${label}* ${tier === "excelente" ? "🏆" : tier === "bueno" ? "✅" : "📈"}\n\n` +
           `${trajectoryLine}${b2bLine}\n\n` +
           `${tip}\n\n` +

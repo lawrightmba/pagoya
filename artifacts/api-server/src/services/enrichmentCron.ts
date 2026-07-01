@@ -146,15 +146,223 @@ async function computePartialPaymentCount(telefono: string): Promise<{
   return { count: partialCount, hasAmountDueData: rowsWithDue > 0 };
 }
 
-// ── Enrichment orchestrator (runs E + F + G + H for one user) ────────────────
+// ── I. Remittance signals (fields 72–75) ─────────────────────────────────────
+// Reads wallet_transactions tagged load_source_type = 'remittance'.
+// Returns NULL for all fields when no remittance transactions exist.
+
+async function computeRemittanceSignals(telefono: string): Promise<{
+  regularityScore: number | null;
+  avgAmountMxn: number | null;
+  sourceConsistency: number | null;
+  dominantCountry: string | null;
+}> {
+  const wallet = await db.execute(sql`
+    SELECT w.id FROM wallets w
+    JOIN users u ON u.id = w.user_id
+    WHERE u.telefono = ${telefono}
+    LIMIT 1
+  `);
+  const walletId = (wallet.rows[0] as Record<string, unknown> | undefined)?.id;
+  if (!walletId) return { regularityScore: null, avgAmountMxn: null, sourceConsistency: null, dominantCountry: null };
+
+  const rows = await db.execute(sql`
+    SELECT amount_mxn, description, created_at
+    FROM wallet_transactions
+    WHERE wallet_id = ${walletId as string}
+      AND load_source_type = 'remittance'
+      AND status = 'confirmed'
+    ORDER BY created_at DESC
+    LIMIT 100
+  `);
+
+  const txns = rows.rows as Array<{ amount_mxn: string; description: string | null; created_at: Date }>;
+  if (txns.length < 2) return { regularityScore: null, avgAmountMxn: null, sourceConsistency: null, dominantCountry: null };
+
+  const amounts = txns.map(t => Number(t.amount_mxn));
+  const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+  const stddev = Math.sqrt(amounts.map(a => (a - avg) ** 2).reduce((a, b) => a + b, 0) / amounts.length);
+  const cv = avg > 0 ? stddev / avg : 1;
+  const regularityScore = Math.round(Math.max(0, Math.min(100, (1 - cv) * 100)));
+
+  // Source consistency: fraction sharing the same dominant description prefix
+  const descFreq: Record<string, number> = {};
+  for (const t of txns) {
+    const key = (t.description ?? "unknown").slice(0, 20).toLowerCase();
+    descFreq[key] = (descFreq[key] ?? 0) + 1;
+  }
+  const topCount = Math.max(...Object.values(descFreq));
+  const sourceConsistency = Math.round((topCount / txns.length) * 100);
+
+  // Dominant country: infer from description keywords
+  const allDesc = txns.map(t => (t.description ?? "").toLowerCase()).join(" ");
+  let dominantCountry: string | null = null;
+  if (allDesc.includes("usa") || allDesc.includes("estados unidos") || allDesc.includes("us ")) dominantCountry = "US";
+  else if (allDesc.includes("canada")) dominantCountry = "CA";
+  else if (allDesc.includes("españa") || allDesc.includes("spain")) dominantCountry = "ES";
+
+  return { regularityScore, avgAmountMxn: Math.round(avg * 100) / 100, sourceConsistency, dominantCountry };
+}
+
+// ── J. Colonia cluster risk (field 81) ────────────────────────────────────────
+// Average payment_score of users in the same colonia (k-anon: N≥5 in cohort).
+// Returns NULL when colonia is NULL or cohort is too small.
+
+async function computeColoniaClusterRisk(telefono: string): Promise<number | null> {
+  const result = await db.execute(sql`
+    WITH user_colonia AS (
+      SELECT colonia FROM users WHERE telefono = ${telefono} LIMIT 1
+    ),
+    cohort AS (
+      SELECT cp.payment_score
+      FROM users u
+      JOIN credit_profiles cp ON cp.telefono = u.telefono
+      WHERE u.colonia = (SELECT colonia FROM user_colonia)
+        AND (SELECT colonia FROM user_colonia) IS NOT NULL
+        AND cp.payment_score IS NOT NULL
+    )
+    SELECT
+      CASE WHEN COUNT(*) >= 5
+        THEN ROUND(AVG(payment_score)::numeric, 2)
+        ELSE NULL
+      END AS cluster_score
+    FROM cohort
+  `);
+  const r = result.rows[0] as Record<string, unknown> | undefined;
+  return r?.cluster_score != null ? Number(r.cluster_score) : null;
+}
+
+// ── K. Referral network risk correlation (field 82) ───────────────────────────
+// INTERNAL ONLY — never exposed via B2B API or pti_export_safe.
+// Avg payment_score of users in the same referral chain (referred_by matches).
+
+async function computeReferralNetworkRisk(telefono: string): Promise<number | null> {
+  const result = await db.execute(sql`
+    WITH ref_source AS (
+      SELECT ref_code FROM users WHERE telefono = ${telefono} LIMIT 1
+    ),
+    same_chain AS (
+      SELECT cp.payment_score
+      FROM users u
+      JOIN credit_profiles cp ON cp.telefono = u.telefono
+      WHERE u.referred_by = (SELECT ref_code FROM ref_source)
+        AND (SELECT ref_code FROM ref_source) IS NOT NULL
+        AND u.telefono != ${telefono}
+        AND cp.payment_score IS NOT NULL
+    )
+    SELECT
+      CASE WHEN COUNT(*) >= 3
+        THEN ROUND(AVG(payment_score)::numeric, 2)
+        ELSE NULL
+      END AS network_score
+    FROM same_chain
+  `);
+  const r = result.rows[0] as Record<string, unknown> | undefined;
+  return r?.network_score != null ? Number(r.network_score) : null;
+}
+
+// ── L. Paula sentiment signals (fields 83–85) ─────────────────────────────────
+// Keyword-based sentiment scoring on paula_inbound_log messages (Spanish NLP).
+// score 0–100: 50 = neutral, >50 positive, <50 stressed.
+
+const STRESS_KEYWORDS = [
+  "no puedo", "no tengo", "deuda", "préstamo", "prestamo", "atrasado",
+  "vencido", "urgente", "necesito", "ayuda", "problemas", "problema",
+  "difícil", "dificil", "no alcanza", "sin dinero", "corte",
+];
+const POSITIVE_KEYWORDS = [
+  "gracias", "excelente", "bien", "pagué", "pague", "listo", "perfecto",
+  "genial", "claro", "sí", "si", "ok", "bueno",
+];
+
+async function computePaulaSentiment(telefono: string): Promise<{
+  score: number | null;
+  stressFlag: boolean | null;
+  trend30d: number | null;
+}> {
+  const rows = await db.execute(sql`
+    SELECT body, received_at
+    FROM paula_inbound_log
+    WHERE telefono = ${telefono}
+      AND received_at >= NOW() - INTERVAL '90 days'
+    ORDER BY received_at ASC
+  `);
+
+  const messages = rows.rows as Array<{ body: string; received_at: Date }>;
+  if (messages.length < 3) return { score: null, stressFlag: null, trend30d: null };
+
+  function scoreMsg(text: string): number {
+    const t = text.toLowerCase();
+    let s = 50;
+    for (const kw of STRESS_KEYWORDS)   if (t.includes(kw)) s -= 8;
+    for (const kw of POSITIVE_KEYWORDS) if (t.includes(kw)) s += 5;
+    return Math.max(0, Math.min(100, s));
+  }
+
+  const now = Date.now();
+  const cutoff30d = now - 30 * 86_400_000;
+  const cutoff60d = now - 60 * 86_400_000;
+
+  const scores = messages.map(m => ({ score: scoreMsg(m.body), ts: new Date(m.received_at).getTime() }));
+  const allScores = scores.map(s => s.score);
+  const avgAll = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+
+  const recent30 = scores.filter(s => s.ts >= cutoff30d).map(s => s.score);
+  const prev30   = scores.filter(s => s.ts >= cutoff60d && s.ts < cutoff30d).map(s => s.score);
+
+  let trend30d: number | null = null;
+  if (recent30.length >= 2 && prev30.length >= 2) {
+    const avgRecent = recent30.reduce((a, b) => a + b, 0) / recent30.length;
+    const avgPrev   = prev30.reduce((a, b) => a + b, 0) / prev30.length;
+    trend30d = Math.round((avgRecent - avgPrev) * 100) / 100;
+  }
+
+  const overallScore = Math.round(avgAll * 100) / 100;
+  const stressFlag = overallScore < 40;
+
+  return { score: overallScore, stressFlag, trend30d };
+}
+
+// ── M. Employment stability score (field 88) ──────────────────────────────────
+// Derived from employment_type (users table) + address_tenure_days.
+// formal=100 base / informal=70 / gig=55 / unemployed=20; tenure bonus up to +15.
+
+async function computeEmploymentStability(telefono: string): Promise<number | null> {
+  const row = await db.execute(sql`
+    SELECT employment_type, address_registered_at FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const r = row.rows[0] as Record<string, unknown> | undefined;
+  if (!r?.employment_type) return null;
+
+  const baseScore: Record<string, number> = {
+    formal: 100, informal: 70, gig: 55, unemployed: 20,
+  };
+  let score = baseScore[r.employment_type as string] ?? 50;
+
+  if (r.address_registered_at) {
+    const tenureDays = Math.floor((Date.now() - new Date(r.address_registered_at as string).getTime()) / 86_400_000);
+    const tenureBonus = Math.min(15, Math.floor(tenureDays / 60)); // +1 per 2 months, max +15
+    score = Math.min(100, score + tenureBonus);
+  }
+
+  return score;
+}
+
+// ── Enrichment orchestrator (runs E–M for one user) ───────────────────────────
 
 async function computeEnrichmentForUser(telefono: string): Promise<void> {
   try {
-    const [sloperResult, cvResult, rankResult, partialResult] = await Promise.all([
+    const [sloperResult, cvResult, rankResult, partialResult,
+           remittanceResult, coloniaRisk, referralRisk, sentimentResult, employmentScore,
+    ] = await Promise.all([
       computeBillerCountSlope(telefono),
       computePaymentAmountCV(telefono),
       computePriorityRank(telefono),
       computePartialPaymentCount(telefono),
+      computeRemittanceSignals(telefono),
+      computeColoniaClusterRisk(telefono),
+      computeReferralNetworkRisk(telefono),
+      computePaulaSentiment(telefono),
+      computeEmploymentStability(telefono),
     ]);
 
     await db.execute(sql`
@@ -162,24 +370,44 @@ async function computeEnrichmentForUser(telefono: string): Promise<void> {
         biller_count_slope_90d, biller_count_slope_n,
         payment_amount_cv, payment_amount_cv_n,
         priority_rank_json, priority_rank_n,
-        partial_payment_count)
+        partial_payment_count,
+        remittance_inflow_regularity_score, avg_remittance_amount_mxn,
+        remittance_source_consistency, dominant_remittance_country,
+        colonia_cluster_risk_score, referral_network_risk_correlation,
+        paula_sentiment_score, financial_stress_language_flag, sentiment_trend_30d,
+        employment_stability_score)
       VALUES (
         ${telefono}, NOW(),
         ${sloperResult.slope}, ${sloperResult.n},
         ${cvResult.cv}, ${cvResult.n},
         ${rankResult.rank ? JSON.stringify(rankResult.rank) : null}::jsonb,
         ${rankResult.n},
-        ${partialResult.count}
+        ${partialResult.count},
+        ${remittanceResult.regularityScore}, ${remittanceResult.avgAmountMxn},
+        ${remittanceResult.sourceConsistency}, ${remittanceResult.dominantCountry},
+        ${coloniaRisk}, ${referralRisk},
+        ${sentimentResult.score}, ${sentimentResult.stressFlag}, ${sentimentResult.trend30d},
+        ${employmentScore}
       )
       ON CONFLICT (telefono) DO UPDATE SET
-        enrichment_computed_at    = NOW(),
-        biller_count_slope_90d    = EXCLUDED.biller_count_slope_90d,
-        biller_count_slope_n      = EXCLUDED.biller_count_slope_n,
-        payment_amount_cv         = EXCLUDED.payment_amount_cv,
-        payment_amount_cv_n       = EXCLUDED.payment_amount_cv_n,
-        priority_rank_json        = EXCLUDED.priority_rank_json,
-        priority_rank_n           = EXCLUDED.priority_rank_n,
-        partial_payment_count     = EXCLUDED.partial_payment_count
+        enrichment_computed_at               = NOW(),
+        biller_count_slope_90d               = EXCLUDED.biller_count_slope_90d,
+        biller_count_slope_n                 = EXCLUDED.biller_count_slope_n,
+        payment_amount_cv                    = EXCLUDED.payment_amount_cv,
+        payment_amount_cv_n                  = EXCLUDED.payment_amount_cv_n,
+        priority_rank_json                   = EXCLUDED.priority_rank_json,
+        priority_rank_n                      = EXCLUDED.priority_rank_n,
+        partial_payment_count                = EXCLUDED.partial_payment_count,
+        remittance_inflow_regularity_score   = EXCLUDED.remittance_inflow_regularity_score,
+        avg_remittance_amount_mxn            = EXCLUDED.avg_remittance_amount_mxn,
+        remittance_source_consistency        = EXCLUDED.remittance_source_consistency,
+        dominant_remittance_country          = EXCLUDED.dominant_remittance_country,
+        colonia_cluster_risk_score           = EXCLUDED.colonia_cluster_risk_score,
+        referral_network_risk_correlation    = EXCLUDED.referral_network_risk_correlation,
+        paula_sentiment_score                = EXCLUDED.paula_sentiment_score,
+        financial_stress_language_flag       = EXCLUDED.financial_stress_language_flag,
+        sentiment_trend_30d                  = EXCLUDED.sentiment_trend_30d,
+        employment_stability_score           = EXCLUDED.employment_stability_score
     `);
   } catch (err) {
     logger.error({ err, telefono }, "[enrichment] computeEnrichmentForUser failed");

@@ -93,7 +93,7 @@ export default function PTIIntroModal({ telefono, onDismiss }: PTIIntroModalProp
               lineHeight: 1.25,
             }}
           >
-            Tu PagoYa Trust Index
+            Tu Predictive Trust Index
           </h2>
           <p
             style={{

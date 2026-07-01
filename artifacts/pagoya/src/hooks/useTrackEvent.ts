@@ -7,7 +7,7 @@ function getPhone(): string {
 }
 
 /**
- * Phase 1 PTI (PagoYa Trust Index) event taxonomy.
+ * Phase 1 PTI (Predictive Trust Index) event taxonomy.
  * Phase 2 will add: wallet_balance_snapshot | biller_dropped | tier_upgraded | payment_timing_early
  * Phase 3 will add: p2p_sent | p2p_received | referral_activated | rep_milestone
  */

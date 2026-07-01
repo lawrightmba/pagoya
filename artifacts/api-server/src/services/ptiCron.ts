@@ -1,5 +1,5 @@
 /**
- * PTI Nightly Cron — PagoYa Trust Index batch jobs
+ * PTI Nightly Cron — Predictive Trust Index batch jobs
  *
  * Phase 0 / Phase 1 architecture decision:
  *   PTI = nightly batch (computed at 2 AM Mexico City = 08:00 UTC)
@@ -419,22 +419,35 @@ function scheduleDailyAt(utcHour: number, fn: () => Promise<void>, label: string
 }
 
 // ── Monthly PTI batch — 1st of month at 03:00 AM Mexico City (09:00 UTC) ─────
+// Node.js setTimeout uses a 32-bit signed integer for the delay.
+// Max safe value = 2^31 - 1 ms ≈ 24.8 days. Any larger value overflows to 1 ms
+// and fires immediately, creating an infinite loop. We chunk the wait into safe
+// segments and re-check each time whether the target has been reached.
+const MAX_SAFE_TIMEOUT_MS = 2_147_483_647; // 2^31 - 1
+
+function safeSetTimeout(fn: () => void, ms: number): void {
+  if (ms <= MAX_SAFE_TIMEOUT_MS) {
+    setTimeout(fn, ms);
+  } else {
+    setTimeout(() => safeSetTimeout(fn, ms - MAX_SAFE_TIMEOUT_MS), MAX_SAFE_TIMEOUT_MS);
+  }
+}
+
 function scheduleMonthly1stAt(utcHour: number, fn: () => Promise<void>, label: string) {
   function msUntilNext(): number {
     const now = new Date();
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, utcHour, 0, 0, 0));
-    // If it's already past the 1st of this month at that hour, schedule for next month
     const thisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, utcHour, 0, 0, 0));
     const target = thisMonth > now ? thisMonth : next;
-    return target.getTime() - now.getTime();
+    return Math.max(1000, target.getTime() - now.getTime());
   }
 
   function scheduleNext() {
     const delay = msUntilNext();
-    logger.info({ label, nextInMs: delay }, `pti-cron: ${label} scheduled`);
-    setTimeout(() => {
+    const nextDate = new Date(Date.now() + delay).toISOString();
+    logger.info({ label, nextRunAt: nextDate }, `pti-cron: ${label} scheduled`);
+    safeSetTimeout(() => {
       fn().catch(err => logger.error({ err }, `pti-cron: ${label} uncaught`));
-      // Re-schedule for next month
       scheduleNext();
     }, delay);
   }

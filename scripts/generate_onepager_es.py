@@ -97,7 +97,7 @@ y2 = y + 11
 for item in [
     "Chatbot WhatsApp + app movil: paga cualquier recibo en 2 minutos",
     "Carga tu monedero con efectivo en OXXO o por SPEI -- sin cuenta bancaria",
-    "PagoYa Trust Index (PTI): score crediticio de 7 dimensiones basado en comportamiento de pago",
+    "Predictive Trust Index (PTI): score crediticio de 7 dimensiones basado en comportamiento de pago",
     "Bono de $150 MXN al registro impulsa la activacion rapida",
 ]:
     y2 = bullet(14, y2, item) + 1
@@ -132,7 +132,7 @@ pdf.set_line_width(0.4)
 pdf.rect(14, pti_y, 182, 22, "FD")
 
 cell(18, pti_y + 3, 0, 5,
-    "PagoYa Trust Index (PTI) -- Nuestra Ventaja en Originacion",
+    "Predictive Trust Index (PTI) -- Nuestra Ventaja en Originacion",
     style="B", size=9, rgb=(0,84,50))
 cell(18, pti_y + 9, 170, 5,
     "Score 0-100 en 7 dimensiones: KYC  *  racha de pagos  *  diversidad de servicios  *  "

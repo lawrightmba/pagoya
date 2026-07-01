@@ -57,7 +57,7 @@ export function Scene6PTI() {
           </div>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', fontSize: 'clamp(22px,2.8vw,40px)', lineHeight: 1.15, marginBottom: 14 }}>
-            PagoYa Trust Index<br /><span style={{ color: C }}>Built from every</span><br /><span style={{ color: C }}>Twilio message</span>
+            Predictive Trust Index<br /><span style={{ color: C }}>Built from every</span><br /><span style={{ color: C }}>Twilio message</span>
           </h2>
 
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(12px,1.05vw,14px)', lineHeight: 1.65, maxWidth: '36ch', marginBottom: 20 }}>

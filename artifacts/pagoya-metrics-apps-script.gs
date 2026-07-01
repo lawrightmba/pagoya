@@ -93,7 +93,7 @@ function writeLiveMetrics(ss, d) {
 
     // ── Score ──
     ["── CREDIT SCORE ──", "", ""],
-    ["Average PTI Score",          d.pti.avg_score > 0 ? d.pti.avg_score.toFixed(1) : "—", "PagoYa Trust Index (0–100)"],
+    ["Average PTI Score",          d.pti.avg_score > 0 ? d.pti.avg_score.toFixed(1) : "—", "Predictive Trust Index (0–100)"],
   ];
 
   // Write top billers if any

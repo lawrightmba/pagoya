@@ -232,7 +232,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
     return (
       <div style={{ background: "#fff", border: "1px solid #F0F0F0", borderRadius: "1rem", padding: "1.25rem", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
         <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#005432", margin: "0 0 6px" }}>
-          🛡️ {es ? "Tu PagoYa Trust Index" : "Your PagoYa Trust Index"}
+          🛡️ {es ? "Tu Predictive Trust Index" : "Your Predictive Trust Index"}
         </p>
         <p style={{ fontSize: "0.82rem", color: "#6B7280", margin: 0 }}>
           {pendingCompute
@@ -271,7 +271,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
 
       {/* Header */}
       <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#005432", margin: "0 0 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span>🛡️ {es ? "PagoYa Trust Index" : "PagoYa Trust Index"}</span>
+        <span>🛡️ {es ? "Predictive Trust Index" : "Predictive Trust Index"}</span>
         {is4Dim && <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#9CA3AF", letterSpacing: "0.05em" }}>v2.0</span>}
       </p>
 
