@@ -950,8 +950,9 @@ router.post("/", async (req: Request, res: Response) => {
     // Fires after income-bucket block. Intercepts a 1/2 reply (or sí/no) when:
     //   (a) users.receives_remittances IS NULL (NULL guard)
     //   (b) last Paula outbound was trigger_type='remittance_profile'
-    // Sets receives_remittances; also retroactively tags existing untagged SPEI-in
-    // transactions as load_source_type='remittance' when user confirms yes.
+    // Sets receives_remittances = true/false on users. FORWARD-ONLY:
+    // future SPEI-in loads for this user are tagged at webhook time;
+    // historical transactions are NOT modified.
     {
       const remitMsgTrimmed = userMessage.trim().toLowerCase();
       const isRemitYes = remitMsgTrimmed === "1" || /^s[ií]$/i.test(remitMsgTrimmed);
