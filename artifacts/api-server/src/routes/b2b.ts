@@ -866,6 +866,7 @@ router.post("/loan-outcomes", async (req: Request, res: Response) => {
 
     // Fetch current PTI for calibration delta (if pti_score_at_time provided)
     let calibrationDelta: number | null = null;
+    let ptiBand: string | null = null;
     if (pti_score_at_time != null) {
       const expected_default_rate =
         pti_score_at_time >= 75 ? 0.03 :
@@ -875,18 +876,24 @@ router.post("/loan-outcomes", async (req: Request, res: Response) => {
 
       const actual_default = loan_outcome_status === "default" ? 1 : 0;
       calibrationDelta = Math.round((actual_default - expected_default_rate) * 1000) / 1000;
+
+      ptiBand =
+        pti_score_at_time >= 75 ? "prime" :
+        pti_score_at_time >= 60 ? "near_prime" :
+        pti_score_at_time >= 45 ? "subprime" :
+        pti_score_at_time >= 30 ? "deep_subprime" : "unscored";
     }
 
     await db.execute(sql`
       INSERT INTO loan_outcomes (
         telefono_hashed, loan_outcome_status, loan_outcome_reported_at,
         outcome_partner_id, calibration_delta, pti_score_at_time,
-        loan_amount_mxn, loan_originated_at
+        pti_band_at_time, loan_amount_mxn, loan_originated_at
       ) VALUES (
         ${hashed_user_id}, ${loan_outcome_status}, NOW(),
         ${partner.id}, ${calibrationDelta},
-        ${pti_score_at_time ?? null}, ${loan_amount_mxn ?? null},
-        ${loan_originated_at ?? null}
+        ${pti_score_at_time ?? null}, ${ptiBand},
+        ${loan_amount_mxn ?? null}, ${loan_originated_at ?? null}
       )
     `);
 
