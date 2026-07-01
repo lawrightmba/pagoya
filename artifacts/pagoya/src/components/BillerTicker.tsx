@@ -26,8 +26,11 @@ const SECONDARY_BILLERS = [
   { icon: "🚰", name: "SACMEX" },
 ];
 
-// Double the primary list for seamless infinite loop
-const TICKER_ROW = [...PRIMARY_BILLERS, ...PRIMARY_BILLERS];
+// Triple the primary list — 3 copies, animation translates -33.333% (= 1 set width).
+// With 2 copies the row (~1100px) was barely wider than the container (~944px),
+// causing the visible window to reach past the row end and flash before reset.
+// 3 copies gives ~1650px total; at -33.333% the window sits entirely within the row.
+const TICKER_ROW = [...PRIMARY_BILLERS, ...PRIMARY_BILLERS, ...PRIMARY_BILLERS];
 
 interface PillProps {
   icon: string;
@@ -123,7 +126,7 @@ export default function BillerTicker({
   return (
     <div style={{ width: "100%" }}>
       <style>{`
-        @keyframes tickerLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes tickerLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
         .bt-row { display: flex; gap: 0; width: max-content; }
         .bt-row:hover { animation-play-state: paused !important; }
         .bt-pill { margin-right: 10px; }
