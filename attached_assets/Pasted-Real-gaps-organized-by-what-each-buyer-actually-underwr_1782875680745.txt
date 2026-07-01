@@ -1,0 +1,27 @@
+Real gaps, organized by what each buyer actually underwrites on — these are refinements to data you already collect, not new integrations.
+
+Shared across all three (highest leverage, cheapest to add)
+
+	•	Score trajectory, not just snapshot — PTI velocity (improving 10 points/month vs. flat at 60) predicts risk better than the static number. You likely have the history in pti_behavioral_signals already; the gap is exposing delta/slope as a first-class field the B2B API returns.
+	•	Cure behavior — not just “missed payment” but time-to-recovery after a miss, and how many misses preceded eventual default vs. permanent recovery. This is the single best predictor lenders ask for and a binary completed/missed status can’t give it to them.
+	•	Payment channel (OXXO cash-in vs. wallet vs. bank-linked) as its own field — channel choice is a banking-penetration proxy that changes pricing risk independent of punctuality.
+	•	Partial payment amounts — did they pay the full CFE bill or a partial amount and top up later? Amount-paid vs. amount-due, not just paid/unpaid.
+	•	Bill-mix stability — a user who drops from 4 recurring billers to 2 is showing income disruption before any single payment is missed. This is an early-warning signal none of your current binary statuses capture.
+
+Lending/BNPL specific
+
+	•	Prioritization order under constraint — when a user is short on cash, which bill gets paid first? That ranking (rent vs. CFE vs. phone) is a strong signal of what a lender’s product would rank against if it competed for the same wallet share.
+	•	Response latency to Paula’s payment nudges, bucketed (same-day / same-week / ignored), not just sent/opened.
+
+Device/telecom financing specific
+
+	•	Address/session stability over time — geographic consistency matters more here because collections and device recovery depend on locatability, not just creditworthiness.
+	•	Installment-size elasticity — does the person pay the same amount every cycle, or does amount fluctuate with income? Device financiers price risk on variance, not just mean punctuality.
+
+Landlord/tenant screening (PagoSeguro) specific
+
+	•	Days-early/late granularity instead of on-time/late binary — landlords price risk on drift toward lateness, not a single missed month.
+	•	Tenancy duration + reason for move (if captured at rep level) — churn risk is as important to landlords as payment risk.
+	•	Cross-property portability — if a tenant moves between PagoSeguro-tracked properties, that continuous history is worth more than any single landlord’s isolated view. Right now that’s probably siloed per-property; stitching it into one portable tenant ID is a real product upgrade with no new data collection required.
+
+None of this requires new user-facing capture — it’s re-modeling data you’re already generating (payment timestamps, amounts, channel, Paula interaction logs) into the fields buyers actually price against, rather than the collapsed status fields PTI currently exposes.
