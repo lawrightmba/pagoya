@@ -605,7 +605,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (/^(content calendar|calendar|calendario de contenido|calendario contenido|contenido|weekly post)$/i.test(userMessage.trim())) {
       const CALENDAR = [
         { week: 1, date: "Jul 1",  status: "✅ Ready",     title: "The Abuela story — article distillation" },
-        { week: 2, date: "Jul 8",  status: "📝 Draft",     title: "What $58B in US-MX remittances tells you about creditworthiness" },
+        { week: 2, date: "Jul 8",  status: "✅ Ready",     title: "What $58B in US-MX remittances tells you about creditworthiness" },
         { week: 3, date: "Jul 15", status: "📝 Draft",     title: "The problem with calling it 'financial inclusion'" },
         { week: 4, date: "Jul 22", status: "📝 Draft",     title: "What 90 behavioral dimensions tell you that a FICO score can't" },
         { week: 5, date: "Jul 29", status: "📝 Draft",     title: "Why WhatsApp is the world's most underrated financial data layer" },
