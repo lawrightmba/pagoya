@@ -24,6 +24,12 @@ uri = "file://artifacts/pagoya-pitch-deck/public/hero-gtm.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "lnG5Z6EBUF6SiORUHCN8E"
+uri = "file://artifacts/pagoya/public/paula-avatar-new.png"
+type = "image"
+title = "paula avatar black hair orange shirt"
+
 [[outputs]]
 id = "i4bav1kvkby8BLMYD6vwu"
 uri = "file://artifacts/api-server/src/billpay/scripts/tabla-resultados-pagoya.xlsx"

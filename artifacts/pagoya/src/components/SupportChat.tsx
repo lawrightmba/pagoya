@@ -784,25 +784,25 @@ export default function SupportChat() {
             width: 64,
             height: 64,
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #046C2C 0%, #1D9E75 100%)",
-            border: "2.5px solid rgba(255,255,255,0.18)",
+            background: "#ffffff",
+            border: "3px solid #1D9E75",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
             padding: 0,
             overflow: "hidden",
             transition: "transform 0.2s, box-shadow 0.2s",
             position: "relative",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(29,158,117,0.7), 0 0 0 6px rgba(29,158,117,0.15)";
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 22px rgba(0,0,0,0.22)";
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 24px rgba(29,158,117,0.55), 0 0 0 0 rgba(29,158,117,0.4)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.15)";
           }}
         >
           {open ? (
@@ -820,14 +820,14 @@ export default function SupportChat() {
             </svg>
           ) : (
             <img
-              src={`${BASE_URL}/ai-avatar.png`}
-              alt="PagoYa AI"
+              src={`${BASE_URL}/paula-pill.png`}
+              alt="Paula"
               style={{
                 width: 58,
                 height: 58,
                 borderRadius: "50%",
                 objectFit: "cover",
-                objectPosition: "top center",
+                objectPosition: "center",
                 display: "block",
                 pointerEvents: "none",
               }}

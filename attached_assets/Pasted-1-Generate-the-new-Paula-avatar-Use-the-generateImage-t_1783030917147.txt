@@ -1,0 +1,114 @@
+1. Generate the new Paula avatar
+Use the generateImage tool with this prompt (adjust outputPath to your public images directory):
+
+await generateImage({
+    images: [{
+        prompt: "Friendly young Mexican woman avatar portrait, front-facing, slight warm smile, shoulder-length straight black hair, wearing a terracotta orange t-shirt. Clean minimal style, soft studio lighting, neutral light gray background, centered composition, head and shoulders visible, professional but approachable. No text, no logos, no borders.",
+        outputPath: "public/images/paula-avatar-new.png",
+        aspectRatio: "1:1",
+        negativePrompt: "blurry, low quality, watermark, text, logos, borders, frame, background clutter, dark background, shadows on face, messy hair, glasses, jewelry, accessories",
+        summary: "paula avatar black hair orange shirt"
+    }]
+});
+
+2. Create the circular 200×200 pill asset
+Run these ImageMagick commands in the shell (adjust paths as needed):
+
+# Create 200x200 circular alpha mask
+magick -size 200x200 xc:black -fill white -draw "circle 100,100 100,0" -alpha copy /tmp/mask-200.png
+# Crop source to center, shift face up 120px for proper centering in circle
+magick public/images/paula-avatar-new.png \
+  -gravity center -crop 1024x1024+0-120 +repage \
+  -resize 200x200^ -gravity center -extent 200x200 \
+  /tmp/paula-200.png
+# Apply circular mask (transparent corners)
+magick /tmp/paula-200.png /tmp/mask-200.png -compose CopyOpacity -composite /tmp/paula-circle.png
+# Composite on white background to match your site's background
+magick -size 200x200 xc:white /tmp/paula-circle.png -gravity center -compose Over -composite public/images/paula-pill.png
+
+3. Replace the WhatsApp FAB component
+Replace your existing WhatsApp floating button component with this structure. Keep your existing WA_NUMBER and WA_MESSAGE values.
+
+function WhatsAppButton() {
+  return (
+    <a
+      href={`https://wa.me/${WA_NUMBER}?text=${WA_MESSAGE}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Pregúntame — Escríbenos por WhatsApp"
+      style={{
+        position: "fixed",
+        bottom: "24px",
+        right: "24px",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "6px",
+        textDecoration: "none",
+        transition: "transform 0.15s",
+      }}
+      onMouseOver={e => {
+        (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1.05)";
+      }}
+      onMouseOut={e => {
+        (e.currentTarget as HTMLAnchorElement).style.transform = "scale(1)";
+      }}
+    >
+      {/* Paula pill avatar */}
+      <div
+        style={{
+          width: "56px",
+          height: "56px",
+          borderRadius: "50%",
+          overflow: "hidden",
+          border: "3px solid #1D9E75",  // your brand teal
+          boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+          background: "#fff",
+        }}
+      >
+        <img
+          src="/images/paula-pill.png"
+          alt="Paula"
+          width={56}
+          height={56}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+      {/* Pill label */}
+      <span
+        style={{
+          background: "#1D9E75",  // your brand teal
+          color: "#fff",
+          fontSize: "12px",
+          fontWeight: 600,
+          padding: "4px 12px",
+          borderRadius: "999px",
+          boxShadow: "0 2px 8px rgba(29,158,117,0.35)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Pregúntame
+      </span>
+    </a>
+  );
+}
+
+Key style values to adapt
+Element	Value
+Avatar size	56px × 56px circle
+Avatar border	3px solid + your brand teal
+Avatar shadow	0 4px 16px rgba(0,0,0,0.15)
+Label background	Your brand teal
+Label text	#fff, 12px, weight 600
+Label padding	4px 12px
+Label border-radius	999px (full pill)
+Label shadow	0 2px 8px rgba(teal,0.35)
+Hover	scale(1.05) on the whole anchor
+4. Render it
+Make sure <WhatsAppButton /> (or whatever you name it) is rendered at the app root level, outside the router, so it appears on every page.
