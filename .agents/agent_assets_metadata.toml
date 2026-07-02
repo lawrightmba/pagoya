@@ -347,3 +347,9 @@ id = "nerCcrzPSv8Lk1Hd0Uu2v"
 uri = "file://pagoya_data_points.pdf"
 type = "pdf"
 title = "PagoYa — 71 Data Points (Internal)"
+
+[[outputs]]
+id = "KR7iO7PAywfFv42NVHUPh"
+uri = "file://artifacts/pagoya/public/ai-avatar.png"
+type = "image"
+title = "Paula / PagoYa AI avatar (225x225 PNG, in-app chat icon)"
