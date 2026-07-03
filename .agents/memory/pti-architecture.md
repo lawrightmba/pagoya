@@ -8,7 +8,7 @@ description: PagoYa Trust Index — dual-model system, DB schema gotchas, cron s
 | Model | File | Storage | Schedule | Purpose |
 |---|---|---|---|---|
 | PagoScore | `api-server/src/services/pagoScore.ts` | `credit_profiles.pago_score` | Nightly 2AM MX | B2B credit profile, Paula AI context, 4-dim (trajectory/financial/routine/social) |
-| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v2.1-4dim** (upgraded June 2026) |
+| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v4.1-behavioral** (Sprint 2, July 2026) |
 
 Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 
@@ -20,14 +20,20 @@ Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 - `user_mission_progress` (NOT `user_missions`): columns `telefono`, `mission_id`, `completed_at`, `rewarded_at`.
 - `pti_behavioral_signals` table: per-computation audit trail + B2B export + model training dataset. Has `computed_at` indexed for time-series queries.
 
-## PTI v2.1-4dim formula (pti.ts — current)
+## PTI v4.1-behavioral formula (pti.ts — current)
 
 | Dimension | Max | Components |
 |---|---|---|
 | Payment Reliability (PR) | 30 | payment_streak(20) + payment_day_consistency(10) |
 | Behavioral Consistency (BC) | 20 | session_cadence(5) + game_engagement(5) + wallet_load_rhythm(3) + paula_interaction_depth(4) + push_engagement(3) |
 | Engagement Depth (ED) | 25 | biller_diversity(8) + kyc_verified(10) + spend_category_mix(4) + signup_utilization_speed(3) |
-| Cash-Flow Stability (CF) | 25 | wallet_balance(10) + load_spend_ratio(7) + p2p_network_activity(3) + account_age(5) |
+| Cash-Flow Stability (CF) | 25 | wallet_balance(8) + load_spend_ratio(4) + payment_amount_volatility(3) + p2p_network_activity(3) + account_age(2) + **bancarization_speed(3)** + **funding_channel_mix(2)** |
+
+### Sprint 2 additions (bancarization_speed, funding_channel_mix)
+- `bancarization_speed`: days from `users.created_at` to `users.first_spei_load_at` (≤7d→3, ≤30d→2, ≤90d→1, never/NaN→0). Rewards fast graduation from cash (OXXO) to bank-rail (SPEI) funding.
+- `funding_channel_mix`: ratio of (spei_load_count + card_load_count) / total loads (≥0.75→2, ≥0.40→1, else 0, gated to 0 if zero loads). Rewards bank-based over cash-based funding mix.
+- CF dimension rebalanced to make room (wallet_balance 10→8, load_spend_ratio 7→4, account_age 5→2 collapsed to 2 tiers ≥30d/≥90d, payment_amount_volatility carved out as its own 3pt sub-component from what was previously folded into load_spend_ratio).
+- **colonia and declared_income_bucket are explicitly excluded from PTI scoring** (fair-lending risk) — available only for B2B export views, never as scoring inputs.
 
 ### Signal sources
 - `payment_day_consistency`: STDDEV of bill_payment DOM over 6 months (≤2→10, ≤5→7, ≤8→4, ≤12→2); needs ≥3 payments

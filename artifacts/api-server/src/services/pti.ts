@@ -16,6 +16,16 @@
  *   + push_notification_engagement — push click-through rate (BC)
  *   + signup_utilization_speed — hours to first payment (ED)
  *   + p2p_network_activity — wallet transfer send count (CF)
+ *
+ * New signals (v4.1 — Sprint 2, July 2026):
+ *   + bancarization_speed — days from signup to first SPEI (bank transfer)
+ *     wallet load. Our single most compelling proprietary signal for lenders:
+ *     it measures how fast an unbanked user adopts formal banking rails. (CF)
+ *   + funding_channel_mix — ratio of bank-based (SPEI/card) vs. cash-based
+ *     (OXXO) wallet loads, i.e. progression away from cash dependency. (CF)
+ *   NOTE: colonia and declared_income_bucket were deliberately EXCLUDED from
+ *   scoring (fair-lending risk of geography/income-based credit signals).
+ *   They remain available for B2B context/segmentation only, never scoring.
  */
 
 import { sql } from "drizzle-orm";
@@ -98,6 +108,10 @@ export interface PTIDataSnapshot {
   p2pSendCount: number;          // P2P transfers sent in last 90 days
   p2pRecipientCount: number;     // distinct P2P recipients in last 90 days
   daysOld: number;               // account age in days
+  daysToFirstSpei: number;       // days from signup to first SPEI load (NaN if never)
+  oxxoLoadCount: number;         // lifetime cash-based (OXXO) wallet loads
+  speiLoadCount: number;         // lifetime bank-transfer (SPEI) wallet loads
+  cardLoadCount: number;         // lifetime card wallet loads
 }
 
 export interface PTIConfidence {
@@ -163,6 +177,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     paulaInteractions, confirmed2fa, declined2fa, pushOpens, curiosityIndex,
     billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
+    daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
   } = snapshot;
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -297,29 +312,28 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   // DIMENSION 4: CASH-FLOW STABILITY — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 4a. Wallet balance — max 9pts
+  // 4a. Wallet balance — max 8pts
   let walletScore = 0;
-  if      (currentBalance >= 500) walletScore = 9;
-  else if (currentBalance >= 200) walletScore = 6;
+  if      (currentBalance >= 500) walletScore = 8;
+  else if (currentBalance >= 200) walletScore = 5;
   else if (currentBalance >= 50)  walletScore = 3;
 
-  // 4b. Load/spend ratio (last 90 days) — max 5pts
+  // 4b. Load/spend ratio (last 90 days) — max 4pts
   let loadSpendRatio = 0;
   let loadSpendScore = 0;
   if (totalLoads > 0 && totalSpend > 0) {
     loadSpendRatio = totalLoads / totalSpend;
-    if      (loadSpendRatio >= 1.0) loadSpendScore = 5;
-    else if (loadSpendRatio >= 0.7) loadSpendScore = 3;
+    if      (loadSpendRatio >= 1.0) loadSpendScore = 4;
+    else if (loadSpendRatio >= 0.7) loadSpendScore = 2;
     else if (loadSpendRatio >= 0.4) loadSpendScore = 1;
   }
 
-  // 4c. Payment amount volatility — max 4pts
+  // 4c. Payment amount volatility — max 3pts
   let volatilityScore = 0;
   if (payCount >= 2) {
-    if      (amountCV <= 0.10) volatilityScore = 4;
-    else if (amountCV <= 0.25) volatilityScore = 3;
-    else if (amountCV <= 0.50) volatilityScore = 2;
-    else if (amountCV <= 1.00) volatilityScore = 1;
+    if      (amountCV <= 0.10) volatilityScore = 3;
+    else if (amountCV <= 0.25) volatilityScore = 2;
+    else if (amountCV <= 0.50) volatilityScore = 1;
   }
 
   // 4d. P2P network activity — max 3pts
@@ -328,13 +342,35 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   else if (p2pSendCount >= 3 && p2pRecipientCount >= 2) p2pScore = 2;
   else if (p2pSendCount >= 1)                           p2pScore = 1;
 
-  // 4e. Account age — max 4pts
+  // 4e. Account age — max 2pts
   let accountAgeScore = 0;
-  if      (daysOld >= 90) accountAgeScore = 4;
-  else if (daysOld >= 30) accountAgeScore = 3;
-  else if (daysOld >= 7)  accountAgeScore = 1;
+  if      (daysOld >= 90) accountAgeScore = 2;
+  else if (daysOld >= 30) accountAgeScore = 1;
 
-  const cfScore = walletScore + loadSpendScore + volatilityScore + p2pScore + accountAgeScore;
+  // 4f. Bancarization speed — max 3pts (NEW v4.1)
+  // Days from signup to first SPEI (bank transfer) load. Rewards fast
+  // adoption of formal banking rails — our strongest proprietary B2B signal.
+  let bancarizationScore = 0;
+  if (!isNaN(daysToFirstSpei)) {
+    if      (daysToFirstSpei <= 7)  bancarizationScore = 3;
+    else if (daysToFirstSpei <= 30) bancarizationScore = 2;
+    else if (daysToFirstSpei <= 90) bancarizationScore = 1;
+  }
+
+  // 4g. Funding channel mix — max 2pts (NEW v4.1)
+  // Ratio of bank-based (SPEI + card) vs. total wallet loads — measures
+  // progression away from cash (OXXO) dependency toward formal banking rails.
+  let fundingMixScore = 0;
+  let fundingMixRatio = 0;
+  const totalLoadEvents = oxxoLoadCount + speiLoadCount + cardLoadCount;
+  if (totalLoadEvents > 0) {
+    fundingMixRatio = (speiLoadCount + cardLoadCount) / totalLoadEvents;
+    if      (fundingMixRatio >= 0.75) fundingMixScore = 2;
+    else if (fundingMixRatio >= 0.40) fundingMixScore = 1;
+  }
+
+  const cfScore = walletScore + loadSpendScore + volatilityScore + p2pScore + accountAgeScore
+                + bancarizationScore + fundingMixScore;
 
   // ── Total ─────────────────────────────────────────────────────────────────
   const total = Math.min(100, prScore + bcScore + edScore + cfScore);
@@ -377,11 +413,13 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     cashflow_stability: {
       score: cfScore, max: 25, label: "Estabilidad de Flujo",
       components: {
-        wallet_balance:           { score: walletScore,     max: 9, value: currentBalance },
-        load_spend_ratio:         { score: loadSpendScore,  max: 5, value: Math.round(loadSpendRatio * 100) / 100 },
-        payment_amount_volatility:{ score: volatilityScore, max: 4, value: Math.round(amountCV * 100) / 100 },
-        p2p_network_activity:     { score: p2pScore,        max: 3, value: p2pSendCount },
-        account_age:              { score: accountAgeScore, max: 4, value: Math.floor(daysOld) },
+        wallet_balance:           { score: walletScore,        max: 8, value: currentBalance },
+        load_spend_ratio:         { score: loadSpendScore,     max: 4, value: Math.round(loadSpendRatio * 100) / 100 },
+        payment_amount_volatility:{ score: volatilityScore,    max: 3, value: Math.round(amountCV * 100) / 100 },
+        p2p_network_activity:     { score: p2pScore,           max: 3, value: p2pSendCount },
+        account_age:              { score: accountAgeScore,    max: 2, value: Math.floor(daysOld) },
+        bancarization_speed:      { score: bancarizationScore, max: 3, value: isNaN(daysToFirstSpei) ? -1 : Math.floor(daysToFirstSpei) },
+        funding_channel_mix:      { score: fundingMixScore,    max: 2, value: Math.round(fundingMixRatio * 100) },
       },
     },
     total,
@@ -399,7 +437,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   return { breakdown, confidence };
 }
 
-export const PTI_MODEL_VERSION = "v4.0-behavioral";
+export const PTI_MODEL_VERSION = "v4.1-behavioral";
 
 export function getPTITier(score: number): { tier: string; color: string; label: string } {
   if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };
@@ -691,12 +729,28 @@ async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot
   `);
   const daysOld = Number((ageRow.rows[0] as Record<string,unknown>)?.days_old ?? 0);
 
+  // 4f/4g. Bancarization speed + funding channel mix (NEW v4.1)
+  const bankingRow = await db.execute(sql`
+    SELECT
+      EXTRACT(EPOCH FROM (first_spei_load_at - created_at)) / 86400 AS days_to_first_spei,
+      COALESCE(oxxo_load_count, 0) AS oxxo_load_count,
+      COALESCE(spei_load_count, 0) AS spei_load_count,
+      COALESCE(card_load_count, 0) AS card_load_count
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const bankingR = bankingRow.rows[0] as Record<string,unknown>;
+  const daysToFirstSpei = bankingR?.days_to_first_spei == null ? NaN : Number(bankingR.days_to_first_spei);
+  const oxxoLoadCount   = Number(bankingR?.oxxo_load_count ?? 0);
+  const speiLoadCount   = Number(bankingR?.spei_load_count ?? 0);
+  const cardLoadCount   = Number(bankingR?.card_load_count ?? 0);
+
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
     loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
     paulaInteractions, confirmed2fa, declined2fa, pushOpens, curiosityIndex,
     billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
+    daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
   };
 }
 

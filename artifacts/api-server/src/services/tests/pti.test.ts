@@ -39,6 +39,10 @@ function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot
     p2pSendCount: 0,
     p2pRecipientCount: 0,
     daysOld: 0,
+    daysToFirstSpei: NaN,
+    oxxoLoadCount: 0,
+    speiLoadCount: 0,
+    cardLoadCount: 0,
     ...overrides,
   };
 }
@@ -110,6 +114,10 @@ describe("computePTI — high-confidence power user", () => {
     p2pSendCount: 6,
     p2pRecipientCount: 4,
     daysOld: 200,
+    daysToFirstSpei: 3,     // fast bank-rail adoption
+    oxxoLoadCount: 1,
+    speiLoadCount: 9,
+    cardLoadCount: 2,       // funding mix ratio = 11/12 = 0.917
   });
   const { breakdown, confidence } = computePTI(snapshot);
 
@@ -118,7 +126,7 @@ describe("computePTI — high-confidence power user", () => {
     expect(breakdown.payment_reliability.score).toBe(25); // streak min(13,8)=8 + day 4 + advance 8 + self 5
     expect(breakdown.behavioral_consistency.score).toBe(20); // 3+3+3+2+3+2+4
     expect(breakdown.engagement_depth.score).toBe(25); // 6+10+4(capped)+2+3
-    expect(breakdown.cashflow_stability.score).toBe(25); // 9+5+4+3+4
+    expect(breakdown.cashflow_stability.score).toBe(25); // wallet 8 + load/spend 4 + volatility 3 + p2p 3 + age 2 + bancarization 3 + funding mix 2
     expect(breakdown.total).toBe(95);
   });
 
@@ -174,7 +182,8 @@ describe("computePTI — medium-confidence user (some history, still early)", ()
     expect(breakdown.payment_reliability.components.advance_payment_days.score).toBe(0);
     expect(breakdown.payment_reliability.components.self_initiated_ratio.score).toBe(0);
     // payCount is 2, which meets the >=2 gate for volatility (unlike the >=3 gates above)
-    expect(breakdown.cashflow_stability.components.payment_amount_volatility.score).toBe(2);
+    // amountCV=0.4 falls in the <=0.50 band, which is worth 1pt post-Sprint-2 reweight (was 2pts pre-v4.1)
+    expect(breakdown.cashflow_stability.components.payment_amount_volatility.score).toBe(1);
   });
 
   it("keeps payment_day_consistency's .score (consistency signal) distinct from .value (raw dominant day-of-month)", () => {
@@ -274,19 +283,52 @@ describe("computePTI — dimension sub-score boundary cases", () => {
     expect(none.engagement_depth.components.kyc_verified.score).toBe(0);
   });
 
-  it("account_age steps at 7/30/90 day thresholds", () => {
+  it("account_age steps at 30/90 day thresholds (max reduced to 2pts in v4.1 to fund bancarization signals)", () => {
     const cases = [
       { daysOld: 6, expected: 0 },
-      { daysOld: 7, expected: 1 },
-      { daysOld: 29, expected: 1 },
-      { daysOld: 30, expected: 3 },
-      { daysOld: 89, expected: 3 },
-      { daysOld: 90, expected: 4 },
+      { daysOld: 29, expected: 0 },
+      { daysOld: 30, expected: 1 },
+      { daysOld: 89, expected: 1 },
+      { daysOld: 90, expected: 2 },
     ];
     for (const { daysOld, expected } of cases) {
       const { breakdown } = computePTI(baseSnapshot({ daysOld }));
       console.log(`[daysOld=${daysOld}] account_age score:`, breakdown.cashflow_stability.components.account_age.score);
       expect(breakdown.cashflow_stability.components.account_age.score).toBe(expected);
+    }
+  });
+
+  it("bancarization_speed rewards fast SPEI adoption, steps down at 7/30/90 days, zero if never bancarized", () => {
+    const cases = [
+      { daysToFirstSpei: NaN, expected: 0 },  // never loaded via SPEI
+      { daysToFirstSpei: 7,   expected: 3 },
+      { daysToFirstSpei: 8,   expected: 2 },
+      { daysToFirstSpei: 30,  expected: 2 },
+      { daysToFirstSpei: 31,  expected: 1 },
+      { daysToFirstSpei: 90,  expected: 1 },
+      { daysToFirstSpei: 91,  expected: 0 },
+    ];
+    for (const { daysToFirstSpei, expected } of cases) {
+      const { breakdown } = computePTI(baseSnapshot({ daysToFirstSpei }));
+      console.log(`[daysToFirstSpei=${daysToFirstSpei}] bancarization_speed score:`, breakdown.cashflow_stability.components.bancarization_speed.score);
+      expect(breakdown.cashflow_stability.components.bancarization_speed.score).toBe(expected);
+    }
+  });
+
+  it("funding_channel_mix rewards bank-based (SPEI+card) over cash (OXXO) loads, gated on having any loads at all", () => {
+    const cases = [
+      { oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0, expected: 0 },   // no loads yet — gated to 0
+      { oxxoLoadCount: 10, speiLoadCount: 0, cardLoadCount: 0, expected: 0 },  // 100% cash
+      { oxxoLoadCount: 6, speiLoadCount: 4, cardLoadCount: 0, expected: 1 },   // ratio 4/10=0.40, exactly at the >=0.40 boundary
+      { oxxoLoadCount: 6, speiLoadCount: 4, cardLoadCount: 1, expected: 1 },   // ratio 5/11=0.45 >= 0.40
+      { oxxoLoadCount: 2, speiLoadCount: 6, cardLoadCount: 2, expected: 2 },   // ratio 8/10=0.80 >= 0.75
+      { oxxoLoadCount: 0, speiLoadCount: 5, cardLoadCount: 5, expected: 2 },   // 100% bank-based
+    ];
+    for (const { oxxoLoadCount, speiLoadCount, cardLoadCount, expected } of cases) {
+      const { breakdown } = computePTI(baseSnapshot({ oxxoLoadCount, speiLoadCount, cardLoadCount }));
+      const ratio = speiLoadCount + cardLoadCount === 0 && oxxoLoadCount === 0 ? null : (speiLoadCount + cardLoadCount) / (oxxoLoadCount + speiLoadCount + cardLoadCount);
+      console.log(`[oxxo=${oxxoLoadCount},spei=${speiLoadCount},card=${cardLoadCount},ratio=${ratio}] funding_channel_mix score:`, breakdown.cashflow_stability.components.funding_channel_mix.score);
+      expect(breakdown.cashflow_stability.components.funding_channel_mix.score).toBe(expected);
     }
   });
 
