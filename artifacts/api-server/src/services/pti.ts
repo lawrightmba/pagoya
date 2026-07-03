@@ -38,6 +38,7 @@ export interface PTIBreakdown {
   cashflow_stability:     PTIDimension;  // max 25
   total: number;
   model_version: string;
+  confidence?: PTIConfidence;
   // Legacy flat fields (backward compat for old DB rows until monthly recompute)
   payment_streak?:      { score: number; months: number; max: number };
   biller_diversity?:    { score: number; count: number;  max: number };
@@ -47,65 +48,131 @@ export interface PTIBreakdown {
   account_age?:         { score: number; days: number;   max: number };
 }
 
-export const PTI_MODEL_VERSION = "v4.0-behavioral";
+/**
+ * PTIDataSnapshot — the complete set of raw behavioral inputs the 4-dimension
+ * scoring model needs. This is what makes the engine portable: any caller
+ * (PagoYa's own DB, PagoSeguro, a partner sending synthetic/demo data) can
+ * build one of these and get a real score back with zero PagoYa DB access.
+ *
+ * `computePTIForUser` (below) is just one producer of this snapshot — it reads
+ * PagoYa's Postgres tables and fills these fields. A standalone/demo caller
+ * fills them from whatever data it has (or from synthetic test fixtures).
+ */
+export interface PTIDataSnapshot {
+  // Payment Reliability inputs
+  streakMonths: number;          // consecutive months with ≥1 completed payment
+  payCount: number;              // confirmed payments in the last 6 months
+  domStddev: number;             // stddev of day-of-month payments land on
+  dominantDay: number;           // most common day-of-month for payments
+  advanceDays: number;           // avg days paid before due date
+  selfRatio: number;             // 0–1, ratio of self-initiated vs. reminder-triggered payments
 
-export function getPTITier(score: number): { tier: string; color: string; label: string } {
-  if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };
-  if (score >= 60) return { tier: "bueno",      color: "#007A4A", label: "Bueno" };
-  if (score >= 40) return { tier: "en_proceso", color: "#F59E0B", label: "En proceso" };
-  return              { tier: "iniciando",       color: "#6B7280", label: "Iniciando" };
+  // Behavioral Consistency inputs
+  loginDays30: number;           // distinct login days in last 30 days
+  hourStd: number;               // stddev of login hour-of-day
+  scratchPlays: number;
+  spinPlays: number;
+  missionsDone: number;
+  loadCount30: number;           // wallet loads in last 90 days (var name kept for back-compat)
+  loadDayStd: number;            // stddev of days between wallet loads
+  paulaInteractions: number;     // WhatsApp Paula interactions in last 30 days
+  confirmed2fa: number;
+  declined2fa: number;
+  pushOpens: number;             // push notification opens in last 30 days
+  curiosityIndex: number;        // 0–1, ratio of proactive financial-literacy Paula topics
+
+  // Engagement Depth inputs
+  billerCount: number;           // distinct billers ever paid
+  kycVerified: boolean;
+  kycTier: string;               // "simplified" | "full"
+  utilityRatio: number;          // 0–1, ratio of payments that are essential utilities
+  intentClicks: number;          // PagoSeguro / high-value-intent click events
+  hoursToFirst: number;          // hours from signup to first payment (NaN if never paid)
+  deviceScore: number;           // 0–100, device tenure/consistency score
+
+  // Cash-Flow Stability inputs
+  currentBalance: number;        // current wallet balance, MXN
+  totalLoads: number;            // wallet loads in last 90 days, MXN
+  totalSpend: number;            // bill payments in last 90 days, MXN
+  amountCV: number;              // coefficient of variation across payment amounts
+  p2pSendCount: number;          // P2P transfers sent in last 90 days
+  p2pRecipientCount: number;     // distinct P2P recipients in last 90 days
+  daysOld: number;               // account age in days
 }
 
-// ─── Compute PTI for a single user ───────────────────────────────────────────
+export interface PTIConfidence {
+  level: "high" | "medium" | "low";
+  score: number;       // 0–1, continuous data-sufficiency signal
+  reasons: string[];   // human-readable notes on what's limiting confidence
+}
 
-export async function computePTIForUser(telefono: string): Promise<PTIBreakdown> {
-  const { db } = await import("@workspace/db");
+/**
+ * Computes a confidence rating for a PTI score based on how much real
+ * behavioral data backs it up. A score of 45 built on 90 days of consistent
+ * payment history means something very different from a score of 45 built
+ * on 3 days of account age with zero payments — lenders need to know which.
+ */
+export function computePTIConfidence(snapshot: PTIDataSnapshot): PTIConfidence {
+  const reasons: string[] = [];
+
+  const paymentDepth = Math.min(snapshot.payCount / 3, 1);
+  const tenureDepth   = Math.min(snapshot.daysOld / 30, 1);
+  const activityDepth = Math.min(snapshot.loginDays30 / 4, 1);
+
+  const score = Math.round((0.5 * paymentDepth + 0.3 * tenureDepth + 0.2 * activityDepth) * 100) / 100;
+
+  if (snapshot.payCount === 0) {
+    reasons.push("No confirmed payments yet — payment reliability sub-scores requiring ≥3 payments are gated to zero, not truly low.");
+  } else if (snapshot.payCount < 3) {
+    reasons.push(`Only ${snapshot.payCount} confirmed payment(s) — several payment reliability signals require 3+ to activate.`);
+  }
+  if (snapshot.daysOld < 30) {
+    reasons.push(`Account is ${Math.floor(snapshot.daysOld)} day(s) old — score may shift materially as tenure accrues.`);
+  }
+  if (snapshot.loginDays30 === 0) {
+    reasons.push("No activity in the last 30 days — behavioral consistency dimension is uninformative.");
+  }
+
+  let level: PTIConfidence["level"];
+  if (snapshot.payCount >= 3 && snapshot.daysOld >= 30 && snapshot.loginDays30 >= 4) {
+    level = "high";
+  } else if (snapshot.payCount === 0 && snapshot.daysOld < 7) {
+    level = "low";
+  } else {
+    level = "medium";
+  }
+
+  if (reasons.length === 0) {
+    reasons.push("Sufficient payment history, account tenure, and recent activity to trust this score.");
+  }
+
+  return { level, score, reasons };
+}
+
+/**
+ * Pure scoring function — no I/O, no DB access. Given a complete data
+ * snapshot, deterministically computes the 4-dimension PTI breakdown plus a
+ * confidence rating. This is the portable core of the engine: it is exactly
+ * what `computePTIForUser` runs internally, and exactly what an external
+ * partner/demo caller can run with their own data.
+ */
+export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown; confidence: PTIConfidence } {
+  const {
+    streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
+    loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
+    paulaInteractions, confirmed2fa, declined2fa, pushOpens, curiosityIndex,
+    billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
+    currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
+  } = snapshot;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)
   // ══════════════════════════════════════════════════════════════════════════
 
-  // Fetch pre-computed v4.0 behavioral signals (written nightly by computePTIv3Signals)
-  const v4SignalsRow = await db.execute(sql`
-    SELECT
-      COALESCE(advance_payment_days_avg,   0) AS advance_days,
-      COALESCE(self_initiated_ratio,       0) AS self_ratio,
-      COALESCE(payment_amount_volatility,  1) AS amount_cv,
-      COALESCE(financial_curiosity_index,  0) AS curiosity_idx,
-      COALESCE(device_consistency_score,   0) AS device_score,
-      COALESCE(recovery_score,             0) AS recovery_sc
-    FROM users WHERE telefono = ${telefono} LIMIT 1
-  `);
-  const v4s            = v4SignalsRow.rows[0] as Record<string,unknown>;
-  const advanceDays    = Number(v4s?.advance_days  ?? 0);
-  const selfRatio      = Number(v4s?.self_ratio     ?? 0);
-  const amountCV       = Number(v4s?.amount_cv      ?? 1);
-  const curiosityIndex = Number(v4s?.curiosity_idx  ?? 0);
-  const deviceScore    = Number(v4s?.device_score   ?? 0);
-
-  // 1a. Payment streak — max 13pts (reduced from 20 to accommodate advance_days + self_initiated)
-  const streakRow = await db.execute(sql`
-    SELECT COALESCE(consecutive_payment_months, 0) AS streak_months
-    FROM users WHERE telefono = ${telefono} LIMIT 1
-  `);
-  const streakMonths = Number((streakRow.rows[0] as Record<string,unknown>)?.streak_months ?? 0);
+  // 1a. Payment streak — max 13pts
   const paymentStreakScore = Math.min(13, streakMonths);
 
-  // 1b. Payment day consistency — max 4pts (reduced; advance_payment_days is a stronger signal)
-  const domRow = await db.execute(sql`
-    SELECT
-      COUNT(*)::int                                               AS pay_count,
-      COALESCE(STDDEV(EXTRACT(DAY FROM created_at)), 15)::numeric AS dom_stddev,
-      MODE() WITHIN GROUP (ORDER BY EXTRACT(DAY FROM created_at))::int AS dominant_day
-    FROM bill_payments
-    WHERE telefono = ${telefono}
-      AND status IN ('completed','success','completed_ok','confirmed')
-      AND created_at > NOW() - INTERVAL '6 months'
-  `);
-  const domR = domRow.rows[0] as Record<string,unknown>;
-  const payCount    = Number(domR?.pay_count    ?? 0);
-  const domStddev   = Number(domR?.dom_stddev   ?? 15);
-  const dominantDay = Number(domR?.dominant_day ?? 0);
+  // 1b. Payment day consistency — max 4pts
   let payDayConsistency = 0;
   if (payCount >= 3) {
     if      (domStddev <= 2)  payDayConsistency = 4;
@@ -114,23 +181,16 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     else if (domStddev <= 12) payDayConsistency = 1;
   }
 
-  // 1c. Advance payment days — max 8pts (NEW v4.0 — strongest single PR signal)
-  // How many days BEFORE the due date does the user pay on average?
-  // Proactive payer (5+ days early) vs. reactive (day-of or late).
-  // Requires ≥3 confirmed payments to avoid cold-start inflation and gaming
-  // (1-2 early payments on token bills cannot swing the sub-score).
+  // 1c. Advance payment days — max 8pts
   let advancePayScore = 0;
   if (payCount >= 3) {
     if      (advanceDays >= 7) advancePayScore = 8;
     else if (advanceDays >= 4) advancePayScore = 6;
     else if (advanceDays >= 2) advancePayScore = 4;
-    else if (advanceDays >= 1) advancePayScore = 2; // day-of earns nothing; ≥1 day = reliable
+    else if (advanceDays >= 1) advancePayScore = 2;
   }
 
-  // 1d. Self-initiated ratio — max 5pts (NEW v4.0)
-  // Ratio of payments the user opened themselves vs. triggered by a Paula reminder.
-  // A user who pays without being reminded is significantly more creditworthy.
-  // Requires ≥3 payments to prevent gaming via a single unprompted payment.
+  // 1d. Self-initiated ratio — max 5pts
   let selfInitScore = 0;
   if (payCount >= 3) {
     if      (selfRatio >= 0.9) selfInitScore = 5;
@@ -145,90 +205,38 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // DIMENSION 2: BEHAVIORAL CONSISTENCY — max 20pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 2a. Session cadence — max 3pts (reduced from 5)
-  const loginRow = await db.execute(sql`
-    SELECT
-      COUNT(DISTINCT DATE(created_at))::int                        AS login_days,
-      COALESCE(STDDEV(EXTRACT(HOUR FROM created_at)), 12)::numeric AS hour_std
-    FROM user_events
-    WHERE telefono = ${telefono}
-      AND event_type = 'login'
-      AND created_at > NOW() - INTERVAL '30 days'
-  `);
-  const lr = loginRow.rows[0] as Record<string,unknown>;
-  const loginDays30 = Number(lr?.login_days ?? 0);
-  const hourStd     = Number(lr?.hour_std   ?? 12);
+  // 2a. Session cadence — max 3pts
   let sessionCadenceScore = 0;
   if      (loginDays30 >= 20) sessionCadenceScore = 3;
   else if (loginDays30 >= 12) sessionCadenceScore = 2;
   else if (loginDays30 >= 4)  sessionCadenceScore = 1;
 
-  // 2b. Routine score composite — max 3pts (NEW v4.0)
-  // Normalizes login-hour variance + payment DOM variance into one routine stability signal.
-  // Low combined variance = structured daily/monthly habits = financial discipline proxy.
+  // 2b. Routine score composite — max 3pts
   let routineScore = 0;
   {
-    const hourNorm = Math.max(0, 1 - hourStd / 12);       // 0→1: lower hour std = higher
-    const domNorm  = Math.max(0, 1 - domStddev / 15);     // 0→1: lower DOM std = higher
+    const hourNorm = Math.max(0, 1 - hourStd / 12);
+    const domNorm  = Math.max(0, 1 - domStddev / 15);
     const routineRaw = (hourNorm + domNorm) / 2;
     if      (routineRaw >= 0.70) routineScore = 3;
     else if (routineRaw >= 0.50) routineScore = 2;
     else if (routineRaw >= 0.30) routineScore = 1;
   }
 
-  // 2c. Game & mission engagement — max 3pts (reduced from 5)
-  const gameRow = await db.execute(sql`
-    SELECT
-      COALESCE((SELECT COUNT(*)::int FROM scratch_card_plays    WHERE telefono = ${telefono} AND play_date > CURRENT_DATE - 30), 0) AS scratch_plays,
-      COALESCE((SELECT COUNT(*)::int FROM spin_results          WHERE telefono = ${telefono} AND spun_at > NOW() - INTERVAL '30 days'), 0) AS spin_plays,
-      COALESCE((SELECT COUNT(*)::int FROM user_mission_progress WHERE telefono = ${telefono} AND completed_at IS NOT NULL), 0) AS missions_done
-  `);
-  const gr = gameRow.rows[0] as Record<string,unknown>;
-  const scratchPlays    = Number(gr?.scratch_plays ?? 0);
-  const spinPlays       = Number(gr?.spin_plays    ?? 0);
-  const missionsDone    = Number(gr?.missions_done ?? 0);
+  // 2c. Game & mission engagement — max 3pts
   const totalEngagement = scratchPlays + spinPlays + (missionsDone * 2);
   let gameEngagementScore = 0;
   if      (totalEngagement >= 20) gameEngagementScore = 3;
   else if (totalEngagement >= 8)  gameEngagementScore = 2;
   else if (totalEngagement >= 2)  gameEngagementScore = 1;
 
-  // 2d. Wallet load rhythm — max 2pts (reduced from 3)
-  const loadRhythmRow = await db.execute(sql`
-    SELECT
-      COUNT(*)::int                                                         AS load_count,
-      COALESCE(STDDEV(EXTRACT(EPOCH FROM wt.created_at) / 86400.0), 30)::numeric AS load_day_std
-    FROM wallet_transactions wt
-    JOIN wallets w ON wt.wallet_id = w.id
-    WHERE w.user_id = ${telefono}
-      AND wt.type IN ('load_card','load_oxxo','spei_in','load_spei','spei_in')
-      AND wt.status = 'confirmed'
-      AND wt.created_at > NOW() - INTERVAL '90 days'
-  `);
-  const rhr = loadRhythmRow.rows[0] as Record<string,unknown>;
-  const loadCount30 = Number(rhr?.load_count   ?? 0);
-  const loadDayStd  = Number(rhr?.load_day_std ?? 30);
+  // 2d. Wallet load rhythm — max 2pts
   let loadRhythmScore = 0;
   if (loadCount30 >= 3) {
     if      (loadDayStd <= 3) loadRhythmScore = 2;
     else if (loadDayStd <= 7) loadRhythmScore = 1;
   }
 
-  // 2e. Paula WhatsApp interaction depth — max 3pts (reduced from 4)
-  const paulaRow = await db.execute(sql`
-    SELECT
-      COUNT(*) FILTER (WHERE event_type = 'paula_interaction')::int   AS interactions,
-      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_confirmed')::int AS confirmed_2fa,
-      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_declined')::int  AS declined_2fa
-    FROM user_events
-    WHERE telefono = ${telefono}
-      AND event_type IN ('paula_interaction', 'paula_2fa_confirmed', 'paula_2fa_declined')
-      AND created_at > NOW() - INTERVAL '30 days'
-  `);
-  const pr2 = paulaRow.rows[0] as Record<string,unknown>;
-  const paulaInteractions = Number(pr2?.interactions  ?? 0);
-  const confirmed2fa      = Number(pr2?.confirmed_2fa ?? 0);
-  const declined2fa       = Number(pr2?.declined_2fa  ?? 0);
+  // 2e. Paula WhatsApp interaction depth — max 3pts
   let paulaScore = 0;
   if      (paulaInteractions >= 15) paulaScore = 2;
   else if (paulaInteractions >= 4)  paulaScore = 1;
@@ -236,22 +244,12 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     paulaScore = Math.min(3, paulaScore + 1);
   }
 
-  // 2f. Push notification engagement — max 2pts (reduced from 3)
-  const pushRow = await db.execute(sql`
-    SELECT COUNT(*)::int AS push_opens
-    FROM user_events
-    WHERE telefono = ${telefono}
-      AND event_type = 'push_opened'
-      AND created_at > NOW() - INTERVAL '30 days'
-  `);
-  const pushOpens = Number((pushRow.rows[0] as Record<string,unknown>)?.push_opens ?? 0);
+  // 2f. Push notification engagement — max 2pts
   let pushScore = 0;
   if      (pushOpens >= 6) pushScore = 2;
   else if (pushOpens >= 2) pushScore = 1;
 
-  // 2g. Financial curiosity index — max 4pts (NEW v4.0)
-  // Ratio of proactive Paula topics (savings goals, PTI score inquiries, budgeting)
-  // to total Paula messages. Curiosity-driven users plan further ahead.
+  // 2g. Financial curiosity index — max 4pts
   let curiosityScore = 0;
   if      (curiosityIndex >= 0.20) curiosityScore = 4;
   else if (curiosityIndex >= 0.10) curiosityScore = 3;
@@ -265,75 +263,29 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // DIMENSION 3: ENGAGEMENT DEPTH — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 3a. Biller diversity — max 6pts (reduced to accommodate device consistency)
-  const billerRow = await db.execute(sql`
-    SELECT COUNT(DISTINCT service_id)::int AS biller_count
-    FROM bill_payments
-    WHERE telefono = ${telefono}
-      AND status IN ('completed','success','completed_ok','confirmed')
-  `);
-  const billerCount = Number((billerRow.rows[0] as Record<string,unknown>)?.biller_count ?? 0);
+  // 3a. Biller diversity — max 6pts
   const billerDiversityScore = Math.min(6, Math.floor(billerCount * 1.5));
 
   // 3b. KYC verified — max 10pts
-  const kycRow = await db.execute(sql`
-    SELECT kyc_submitted_at IS NOT NULL AS verified, kyc_tier
-    FROM users WHERE telefono = ${telefono} LIMIT 1
-  `);
-  const kycR       = kycRow.rows[0] as Record<string,unknown>;
-  const kycVerified = Boolean(kycR?.verified);
-  const kycTier    = String(kycR?.kyc_tier ?? "simplified");
   let kycScore = 0;
   if (kycVerified && kycTier === "full") kycScore = 10;
   else if (kycVerified)                  kycScore = 7;
 
-  // 3c. Spend category mix — max 4pts (reduced from 5)
-  // Utility % signals responsible service prioritization.
-  const categoryRow = await db.execute(sql`
-    SELECT
-      COUNT(*) FILTER (WHERE COALESCE(service_name,'') ILIKE ANY(ARRAY['%cfe%','%luz%','%agua%','%sacmex%','%seapal%','%gas%','%naturgy%']))::float
-        / NULLIF(COUNT(*), 0) AS utility_ratio
-    FROM bill_payments
-    WHERE telefono = ${telefono}
-      AND status IN ('completed','success','completed_ok','confirmed')
-  `);
-  const utilityRatio = Number((categoryRow.rows[0] as Record<string,unknown>)?.utility_ratio ?? 0);
+  // 3c. Spend category mix — max 4pts
   let spendCategoryScore = 0;
   if      (utilityRatio >= 0.6) spendCategoryScore = 4;
   else if (utilityRatio >= 0.4) spendCategoryScore = 3;
   else if (utilityRatio >= 0.2) spendCategoryScore = 1;
-
-  // Pago Seguro / high-value intent signals (cross-platform behavioral data)
-  const intentRow = await db.execute(sql`
-    SELECT COUNT(*)::int AS intent_clicks
-    FROM user_events
-    WHERE telefono = ${telefono}
-      AND event_type IN ('pago_seguro_click', 'high_value_intent_click')
-  `);
-  const intentClicks = Number((intentRow.rows[0] as Record<string,unknown>)?.intent_clicks ?? 0);
   if (intentClicks >= 1) spendCategoryScore = Math.min(4, spendCategoryScore + 1);
 
-  // 3d. Signup utilization speed — max 2pts (reduced from 3)
-  const speedRow = await db.execute(sql`
-    SELECT
-      EXTRACT(EPOCH FROM (MIN(bp.created_at) - u.created_at)) / 3600 AS hours_to_first_payment
-    FROM users u
-    LEFT JOIN bill_payments bp ON bp.telefono = u.telefono
-      AND bp.status IN ('completed','success','completed_ok','confirmed')
-    WHERE u.telefono = ${telefono}
-    GROUP BY u.created_at
-  `);
-  const hoursToFirst = Number((speedRow.rows[0] as Record<string,unknown>)?.hours_to_first_payment ?? null);
+  // 3d. Signup utilization speed — max 2pts
   let signupSpeedScore = 0;
   if (!isNaN(hoursToFirst) && hoursToFirst > 0) {
     if      (hoursToFirst <= 12)  signupSpeedScore = 2;
     else if (hoursToFirst <= 72)  signupSpeedScore = 1;
   }
 
-  // 3e. Device consistency — max 3pts (NEW v4.0)
-  // How long the user has maintained the same device. Stability signal: same device
-  // for 90+ days means the user is not transient or frequently re-registering.
-  // Sourced from users.device_consistency_score (nightly computed from device_first_seen_at)
+  // 3e. Device consistency — max 3pts
   let deviceConsistencyScore = 0;
   if      (deviceScore >= 80) deviceConsistencyScore = 3;
   else if (deviceScore >= 50) deviceConsistencyScore = 2;
@@ -345,40 +297,13 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // DIMENSION 4: CASH-FLOW STABILITY — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 4a. Wallet balance — max 9pts (reduced from 10)
-  const balanceRow = await db.execute(sql`
-    SELECT COALESCE(balance_mxn, 0) AS balance
-    FROM wallets WHERE user_id = ${telefono} LIMIT 1
-  `);
-  const currentBalance = Number((balanceRow.rows[0] as Record<string,unknown>)?.balance ?? 0);
+  // 4a. Wallet balance — max 9pts
   let walletScore = 0;
   if      (currentBalance >= 500) walletScore = 9;
   else if (currentBalance >= 200) walletScore = 6;
   else if (currentBalance >= 50)  walletScore = 3;
 
-  // 4b. Load/spend ratio (last 90 days) — max 5pts (reduced from 7)
-  const ratioRow = await db.execute(sql`
-    SELECT
-      COALESCE((
-        SELECT SUM(wt.amount_mxn::numeric)
-        FROM wallet_transactions wt
-        JOIN wallets w ON wt.wallet_id = w.id
-        WHERE w.user_id = ${telefono}
-          AND wt.type IN ('load_card','load_oxxo','spei_in','SIGNUP_BONUS')
-          AND wt.status = 'confirmed'
-          AND wt.created_at > NOW() - INTERVAL '90 days'
-      ), 0) AS total_loads,
-      COALESCE((
-        SELECT SUM(monto::numeric)
-        FROM bill_payments
-        WHERE telefono = ${telefono}
-          AND status IN ('completed','success','completed_ok','confirmed')
-          AND created_at > NOW() - INTERVAL '90 days'
-      ), 0) AS total_spend
-  `);
-  const rr = ratioRow.rows[0] as Record<string,unknown>;
-  const totalLoads = Number(rr?.total_loads ?? 0);
-  const totalSpend = Number(rr?.total_spend ?? 0);
+  // 4b. Load/spend ratio (last 90 days) — max 5pts
   let loadSpendRatio = 0;
   let loadSpendScore = 0;
   if (totalLoads > 0 && totalSpend > 0) {
@@ -388,45 +313,22 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     else if (loadSpendRatio >= 0.4) loadSpendScore = 1;
   }
 
-  // 4c. Payment amount volatility — max 4pts (NEW v4.0)
-  // Low coefficient of variation across biller amounts = stable, predictable obligations.
-  // High volatility = irregular income or irregular discipline — negative signal.
-  // Requires ≥2 confirmed payments to prevent the cold-start false-positive
-  // (COALESCE(null,1) would otherwise give 1pt to zero-history users).
+  // 4c. Payment amount volatility — max 4pts
   let volatilityScore = 0;
   if (payCount >= 2) {
-    if      (amountCV <= 0.10) volatilityScore = 4; // very consistent
+    if      (amountCV <= 0.10) volatilityScore = 4;
     else if (amountCV <= 0.25) volatilityScore = 3;
     else if (amountCV <= 0.50) volatilityScore = 2;
     else if (amountCV <= 1.00) volatilityScore = 1;
   }
 
   // 4d. P2P network activity — max 3pts
-  const p2pRow = await db.execute(sql`
-    SELECT
-      COUNT(DISTINCT wt.id)::int AS send_count,
-      COUNT(DISTINCT SUBSTRING(wt.description FROM 'Enviado a (\\S+)'))::int AS recipient_diversity
-    FROM wallet_transactions wt
-    JOIN wallets w ON wt.wallet_id = w.id
-    WHERE w.user_id = ${telefono}
-      AND wt.type = 'transfer_send'
-      AND wt.status = 'confirmed'
-      AND wt.created_at > NOW() - INTERVAL '90 days'
-  `);
-  const p2pr = p2pRow.rows[0] as Record<string,unknown>;
-  const p2pSendCount      = Number(p2pr?.send_count         ?? 0);
-  const p2pRecipientCount = Number(p2pr?.recipient_diversity ?? 0);
   let p2pScore = 0;
   if      (p2pSendCount >= 5 && p2pRecipientCount >= 3) p2pScore = 3;
   else if (p2pSendCount >= 3 && p2pRecipientCount >= 2) p2pScore = 2;
   else if (p2pSendCount >= 1)                           p2pScore = 1;
 
-  // 4e. Account age — max 4pts (reduced from 5)
-  const ageRow = await db.execute(sql`
-    SELECT EXTRACT(EPOCH FROM (NOW() - created_at)) / 86400 AS days_old
-    FROM users WHERE telefono = ${telefono} LIMIT 1
-  `);
-  const daysOld = Number((ageRow.rows[0] as Record<string,unknown>)?.days_old ?? 0);
+  // 4e. Account age — max 4pts
   let accountAgeScore = 0;
   if      (daysOld >= 90) accountAgeScore = 4;
   else if (daysOld >= 30) accountAgeScore = 3;
@@ -438,6 +340,8 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   const total = Math.min(100, prScore + bcScore + edScore + cfScore);
 
   // ── Build structured breakdown ────────────────────────────────────────────
+  const confidence = computePTIConfidence(snapshot);
+
   const breakdown: PTIBreakdown = {
     payment_reliability: {
       score: prScore, max: 30, label: "Fiabilidad de Pago",
@@ -482,6 +386,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     },
     total,
     model_version: PTI_MODEL_VERSION,
+    confidence,
     // Legacy flat fields (backward compat)
     payment_streak:   { score: paymentStreakScore, months: streakMonths, max: 13 },
     biller_diversity: { score: billerDiversityScore, count: billerCount, max: 6 },
@@ -491,10 +396,31 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
     account_age:      { score: accountAgeScore, days: Math.floor(daysOld), max: 4 },
   };
 
+  return { breakdown, confidence };
+}
+
+export const PTI_MODEL_VERSION = "v4.0-behavioral";
+
+export function getPTITier(score: number): { tier: string; color: string; label: string } {
+  if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };
+  if (score >= 60) return { tier: "bueno",      color: "#007A4A", label: "Bueno" };
+  if (score >= 40) return { tier: "en_proceso", color: "#F59E0B", label: "En proceso" };
+  return              { tier: "iniciando",       color: "#6B7280", label: "Iniciando" };
+}
+
+// ─── Compute PTI for a single user ───────────────────────────────────────────
+
+export async function computePTIForUser(telefono: string): Promise<PTIBreakdown> {
+  const { db } = await import("@workspace/db");
+  const snapshot = await buildPTISnapshotFromDb(telefono);
+
+  const { breakdown, confidence } = computePTI(snapshot);
+  void confidence; // already embedded in breakdown.confidence
+
   // ── Persist to users table ────────────────────────────────────────────────
   await db.execute(sql`
     UPDATE users SET
-      pti_score             = ${total},
+      pti_score             = ${breakdown.total},
       pti_breakdown         = ${JSON.stringify(breakdown)}::jsonb,
       pti_computed_at       = NOW(),
       pti_first_computed_at = COALESCE(pti_first_computed_at, NOW())
@@ -504,7 +430,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
   // ── Log to score history (powers pti_trend_30d view + Paula trend coaching) ─
   await db.execute(sql`
     INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
-    VALUES (${telefono}, ${total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
+    VALUES (${telefono}, ${breakdown.total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
   `).catch(err => logger.warn({ err, telefono }, "pti: history log failed — continuing"));
 
   // ── Persist dimension scores to behavioral signals audit table ────────────
@@ -516,14 +442,262 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
        pr_score, bc_score, ed_score, cf_score)
     VALUES (
       ${telefono}, NOW(),
-      ${payDayConsistency}, ${dominantDay},
-      ${loginDays30}, ${hourStd}, ${scratchPlays + spinPlays}, ${missionsDone},
-      ${loadCount30}, ${loadDayStd}, ${utilityRatio}, ${intentClicks},
-      ${prScore}, ${bcScore}, ${edScore}, ${cfScore}
+      ${breakdown.payment_reliability.components.payment_day_consistency.value}, ${snapshot.dominantDay},
+      ${snapshot.loginDays30}, ${snapshot.hourStd}, ${snapshot.scratchPlays + snapshot.spinPlays}, ${snapshot.missionsDone},
+      ${snapshot.loadCount30}, ${snapshot.loadDayStd}, ${snapshot.utilityRatio}, ${snapshot.intentClicks},
+      ${breakdown.payment_reliability.score}, ${breakdown.behavioral_consistency.score},
+      ${breakdown.engagement_depth.score}, ${breakdown.cashflow_stability.score}
     )
   `).catch(err => logger.warn({ err, telefono }, "pti: behavioral signals persist failed — continuing"));
 
   return breakdown;
+}
+
+/**
+ * Fetches all raw behavioral fields PagoYa's Postgres tables hold for a user
+ * and assembles them into a portable PTIDataSnapshot. This is the ONLY place
+ * in the engine that touches the database — everything downstream of this
+ * (computePTI) is pure and works identically for a partner's synthetic data.
+ */
+async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot> {
+  const { db } = await import("@workspace/db");
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Fetch pre-computed v4.0 behavioral signals (written nightly by computePTIv3Signals)
+  const v4SignalsRow = await db.execute(sql`
+    SELECT
+      COALESCE(advance_payment_days_avg,   0) AS advance_days,
+      COALESCE(self_initiated_ratio,       0) AS self_ratio,
+      COALESCE(payment_amount_volatility,  1) AS amount_cv,
+      COALESCE(financial_curiosity_index,  0) AS curiosity_idx,
+      COALESCE(device_consistency_score,   0) AS device_score,
+      COALESCE(recovery_score,             0) AS recovery_sc
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const v4s            = v4SignalsRow.rows[0] as Record<string,unknown>;
+  const advanceDays    = Number(v4s?.advance_days  ?? 0);
+  const selfRatio      = Number(v4s?.self_ratio     ?? 0);
+  const amountCV       = Number(v4s?.amount_cv      ?? 1);
+  const curiosityIndex = Number(v4s?.curiosity_idx  ?? 0);
+  const deviceScore    = Number(v4s?.device_score   ?? 0);
+
+  // 1a. Payment streak
+  const streakRow = await db.execute(sql`
+    SELECT COALESCE(consecutive_payment_months, 0) AS streak_months
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const streakMonths = Number((streakRow.rows[0] as Record<string,unknown>)?.streak_months ?? 0);
+
+  // 1b. Payment day consistency (last 6 months of confirmed payments)
+  const domRow = await db.execute(sql`
+    SELECT
+      COUNT(*)::int                                               AS pay_count,
+      COALESCE(STDDEV(EXTRACT(DAY FROM created_at)), 15)::numeric AS dom_stddev,
+      MODE() WITHIN GROUP (ORDER BY EXTRACT(DAY FROM created_at))::int AS dominant_day
+    FROM bill_payments
+    WHERE telefono = ${telefono}
+      AND status IN ('completed','success','completed_ok','confirmed')
+      AND created_at > NOW() - INTERVAL '6 months'
+  `);
+  const domR = domRow.rows[0] as Record<string,unknown>;
+  const payCount    = Number(domR?.pay_count    ?? 0);
+  const domStddev   = Number(domR?.dom_stddev   ?? 15);
+  const dominantDay = Number(domR?.dominant_day ?? 0);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DIMENSION 2: BEHAVIORAL CONSISTENCY — raw inputs
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // 2a. Session cadence
+  const loginRow = await db.execute(sql`
+    SELECT
+      COUNT(DISTINCT DATE(created_at))::int                        AS login_days,
+      COALESCE(STDDEV(EXTRACT(HOUR FROM created_at)), 12)::numeric AS hour_std
+    FROM user_events
+    WHERE telefono = ${telefono}
+      AND event_type = 'login'
+      AND created_at > NOW() - INTERVAL '30 days'
+  `);
+  const lr = loginRow.rows[0] as Record<string,unknown>;
+  const loginDays30 = Number(lr?.login_days ?? 0);
+  const hourStd     = Number(lr?.hour_std   ?? 12);
+
+  // 2c. Game & mission engagement
+  const gameRow = await db.execute(sql`
+    SELECT
+      COALESCE((SELECT COUNT(*)::int FROM scratch_card_plays    WHERE telefono = ${telefono} AND play_date > CURRENT_DATE - 30), 0) AS scratch_plays,
+      COALESCE((SELECT COUNT(*)::int FROM spin_results          WHERE telefono = ${telefono} AND spun_at > NOW() - INTERVAL '30 days'), 0) AS spin_plays,
+      COALESCE((SELECT COUNT(*)::int FROM user_mission_progress WHERE telefono = ${telefono} AND completed_at IS NOT NULL), 0) AS missions_done
+  `);
+  const gr = gameRow.rows[0] as Record<string,unknown>;
+  const scratchPlays = Number(gr?.scratch_plays ?? 0);
+  const spinPlays    = Number(gr?.spin_plays    ?? 0);
+  const missionsDone = Number(gr?.missions_done ?? 0);
+
+  // 2d. Wallet load rhythm (last 90 days)
+  const loadRhythmRow = await db.execute(sql`
+    SELECT
+      COUNT(*)::int                                                         AS load_count,
+      COALESCE(STDDEV(EXTRACT(EPOCH FROM wt.created_at) / 86400.0), 30)::numeric AS load_day_std
+    FROM wallet_transactions wt
+    JOIN wallets w ON wt.wallet_id = w.id
+    WHERE w.user_id = ${telefono}
+      AND wt.type IN ('load_card','load_oxxo','spei_in','load_spei','spei_in')
+      AND wt.status = 'confirmed'
+      AND wt.created_at > NOW() - INTERVAL '90 days'
+  `);
+  const rhr = loadRhythmRow.rows[0] as Record<string,unknown>;
+  const loadCount30 = Number(rhr?.load_count   ?? 0);
+  const loadDayStd  = Number(rhr?.load_day_std ?? 30);
+
+  // 2e. Paula WhatsApp interaction depth
+  const paulaRow = await db.execute(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE event_type = 'paula_interaction')::int   AS interactions,
+      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_confirmed')::int AS confirmed_2fa,
+      COUNT(*) FILTER (WHERE event_type = 'paula_2fa_declined')::int  AS declined_2fa
+    FROM user_events
+    WHERE telefono = ${telefono}
+      AND event_type IN ('paula_interaction', 'paula_2fa_confirmed', 'paula_2fa_declined')
+      AND created_at > NOW() - INTERVAL '30 days'
+  `);
+  const pr2 = paulaRow.rows[0] as Record<string,unknown>;
+  const paulaInteractions = Number(pr2?.interactions  ?? 0);
+  const confirmed2fa      = Number(pr2?.confirmed_2fa ?? 0);
+  const declined2fa       = Number(pr2?.declined_2fa  ?? 0);
+
+  // 2f. Push notification engagement
+  const pushRow = await db.execute(sql`
+    SELECT COUNT(*)::int AS push_opens
+    FROM user_events
+    WHERE telefono = ${telefono}
+      AND event_type = 'push_opened'
+      AND created_at > NOW() - INTERVAL '30 days'
+  `);
+  const pushOpens = Number((pushRow.rows[0] as Record<string,unknown>)?.push_opens ?? 0);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DIMENSION 3: ENGAGEMENT DEPTH — raw inputs
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // 3a. Biller diversity
+  const billerRow = await db.execute(sql`
+    SELECT COUNT(DISTINCT service_id)::int AS biller_count
+    FROM bill_payments
+    WHERE telefono = ${telefono}
+      AND status IN ('completed','success','completed_ok','confirmed')
+  `);
+  const billerCount = Number((billerRow.rows[0] as Record<string,unknown>)?.biller_count ?? 0);
+
+  // 3b. KYC verified
+  const kycRow = await db.execute(sql`
+    SELECT kyc_submitted_at IS NOT NULL AS verified, kyc_tier
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const kycR       = kycRow.rows[0] as Record<string,unknown>;
+  const kycVerified = Boolean(kycR?.verified);
+  const kycTier    = String(kycR?.kyc_tier ?? "simplified");
+
+  // 3c. Spend category mix — utility % signals responsible service prioritization
+  const categoryRow = await db.execute(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE COALESCE(service_name,'') ILIKE ANY(ARRAY['%cfe%','%luz%','%agua%','%sacmex%','%seapal%','%gas%','%naturgy%']))::float
+        / NULLIF(COUNT(*), 0) AS utility_ratio
+    FROM bill_payments
+    WHERE telefono = ${telefono}
+      AND status IN ('completed','success','completed_ok','confirmed')
+  `);
+  const utilityRatio = Number((categoryRow.rows[0] as Record<string,unknown>)?.utility_ratio ?? 0);
+
+  // Pago Seguro / high-value intent signals (cross-platform behavioral data)
+  const intentRow = await db.execute(sql`
+    SELECT COUNT(*)::int AS intent_clicks
+    FROM user_events
+    WHERE telefono = ${telefono}
+      AND event_type IN ('pago_seguro_click', 'high_value_intent_click')
+  `);
+  const intentClicks = Number((intentRow.rows[0] as Record<string,unknown>)?.intent_clicks ?? 0);
+
+  // 3d. Signup utilization speed
+  const speedRow = await db.execute(sql`
+    SELECT
+      EXTRACT(EPOCH FROM (MIN(bp.created_at) - u.created_at)) / 3600 AS hours_to_first_payment
+    FROM users u
+    LEFT JOIN bill_payments bp ON bp.telefono = u.telefono
+      AND bp.status IN ('completed','success','completed_ok','confirmed')
+    WHERE u.telefono = ${telefono}
+    GROUP BY u.created_at
+  `);
+  const hoursToFirst = Number((speedRow.rows[0] as Record<string,unknown>)?.hours_to_first_payment ?? null);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DIMENSION 4: CASH-FLOW STABILITY — raw inputs
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // 4a. Wallet balance
+  const balanceRow = await db.execute(sql`
+    SELECT COALESCE(balance_mxn, 0) AS balance
+    FROM wallets WHERE user_id = ${telefono} LIMIT 1
+  `);
+  const currentBalance = Number((balanceRow.rows[0] as Record<string,unknown>)?.balance ?? 0);
+
+  // 4b. Load/spend ratio (last 90 days)
+  const ratioRow = await db.execute(sql`
+    SELECT
+      COALESCE((
+        SELECT SUM(wt.amount_mxn::numeric)
+        FROM wallet_transactions wt
+        JOIN wallets w ON wt.wallet_id = w.id
+        WHERE w.user_id = ${telefono}
+          AND wt.type IN ('load_card','load_oxxo','spei_in','SIGNUP_BONUS')
+          AND wt.status = 'confirmed'
+          AND wt.created_at > NOW() - INTERVAL '90 days'
+      ), 0) AS total_loads,
+      COALESCE((
+        SELECT SUM(monto::numeric)
+        FROM bill_payments
+        WHERE telefono = ${telefono}
+          AND status IN ('completed','success','completed_ok','confirmed')
+          AND created_at > NOW() - INTERVAL '90 days'
+      ), 0) AS total_spend
+  `);
+  const rr = ratioRow.rows[0] as Record<string,unknown>;
+  const totalLoads = Number(rr?.total_loads ?? 0);
+  const totalSpend = Number(rr?.total_spend ?? 0);
+
+  // 4d. P2P network activity
+  const p2pRow = await db.execute(sql`
+    SELECT
+      COUNT(DISTINCT wt.id)::int AS send_count,
+      COUNT(DISTINCT SUBSTRING(wt.description FROM 'Enviado a (\\S+)'))::int AS recipient_diversity
+    FROM wallet_transactions wt
+    JOIN wallets w ON wt.wallet_id = w.id
+    WHERE w.user_id = ${telefono}
+      AND wt.type = 'transfer_send'
+      AND wt.status = 'confirmed'
+      AND wt.created_at > NOW() - INTERVAL '90 days'
+  `);
+  const p2pr = p2pRow.rows[0] as Record<string,unknown>;
+  const p2pSendCount      = Number(p2pr?.send_count         ?? 0);
+  const p2pRecipientCount = Number(p2pr?.recipient_diversity ?? 0);
+
+  // 4e. Account age
+  const ageRow = await db.execute(sql`
+    SELECT EXTRACT(EPOCH FROM (NOW() - created_at)) / 86400 AS days_old
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const daysOld = Number((ageRow.rows[0] as Record<string,unknown>)?.days_old ?? 0);
+
+  return {
+    streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
+    loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
+    paulaInteractions, confirmed2fa, declined2fa, pushOpens, curiosityIndex,
+    billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
+    currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
+  };
 }
 
 /** Monthly batch: recompute PTI for all users + send WhatsApp notification */
