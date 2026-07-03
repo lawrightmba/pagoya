@@ -442,7 +442,7 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
        pr_score, bc_score, ed_score, cf_score)
     VALUES (
       ${telefono}, NOW(),
-      ${breakdown.payment_reliability.components.payment_day_consistency.value}, ${snapshot.dominantDay},
+      ${breakdown.payment_reliability.components.payment_day_consistency.score}, ${snapshot.dominantDay},
       ${snapshot.loginDays30}, ${snapshot.hourStd}, ${snapshot.scratchPlays + snapshot.spinPlays}, ${snapshot.missionsDone},
       ${snapshot.loadCount30}, ${snapshot.loadDayStd}, ${snapshot.utilityRatio}, ${snapshot.intentClicks},
       ${breakdown.payment_reliability.score}, ${breakdown.behavioral_consistency.score},

@@ -177,6 +177,16 @@ describe("computePTI — medium-confidence user (some history, still early)", ()
     expect(breakdown.cashflow_stability.components.payment_amount_volatility.score).toBe(2);
   });
 
+  it("keeps payment_day_consistency's .score (consistency signal) distinct from .value (raw dominant day-of-month)", () => {
+    // Regression guard: pti_behavioral_signals.payment_day_consistency must persist the
+    // CONSISTENCY SCORE, not the raw dominant-day value (dominantDay=15 here) — a prior
+    // refactor accidentally wired .value (= dominantDay) into that column instead of .score.
+    const component = breakdown.payment_reliability.components.payment_day_consistency;
+    expect(component.value).toBe(15); // raw dominantDay passed straight through
+    expect(component.score).not.toBe(component.value);
+    expect(component.score).toBe(0); // gated to 0 here since payCount(2) < 3
+  });
+
   it("computes plausible non-zero scores for every dimension", () => {
     expect(breakdown.payment_reliability.score).toBe(2); // only streak: min(13,2)
     expect(breakdown.behavioral_consistency.score).toBeGreaterThan(0);
