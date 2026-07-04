@@ -86,3 +86,13 @@ Still written to breakdown JSONB for backward compat; PTIScoreCard reads `is4Dim
 
 ## WhatsApp notification (monthly batch only)
 Fires for users with ≥1 completed payment. Lowest-dimension improvement tip sent.
+
+## Sprint 2b — isolated fair-lending adjustment layer (July 2026)
+
+`fairLendingAdjustment.ts` is a **separate module from pti.ts**, applied strictly post-hoc. `computePTI()`'s 100pt score never sees colonia/declared_income_bucket — enforced by a source-scan regression test in `pti.test.ts` that fails the build if those field names ever appear in `pti.ts`.
+
+- Adjustment is capped `[-5, +5]`, added on top of the 100pt PTI score via `computeFinalPTI()`, never inside `computePTI()`.
+- Hard-gated by a real signoff row in `fair_lending_signoff` (prod DB) matching the current `FAIR_LENDING_MAPPING_VERSION` hash — `resolveAdjustmentFlagState()` won't enable without it, even if `ENABLE_GEO_INCOME_ADJUSTMENT=true`.
+- `ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING` bypass only works when `NODE_ENV !== "production"` — hard-locked off in prod regardless of the env var value (logs an error if misconfigured).
+- Every call to `computeFinalPTI()` writes an audit row to `pti_fairlending_adjustment_log` (gate_passed, reason, mapping_version always populated, even when not applied).
+- `FAIR_LENDING_MAPPING` in `config/fairLendingMapping.ts` is currently all-zero placeholders pending an actual bias-testing study — do not populate real point values without a corresponding signoff row and bias-test report.

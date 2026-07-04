@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { computePTI, computePTIConfidence, getPTITier, PTI_MODEL_VERSION, type PTIDataSnapshot } from "../pti.js";
 
 /**
@@ -345,6 +347,34 @@ describe("computePTI — dimension sub-score boundary cases", () => {
     const { breakdown } = computePTI(snapshot);
     console.log("[max-out] total:", breakdown.total);
     expect(breakdown.total).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("computePTI — fair-lending isolation guard (Sprint 2b)", () => {
+  it("never references colonia or declared_income_bucket in source (regression guard)", () => {
+    // Sprint 2b requirement: computePTI() and its dimension sub-functions must
+    // never import or reference colonia/declared_income_bucket at all — those
+    // fields live exclusively in the isolated fairLendingAdjustment.ts module.
+    // This is a source-level guard rather than a behavioral one because the
+    // whole point is that these fields must never even be read here.
+    const thisFileUrl = import.meta.url;
+    const ptiPath = fileURLToPath(new URL("../pti.ts", thisFileUrl));
+    const source = readFileSync(ptiPath, "utf-8");
+    console.log("[fair-lending guard] scanned pti.ts for forbidden field references");
+    expect(source).not.toMatch(/\bcolonia\b/i);
+    expect(source).not.toMatch(/declared_income_bucket|declaredIncomeBucket/i);
+  });
+
+  it("produces byte-identical output whether or not fair-lending fields exist on the snapshot", () => {
+    // computePTI's own PTIDataSnapshot type has no colonia/income fields at all,
+    // so this just re-affirms that passing extra unrelated properties (as a
+    // caller merging in FairLendingSnapshot might) cannot change the result.
+    const base = baseSnapshot({ payCount: 5, daysOld: 60 });
+    const withExtraFields = { ...base, colonia: "Roma Norte", declaredIncomeBucket: "bucket_3" } as PTIDataSnapshot;
+    const a = computePTI(base);
+    const b = computePTI(withExtraFields);
+    expect(b.breakdown).toEqual(a.breakdown);
+    expect(b.confidence).toEqual(a.confidence);
   });
 });
 

@@ -23,9 +23,12 @@
  *     it measures how fast an unbanked user adopts formal banking rails. (CF)
  *   + funding_channel_mix — ratio of bank-based (SPEI/card) vs. cash-based
  *     (OXXO) wallet loads, i.e. progression away from cash dependency. (CF)
- *   NOTE: colonia and declared_income_bucket were deliberately EXCLUDED from
- *   scoring (fair-lending risk of geography/income-based credit signals).
- *   They remain available for B2B context/segmentation only, never scoring.
+ *   NOTE: geography- and declared-income-based fields are deliberately
+ *   EXCLUDED from this module (fair-lending risk of location/income-based
+ *   credit signals). Any post-hoc adjustment using those fields lives
+ *   exclusively in the isolated, feature-flagged fairLendingAdjustment.ts
+ *   module — never here. A regression test in pti.test.ts enforces this by
+ *   scanning this file's source for those forbidden field names.
  */
 
 import { sql } from "drizzle-orm";
