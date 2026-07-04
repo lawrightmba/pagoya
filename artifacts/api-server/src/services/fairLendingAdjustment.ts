@@ -26,7 +26,12 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePTI, type PTIDataSnapshot, type PTIBreakdown, type PTIConfidence } from "./pti.js";
-import { FAIR_LENDING_MAPPING, FAIR_LENDING_MAPPING_VERSION } from "../config/fairLendingMapping.js";
+import {
+  FAIR_LENDING_MAPPING,
+  FAIR_LENDING_MAPPING_VERSION,
+  FAIR_LENDING_THRESHOLDS,
+  type FairLendingThresholds,
+} from "../config/fairLendingMapping.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +39,7 @@ export type AdjustmentDisabledReason =
   | "flag_off"
   | "no_signoff_on_file"
   | "mapping_version_mismatch"
+  | "signoff_expired"
   | "fields_unavailable";
 
 /**
@@ -48,10 +54,17 @@ export interface AdjustmentFlagState {
   reasonIfDisabled: AdjustmentDisabledReason | null;
   /** Was ENABLE_GEO_INCOME_ADJUSTMENT=true requested at all? */
   flagRequested: boolean;
-  /** Did a matching fair_lending_signoff row exist (or staging bypass apply)? */
+  /** Did a matching, non-expired fair_lending_signoff row exist (or staging bypass apply)? */
   gatePassed: boolean;
   /** Hash of the mapping table in effect at resolution time. */
   mappingVersion: string;
+  /**
+   * Reduced cap (absolute value) to use instead of the global default ±5,
+   * when the active signoff's status is 'conditional'. Null when the
+   * status is 'pass' (or the gate isn't passed) — in which case the
+   * global default cap applies.
+   */
+  adjustmentCapOverride: number | null;
 }
 
 /** Minimal shape of fair-lending-relevant fields a snapshot may carry. */
@@ -108,9 +121,62 @@ export interface DisparateImpactReportResult {
   fourFifthsRatio: number;
   /** Whether a statistically significant residual disparate effect remains after controlling for legitimate behavioral factors. true = FAILS. */
   residualEffectSignificant: boolean;
+  /**
+   * Severity metric for a detected residual effect (e.g. effect-size or a
+   * derived 0-1 scale from p-value) — compared against
+   * FAIR_LENDING_THRESHOLDS.residual_effect_severity_conditional_max to
+   * decide whether a present residual effect is "small enough" to still
+   * allow a 'conditional' outcome, or severe enough to force 'fail'.
+   * Only meaningful when residualEffectSignificant=true; ignored otherwise.
+   * Defaults to 0 (treated as "no meaningful severity") if omitted.
+   */
+  residualEffectSeverity?: number;
   residualEffectPValue?: number;
   sampleSize?: number;
   notes?: string;
+}
+
+export type ReportOutcome = "pass" | "conditional" | "fail";
+
+/**
+ * Classifies a disparate-impact report into pass/conditional/fail per the
+ * Sprint 2b Addendum 2 escalation table. Ratio and residual-effect severity
+ * are kept as SEPARATE inputs (never averaged/blended into one score) so the
+ * compounding-escalation rule stays legible and auditable:
+ *
+ *   ratio < conditional_min                         -> fail
+ *   conditional_min <= ratio < pass_min:
+ *     no residual effect                            -> conditional
+ *     residual effect, severity < conditional_max    -> conditional
+ *     residual effect, severity >= conditional_max   -> fail   (compounding)
+ *   ratio >= pass_min:
+ *     no residual effect                            -> pass
+ *     residual effect, severity < conditional_max    -> conditional
+ *     residual effect, severity >= conditional_max   -> fail
+ */
+export function classifyReportOutcome(
+  report: DisparateImpactReportResult,
+  thresholds: FairLendingThresholds = FAIR_LENDING_THRESHOLDS,
+): ReportOutcome {
+  const { fourFifthsRatio, residualEffectSignificant } = report;
+  const severity = report.residualEffectSeverity ?? 0;
+  const residualIsSevere = residualEffectSignificant && severity >= thresholds.residual_effect_severity_conditional_max;
+  const residualIsMild = residualEffectSignificant && !residualIsSevere;
+
+  if (fourFifthsRatio < thresholds.fourFifths_conditional_min) {
+    return "fail";
+  }
+
+  if (fourFifthsRatio < thresholds.fourFifths_pass_min) {
+    // Borderline ratio zone.
+    if (!residualEffectSignificant || residualIsMild) return "conditional";
+    return "fail"; // borderline ratio + severe residual effect compounds to fail
+  }
+
+  // Ratio fully passes.
+  if (!residualEffectSignificant) return "pass";
+  if (residualIsMild) return "conditional"; // a good ratio doesn't excuse a real residual signal
+  return "fail";
 }
 
 export interface RecordSignoffParams {
@@ -126,11 +192,23 @@ export interface RecordSignoffParams {
    */
   mappingVersionAtTestTime: string;
   reportGeneratedAt?: Date;
+  /**
+   * Required, non-empty free-text acceptance statement when the report
+   * classifies as 'conditional'. Forces the attester to articulate why a
+   * conditional result is being accepted — cannot be silently defaulted.
+   * Ignored (not required) when the report classifies as 'pass'.
+   */
+  conditionalAcknowledgment?: string;
+  /** Override the config default — used by tests to exercise specific threshold edges. */
+  thresholds?: FairLendingThresholds;
 }
 
 export interface SignoffRecord {
   id: number;
   approvedMappingVersion: string;
+  status: ReportOutcome;
+  adjustmentCapOverride: number | null;
+  retestDueAt: Date;
 }
 
 /**
@@ -163,7 +241,7 @@ export async function resolveAdjustmentFlagState(): Promise<AdjustmentFlagState>
   const flagRequested = process.env.ENABLE_GEO_INCOME_ADJUSTMENT === "true";
 
   if (!flagRequested) {
-    return { enabled: false, reasonIfDisabled: "flag_off", flagRequested: false, gatePassed: false, mappingVersion };
+    return { enabled: false, reasonIfDisabled: "flag_off", flagRequested: false, gatePassed: false, mappingVersion, adjustmentCapOverride: null };
   }
 
   const isProduction = process.env.NODE_ENV === "production";
@@ -180,20 +258,47 @@ export async function resolveAdjustmentFlagState(): Promise<AdjustmentFlagState>
   }
 
   if (stagingBypassRequested && !isProduction) {
-    return { enabled: true, reasonIfDisabled: null, flagRequested: true, gatePassed: true, mappingVersion };
+    return { enabled: true, reasonIfDisabled: null, flagRequested: true, gatePassed: true, mappingVersion, adjustmentCapOverride: null };
   }
 
-  const { hasAnyRow, matches } = await checkSignoffStatus(mappingVersion);
-  if (!matches) {
+  const status = await checkSignoffStatus(mappingVersion);
+  if (!status.matches) {
     // Distinct reason codes so monitoring/logs can tell "never signed off at
     // all" apart from "was signed off, but against a different mapping
     // version than the one currently loaded" (e.g. config edited post-signoff).
-    const reason: AdjustmentDisabledReason = hasAnyRow ? "mapping_version_mismatch" : "no_signoff_on_file";
+    const reason: AdjustmentDisabledReason = status.hasAnyRow ? "mapping_version_mismatch" : "no_signoff_on_file";
     logger.warn({ mappingVersion, reason }, "[fairLendingAdjustment] adjustment layer requested but gate check failed");
-    return { enabled: false, reasonIfDisabled: reason, flagRequested: true, gatePassed: false, mappingVersion };
+    return { enabled: false, reasonIfDisabled: reason, flagRequested: true, gatePassed: false, mappingVersion, adjustmentCapOverride: null };
   }
 
-  return { enabled: true, reasonIfDisabled: null, flagRequested: true, gatePassed: true, mappingVersion };
+  if (status.isExpired) {
+    // A row matched the current mapping version, but its retest_due_at has
+    // passed — fails closed exactly like no_signoff_on_file, distinguishably.
+    // Applies uniformly to 'pass' and 'conditional' signoffs; only the
+    // interval that got them here differs.
+    logger.warn(
+      { mappingVersion, reason: "signoff_expired", retestDueAt: status.retestDueAt },
+      "[fairLendingAdjustment] adjustment layer requested but the matching signoff has expired (past retest_due_at)",
+    );
+    return { enabled: false, reasonIfDisabled: "signoff_expired", flagRequested: true, gatePassed: false, mappingVersion, adjustmentCapOverride: null };
+  }
+
+  return {
+    enabled: true,
+    reasonIfDisabled: null,
+    flagRequested: true,
+    gatePassed: true,
+    mappingVersion,
+    adjustmentCapOverride: status.adjustmentCapOverride,
+  };
+}
+
+interface SignoffStatusResult {
+  hasAnyRow: boolean;
+  matches: boolean;
+  isExpired: boolean;
+  retestDueAt: Date | null;
+  adjustmentCapOverride: number | null;
 }
 
 /**
@@ -201,22 +306,32 @@ export async function resolveAdjustmentFlagState(): Promise<AdjustmentFlagState>
  *   - hasAnyRow: does at least one fair_lending_signoff row exist at all?
  *   - matches: does a row exist whose approved_mapping_version matches the
  *     currently-loaded mapping hash?
+ *   - isExpired: if matches=true, has that row's retest_due_at passed?
+ *   - adjustmentCapOverride: that row's reduced cap, if status='conditional'.
  *
- * Separating these lets callers distinguish "never signed off" from
- * "signed off against a stale mapping version" (config drift after signoff).
+ * Separating hasAnyRow/matches lets callers distinguish "never signed off"
+ * from "signed off against a stale mapping version" (config drift). Separating
+ * isExpired again lets callers distinguish either of those from "was signed
+ * off correctly, but the review window has lapsed."
  */
-async function checkSignoffStatus(mappingVersion: string): Promise<{ hasAnyRow: boolean; matches: boolean }> {
+async function checkSignoffStatus(mappingVersion: string): Promise<SignoffStatusResult> {
   const { db } = await import("@workspace/db");
   const matchRow = await db.execute(sql`
-    SELECT id FROM fair_lending_signoff
+    SELECT retest_due_at, adjustment_cap_override
+    FROM fair_lending_signoff
     WHERE approved_mapping_version = ${mappingVersion}
+    ORDER BY created_at DESC
     LIMIT 1
   `);
   if (matchRow.rows.length > 0) {
-    return { hasAnyRow: true, matches: true };
+    const row = matchRow.rows[0] as Record<string, unknown>;
+    const retestDueAt = row.retest_due_at ? new Date(row.retest_due_at as string) : null;
+    const isExpired = retestDueAt !== null && retestDueAt.getTime() < Date.now();
+    const adjustmentCapOverride = row.adjustment_cap_override != null ? Number(row.adjustment_cap_override) : null;
+    return { hasAnyRow: true, matches: true, isExpired, retestDueAt, adjustmentCapOverride };
   }
   const anyRow = await db.execute(sql`SELECT id FROM fair_lending_signoff LIMIT 1`);
-  return { hasAnyRow: anyRow.rows.length > 0, matches: false };
+  return { hasAnyRow: anyRow.rows.length > 0, matches: false, isExpired: false, retestDueAt: null, adjustmentCapOverride: null };
 }
 
 /**
@@ -233,33 +348,57 @@ async function checkSignoffStatus(mappingVersion: string): Promise<{ hasAnyRow: 
  * this themselves (e.g. via computeMappingVersionHash()) at test-run time.
  */
 export async function recordFairLendingSignoff(params: RecordSignoffParams): Promise<SignoffRecord> {
-  const { reportResult, attestedBy, mappingVersionAtTestTime, reportGeneratedAt } = params;
+  const { reportResult, attestedBy, mappingVersionAtTestTime, reportGeneratedAt, conditionalAcknowledgment } = params;
+  const thresholds = params.thresholds ?? FAIR_LENDING_THRESHOLDS;
 
-  if (!passesBiasThresholds(reportResult)) {
+  const outcome = classifyReportOutcome(reportResult, thresholds);
+
+  if (outcome === "fail") {
     throw new Error(
       `[fairLendingAdjustment] Refusing to record signoff: disparate-impact report fails bias thresholds ` +
-        `(fourFifthsRatio=${reportResult.fourFifthsRatio}, residualEffectSignificant=${reportResult.residualEffectSignificant}). ` +
-        `A signoff row cannot be created from a failing report.`,
+        `(fourFifthsRatio=${reportResult.fourFifthsRatio}, residualEffectSignificant=${reportResult.residualEffectSignificant}, ` +
+        `residualEffectSeverity=${reportResult.residualEffectSeverity ?? 0}). A signoff row cannot be created from a failing report.`,
     );
   }
+
+  if (outcome === "conditional" && (!conditionalAcknowledgment || conditionalAcknowledgment.trim().length === 0)) {
+    throw new Error(
+      `[fairLendingAdjustment] Refusing to record signoff: report classifies as 'conditional' ` +
+        `(fourFifthsRatio=${reportResult.fourFifthsRatio}) but conditionalAcknowledgment was missing or empty. ` +
+        `A conditional signoff requires the attester to explicitly articulate acceptance — it cannot be silently defaulted.`,
+    );
+  }
+
+  const now = reportGeneratedAt ?? new Date();
+  const retestIntervalDays = outcome === "conditional" ? thresholds.conditional_retest_interval_days : thresholds.standard_retest_interval_days;
+  const retestDueAt = new Date(now.getTime() + retestIntervalDays * 24 * 60 * 60 * 1000);
+  const adjustmentCapOverride = outcome === "conditional" ? thresholds.conditional_adjustment_cap : null;
 
   const { db } = await import("@workspace/db");
   const row = await db.execute(sql`
     INSERT INTO fair_lending_signoff (
       signed_off_by, attested_by, approved_mapping_version,
-      disparate_impact_report, report_generated_at, bias_test_report_ref
+      disparate_impact_report, report_generated_at, bias_test_report_ref,
+      status, adjustment_cap_override, retest_due_at, conditional_acknowledgment
     ) VALUES (
       ${attestedBy}, ${attestedBy}, ${mappingVersionAtTestTime},
-      ${JSON.stringify(reportResult)}::jsonb, ${reportGeneratedAt ?? new Date()}, ${reportResult.notes ?? null}
+      ${JSON.stringify(reportResult)}::jsonb, ${now}, ${reportResult.notes ?? null},
+      ${outcome}, ${adjustmentCapOverride}, ${retestDueAt}, ${outcome === "conditional" ? conditionalAcknowledgment : null}
     )
-    RETURNING id, approved_mapping_version
+    RETURNING id, approved_mapping_version, status, adjustment_cap_override, retest_due_at
   `);
   const inserted = row.rows[0] as Record<string, unknown>;
   logger.info(
-    { mappingVersion: mappingVersionAtTestTime, attestedBy },
-    "[fairLendingAdjustment] recorded fair-lending signoff from passing disparate-impact report",
+    { mappingVersion: mappingVersionAtTestTime, attestedBy, status: outcome, adjustmentCapOverride, retestDueAt },
+    "[fairLendingAdjustment] recorded fair-lending signoff from disparate-impact report",
   );
-  return { id: Number(inserted.id), approvedMappingVersion: String(inserted.approved_mapping_version) };
+  return {
+    id: Number(inserted.id),
+    approvedMappingVersion: String(inserted.approved_mapping_version),
+    status: outcome,
+    adjustmentCapOverride: inserted.adjustment_cap_override != null ? Number(inserted.adjustment_cap_override) : null,
+    retestDueAt: new Date(inserted.retest_due_at as string),
+  };
 }
 
 /**
@@ -287,7 +426,7 @@ export async function assertProductionSafety(): Promise<void> {
   const mappingVersion = FAIR_LENDING_MAPPING_VERSION;
   const { db } = await import("@workspace/db");
   const row = await db.execute(sql`
-    SELECT id, disparate_impact_report, report_generated_at
+    SELECT id, disparate_impact_report, report_generated_at, status, retest_due_at
     FROM fair_lending_signoff
     WHERE approved_mapping_version = ${mappingVersion}
     ORDER BY created_at DESC
@@ -309,8 +448,26 @@ export async function assertProductionSafety(): Promise<void> {
   }
 
   const signoffRow = row.rows[0] as Record<string, unknown>;
+
+  // An expired signoff (past its retest_due_at) is treated IDENTICALLY to a
+  // missing one — a lapsed review window must never keep authorizing the
+  // adjustment layer past its intended re-verification date, whether the
+  // original status was 'pass' or 'conditional'.
+  const retestDueAt = signoffRow.retest_due_at ? new Date(signoffRow.retest_due_at as string) : null;
+  if (retestDueAt !== null && retestDueAt.getTime() < Date.now()) {
+    logger.error(
+      { mappingVersion, signoffId: signoffRow.id, retestDueAt, status: signoffRow.status },
+      "[fairLendingAdjustment] BOOT FAILURE: the only matching signoff on file has expired (past retest_due_at)",
+    );
+    throw new Error(
+      `[fairLendingAdjustment] BOOT FAILURE: reason="signoff_expired" — the fair_lending_signoff row for ` +
+        `mappingVersion=${mappingVersion} (status=${signoffRow.status}) expired at ${retestDueAt.toISOString()}. ` +
+        `Refusing to boot with a silently-degraded adjustment layer. Record a fresh signoff via recordFairLendingSignoff().`,
+    );
+  }
+
   const report = signoffRow.disparate_impact_report as DisparateImpactReportResult | null;
-  if (!report || !passesBiasThresholds(report)) {
+  if (!report || classifyReportOutcome(report) === "fail") {
     logger.error(
       { mappingVersion, signoffId: signoffRow.id },
       "[fairLendingAdjustment] BOOT FAILURE: matching signoff row found, but its stored disparate-impact report is missing or fails re-verification (stale report)",
@@ -323,8 +480,8 @@ export async function assertProductionSafety(): Promise<void> {
   }
 
   logger.info(
-    { mappingVersion, signoffId: signoffRow.id },
-    "[fairLendingAdjustment] boot-time production safety check passed — valid, current, passing signoff on file",
+    { mappingVersion, signoffId: signoffRow.id, status: signoffRow.status },
+    "[fairLendingAdjustment] boot-time production safety check passed — valid, current, non-expired signoff on file",
   );
 }
 
@@ -383,7 +540,11 @@ export function computeFairLendingAdjustment(
     components.push({ key: "income_bucket", input_value: bucketKey, points });
   }
 
-  const adjustment = Math.max(-5, Math.min(5, rawTotal));
+  // Reduced cap applies when the active signoff is 'conditional' — the
+  // global default ±5 only applies when no override is present (i.e. the
+  // active signoff is a clean 'pass').
+  const cap = flagState.adjustmentCapOverride != null ? Math.abs(flagState.adjustmentCapOverride) : 5;
+  const adjustment = Math.max(-cap, Math.min(cap, rawTotal));
 
   return { adjustment, components, applied: true, reason: null, mapping_version: mappingVersion };
 }

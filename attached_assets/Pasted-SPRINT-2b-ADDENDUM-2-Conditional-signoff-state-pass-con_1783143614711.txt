@@ -1,0 +1,128 @@
+SPRINT 2b ADDENDUM 2: Conditional signoff state (pass / conditional / fail)
+
+CONTEXT
+recordFairLendingSignoff currently has a binary outcome: reject outright, 
+or create a full signoff. We're replacing this with three states so the 
+strength of the adjustment-layer trust is proportional to the strength of 
+the bias-test evidence. This is a flagship-product-grade requirement — 
+build it as a first-class outcome type, not a bolt-on flag.
+
+THRESHOLDS (config-driven, not hardcoded — must be editable without a 
+code deploy, same pattern as the mapping table)
+
+  fairLendingThresholds:
+    fourFifths_pass_min: 0.80        // TODO: confirm with bias-test methodology owner
+    fourFifths_conditional_min: 0.70  // TODO: confirm
+    residual_effect_significant: <p-value AND/OR effect-size cutoff>  // TODO
+    residual_effect_severity_conditional_max: <cutoff below which a 
+      detected residual effect is "small enough" for conditional>  // TODO
+
+  Ship with these as clearly marked placeholder values pending sign-off 
+  from whoever owns bias-test methodology (do not assume Julio owns the 
+  statistical thresholds — that's a data-science/bias-testing decision, 
+  legal owns interpretation of what the numbers mean for compliance, 
+  not the numbers themselves. Flag this distinction back to Lloyd if 
+  ownership is ambiguous.)
+
+CLASSIFICATION LOGIC
+
+classifyReportOutcome(reportResult, thresholds) -> 'pass' | 'conditional' | 'fail'
+
+  - ratio < conditional_min -> 'fail'
+  - ratio >= conditional_min AND ratio < pass_min:
+      - no residual effect detected -> 'conditional'
+      - residual effect detected but below severity_conditional_max -> 'conditional'
+      - residual effect detected and >= severity_conditional_max -> 'fail' 
+        (compounding: borderline ratio + real residual effect escalates, 
+        does not average out to conditional)
+  - ratio >= pass_min:
+      - no residual effect -> 'pass'
+      - residual effect below severity_conditional_max -> 'conditional' 
+        (a good ratio doesn't excuse a real residual signal)
+      - residual effect >= severity_conditional_max -> 'fail'
+
+recordFairLendingSignoff UPDATES
+
+  New required field on creation: 
+    status: 'pass' | 'conditional'   (fail path still throws, no row created)
+  
+  New field: adjustment_cap_override
+    - pass -> null (uses global default cap, currently ±5)
+    - conditional -> a reduced cap value pulled from config 
+      (fairLendingThresholds.conditional_adjustment_cap, e.g. ±2, 
+      itself TODO-marked pending sign-off)
+
+  New field: retest_due_at
+    - pass -> now + standard_retest_interval_days (config, e.g. 180)
+    - conditional -> now + conditional_retest_interval_days (config, e.g. 60)
+
+  New required field for conditional only: conditionalAcknowledgment (string)
+    - Free-text, required (throw if empty) when status='conditional'
+    - Not required/ignored when status='pass'
+    - Stored verbatim in the signoff row for audit purposes
+
+  recordFairLendingSignoff signature becomes:
+    recordFairLendingSignoff({ reportResult, attestedBy, 
+      mappingVersionAtTestTime, conditionalAcknowledgment? })
+    - Internally calls classifyReportOutcome first
+    - Throws if outcome is 'fail' (same as current REJECT behavior)
+    - Throws if outcome is 'conditional' and conditionalAcknowledgment is 
+      missing/empty (forces the attester to articulate acceptance, can't 
+      be silently defaulted)
+    - Otherwise creates the row with status, adjustment_cap_override, 
+      retest_due_at populated correctly
+
+GATE LOGIC UPDATES (resolveAdjustmentFlagState)
+
+  Add a new failure reason: 'signoff_expired' 
+    - if the matching signoff row's retest_due_at has passed, gate fails 
+      closed exactly like no_signoff_on_file — do not let a stale 
+      conditional (or even stale full pass) approval keep authorizing 
+      adjustments past its review window
+    - this applies to BOTH pass and conditional signoffs, but conditional's 
+      shorter window means it naturally expires faster — the mechanism 
+      is unified, only the interval differs
+
+  When gate passes on a conditional signoff, computeFairLendingAdjustment 
+  must apply adjustment_cap_override instead of the global default cap 
+  when clamping the final adjustment value.
+
+SCHEMA UPDATES — fair_lending_signoff
+  Add: status ('pass' | 'conditional')
+  Add: adjustment_cap_override (nullable numeric)
+  Add: retest_due_at (timestamp)
+  Add: conditional_acknowledgment (nullable text)
+
+TESTS REQUIRED
+1. classifyReportOutcome — table-driven test covering all combinations: 
+   ratio below/at/above each threshold, crossed with residual 
+   present/absent/severe, confirming the compounding-escalation rule 
+   (borderline ratio + real residual -> fail, not conditional)
+2. recordFairLendingSignoff — conditional path requires 
+   conditionalAcknowledgment, throws without it
+3. recordFairLendingSignoff — conditional path sets reduced 
+   adjustment_cap_override and shorter retest_due_at correctly
+4. recordFairLendingSignoff — pass path sets adjustment_cap_override=null 
+   and standard retest_due_at
+5. computeFairLendingAdjustment — respects adjustment_cap_override when 
+   present, clamps to conditional cap even if raw computed adjustment 
+   would exceed it but stay within the global cap (proves the tighter 
+   cap actually binds, not just documented)
+6. resolveAdjustmentFlagState — signoff_expired fires correctly for a 
+   conditional signoff past its 60-day window
+7. resolveAdjustmentFlagState — signoff_expired fires correctly for a 
+   pass signoff past its 180-day window (same mechanism, different interval)
+8. resolveAdjustmentFlagState — signoff_expired is distinguishable in 
+   logs/reason codes from no_signoff_on_file and mapping_version_mismatch 
+   (three distinct, non-overlapping failure reasons now)
+9. Boot check (assertProductionSafety) — treats an expired signoff 
+   identically to a missing one; fails startup loudly if flag=true and 
+   the only signoff on file is expired
+
+DO NOT
+- Do not let a conditional signoff silently use the full adjustment cap
+- Do not let recordFairLendingSignoff create a 'conditional' row without 
+  a non-empty conditionalAcknowledgment
+- Do not average or blend ratio + residual severity into a single score — 
+  keep them as separate inputs to classifyReportOutcome so the compounding/
+  escalation rule stays legible and auditable, not buried in a formula
