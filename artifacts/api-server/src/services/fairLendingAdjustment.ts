@@ -119,48 +119,108 @@ export interface FinalPTILogContext {
 export interface DisparateImpactReportResult {
   /** Selection-rate ratio of the most-adversely-affected group vs. the most-favored group. Standard threshold: >= 0.8 (the "4/5ths rule"). */
   fourFifthsRatio: number;
-  /** Whether a statistically significant residual disparate effect remains after controlling for legitimate behavioral factors. true = FAILS. */
+  /**
+   * Whether a residual disparate effect was flagged by the analysis after
+   * controlling for legitimate behavioral factors. NOTE (Sprint 2b Addendum
+   * 4): this flag alone no longer determines "significant" — see
+   * `residualEffectPValue` / `residualEffectMagnitudeD` below, which are
+   * evaluated together against the configured thresholds inside
+   * `classifyReportOutcome()`. Kept as an input signal from the report, not
+   * as the final significance verdict.
+   */
   residualEffectSignificant: boolean;
   /**
-   * Severity metric for a detected residual effect (e.g. effect-size or a
-   * derived 0-1 scale from p-value) — compared against
-   * FAIR_LENDING_THRESHOLDS.residual_effect_severity_conditional_max to
-   * decide whether a present residual effect is "small enough" to still
-   * allow a 'conditional' outcome, or severe enough to force 'fail'.
-   * Only meaningful when residualEffectSignificant=true; ignored otherwise.
-   * Defaults to 0 (treated as "no meaningful severity") if omitted.
+   * P-value for the detected residual effect. Sprint 2b Addendum 4: a
+   * residual effect is only treated as "significant" when BOTH
+   * `residualEffectPValue < residual_effect_significance_p` AND
+   * `|residualEffectMagnitudeD| >= residual_effect_min_magnitude_d` hold —
+   * p-value alone must never gate significance.
+   */
+  residualEffectPValue?: number;
+  /**
+   * Effect size (Cohen's d or equivalent) for the detected residual effect.
+   * Sprint 2b Addendum 4: this is what gates BOTH significance (alongside
+   * p-value) and conditional-vs-fail severity escalation — p-value
+   * magnitude must never be used for either decision.
+   */
+  residualEffectMagnitudeD?: number;
+  /**
+   * @deprecated Sprint 2b Addendum 4 — superseded by
+   * `residualEffectMagnitudeD` for the severity/escalation decision. Kept
+   * only so older report payloads don't break the type; no longer read by
+   * `classifyReportOutcome()`.
    */
   residualEffectSeverity?: number;
-  residualEffectPValue?: number;
+  /** Sample size for the adversely-affected ("A") comparison group. */
+  groupASampleSize?: number;
+  /** Sample size for the favored ("B") comparison group. */
+  groupBSampleSize?: number;
+  /**
+   * @deprecated Sprint 2b Addendum 4 — superseded by per-group
+   * `groupASampleSize` / `groupBSampleSize`, which are what
+   * `classifyReportOutcome()`'s `insufficient_data` guardrail actually
+   * checks. Kept only so older report payloads don't break the type.
+   */
   sampleSize?: number;
   notes?: string;
 }
 
-export type ReportOutcome = "pass" | "conditional" | "fail";
+export type ReportOutcome = "pass" | "conditional" | "fail" | "insufficient_data";
 
 /**
- * Classifies a disparate-impact report into pass/conditional/fail per the
- * Sprint 2b Addendum 2 escalation table. Ratio and residual-effect severity
- * are kept as SEPARATE inputs (never averaged/blended into one score) so the
- * compounding-escalation rule stays legible and auditable:
+ * Classifies a disparate-impact report into
+ * insufficient_data/pass/conditional/fail per the Sprint 2b Addendum 2/4
+ * escalation table.
  *
+ * Sprint 2b Addendum 4: sample size is checked FIRST, before any ratio or
+ * residual-effect logic runs. If either compared group's sample size is
+ * below `minimum_sample_size_per_group`, the result is 'insufficient_data'
+ * regardless of what the ratio/residual values are — even a perfect 1.0
+ * ratio computed on a handful of users must not be classified the same as
+ * one computed on a statistically meaningful sample.
+ *
+ * Residual-effect "significance" requires BOTH a p-value below
+ * `residual_effect_significance_p` AND an effect size (|d|) at/above
+ * `residual_effect_min_magnitude_d` — p-value alone is never sufficient.
+ * Severity (conditional-vs-fail escalation) is likewise driven purely by
+ * effect size (|d| vs `residual_effect_severity_conditional_max_d`), never
+ * by p-value magnitude.
+ *
+ * Ratio and residual-effect severity are kept as SEPARATE inputs (never
+ * averaged/blended into one score) so the compounding-escalation rule stays
+ * legible and auditable:
+ *
+ *   either group's sample size < minimum_sample_size_per_group -> insufficient_data
  *   ratio < conditional_min                         -> fail
  *   conditional_min <= ratio < pass_min:
  *     no residual effect                            -> conditional
- *     residual effect, severity < conditional_max    -> conditional
- *     residual effect, severity >= conditional_max   -> fail   (compounding)
+ *     residual effect, |d| < severity_max_d          -> conditional
+ *     residual effect, |d| >= severity_max_d         -> fail   (compounding)
  *   ratio >= pass_min:
  *     no residual effect                            -> pass
- *     residual effect, severity < conditional_max    -> conditional
- *     residual effect, severity >= conditional_max   -> fail
+ *     residual effect, |d| < severity_max_d          -> conditional
+ *     residual effect, |d| >= severity_max_d         -> fail
  */
 export function classifyReportOutcome(
   report: DisparateImpactReportResult,
   thresholds: FairLendingThresholds = FAIR_LENDING_THRESHOLDS,
 ): ReportOutcome {
-  const { fourFifthsRatio, residualEffectSignificant } = report;
-  const severity = report.residualEffectSeverity ?? 0;
-  const residualIsSevere = residualEffectSignificant && severity >= thresholds.residual_effect_severity_conditional_max;
+  const { fourFifthsRatio } = report;
+
+  const groupASampleSize = report.groupASampleSize ?? 0;
+  const groupBSampleSize = report.groupBSampleSize ?? 0;
+  if (groupASampleSize < thresholds.minimum_sample_size_per_group || groupBSampleSize < thresholds.minimum_sample_size_per_group) {
+    return "insufficient_data";
+  }
+
+  const pValue = report.residualEffectPValue;
+  const magnitudeD = Math.abs(report.residualEffectMagnitudeD ?? 0);
+  const residualEffectSignificant =
+    report.residualEffectSignificant &&
+    pValue !== undefined &&
+    pValue < thresholds.residual_effect_significance_p &&
+    magnitudeD >= thresholds.residual_effect_min_magnitude_d;
+  const residualIsSevere = residualEffectSignificant && magnitudeD >= thresholds.residual_effect_severity_conditional_max_d;
   const residualIsMild = residualEffectSignificant && !residualIsSevere;
 
   if (fourFifthsRatio < thresholds.fourFifths_conditional_min) {
@@ -361,12 +421,30 @@ export async function recordFairLendingSignoff(params: RecordSignoffParams): Pro
 
   const outcome = classifyReportOutcome(reportResult, thresholds);
 
+  // Sprint 2b Addendum 4: 'insufficient_data' is treated identically to
+  // 'fail' for gate purposes (throws, no row created, no conditional path)
+  // but uses a DISTINCT reason string in the thrown error — "we don't have
+  // enough data yet" is a different situation than "we tested and it
+  // failed" and must read that way in any audit trail or monitoring.
+  if (outcome === "insufficient_data") {
+    const err = new Error(
+      `[fairLendingAdjustment] Refusing to record signoff: reason="insufficient_data" — one or both compared ` +
+        `groups fall below the minimum sample size (${thresholds.minimum_sample_size_per_group}) required to classify ` +
+        `this report at all (groupASampleSize=${reportResult.groupASampleSize ?? 0}, groupBSampleSize=${reportResult.groupBSampleSize ?? 0}). ` +
+        `A signoff row cannot be created from a report with insufficient data — this is distinct from a failing report.`,
+    ) as Error & { reason: "insufficient_data" };
+    err.reason = "insufficient_data";
+    throw err;
+  }
+
   if (outcome === "fail") {
-    throw new Error(
-      `[fairLendingAdjustment] Refusing to record signoff: disparate-impact report fails bias thresholds ` +
+    const err = new Error(
+      `[fairLendingAdjustment] Refusing to record signoff: reason="fail" — disparate-impact report fails bias thresholds ` +
         `(fourFifthsRatio=${reportResult.fourFifthsRatio}, residualEffectSignificant=${reportResult.residualEffectSignificant}, ` +
-        `residualEffectSeverity=${reportResult.residualEffectSeverity ?? 0}). A signoff row cannot be created from a failing report.`,
-    );
+        `residualEffectMagnitudeD=${reportResult.residualEffectMagnitudeD ?? 0}). A signoff row cannot be created from a failing report.`,
+    ) as Error & { reason: "fail" };
+    err.reason = "fail";
+    throw err;
   }
 
   if (outcome === "conditional" && (!conditionalAcknowledgment || conditionalAcknowledgment.trim().length === 0)) {
@@ -572,16 +650,20 @@ export async function checkScoredPopulationVolumeGrowth(): Promise<{ checked: bo
   const populationRow = await db.execute(sql`SELECT COUNT(*)::int AS n FROM users WHERE pti_score IS NOT NULL`);
   const current = Number((populationRow.rows[0] as Record<string, unknown> | undefined)?.n ?? 0);
 
+  // volume_growth_trigger_pct is expressed in PERCENTAGE POINTS (e.g. 25 =
+  // +25%), not a fraction — growth below is computed as a fraction and must
+  // be scaled to the same units before comparing.
   const growth = baseline > 0 ? (current - baseline) / baseline : 0;
-  const triggered = growth >= triggerPct;
+  const growthPct = growth * 100;
+  const triggered = growthPct >= triggerPct;
 
-  logger.info({ signoffId, baseline, current, growth, triggerPct, triggered }, "[fairLendingAdjustment] checkScoredPopulationVolumeGrowth: daily check");
+  logger.info({ signoffId, baseline, current, growthPct, triggerPct, triggered }, "[fairLendingAdjustment] checkScoredPopulationVolumeGrowth: daily check");
 
   if (triggered) {
     await db.execute(sql`UPDATE fair_lending_signoff SET retest_due_at = NOW() WHERE id = ${signoffId}`);
     await db.execute(sql`
       INSERT INTO fair_lending_retest_triggers (signoff_id, trigger_type, reason)
-      VALUES (${signoffId}, 'volume_growth', ${`scored population grew ${(growth * 100).toFixed(1)}% (baseline=${baseline}, current=${current}) >= trigger ${(triggerPct * 100).toFixed(1)}%`})
+      VALUES (${signoffId}, 'volume_growth', ${`scored population grew ${growthPct.toFixed(1)}% (baseline=${baseline}, current=${current}) >= trigger ${triggerPct.toFixed(1)}%`})
     `);
   }
 
@@ -664,9 +746,10 @@ export async function assertProductionSafety(): Promise<void> {
   }
 
   const report = signoffRow.disparate_impact_report as DisparateImpactReportResult | null;
-  if (!report || classifyReportOutcome(report) === "fail") {
+  const reVerifiedOutcome = report ? classifyReportOutcome(report) : null;
+  if (!report || reVerifiedOutcome === "fail" || reVerifiedOutcome === "insufficient_data") {
     logger.error(
-      { mappingVersion, signoffId: signoffRow.id },
+      { mappingVersion, signoffId: signoffRow.id, reVerifiedOutcome },
       "[fairLendingAdjustment] BOOT FAILURE: matching signoff row found, but its stored disparate-impact report is missing or fails re-verification (stale report)",
     );
     throw new Error(

@@ -72,59 +72,106 @@ function sortedEntries(obj: Record<string, number>): [string, number][] {
 export const FAIR_LENDING_MAPPING_VERSION = computeMappingVersionHash(FAIR_LENDING_MAPPING);
 
 /**
- * Fair-Lending Signoff Thresholds — Placeholder Config (Sprint 2b Addendum 2)
+ * Fair-Lending Signoff Thresholds (Sprint 2b Addendum 2, values populated
+ * Addendum 4).
  *
  * Drives `classifyReportOutcome()` in fairLendingAdjustment.ts. Editable
  * without a code deploy, same spirit as FAIR_LENDING_MAPPING above.
  *
  * OWNERSHIP NOTE (flagged per addendum): the STATISTICAL cutoffs below
- * (ratio thresholds, residual-effect severity cutoff) are a data-science /
- * bias-testing-methodology decision, NOT a compliance/legal decision and
- * NOT assumed to be Julio's call. Legal owns interpreting what a given
- * classification means for compliance obligations, not the numeric cutoffs
- * themselves. If ownership of these numbers is ambiguous, flag back to
- * Lloyd before treating any of the values below as final.
+ * (ratio thresholds, residual-effect significance/severity cutoffs, minimum
+ * sample size) are a data-science / bias-testing-methodology decision, NOT a
+ * compliance/legal decision and NOT assumed to be Julio's call. Legal owns
+ * interpreting what a given classification means for compliance
+ * obligations, not the numeric cutoffs themselves. If ownership of these
+ * numbers is ambiguous, flag back to Lloyd before treating any of the
+ * values below as final.
  *
- * ALL VALUES BELOW ARE PLACEHOLDERS PENDING SIGN-OFF FROM THE BIAS-TEST
- * METHODOLOGY OWNER. Do not treat as approved thresholds.
+ * ============================================================================
+ * METHODOLOGY CAVEAT (Sprint 2b Addendum 4) — READ BEFORE CITING THESE VALUES
+ * ============================================================================
+ * The values below are an INITIAL CONFIGURATION set by Lloyd Wright as the
+ * authorized threshold owner, borrowing from US EEOC/ECOA four-fifths-rule
+ * convention. Lloyd is not a statistician. These are a defensible, DOCUMENTED
+ * STARTING POINT — NOT validated science, and NOT confirmed as applicable to
+ * Mexico's regulatory context or PagoYa's specific population. They are
+ * pending review by a qualified bias-testing methodology reviewer for
+ * jurisdiction-specific adjustment. Do not present these as final/validated
+ * thresholds in any user-facing, licensee-facing, or investor-facing
+ * documentation (data cards, methodology memos, etc.) without this caveat
+ * carried alongside them.
+ * ============================================================================
  */
 export interface FairLendingThresholds {
   /** Four-fifths ratio at/above which the ratio dimension alone is a full "pass". */
-  fourFifths_pass_min: number; // TODO: confirm with bias-test methodology owner
+  fourFifths_pass_min: number;
   /** Four-fifths ratio at/above which the ratio dimension is "conditional" (below this = outright fail). */
-  fourFifths_conditional_min: number; // TODO: confirm with bias-test methodology owner
+  fourFifths_conditional_min: number;
   /**
-   * Residual-effect severity metric (e.g. effect-size or 1 - p-value) at/above
-   * which a detected residual effect is considered severe enough to escalate
-   * a result to (or keep it at) 'fail' rather than 'conditional'.
+   * Minimum sample size required PER COMPARED GROUP before a disparate-impact
+   * report may be classified as pass/conditional/fail at all. If either
+   * group's sample size is below this, `classifyReportOutcome()` returns
+   * 'insufficient_data' regardless of what the ratio/residual values are —
+   * a statistically meaningless ratio (e.g. computed on n=5) must never be
+   * treated the same as one computed on a meaningful sample.
    */
-  residual_effect_severity_conditional_max: number; // TODO: confirm with bias-test methodology owner — units/metric TBD (p-value AND/OR effect-size cutoff)
-  /** Reduced adjustment cap (absolute value) applied when status='conditional'. */
-  conditional_adjustment_cap: number; // TODO: confirm with bias-test methodology owner, e.g. ±2
-  /** Retest interval (days) for a full 'pass' signoff. */
-  standard_retest_interval_days: number; // TODO: confirm, e.g. 180
-  /** Retest interval (days) for a 'conditional' signoff — shorter than standard. */
-  conditional_retest_interval_days: number; // TODO: confirm, e.g. 60
+  minimum_sample_size_per_group: number;
   /**
-   * Fractional growth (e.g. 0.25 = +25%) in the scored population since the
-   * active signoff's baseline count that should force an early retest.
-   * NULL = trigger disabled (mechanism built, not yet calibrated).
-   *
-   * TODO PLACEHOLDER — pending input from the bias-testing methodology owner
-   * on what volume shift is actually meaningful. Do not set a "reasonable
-   * guess" value here; leave null until an explicit number is provided.
+   * P-value threshold below which a residual effect is a candidate to be
+   * "significant" — but significance ALSO requires the effect size (d) to
+   * clear `residual_effect_min_magnitude_d`. P-value alone must never gate
+   * significance (a large sample can produce p<0.05 on a trivially small,
+   * practically meaningless effect).
+   */
+  residual_effect_significance_p: number;
+  /**
+   * Minimum effect size (Cohen's d or equivalent) required, ALONGSIDE
+   * p < residual_effect_significance_p, for a residual effect to be treated
+   * as "significant" at all. Below this magnitude, even a low p-value is not
+   * treated as a significant residual effect.
+   */
+  residual_effect_min_magnitude_d: number;
+  /**
+   * Effect-size (d) magnitude at/above which a significant residual effect
+   * is considered severe enough to escalate a result to (or keep it at)
+   * 'fail' rather than 'conditional'. Driven by effect size, NEVER by
+   * p-value — p-value magnitude must not be used anywhere in this
+   * escalation decision.
+   */
+  residual_effect_severity_conditional_max_d: number;
+  /** Reduced adjustment cap (absolute value) applied when status='conditional'. */
+  conditional_adjustment_cap: number;
+  /** Retest interval (days) for a full 'pass' signoff. */
+  standard_retest_interval_days: number;
+  /** Retest interval (days) for a 'conditional' signoff — shorter than standard. */
+  conditional_retest_interval_days: number;
+  /**
+   * Growth in the scored population, expressed in PERCENTAGE POINTS (e.g.
+   * 25 = +25%, NOT a 0-1 fraction), since the active signoff's baseline
+   * count that should force an early retest. NULL = trigger disabled
+   * (mechanism built, not yet calibrated).
    */
   volume_growth_trigger_pct: number | null;
 }
 
+/**
+ * INITIAL CONFIGURATION set by Lloyd Wright (authorized threshold owner) via
+ * `updateFairLendingThresholds()` per Sprint 2b Addendum 4. See the
+ * METHODOLOGY CAVEAT above — these borrow from US EEOC/ECOA convention and
+ * are pending review by a qualified bias-testing methodology reviewer for
+ * applicability to Mexico's regulatory context.
+ */
 export const FAIR_LENDING_THRESHOLDS: FairLendingThresholds = {
-  fourFifths_pass_min: 0.8, // TODO: confirm with bias-test methodology owner
-  fourFifths_conditional_min: 0.7, // TODO: confirm with bias-test methodology owner
-  residual_effect_severity_conditional_max: 0.5, // TODO: confirm with bias-test methodology owner (placeholder mid-scale value, units TBD)
-  conditional_adjustment_cap: 2, // TODO: confirm with bias-test methodology owner
-  standard_retest_interval_days: 180, // TODO: confirm with bias-test methodology owner
-  conditional_retest_interval_days: 60, // TODO: confirm with bias-test methodology owner
-  volume_growth_trigger_pct: null, // TODO: pending input — mechanism is live but disabled until set
+  fourFifths_pass_min: 0.8,
+  fourFifths_conditional_min: 0.7,
+  minimum_sample_size_per_group: 30,
+  residual_effect_significance_p: 0.05,
+  residual_effect_min_magnitude_d: 0.2,
+  residual_effect_severity_conditional_max_d: 0.5,
+  conditional_adjustment_cap: 2,
+  standard_retest_interval_days: 180,
+  conditional_retest_interval_days: 60,
+  volume_growth_trigger_pct: 25,
 };
 
 /**

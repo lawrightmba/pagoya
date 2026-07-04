@@ -33,32 +33,36 @@ import {
 const CONDITIONAL_REPORT_RATIO: DisparateImpactReportResult = {
   fourFifthsRatio: 0.75, // between conditional_min(0.7) and pass_min(0.8)
   residualEffectSignificant: false,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic conditional report (ratio in conditional band) for automated test",
 };
 
 const CONDITIONAL_REPORT_MILD_RESIDUAL: DisparateImpactReportResult = {
   fourFifthsRatio: 0.92, // passing ratio
   residualEffectSignificant: true,
-  residualEffectSeverity: 0.3, // below residual_effect_severity_conditional_max(0.5) -> mild
+  residualEffectMagnitudeD: 0.3, // >= min_magnitude_d(0.2), < severity_conditional_max_d(0.5) -> mild
   residualEffectPValue: 0.03,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic conditional report (mild residual effect despite passing ratio) for automated test",
 };
 
 const FAIL_REPORT_SEVERE_RESIDUAL: DisparateImpactReportResult = {
   fourFifthsRatio: 0.92, // passing ratio
   residualEffectSignificant: true,
-  residualEffectSeverity: 0.9, // above residual_effect_severity_conditional_max(0.5) -> severe
+  residualEffectMagnitudeD: 0.9, // >= severity_conditional_max_d(0.5) -> severe
   residualEffectPValue: 0.001,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic failing report (severe residual effect overrides a passing ratio) for automated test",
 };
 
 const FAIL_REPORT_BELOW_CONDITIONAL_MIN: DisparateImpactReportResult = {
   fourFifthsRatio: 0.5, // below conditional_min(0.7) -> outright fail regardless of residual
   residualEffectSignificant: false,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic failing report (ratio below conditional floor) for automated test",
 };
 
@@ -66,24 +70,35 @@ const PASSING_REPORT: DisparateImpactReportResult = {
   fourFifthsRatio: 0.92,
   residualEffectSignificant: false,
   residualEffectPValue: 0.41,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic passing report for automated test",
 };
 
 const FAILING_REPORT_RATIO: DisparateImpactReportResult = {
   fourFifthsRatio: 0.55, // below 0.8 threshold
   residualEffectSignificant: false,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic failing report (4/5ths) for automated test",
 };
 
 const FAILING_REPORT_RESIDUAL: DisparateImpactReportResult = {
   fourFifthsRatio: 0.9,
   residualEffectSignificant: true, // fails on residual effect even though ratio passes
-  residualEffectSeverity: 0.9, // severe (>= conditional_max) -> outright fail, not conditional
+  residualEffectMagnitudeD: 0.9, // severe (>= severity_conditional_max_d) -> outright fail, not conditional
   residualEffectPValue: 0.01,
-  sampleSize: 5000,
+  groupASampleSize: 5000,
+  groupBSampleSize: 5000,
   notes: "synthetic failing report (severe residual effect) for automated test",
+};
+
+const INSUFFICIENT_DATA_REPORT: DisparateImpactReportResult = {
+  fourFifthsRatio: 1.0, // even a "perfect" ratio must not pass with too few samples
+  residualEffectSignificant: false,
+  groupASampleSize: 5,
+  groupBSampleSize: 5000,
+  notes: "synthetic report with one undersized comparison group for automated test",
 };
 
 // Sprint 2b Addendum 3: recordFairLendingSignoff now gates on threshold-owner
@@ -595,23 +610,30 @@ describe("classifyReportOutcome — three-state escalation table (Addendum 2)", 
     const compoundingFail: DisparateImpactReportResult = {
       fourFifthsRatio: 0.75, // borderline
       residualEffectSignificant: true,
-      residualEffectSeverity: 0.9, // severe
-      sampleSize: 5000,
+      residualEffectMagnitudeD: 0.9, // severe
+      residualEffectPValue: 0.001,
+      groupASampleSize: 5000,
+      groupBSampleSize: 5000,
     };
     const outcome = classifyReportOutcome(compoundingFail);
     console.log("[classify] borderline ratio + severe residual ->", outcome);
     expect(outcome).toBe("fail");
   });
 
-  it("treats a missing residualEffectSeverity as 0 (defaults to mild, never fails purely from an absent field)", () => {
-    const noSeverityField: DisparateImpactReportResult = {
+  it("treats a missing residualEffectMagnitudeD/residualEffectPValue as NOT significant (never fails purely from an absent field)", () => {
+    const noEffectSizeField: DisparateImpactReportResult = {
       fourFifthsRatio: 0.92,
-      residualEffectSignificant: true, // significant, but no severity supplied
-      sampleSize: 5000,
+      residualEffectSignificant: true, // flagged by the report, but no p-value/effect-size supplied
+      groupASampleSize: 5000,
+      groupBSampleSize: 5000,
     };
-    const outcome = classifyReportOutcome(noSeverityField);
-    console.log("[classify] residual significant, severity omitted ->", outcome);
-    expect(outcome).toBe("conditional");
+    const outcome = classifyReportOutcome(noEffectSizeField);
+    console.log("[classify] residual flagged significant, p-value/effect-size omitted ->", outcome);
+    // Sprint 2b Addendum 4: significance now REQUIRES an explicit p-value AND
+    // effect size clearing the configured thresholds — a bare boolean flag
+    // with no supporting numbers is treated as not-significant, and a fully
+    // passing ratio (0.92) with no significant residual effect is 'pass'.
+    expect(outcome).toBe("pass");
   });
 
   it("respects an overridden thresholds argument instead of always using the live config", () => {
@@ -619,6 +641,92 @@ describe("classifyReportOutcome — three-state escalation table (Addendum 2)", 
     const outcome = classifyReportOutcome(PASSING_REPORT, customThresholds); // 0.92 < 0.99 now
     console.log("[classify] PASSING_REPORT against artificially strict thresholds ->", outcome);
     expect(outcome).toBe("conditional");
+  });
+});
+
+describe("classifyReportOutcome — insufficient_data guardrail (Sprint 2b Addendum 4)", () => {
+  it("returns 'insufficient_data' when either group's sample size is below the minimum, regardless of ratio/residual values", () => {
+    const outcome = classifyReportOutcome(INSUFFICIENT_DATA_REPORT);
+    console.log("[classify] INSUFFICIENT_DATA_REPORT (ratio=1.0, groupA n=5) ->", outcome);
+    expect(outcome).toBe("insufficient_data");
+  });
+
+  it("returns 'insufficient_data' even with a perfect 1.0 ratio and no residual effect at all", () => {
+    const perfectRatioTinySample: DisparateImpactReportResult = {
+      fourFifthsRatio: 1.0,
+      residualEffectSignificant: false,
+      groupASampleSize: 10,
+      groupBSampleSize: 10,
+    };
+    const outcome = classifyReportOutcome(perfectRatioTinySample);
+    expect(outcome).toBe("insufficient_data");
+  });
+
+  it("returns 'insufficient_data' when the OTHER group (group B) is undersized", () => {
+    const groupBUndersized: DisparateImpactReportResult = {
+      fourFifthsRatio: 0.92,
+      residualEffectSignificant: false,
+      groupASampleSize: 5000,
+      groupBSampleSize: 29, // one below the minimum(30)
+    };
+    const outcome = classifyReportOutcome(groupBUndersized);
+    expect(outcome).toBe("insufficient_data");
+  });
+
+  it("proceeds with normal pass/conditional/fail logic once both groups meet the minimum sample size", () => {
+    const atMinimum: DisparateImpactReportResult = {
+      fourFifthsRatio: 0.92,
+      residualEffectSignificant: false,
+      groupASampleSize: 30, // exactly at the minimum
+      groupBSampleSize: 30,
+    };
+    const outcome = classifyReportOutcome(atMinimum);
+    expect(outcome).toBe("pass");
+  });
+
+  it("requires BOTH p-value AND effect-size thresholds for residual significance — p<0.05 with |d|<0.2 is NOT significant", () => {
+    const smallEffectLowP: DisparateImpactReportResult = {
+      fourFifthsRatio: 0.92, // fully passing ratio
+      residualEffectSignificant: true,
+      residualEffectPValue: 0.01, // clears the p-value bar on its own
+      residualEffectMagnitudeD: 0.05, // but effect size is far below min_magnitude_d(0.2)
+      groupASampleSize: 5000,
+      groupBSampleSize: 5000,
+    };
+    const outcome = classifyReportOutcome(smallEffectLowP);
+    console.log("[classify] p<0.05 but |d|<0.2 (regression vs old p-value-only behavior) ->", outcome);
+    // Old p-value-only behavior would have treated this as significant and
+    // at minimum 'conditional'; Addendum 4 requires effect size too, so a
+    // fully-passing ratio with a practically-trivial effect is 'pass'.
+    expect(outcome).toBe("pass");
+  });
+
+  it("severity escalation (conditional -> fail) is driven by effect size crossing the threshold, NOT by p-value magnitude", () => {
+    // Extremely significant p-value, but effect size sits just below the
+    // severity cutoff -> must stay 'conditional', not escalate to 'fail'.
+    const tinyPValueModerateEffect: DisparateImpactReportResult = {
+      fourFifthsRatio: 0.92,
+      residualEffectSignificant: true,
+      residualEffectPValue: 0.0001, // extremely significant by p-value alone
+      residualEffectMagnitudeD: 0.49, // just below severity_conditional_max_d(0.5)
+      groupASampleSize: 5000,
+      groupBSampleSize: 5000,
+    };
+    const stillConditional = classifyReportOutcome(tinyPValueModerateEffect);
+    expect(stillConditional).toBe("conditional");
+
+    // A much LESS significant p-value but effect size at/above the severity
+    // cutoff must still escalate to 'fail'.
+    const largerPValueSevereEffect: DisparateImpactReportResult = {
+      fourFifthsRatio: 0.92,
+      residualEffectSignificant: true,
+      residualEffectPValue: 0.049, // barely clears significance_p(0.05)
+      residualEffectMagnitudeD: 0.5, // at the severity cutoff -> severe
+      groupASampleSize: 5000,
+      groupBSampleSize: 5000,
+    };
+    const nowFails = classifyReportOutcome(largerPValueSevereEffect);
+    expect(nowFails).toBe("fail");
   });
 });
 
@@ -687,6 +795,42 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     expect(record.adjustmentCapOverride).toBeNull();
     const expectedRetestMs = before + FAIR_LENDING_THRESHOLDS.standard_retest_interval_days * 24 * 60 * 60 * 1000;
     expect(Math.abs(record.retestDueAt.getTime() - expectedRetestMs)).toBeLessThan(60_000);
+  });
+
+  it("REJECTS a report with an undersized comparison group with a distinct 'insufficient_data' reason (Sprint 2b Addendum 4)", async () => {
+    await expect(
+      recordFairLendingSignoff({
+        reportResult: INSUFFICIENT_DATA_REPORT,
+        attestedBy: OWNER_NAME,
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      }),
+    ).rejects.toMatchObject({ reason: "insufficient_data" });
+  });
+
+  it("the insufficient_data rejection is distinguishable from a plain 'fail' rejection", async () => {
+    let insufficientDataErr: unknown;
+    let failErr: unknown;
+    try {
+      await recordFairLendingSignoff({
+        reportResult: INSUFFICIENT_DATA_REPORT,
+        attestedBy: OWNER_NAME,
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      });
+    } catch (err) {
+      insufficientDataErr = err;
+    }
+    try {
+      await recordFairLendingSignoff({
+        reportResult: FAIL_REPORT_BELOW_CONDITIONAL_MIN,
+        attestedBy: OWNER_NAME,
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      });
+    } catch (err) {
+      failErr = err;
+    }
+    expect((insufficientDataErr as { reason?: string } | undefined)?.reason).toBe("insufficient_data");
+    expect((failErr as { reason?: string } | undefined)?.reason).toBe("fail");
+    expect((insufficientDataErr as { reason?: string })?.reason).not.toBe((failErr as { reason?: string })?.reason);
   });
 });
 
@@ -1044,12 +1188,86 @@ describe("expireOutdatedMappingVersionSignoffs — mapping-version-change trigge
   });
 });
 
-describe("checkScoredPopulationVolumeGrowth — volume-growth trigger (Addendum 3, placeholder no-op)", () => {
-  it("no-ops while volume_growth_trigger_pct is null (unconfigured placeholder)", async () => {
-    expect(FAIR_LENDING_THRESHOLDS.volume_growth_trigger_pct).toBeNull();
+describe("checkScoredPopulationVolumeGrowth — volume-growth trigger (Sprint 2b Addendum 4, live at 25%)", () => {
+  // The real `users` table's scored-population count is whatever it is in
+  // this environment (frequently 0) and is shared with the rest of the
+  // suite/app, so we can't rely on it to simulate growth. Instead we insert
+  // a handful of throwaway scored users tagged with a unique telefono
+  // prefix, and clean them up (along with our signoff rows) afterward.
+  const TEST_PHONE_PREFIX = "TEST-VOLUME-GROWTH-";
+
+  async function countScoredUsers(db: Awaited<ReturnType<typeof import("@workspace/db")>>["db"]) {
+    const row = await db.execute(sql`SELECT COUNT(*)::int AS n FROM users WHERE pti_score IS NOT NULL`);
+    return Number((row.rows[0] as Record<string, unknown>).n ?? 0);
+  }
+
+  async function addScoredUsers(db: Awaited<ReturnType<typeof import("@workspace/db")>>["db"], count: number) {
+    for (let i = 0; i < count; i++) {
+      await db.execute(sql`
+        INSERT INTO users (telefono, pti_score)
+        VALUES (${TEST_PHONE_PREFIX + Date.now() + "-" + i}, 50)
+      `);
+    }
+  }
+
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      DELETE FROM fair_lending_retest_triggers
+      WHERE signoff_id IN (SELECT id FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-volume-growth')
+    `);
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-volume-growth'`);
+    await db.execute(sql`DELETE FROM users WHERE telefono LIKE ${TEST_PHONE_PREFIX + "%"}`);
+  });
+
+  it("is configured with a real (non-null) trigger threshold as of Addendum 4", () => {
+    expect(FAIR_LENDING_THRESHOLDS.volume_growth_trigger_pct).toBe(25);
+  });
+
+  it("does NOT trigger when scored-population growth stays below the 25-point threshold (percentage-point units, not fraction)", async () => {
+    const { db } = await import("@workspace/db");
+    // Establish a guaranteed NON-ZERO baseline first (checkScoredPopulationVolumeGrowth
+    // short-circuits growth=0 whenever baseline itself is 0), then add ~10%
+    // more on top — well under the 25-point trigger. This is also the
+    // regression guard for the fraction-vs-percentage-points units bug
+    // (growth is computed as a 0-1 fraction internally, but the threshold
+    // is stored/compared in 0-100 percentage-point units).
+    await addScoredUsers(db, 20);
+    const baseline = await countScoredUsers(db);
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, status, retest_due_at, scored_population_count_at_signoff)
+      VALUES ('test-harness-volume-growth', ${FAIR_LENDING_MAPPING_VERSION}, 'VOLUME-GROWTH-BELOW', 'pass', NOW() + INTERVAL '90 days', ${baseline})
+    `);
+    const growthUsersToAdd = Math.max(1, Math.ceil(baseline * 0.1));
+    await addScoredUsers(db, growthUsersToAdd);
     const result = await checkScoredPopulationVolumeGrowth();
-    console.log("[volume-growth] result while unconfigured:", result);
-    expect(result.checked).toBe(false);
+    console.log("[volume-growth] below-threshold result:", result, "baseline:", baseline, "usersAdded:", growthUsersToAdd);
+    expect(result.checked).toBe(true);
     expect(result.triggered).toBe(false);
+  });
+
+  it("DOES trigger and logs a volume_growth retest row when growth crosses the 25-point threshold", async () => {
+    const { db } = await import("@workspace/db");
+    // Same non-zero-baseline setup, then add enough scored users to
+    // guarantee >=30% growth over baseline, clearing the 25-point trigger.
+    await addScoredUsers(db, 20);
+    const baseline = await countScoredUsers(db);
+    const signoffRow = await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, status, retest_due_at, scored_population_count_at_signoff)
+      VALUES ('test-harness-volume-growth', ${FAIR_LENDING_MAPPING_VERSION}, 'VOLUME-GROWTH-ABOVE', 'pass', NOW() + INTERVAL '90 days', ${baseline})
+      RETURNING id
+    `);
+    const signoffId = (signoffRow.rows[0] as Record<string, unknown>).id;
+    const growthUsersToAdd = Math.ceil(baseline * 0.3) + 1;
+    await addScoredUsers(db, growthUsersToAdd);
+    const result = await checkScoredPopulationVolumeGrowth();
+    console.log("[volume-growth] above-threshold result:", result, "baseline:", baseline, "usersAdded:", growthUsersToAdd);
+    expect(result.checked).toBe(true);
+    expect(result.triggered).toBe(true);
+
+    const trigger = await db.execute(sql`
+      SELECT * FROM fair_lending_retest_triggers WHERE signoff_id = ${signoffId} AND trigger_type = 'volume_growth'
+    `);
+    expect(trigger.rows.length).toBeGreaterThanOrEqual(1);
   });
 });

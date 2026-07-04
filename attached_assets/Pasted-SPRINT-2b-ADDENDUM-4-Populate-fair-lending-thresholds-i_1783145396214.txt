@@ -1,0 +1,95 @@
+SPRINT 2b ADDENDUM 4: Populate fair-lending thresholds + insufficient_data guardrail
+
+CONTEXT
+FAIR_LENDING_THRESHOLDS and volume_growth_trigger_pct have been placeholder/
+null since Addendum 2/3. This sprint populates real starting values (set by 
+Lloyd Wright as authorized threshold owner) and closes a gap identified in 
+review: classifyReportOutcome had no minimum-sample-size check, meaning a 
+4/5ths ratio computed on a tiny group could be classified as pass/conditional/
+fail identically to one computed on a statistically meaningful sample.
+
+THRESHOLD VALUES (via updateFairLendingThresholds, actingIdentity="Lloyd Wright")
+
+  fourFifths_pass_min: 0.80
+  fourFifths_conditional_min: 0.70
+  minimum_sample_size_per_group: 30
+  residual_effect_significance_p: 0.05
+  residual_effect_min_magnitude_d: 0.2   // below this, even p<0.05 is not 
+                                           // treated as a significant residual effect
+  residual_effect_severity_conditional_max_d: 0.5  // at/above this magnitude, 
+                                                      // residual effect escalates 
+                                                      // toward fail per compounding rule
+  volume_growth_trigger_pct: 25
+
+  These are STARTING values, not final — flagged in code comments and in 
+  the data-card/methodology notes as "initial configuration pending review 
+  by a qualified bias-testing methodology reviewer," since Lloyd is not a 
+  statistician and these borrow from US EEOC/ECOA convention which may need 
+  jurisdiction-specific adjustment for Mexico. This caveat should be visible 
+  wherever these values are documented, not just in a code comment.
+
+NEW: insufficient_data OUTCOME
+
+  classifyReportOutcome must check sample size BEFORE evaluating ratio/
+  residual logic:
+  
+  - if either compared group's sample size < minimum_sample_size_per_group:
+      return 'insufficient_data' (new outcome, distinct from pass/
+      conditional/fail)
+  - otherwise, proceed with existing pass/conditional/fail logic using the 
+    now-populated real threshold values
+
+  residual effect classification updates to use effect size, not p-value alone:
+  - "significant" requires BOTH p < residual_effect_significance_p AND 
+    |d| >= residual_effect_min_magnitude_d
+  - severity check for conditional-vs-fail escalation uses 
+    |d| vs residual_effect_severity_conditional_max_d, not p-value
+
+recordFairLendingSignoff / gate behavior for insufficient_data:
+  - Treated identically to 'fail' — recordFairLendingSignoff throws, no 
+    signoff row created, no conditional path available
+  - Distinct reason string ("insufficient_data") in whatever error/log is 
+    produced, so this is distinguishable from a genuine fail in monitoring 
+    and in any audit trail — "we don't have enough data yet" is a different 
+    situation than "we tested and it failed," and should read that way to 
+    anyone reviewing the log later
+
+TESTS REQUIRED
+1. classifyReportOutcome returns 'insufficient_data' when either group's 
+   sample size is below the minimum, regardless of what the ratio/residual 
+   values are (even a perfect 1.0 ratio with n=5 should not pass)
+2. classifyReportOutcome proceeds with normal pass/conditional/fail logic 
+   once both groups meet the minimum
+3. residual significance now requires both p-value AND effect-size 
+   thresholds — a p<0.05 result with |d|<0.2 is NOT treated as a 
+   significant residual effect (regression test against the old p-value-
+   only behavior, if any existed)
+4. severity escalation (conditional -> fail) is driven by effect size 
+   crossing residual_effect_severity_conditional_max_d, not by p-value 
+   magnitude
+5. recordFairLendingSignoff throws distinctly for insufficient_data vs. 
+   fail — confirm the reason/error is distinguishable in whatever the 
+   caller receives
+6. updateFairLendingThresholds successfully sets all five new values when 
+   called with actingIdentity="Lloyd Wright"; still fails closed for any 
+   other identity (regression on the Addendum 3 ownership gate)
+7. volume growth trigger fires an early retest once cumulative scored-
+   population growth crosses 25% since the last report (previously inert 
+   with volume_growth_trigger_pct=null — confirm it's now live)
+
+DOCUMENTATION
+  Wherever these threshold values are surfaced (internal docs, future 
+  data-card content, Julio's memo inputs), include the caveat: "Initial 
+  configuration based on US EEOC/ECOA four-fifths-rule convention; pending 
+  review by a qualified bias-testing methodology reviewer for applicability 
+  to Mexico's regulatory context and PagoYa's specific population." This 
+  should not read as fully validated science — it's a defensible, 
+  documented starting point.
+
+DO NOT
+- Do not let insufficient_data silently fall through to any pass or 
+  conditional outcome
+- Do not use p-value alone anywhere in the severity/escalation logic — 
+  effect size must gate magnitude decisions
+- Do not treat these threshold values as final/validated in any user-
+  facing or licensee-facing documentation
