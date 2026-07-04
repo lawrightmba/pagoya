@@ -1,0 +1,101 @@
+SPRINT 3b: Separate sandbox/production issuance authority + attributable, 
+audited production key creation
+
+CONTEXT
+Sprint 3 shipped a single ADMIN_TOKEN gating both sandbox and production 
+key provisioning. This is inconsistent with the rest of the PTI codebase, 
+where every consequential action (signoffs, threshold edits, adjustment 
+activation) is attributable to a specific identity and logged at the 
+moment of the decision, not just at time of use. This sprint closes that 
+gap for production licensee key issuance specifically. Sandbox issuance 
+stays low-friction by design — this sprint does not add friction there.
+
+SCOPE
+
+1. SEPARATE CREDENTIALS FOR SANDBOX VS. PRODUCTION ISSUANCE
+
+  - SANDBOX_ADMIN_TOKEN — existing behavior, low friction, unchanged. 
+    Continues to allow self-serve sandbox key creation for prospects 
+    without additional approval steps.
+  - PRODUCTION_ADMIN_TOKEN — new, distinct secret. Required for any 
+    request to issue a key with sandbox_mode=false. Must NOT be derived 
+    from, equal to, or a variant of SANDBOX_ADMIN_TOKEN — validate this 
+    at startup (fail boot if they match, to prevent an accidental 
+    copy-paste config error from silently collapsing the separation 
+    this sprint exists to create).
+  - The production admin route must reject any request presenting only 
+    SANDBOX_ADMIN_TOKEN, even if otherwise well-formed.
+
+2. ATTRIBUTABLE PRODUCTION ISSUANCE
+
+  Production key creation endpoint now requires, in addition to 
+  PRODUCTION_ADMIN_TOKEN:
+    - approvedBy (string, required, non-empty) — who is authorizing this 
+      commercial licensee
+    - licenseeName (already likely present, confirm required not optional)
+    - agreementReference (string, required) — pointer to the commercial 
+      agreement (contract ID, doc link, or similar; free text is fine, 
+      this is a pointer not a legal validation)
+    - approvalDate (defaults to server time if omitted, but can be 
+      explicitly set for backdating a record if issuance is being logged 
+      after the fact)
+
+  Reject (throw, no key created) if approvedBy or agreementReference 
+  is missing/empty when sandbox_mode=false. Sandbox-mode requests are 
+  exempt from all of the above — no behavior change there.
+
+3. ISSUANCE-TIME AUDIT LOGGING (not just usage-time)
+
+  New table: licensee_key_issuance_log
+    - key_id, licensee_name, sandbox_mode, approved_by, 
+      agreement_reference, approval_date, issued_at, 
+      pinned_model_version, issuing_token_type ('sandbox' | 'production')
+
+  Write a row to this table AT THE MOMENT OF ISSUANCE for every key 
+  created, sandbox or production — sandbox entries just have null 
+  approved_by/agreement_reference. This is distinct from 
+  licensee_api_audit_log, which already logs per-request usage; this new 
+  table answers "when and why did this key come to exist," which the 
+  existing table doesn't capture.
+
+4. VERSION-BUMP ENDPOINT — SAME TREATMENT
+
+  The existing version-bump (upgrade) endpoint for licensee keys changes 
+  a licensee's live model version — this is a similarly consequential, 
+  under-attributed action per your own framing earlier in this project 
+  ("changes their credit model... should log an audit event"). Apply the 
+  same requirement: version-bump on a sandbox_mode=false key requires 
+  PRODUCTION_ADMIN_TOKEN + approvedBy, logged to 
+  licensee_version_upgrade_log with approver attribution (this table 
+  already exists from Sprint 3 — confirm it currently captures who 
+  approved the bump; if not, add it now).
+
+TESTS REQUIRED
+1. Production key issuance rejects SANDBOX_ADMIN_TOKEN even if otherwise 
+   valid
+2. Production key issuance rejects missing/empty approvedBy or 
+   agreementReference
+3. Production key issuance succeeds and writes a complete 
+   licensee_key_issuance_log row, including issuing_token_type='production'
+4. Sandbox key issuance is unaffected — no approvedBy/agreementReference 
+   required, still works exactly as in Sprint 3
+5. Sandbox key issuance still writes a licensee_key_issuance_log row 
+   (with null approval fields), so total issuance history is queryable 
+   in one place regardless of key type
+6. Boot check: server refuses to start if PRODUCTION_ADMIN_TOKEN equals 
+   or is unset while SANDBOX_ADMIN_TOKEN is set (prevents silent 
+   credential collapse)
+7. Version-bump on a production key requires PRODUCTION_ADMIN_TOKEN + 
+   approvedBy; sandbox key version-bumps unaffected
+8. Isolation guard regression: confirm this sprint's changes don't touch 
+   or import anything from the fair-lending adjustment layer (same 
+   source-scan pattern as Sprint 3)
+
+DO NOT
+- Do not add approval friction to sandbox key issuance — it must remain 
+  self-serve
+- Do not let PRODUCTION_ADMIN_TOKEN default to or silently fall back to 
+  SANDBOX_ADMIN_TOKEN under any code path
+- Do not skip logging issuance for sandbox keys — the goal is one 
+  queryable history of "every key that has ever existed and why," not 
+  just production keys
