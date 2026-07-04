@@ -1,0 +1,145 @@
+SPRINT 2b: Isolated Fair-Lending Adjustment Layer for PTI
+(includes mapping table + hard prod-activation gate)
+
+CONTEXT
+PTI v4.1 core scoring (computePTI) must remain untouched by this sprint.
+We are re-introducing colonia and declared_income_bucket, but NOT as raw 
+scoring inputs inside the 100-point behavioral score. They will live in a 
+separate, toggleable adjustment layer that sits outside the base score.
+
+The colonia/income point-mapping table below is a PLACEHOLDER pending 
+bias/fair-lending sign-off. It must be fully built, testable, and wired 
+end-to-end in this sprint — but structurally prevented from ever running 
+in production until sign-off is explicitly recorded.
+
+GOAL
+Build computeFairLendingAdjustment(snapshot) as an independent function that:
+1. Is OFF by default (feature flag: ENABLE_GEO_INCOME_ADJUSTMENT, default false)
+2. Never modifies computePTI()'s internal logic, weights, or point totals
+3. Returns a capped adjustment value in the range [-5, +5]
+4. Is fully explainable: every call returns a breakdown of which components 
+   (colonia tier, income bucket) contributed what, and why
+5. CANNOT be activated in production without a recorded bias-testing 
+   sign-off — this is enforced in code, not just policy
+
+REQUIRED BEHAVIOR
+
+computePTI(snapshot) 
+  -> unchanged. Always returns base_score 0-100. Must not import or reference 
+     colonia/declared_income_bucket at all. Fail build/lint if these fields 
+     are referenced inside computePTI or its dimension sub-functions.
+
+PLACEHOLDER MAPPING TABLE (build as config, not hardcoded logic — 
+must be editable without a code deploy once real values are approved):
+
+  colonia_tier_adjustment:
+    tier_1_marginacion_muy_bajo:  0   // TODO: pending bias test
+    tier_2_marginacion_bajo:      0   // TODO: pending bias test
+    tier_3_marginacion_medio:     0   // TODO: pending bias test
+    tier_4_marginacion_alto:      0   // TODO: pending bias test
+    tier_5_marginacion_muy_alto:  0   // TODO: pending bias test
+    unknown:                      0
+
+  income_bucket_adjustment:
+    bucket_1_lowest:   0   // TODO: pending bias test
+    bucket_2:          0   // TODO: pending bias test
+    bucket_3:          0   // TODO: pending bias test
+    bucket_4:          0   // TODO: pending bias test
+    bucket_5_highest:  0   // TODO: pending bias test
+    unknown:           0
+
+  All values ship at 0. This lets the full pipeline (logging, delta 
+  reporting, capping, portable-mode fallback) be built, tested, and 
+  demonstrated end-to-end producing adjustment=0 everywhere, WITHOUT 
+  requiring real point values to exist yet. Real values get filled in 
+  as a config update only, post sign-off — no code changes required at 
+  that point.
+
+PROD-ACTIVATION GATE (hard requirement)
+
+  New table: fair_lending_signoff
+    - id, signed_off_by, signoff_date, bias_test_report_ref, 
+      approved_mapping_version, notes
+
+  ENABLE_GEO_INCOME_ADJUSTMENT must check TWO conditions before ever 
+  returning true in a production environment:
+    1. The env var / config flag is set to true, AND
+    2. A row exists in fair_lending_signoff with approved_mapping_version 
+       matching the currently-loaded mapping table's version hash
+
+  If condition 2 is not met, the flag evaluates to false regardless of 
+  condition 1 — log a warning ("adjustment layer requested but no matching 
+  signoff on file") but do not error or block scoring; just fall through 
+  to adjustment=0 / applied=false.
+
+  In non-production environments (dev/staging), condition 2 can be bypassed 
+  with an explicit ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING=true flag, so the 
+  team can test the mapping logic before real sign-off exists. This flag 
+  must be hardcoded to false / unavailable in the production config and 
+  should fail the build if set true outside NODE_ENV=production checks fail.
+
+computeFairLendingAdjustment(snapshot, flagState)
+  -> if flagState resolves false (either by config or by failed gate check): 
+     return { adjustment: 0, components: [], applied: false, 
+     reason: <"flag_off" | "no_signoff_on_file" | "fields_unavailable"> }
+  -> if flagState resolves true: compute adjustment from colonia + 
+     declared_income_bucket via the mapping config, capped to [-5, +5], 
+     return { adjustment: X, components: [...], applied: true, 
+     mapping_version: <hash> }
+
+computeFinalPTI(snapshot, flagState)
+  -> base_score = computePTI(snapshot)
+  -> { adjustment, components, applied, reason } = 
+     computeFairLendingAdjustment(snapshot, flagState)
+  -> final_score = clamp(base_score + adjustment, 0, 100)
+  -> return { base_score, adjustment, final_score, applied, reason, components }
+
+LOGGING (non-negotiable)
+Every score computation must persist:
+  - base_score (flag-independent, always populated)
+  - final_score (post-adjustment if applied)
+  - flag state AND gate-check result at time of computation
+  - mapping_version used (even if all zeros)
+  - adjustment component breakdown (even when adjustment = 0)
+
+New table: pti_fairlending_adjustment_log
+  - user_id, snapshot_id, base_score, adjustment, final_score, 
+    flag_requested, gate_passed, applied, reason, mapping_version,
+    colonia, colonia_tier, declared_income_bucket, 
+    component_breakdown (JSON), computed_at
+
+PORTABLE MODE
+Snapshot missing colonia/declared_income_bucket entirely -> 
+computeFairLendingAdjustment short-circuits to 
+{ adjustment: 0, applied: false, reason: "fields_unavailable" } 
+without error. Portable-mode licensees license computePTI() alone and 
+never touch this module.
+
+TESTS REQUIRED
+1. Regression: computePTI() output byte-identical whether or not colonia/
+   declared_income_bucket exist on the snapshot at all
+2. Flag-off: adjustment === 0, final_score === base_score, for any input
+3. Gate enforcement: flag=true + no matching fair_lending_signoff row 
+   -> adjustment still 0, reason: "no_signoff_on_file" (this is the 
+   critical test — prove prod cannot self-activate)
+4. Gate pass: flag=true + valid signoff row with matching mapping_version 
+   -> adjustment computes per mapping table
+5. Cap enforcement: adjustment never exceeds ±5 even with all-nonzero 
+   mapping values
+6. Missing-data: portable-mode snapshots produce applied: false, no errors
+7. Logging: every computeFinalPTI() call produces exactly one log row 
+   with gate_passed and reason populated correctly
+8. Staging bypass: ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING works in staging, 
+   confirmed unavailable/false-locked when NODE_ENV=production
+9. Delta report: given a batch of historical snapshots (with mapping 
+   values temporarily set non-zero in a test fixture, not prod config), 
+   produce distribution of (final_score - base_score) — this is the 
+   artifact for bias testing and Julio's memo
+
+DO NOT
+- Do not fold colonia/income into any existing dimension
+- Do not change the 100-point total or any existing weight
+- Do not let the adjustment module import from or call computePTI() internals
+- Do not allow any code path where production can activate the adjustment 
+  without a recorded signoff row matching the loaded mapping version
+- Do not hardcode real point values in this sprint — placeholder zeros only
