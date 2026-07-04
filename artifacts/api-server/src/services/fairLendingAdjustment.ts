@@ -346,10 +346,18 @@ async function checkSignoffStatus(mappingVersion: string): Promise<SignoffStatus
  * `mappingVersionAtTestTime` must be the hash that was active WHEN THE TEST
  * WAS RUN, not necessarily the currently-loaded config — callers capture
  * this themselves (e.g. via computeMappingVersionHash()) at test-run time.
+ *
+ * Sprint 2b Addendum 3: `attestedBy` must match the current authorized
+ * threshold owner (`fairLendingOwnership.ts`) — mismatch throws before any
+ * classification or DB write happens. This prevents someone other than the
+ * designated owner from ever getting a signoff on file, even a passing one.
  */
 export async function recordFairLendingSignoff(params: RecordSignoffParams): Promise<SignoffRecord> {
   const { reportResult, attestedBy, mappingVersionAtTestTime, reportGeneratedAt, conditionalAcknowledgment } = params;
   const thresholds = params.thresholds ?? FAIR_LENDING_THRESHOLDS;
+
+  const { verifyThresholdOwnerAuthorization } = await import("./fairLendingOwnership.js");
+  await verifyThresholdOwnerAuthorization(attestedBy);
 
   const outcome = classifyReportOutcome(reportResult, thresholds);
 
@@ -371,25 +379,37 @@ export async function recordFairLendingSignoff(params: RecordSignoffParams): Pro
 
   const now = reportGeneratedAt ?? new Date();
   const retestIntervalDays = outcome === "conditional" ? thresholds.conditional_retest_interval_days : thresholds.standard_retest_interval_days;
-  const retestDueAt = new Date(now.getTime() + retestIntervalDays * 24 * 60 * 60 * 1000);
+  // retest_due_at_ceiling is the fixed calendar cap computed once at record
+  // time. The effective retest_due_at starts equal to it, but can only ever
+  // be pulled EARLIER (never later) by a trigger event — see forceRetest(),
+  // expireOutdatedMappingVersionSignoffs(), checkScoredPopulationVolumeGrowth().
+  const retestDueAtCeiling = new Date(now.getTime() + retestIntervalDays * 24 * 60 * 60 * 1000);
   const adjustmentCapOverride = outcome === "conditional" ? thresholds.conditional_adjustment_cap : null;
 
   const { db } = await import("@workspace/db");
+
+  const populationRow = await db.execute(sql`
+    SELECT COUNT(*)::int AS n FROM users WHERE pti_score IS NOT NULL
+  `);
+  const scoredPopulationCount = Number((populationRow.rows[0] as Record<string, unknown> | undefined)?.n ?? 0);
+
   const row = await db.execute(sql`
     INSERT INTO fair_lending_signoff (
       signed_off_by, attested_by, approved_mapping_version,
       disparate_impact_report, report_generated_at, bias_test_report_ref,
-      status, adjustment_cap_override, retest_due_at, conditional_acknowledgment
+      status, adjustment_cap_override, retest_due_at, retest_due_at_ceiling,
+      scored_population_count_at_signoff, conditional_acknowledgment
     ) VALUES (
       ${attestedBy}, ${attestedBy}, ${mappingVersionAtTestTime},
       ${JSON.stringify(reportResult)}::jsonb, ${now}, ${reportResult.notes ?? null},
-      ${outcome}, ${adjustmentCapOverride}, ${retestDueAt}, ${outcome === "conditional" ? conditionalAcknowledgment : null}
+      ${outcome}, ${adjustmentCapOverride}, ${retestDueAtCeiling}, ${retestDueAtCeiling},
+      ${scoredPopulationCount}, ${outcome === "conditional" ? conditionalAcknowledgment : null}
     )
     RETURNING id, approved_mapping_version, status, adjustment_cap_override, retest_due_at
   `);
   const inserted = row.rows[0] as Record<string, unknown>;
   logger.info(
-    { mappingVersion: mappingVersionAtTestTime, attestedBy, status: outcome, adjustmentCapOverride, retestDueAt },
+    { mappingVersion: mappingVersionAtTestTime, attestedBy, status: outcome, adjustmentCapOverride, retestDueAt: retestDueAtCeiling, scoredPopulationCount },
     "[fairLendingAdjustment] recorded fair-lending signoff from disparate-impact report",
   );
   return {
@@ -399,6 +419,173 @@ export async function recordFairLendingSignoff(params: RecordSignoffParams): Pro
     adjustmentCapOverride: inserted.adjustment_cap_override != null ? Number(inserted.adjustment_cap_override) : null,
     retestDueAt: new Date(inserted.retest_due_at as string),
   };
+}
+
+/**
+ * Sprint 2b Addendum 3: the ONLY sanctioned runtime path for mutating
+ * `FAIR_LENDING_THRESHOLDS`. Direct property assignment elsewhere in the
+ * codebase should never happen — this function exists precisely so that
+ * every mutation is (a) authorization-checked against the current threshold
+ * owner and (b) logged. Mutates the exported config object in place (never
+ * reassigns the binding) so existing imports keep seeing live values.
+ */
+export async function updateFairLendingThresholds(
+  updates: Partial<FairLendingThresholds>,
+  actingIdentity: string | null | undefined,
+): Promise<FairLendingThresholds> {
+  const { verifyThresholdOwnerAuthorization } = await import("./fairLendingOwnership.js");
+  await verifyThresholdOwnerAuthorization(actingIdentity);
+
+  const before = { ...FAIR_LENDING_THRESHOLDS };
+  Object.assign(FAIR_LENDING_THRESHOLDS, updates);
+
+  logger.info(
+    { actingIdentity, before, after: { ...FAIR_LENDING_THRESHOLDS } },
+    "[fairLendingAdjustment] FAIR_LENDING_THRESHOLDS updated by authorized owner",
+  );
+
+  return { ...FAIR_LENDING_THRESHOLDS };
+}
+
+// ─── Event-driven retest_due_at (Sprint 2b Addendum 3) ─────────────────────
+//
+// retest_due_at is no longer a fixed value chosen once at signoff time. It is
+// recomputed as the EARLIER of:
+//   (a) retest_due_at_ceiling — the fixed calendar cap set at record time.
+//   (b) the next occurrence of a defined trigger event:
+//       - mapping_version changes            -> expireOutdatedMappingVersionSignoffs()
+//       - scored-population volume growth     -> checkScoredPopulationVolumeGrowth()
+//       - a manual forceRetest(reason) call   -> forceRetest()
+// Whichever fires first pulls retest_due_at to NOW, which flips
+// signoff_expired=true on the next gate check (request-time or boot).
+
+export type RetestTriggerType = "manual" | "mapping_version_change" | "volume_growth";
+
+/**
+ * Manually forces an immediate retest by pulling the active signoff's
+ * retest_due_at to NOW. Always available — no threshold or owner check
+ * required, since this is a "someone wants a fresh look" action, not a
+ * threshold mutation. Requires a non-empty reason for the audit trail.
+ * No-ops (returns false) if no signoff row exists for the current mapping
+ * version at all.
+ */
+export async function forceRetest(reason: string, actingIdentity?: string | null): Promise<boolean> {
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason) {
+    throw new Error("[fairLendingAdjustment] forceRetest requires a non-empty reason string.");
+  }
+
+  const { db } = await import("@workspace/db");
+  const mappingVersion = FAIR_LENDING_MAPPING_VERSION;
+
+  const row = await db.execute(sql`
+    SELECT id FROM fair_lending_signoff
+    WHERE approved_mapping_version = ${mappingVersion}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  if (row.rows.length === 0) {
+    logger.warn({ mappingVersion }, "[fairLendingAdjustment] forceRetest: no signoff row on file for current mapping version — nothing to expire");
+    return false;
+  }
+  const signoffId = Number((row.rows[0] as Record<string, unknown>).id);
+
+  await db.execute(sql`
+    UPDATE fair_lending_signoff SET retest_due_at = NOW() WHERE id = ${signoffId}
+  `);
+  await db.execute(sql`
+    INSERT INTO fair_lending_retest_triggers (signoff_id, trigger_type, reason, triggered_by)
+    VALUES (${signoffId}, 'manual', ${trimmedReason}, ${actingIdentity ?? null})
+  `);
+
+  logger.info({ signoffId, reason: trimmedReason, actingIdentity: actingIdentity ?? null }, "[fairLendingAdjustment] forceRetest: retest_due_at pulled to NOW");
+  return true;
+}
+
+/**
+ * Any signoff row whose approved_mapping_version no longer matches the
+ * currently-loaded mapping hash is already gate-blocked via
+ * mapping_version_mismatch — but its retest_due_at would otherwise sit
+ * dangling at its old (possibly far-future) ceiling. This forces it to NOW
+ * as well, so the row's own state is consistent with reality rather than
+ * relying solely on the WHERE-clause mismatch. Intentionally NOT called on
+ * the per-request gate-check path (resolveAdjustmentFlagState) to avoid
+ * adding a write to every scoring request — called at boot and from the
+ * daily cron instead.
+ */
+export async function expireOutdatedMappingVersionSignoffs(currentMappingVersion: string = FAIR_LENDING_MAPPING_VERSION): Promise<number> {
+  const { db } = await import("@workspace/db");
+  const rows = await db.execute(sql`
+    UPDATE fair_lending_signoff
+    SET retest_due_at = LEAST(retest_due_at, NOW())
+    WHERE approved_mapping_version != ${currentMappingVersion}
+      AND retest_due_at > NOW()
+    RETURNING id
+  `);
+  if (rows.rows.length > 0) {
+    for (const r of rows.rows) {
+      const signoffId = Number((r as Record<string, unknown>).id);
+      await db.execute(sql`
+        INSERT INTO fair_lending_retest_triggers (signoff_id, trigger_type, reason)
+        VALUES (${signoffId}, 'mapping_version_change', ${`mapping version changed to ${currentMappingVersion}`})
+      `);
+    }
+    logger.info({ count: rows.rows.length, currentMappingVersion }, "[fairLendingAdjustment] expired retest_due_at for outdated-mapping-version signoffs");
+  }
+  return rows.rows.length;
+}
+
+/**
+ * Daily-cron-only check (never per-request, per the same latency reasoning
+ * as the request-time gate itself): compares the current scored population
+ * size against the baseline captured on the active signoff row at record
+ * time. If growth exceeds `FAIR_LENDING_THRESHOLDS.volume_growth_trigger_pct`,
+ * forces retest_due_at to NOW. No-ops entirely while that threshold is null
+ * (placeholder pending bias-testing-owner input) — the mechanism is fully
+ * built and wired, just deliberately inert until a real cutoff is set.
+ */
+export async function checkScoredPopulationVolumeGrowth(): Promise<{ checked: boolean; triggered: boolean }> {
+  const triggerPct = FAIR_LENDING_THRESHOLDS.volume_growth_trigger_pct;
+  if (triggerPct == null) {
+    logger.info("[fairLendingAdjustment] checkScoredPopulationVolumeGrowth: volume_growth_trigger_pct not yet configured — skipping");
+    return { checked: false, triggered: false };
+  }
+
+  const { db } = await import("@workspace/db");
+  const mappingVersion = FAIR_LENDING_MAPPING_VERSION;
+
+  const row = await db.execute(sql`
+    SELECT id, scored_population_count_at_signoff
+    FROM fair_lending_signoff
+    WHERE approved_mapping_version = ${mappingVersion}
+      AND retest_due_at > NOW()
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  if (row.rows.length === 0) {
+    return { checked: false, triggered: false };
+  }
+  const signoffRow = row.rows[0] as Record<string, unknown>;
+  const signoffId = Number(signoffRow.id);
+  const baseline = Number(signoffRow.scored_population_count_at_signoff ?? 0);
+
+  const populationRow = await db.execute(sql`SELECT COUNT(*)::int AS n FROM users WHERE pti_score IS NOT NULL`);
+  const current = Number((populationRow.rows[0] as Record<string, unknown> | undefined)?.n ?? 0);
+
+  const growth = baseline > 0 ? (current - baseline) / baseline : 0;
+  const triggered = growth >= triggerPct;
+
+  logger.info({ signoffId, baseline, current, growth, triggerPct, triggered }, "[fairLendingAdjustment] checkScoredPopulationVolumeGrowth: daily check");
+
+  if (triggered) {
+    await db.execute(sql`UPDATE fair_lending_signoff SET retest_due_at = NOW() WHERE id = ${signoffId}`);
+    await db.execute(sql`
+      INSERT INTO fair_lending_retest_triggers (signoff_id, trigger_type, reason)
+      VALUES (${signoffId}, 'volume_growth', ${`scored population grew ${(growth * 100).toFixed(1)}% (baseline=${baseline}, current=${current}) >= trigger ${(triggerPct * 100).toFixed(1)}%`})
+    `);
+  }
+
+  return { checked: true, triggered };
 }
 
 /**
@@ -424,6 +611,16 @@ export async function assertProductionSafety(): Promise<void> {
   if (!flagRequested) return; // flag off: boots clean regardless of signoff state.
 
   const mappingVersion = FAIR_LENDING_MAPPING_VERSION;
+
+  // Sprint 2b Addendum 3: before evaluating gate state, make sure any signoff
+  // rows left over from a prior mapping version have their retest_due_at
+  // reflect reality (pulled to NOW) rather than dangling at a stale future
+  // ceiling. Purely a hygiene/audit-trail step — the WHERE clause below
+  // already excludes them from ever passing the gate regardless.
+  await expireOutdatedMappingVersionSignoffs(mappingVersion).catch((err) => {
+    logger.warn({ err }, "[fairLendingAdjustment] expireOutdatedMappingVersionSignoffs failed during boot check — continuing");
+  });
+
   const { db } = await import("@workspace/db");
   const row = await db.execute(sql`
     SELECT id, disparate_impact_report, report_generated_at, status, retest_due_at

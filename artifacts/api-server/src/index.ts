@@ -4,6 +4,7 @@ import { siprelBalanceCheck } from "./jobs/siprelBalanceCheck.js";
 import { startNudgePollCron } from "./services/nudgeService.js";
 import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 import { assertProductionSafety } from "./services/fairLendingAdjustment.js";
+import { startFairLendingRetestCron } from "./services/fairLendingRetestCron.js";
 
 const rawPort = process.env["PORT"];
 
@@ -38,4 +39,5 @@ app.listen(port, (err) => {
   siprelBalanceCheck.start();
   startNudgePollCron();
   startEnrichmentCrons();
+  startFairLendingRetestCron();
 });

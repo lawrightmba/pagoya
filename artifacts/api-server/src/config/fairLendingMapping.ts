@@ -105,6 +105,16 @@ export interface FairLendingThresholds {
   standard_retest_interval_days: number; // TODO: confirm, e.g. 180
   /** Retest interval (days) for a 'conditional' signoff — shorter than standard. */
   conditional_retest_interval_days: number; // TODO: confirm, e.g. 60
+  /**
+   * Fractional growth (e.g. 0.25 = +25%) in the scored population since the
+   * active signoff's baseline count that should force an early retest.
+   * NULL = trigger disabled (mechanism built, not yet calibrated).
+   *
+   * TODO PLACEHOLDER — pending input from the bias-testing methodology owner
+   * on what volume shift is actually meaningful. Do not set a "reasonable
+   * guess" value here; leave null until an explicit number is provided.
+   */
+  volume_growth_trigger_pct: number | null;
 }
 
 export const FAIR_LENDING_THRESHOLDS: FairLendingThresholds = {
@@ -114,4 +124,17 @@ export const FAIR_LENDING_THRESHOLDS: FairLendingThresholds = {
   conditional_adjustment_cap: 2, // TODO: confirm with bias-test methodology owner
   standard_retest_interval_days: 180, // TODO: confirm with bias-test methodology owner
   conditional_retest_interval_days: 60, // TODO: confirm with bias-test methodology owner
+  volume_growth_trigger_pct: null, // TODO: pending input — mechanism is live but disabled until set
 };
+
+/**
+ * Fair-Lending Threshold Ownership (Sprint 2b Addendum 3)
+ *
+ * `FAIR_LENDING_THRESHOLDS` above is a bias-testing-methodology decision, not
+ * a free-for-all config. Only the current authorized owner (tracked in the
+ * `fair_lending_threshold_owner_log` DB table — append-only, latest row wins)
+ * may modify it (via `updateFairLendingThresholds()`) or attest a signoff
+ * (via `recordFairLendingSignoff()`). See `fairLendingOwnership.ts` for the
+ * enforcement functions. Reassignment is a deliberate, audited act via
+ * `reassignThresholdOwner()` — never a direct table edit.
+ */

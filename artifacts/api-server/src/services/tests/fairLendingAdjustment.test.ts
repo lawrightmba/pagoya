@@ -8,10 +8,20 @@ import {
   passesBiasThresholds,
   classifyReportOutcome,
   buildDeltaReport,
+  updateFairLendingThresholds,
+  forceRetest,
+  expireOutdatedMappingVersionSignoffs,
+  checkScoredPopulationVolumeGrowth,
   type AdjustmentFlagState,
   type FairLendingSnapshot,
   type DisparateImpactReportResult,
 } from "../fairLendingAdjustment.js";
+import {
+  getCurrentThresholdOwner,
+  reassignThresholdOwner,
+  getThresholdOwnerHistory,
+  verifyThresholdOwnerAuthorization,
+} from "../fairLendingOwnership.js";
 import { computePTI, type PTIDataSnapshot } from "../pti.js";
 import {
   FAIR_LENDING_MAPPING,
@@ -75,6 +85,16 @@ const FAILING_REPORT_RESIDUAL: DisparateImpactReportResult = {
   sampleSize: 5000,
   notes: "synthetic failing report (severe residual effect) for automated test",
 };
+
+// Sprint 2b Addendum 3: recordFairLendingSignoff now gates on threshold-owner
+// authorization. Resolved once per test-file load rather than per-test since
+// the seeded owner ("Lloyd Wright") does not change unless a test explicitly
+// reassigns it (and those tests restore it in their own afterEach/finally).
+let OWNER_NAME: string;
+{
+  const { getCurrentThresholdOwner } = await import("../fairLendingOwnership.js");
+  OWNER_NAME = (await getCurrentThresholdOwner()).ownerName;
+}
 
 function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot {
   return {
@@ -443,7 +463,7 @@ describe("recordFairLendingSignoff — report-driven creation (live DB)", () => 
     await expect(
       recordFairLendingSignoff({
         reportResult: FAILING_REPORT_RATIO,
-        attestedBy: "test-harness-report-driven",
+        attestedBy: OWNER_NAME,
         mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
       }),
     ).rejects.toThrow(/fails bias thresholds/);
@@ -453,7 +473,7 @@ describe("recordFairLendingSignoff — report-driven creation (live DB)", () => 
     await expect(
       recordFairLendingSignoff({
         reportResult: FAILING_REPORT_RESIDUAL,
-        attestedBy: "test-harness-report-driven",
+        attestedBy: OWNER_NAME,
         mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
       }),
     ).rejects.toThrow(/fails bias thresholds/);
@@ -462,7 +482,7 @@ describe("recordFairLendingSignoff — report-driven creation (live DB)", () => 
   it("SUCCEEDS and the gate subsequently passes, given a genuinely passing report", async () => {
     const record = await recordFairLendingSignoff({
       reportResult: PASSING_REPORT,
-      attestedBy: "test-harness-report-driven",
+      attestedBy: OWNER_NAME,
       mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
     });
     console.log("[report-driven] created signoff record:", JSON.stringify(record, null, 2));
@@ -489,7 +509,7 @@ describe("recordFairLendingSignoff — report-driven creation (live DB)", () => 
     // First attestation.
     const first = await recordFairLendingSignoff({
       reportResult: PASSING_REPORT,
-      attestedBy: "test-harness-report-driven",
+      attestedBy: OWNER_NAME,
       mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
     });
     // "New advisor" re-attesting to the SAME report result — proves attestedBy
@@ -497,7 +517,7 @@ describe("recordFairLendingSignoff — report-driven creation (live DB)", () => 
     // report to pass, and doesn't re-derive or re-run anything based on identity.
     const second = await recordFairLendingSignoff({
       reportResult: PASSING_REPORT,
-      attestedBy: "test-harness-report-driven-new-advisor",
+      attestedBy: OWNER_NAME,
       mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
     });
     console.log("[re-attest] first:", first, "second:", second);
@@ -612,7 +632,7 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     await expect(
       recordFairLendingSignoff({
         reportResult: FAIL_REPORT_BELOW_CONDITIONAL_MIN,
-        attestedBy: "test-harness-tri-state",
+        attestedBy: OWNER_NAME,
         mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
       }),
     ).rejects.toThrow(/fails bias thresholds/);
@@ -622,7 +642,7 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     await expect(
       recordFairLendingSignoff({
         reportResult: CONDITIONAL_REPORT_RATIO,
-        attestedBy: "test-harness-tri-state",
+        attestedBy: OWNER_NAME,
         mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
       }),
     ).rejects.toThrow(/conditionalAcknowledgment/);
@@ -632,7 +652,7 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     await expect(
       recordFairLendingSignoff({
         reportResult: CONDITIONAL_REPORT_RATIO,
-        attestedBy: "test-harness-tri-state",
+        attestedBy: OWNER_NAME,
         mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
         conditionalAcknowledgment: "   ",
       }),
@@ -643,7 +663,7 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     const before = Date.now();
     const record = await recordFairLendingSignoff({
       reportResult: CONDITIONAL_REPORT_RATIO,
-      attestedBy: "test-harness-tri-state",
+      attestedBy: OWNER_NAME,
       mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
       conditionalAcknowledgment: "Accepted pending Q3 retest; ratio in borderline band but no residual signal.",
     });
@@ -659,7 +679,7 @@ describe("recordFairLendingSignoff — three-state outcome persistence (Addendum
     const before = Date.now();
     const record = await recordFairLendingSignoff({
       reportResult: PASSING_REPORT,
-      attestedBy: "test-harness-tri-state",
+      attestedBy: OWNER_NAME,
       mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
     });
     console.log("[tri-state] pass signoff record:", JSON.stringify(record, null, 2));
@@ -806,5 +826,230 @@ describe("buildDeltaReport — bias-testing artifact (test #9)", () => {
     console.log("[delta-report, TEST FIXTURE mapping] deltas:", fixtureDeltas);
     expect(fixtureDeltas[0]).toBe(-5); // tier_1(-5) + bucket_5(-5) = -10, capped to -5
     expect(fixtureDeltas[1]).toBe(5);  // tier_5(+8) + bucket_1(+8) = +16, capped to +5
+  });
+});
+
+describe("fairLendingOwnership — threshold-owner authorization (Addendum 3, live DB)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_threshold_owner_log WHERE assigned_by LIKE 'test-harness-owner%'`);
+  });
+
+  it("getCurrentThresholdOwner returns the seeded owner by default", async () => {
+    const owner = await getCurrentThresholdOwner();
+    console.log("[ownership] current owner:", owner);
+    expect(owner.ownerName).toBeTruthy();
+  });
+
+  it("verifyThresholdOwnerAuthorization throws when actingIdentity does not match the current owner", async () => {
+    const owner = await getCurrentThresholdOwner();
+    await expect(
+      verifyThresholdOwnerAuthorization(`definitely-not-${owner.ownerName}`),
+    ).rejects.toThrow();
+  });
+
+  it("verifyThresholdOwnerAuthorization resolves when actingIdentity matches the current owner", async () => {
+    const owner = await getCurrentThresholdOwner();
+    await expect(verifyThresholdOwnerAuthorization(owner.ownerName)).resolves.not.toThrow();
+  });
+
+  it("reassignThresholdOwner REJECTS an empty newOwner or empty reason", async () => {
+    await expect(
+      reassignThresholdOwner({ newOwner: "", effectiveDate: new Date(), reason: "valid reason", assignedBy: "test-harness-owner" }),
+    ).rejects.toThrow();
+    await expect(
+      reassignThresholdOwner({ newOwner: "New Owner", effectiveDate: new Date(), reason: "", assignedBy: "test-harness-owner" }),
+    ).rejects.toThrow();
+  });
+
+  it("reassignThresholdOwner appends a new owner and subsequent authorization checks use it", async () => {
+    const before = await getCurrentThresholdOwner();
+    await reassignThresholdOwner({
+      newOwner: "test-harness-owner-new",
+      effectiveDate: new Date(),
+      reason: "test-harness reassignment for automated coverage",
+      assignedBy: "test-harness-owner",
+    });
+    const after = await getCurrentThresholdOwner();
+    console.log("[ownership] before:", before, "after:", after);
+    expect(after.ownerName).toBe("test-harness-owner-new");
+
+    await expect(verifyThresholdOwnerAuthorization(before.ownerName)).rejects.toThrow();
+    await expect(verifyThresholdOwnerAuthorization("test-harness-owner-new")).resolves.not.toThrow();
+
+    const history = await getThresholdOwnerHistory();
+    console.log("[ownership] history length after reassignment:", history.length);
+    expect(history.length).toBeGreaterThanOrEqual(2);
+
+    // Restore original owner so other tests / prod state aren't left mutated.
+    await reassignThresholdOwner({
+      newOwner: before.ownerName,
+      effectiveDate: new Date(),
+      reason: "test-harness restoring original owner after automated coverage",
+      assignedBy: "test-harness-owner",
+    });
+  });
+});
+
+describe("recordFairLendingSignoff — ownership gate (Addendum 3, live DB)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by LIKE 'test-harness-ownership-gate%'`);
+  });
+
+  it("REJECTS a signoff attestation from someone who is not the current threshold owner", async () => {
+    await expect(
+      recordFairLendingSignoff({
+        reportResult: PASSING_REPORT,
+        attestedBy: "test-harness-ownership-gate-imposter",
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("SUCCEEDS when attestedBy matches the current threshold owner, and stores baseline population + ceiling", async () => {
+    const owner = await getCurrentThresholdOwner();
+    const record = await recordFairLendingSignoff({
+      reportResult: PASSING_REPORT,
+      attestedBy: owner.ownerName,
+      mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+    });
+    console.log("[ownership-gate] signoff created by current owner:", JSON.stringify(record, null, 2));
+    expect(record.id).toBeGreaterThan(0);
+
+    const { db } = await import("@workspace/db");
+    const row = await db.execute(sql`
+      SELECT retest_due_at_ceiling, scored_population_count_at_signoff
+      FROM fair_lending_signoff WHERE id = ${record.id}
+    `);
+    const stored = row.rows[0] as Record<string, unknown>;
+    console.log("[ownership-gate] stored baseline row:", stored);
+    expect(stored.retest_due_at_ceiling).toBeTruthy();
+    expect(typeof stored.scored_population_count_at_signoff === "number" || typeof stored.scored_population_count_at_signoff === "string").toBe(true);
+
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE id = ${record.id}`);
+  });
+});
+
+describe("updateFairLendingThresholds — ownership-gated mutation (Addendum 3)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_threshold_owner_log WHERE assigned_by = 'test-harness-thresholds'`);
+  });
+
+  it("REJECTS a threshold update from a non-owner identity and leaves FAIR_LENDING_THRESHOLDS unchanged", async () => {
+    const before = { ...FAIR_LENDING_THRESHOLDS };
+    await expect(
+      updateFairLendingThresholds({ fourFifths_pass_min: 0.85 }, "not-the-owner"),
+    ).rejects.toThrow();
+    expect(FAIR_LENDING_THRESHOLDS).toEqual(before);
+  });
+
+  it("SUCCEEDS for the current owner and mutates FAIR_LENDING_THRESHOLDS in place", async () => {
+    const owner = await getCurrentThresholdOwner();
+    const original = FAIR_LENDING_THRESHOLDS.fourFifths_pass_min;
+    try {
+      await updateFairLendingThresholds({ fourFifths_pass_min: 0.81 }, owner.ownerName);
+      expect(FAIR_LENDING_THRESHOLDS.fourFifths_pass_min).toBe(0.81);
+    } finally {
+      await updateFairLendingThresholds({ fourFifths_pass_min: original }, owner.ownerName);
+      expect(FAIR_LENDING_THRESHOLDS.fourFifths_pass_min).toBe(original);
+    }
+  });
+});
+
+describe("forceRetest — manual event-driven retest trigger (Addendum 3, live DB)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-force-retest'`);
+    await db.execute(sql`DELETE FROM fair_lending_retest_triggers WHERE reason LIKE 'test-harness-force-retest%'`);
+  });
+
+  it("REJECTS an empty reason", async () => {
+    await expect(forceRetest("", "test-harness-force-retest-actor")).rejects.toThrow();
+  });
+
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_retest_triggers WHERE reason LIKE 'test-harness-force-retest%'`);
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-force-retest'`);
+  });
+
+  it("pulls retest_due_at to NOW for the latest signoff and logs a manual trigger", async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, status, retest_due_at)
+      VALUES ('test-harness-force-retest', ${FAIR_LENDING_MAPPING_VERSION}, 'FORCE-RETEST-REPORT', 'pass', NOW() + INTERVAL '90 days')
+    `);
+    await forceRetest("test-harness-force-retest-manual-trigger", "test-harness-force-retest-actor");
+
+    const row = await db.execute(sql`
+      SELECT retest_due_at FROM fair_lending_signoff
+      WHERE signed_off_by = 'test-harness-force-retest'
+      ORDER BY created_at DESC LIMIT 1
+    `);
+    const retestDueAt = new Date((row.rows[0] as Record<string, unknown>).retest_due_at as string);
+    console.log("[force-retest] retest_due_at after forceRetest:", retestDueAt);
+    expect(retestDueAt.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+
+    const trigger = await db.execute(sql`
+      SELECT * FROM fair_lending_retest_triggers WHERE reason LIKE 'test-harness-force-retest%'
+    `);
+    expect(trigger.rows.length).toBeGreaterThanOrEqual(1);
+    expect((trigger.rows[0] as Record<string, unknown>).trigger_type).toBe("manual");
+  });
+});
+
+describe("expireOutdatedMappingVersionSignoffs — mapping-version-change trigger (Addendum 3, live DB)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      DELETE FROM fair_lending_retest_triggers
+      WHERE signoff_id IN (SELECT id FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-mapping-expiry')
+    `);
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-mapping-expiry'`);
+  });
+
+  it("pulls retest_due_at to NOW only for rows on a stale mapping version, and logs a mapping_version_change trigger", async () => {
+    const { db } = await import("@workspace/db");
+    const staleVersion = "test-harness-mapping-expiry-STALE-v0";
+    const currentVersion = FAIR_LENDING_MAPPING_VERSION;
+
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, status, retest_due_at)
+      VALUES ('test-harness-mapping-expiry', ${staleVersion}, 'STALE-VERSION-REPORT', 'pass', NOW() + INTERVAL '90 days')
+    `);
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, status, retest_due_at)
+      VALUES ('test-harness-mapping-expiry', ${currentVersion}, 'CURRENT-VERSION-REPORT', 'pass', NOW() + INTERVAL '90 days')
+    `);
+
+    const expiredCount = await expireOutdatedMappingVersionSignoffs(currentVersion);
+    console.log("[mapping-expiry] expiredCount:", expiredCount);
+    expect(expiredCount).toBeGreaterThanOrEqual(1);
+
+    const staleRow = await db.execute(sql`
+      SELECT retest_due_at FROM fair_lending_signoff
+      WHERE signed_off_by = 'test-harness-mapping-expiry' AND approved_mapping_version = ${staleVersion}
+    `);
+    const staleDueAt = new Date((staleRow.rows[0] as Record<string, unknown>).retest_due_at as string);
+    expect(staleDueAt.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+
+    const currentRow = await db.execute(sql`
+      SELECT retest_due_at FROM fair_lending_signoff
+      WHERE signed_off_by = 'test-harness-mapping-expiry' AND approved_mapping_version = ${currentVersion}
+    `);
+    const currentDueAt = new Date((currentRow.rows[0] as Record<string, unknown>).retest_due_at as string);
+    expect(currentDueAt.getTime()).toBeGreaterThan(Date.now());
+  });
+});
+
+describe("checkScoredPopulationVolumeGrowth — volume-growth trigger (Addendum 3, placeholder no-op)", () => {
+  it("no-ops while volume_growth_trigger_pct is null (unconfigured placeholder)", async () => {
+    expect(FAIR_LENDING_THRESHOLDS.volume_growth_trigger_pct).toBeNull();
+    const result = await checkScoredPopulationVolumeGrowth();
+    console.log("[volume-growth] result while unconfigured:", result);
+    expect(result.checked).toBe(false);
+    expect(result.triggered).toBe(false);
   });
 });

@@ -1,0 +1,105 @@
+SPRINT 3: Standalone Licensable PTI API
+
+SCOPE
+Expose computePTI() / computeFinalPTI()'s BASE SCORE ONLY as a licensable 
+HTTP API. The fair-lending adjustment layer (Sprint 2b + addenda) is NOT 
+exposed via this API in any form — no fields, no opt-in flags, no 
+documentation references. It remains internal-only, callable solely from 
+PagoYa's own scoring pipeline.
+
+VERSIONING (per Lloyd: pin to specific model version, no silent riding-latest)
+
+  Licensee API keys are issued against a specific pinned model version 
+  (e.g. "v4.1-behavioral"). 
+  - Endpoint: /v1/score requires the key's pinned version to exist and be 
+    supported; if PagoYa retires a version, licensees on it get a 
+    deprecation notice and window (config: deprecation_notice_days, e.g. 90) 
+    before that version stops serving.
+  - New model versions never auto-apply to existing licensee keys. A 
+    licensee must explicitly request a version upgrade (new key or 
+    version-bump endpoint), which should log an audit event given this 
+    changes their credit model.
+  - Version pinning table: licensee_api_keys(key_id, licensee_name, 
+    pinned_model_version, issued_at, sandbox_mode boolean)
+
+SANDBOX MODE (per Lloyd: yes, separate from production)
+
+  sandbox_mode=true keys:
+  - Only accept/return synthetic data (seed a fixture dataset of 
+    representative synthetic snapshots spanning zero-data through 
+    high-confidence users)
+  - Clearly flagged in every response (sandbox: true) so it's unmistakable 
+    in logs or if a response is screenshotted into a sales conversation
+  - No rate-limit tier restrictions (prospective licensees should be able 
+    to explore freely)
+  - Separate key issuance flow, no commercial agreement required to obtain 
+    a sandbox key
+
+CORE ENDPOINTS
+
+  POST /v1/score
+    Input: behavioral snapshot payload (matches PTIDataSnapshot shape, 
+    minus any fair-lending fields — reject/ignore colonia or income fields 
+    if present in the payload, log a warning if a licensee sends them, 
+    since it signals they may be expecting adjustment-layer behavior 
+    that doesn't exist in this product)
+    Output: { base_score, tier, confidence, dimension_breakdown, 
+    model_version, portable_mode: boolean }
+    - portable_mode auto-detected: if wallet-rail fields 
+      (bancarization_speed inputs, funding_channel_mix inputs) are absent, 
+      route to the portable Cash-Flow Stability weight table automatically. 
+      No caller-side flag required.
+
+  GET /v1/data-card
+    Public, no auth required (mirrors PagoYa's existing pti_export_safe 
+    data-card pattern). Documents: dimensions used, weights, what's 
+    explicitly excluded (state plainly: "no geographic or income data is 
+    used in score computation"), portable-mode fallback behavior, 
+    k-anonymity notes if applicable to any aggregate stats exposed.
+    This is your strongest diligence asset — it should be able to stand 
+    alone as "here is proof this is a clean behavioral model."
+
+  GET /v1/model-versions
+    Lists supported versions, pinned-vs-deprecated status, deprecation 
+    dates for any version in its notice window.
+
+AUTH & RATE LIMITING
+  Reuse PagoYa's existing B2B API key pattern (per-partner keys, daily 
+  rate limits) rather than building new auth infrastructure. Extend it 
+  with pinned_model_version and sandbox_mode fields rather than 
+  architecting from scratch.
+
+ISOLATION GUARD (extends Sprint 2b's existing guard)
+  New regression test: /v1/score's response schema and internal handler 
+  never reference fairLendingAdjustment.ts, computeFairLendingAdjustment, 
+  or any fair_lending_signoff table — enforced by source-scan test, same 
+  pattern as the existing computePTI() isolation guard. This is the test 
+  that proves the API surface boundary actually holds, not just that it 
+  was built that way once.
+
+TESTS REQUIRED
+1. /v1/score returns correct base_score for a pinned version, unaffected 
+   by any fair-lending fields present or absent in payload
+2. Colonia/income fields in payload are ignored (not scored) and logged 
+   as a warning, request still succeeds
+3. Portable-mode auto-detection routes correctly based on field presence, 
+   without requiring a caller flag
+4. Version pinning: a key pinned to v4.1 gets v4.1 results even after a 
+   hypothetical v4.2 exists; deprecation window logic fires correctly
+5. Sandbox keys reject non-synthetic-looking payloads OR clearly flag 
+   sandbox:true on every response (pick one enforcement approach — 
+   recommend the flag, since rejecting is harder to get right and less 
+   licensee-friendly)
+6. Rate limiting enforced per key, consistent with existing B2B pattern
+7. Isolation guard: source-scan confirms zero references to fair-lending 
+   module/table anywhere in the /v1/score request path
+8. Data-card endpoint is public (no auth), returns accurate methodology 
+   documentation matching current model version
+
+DO NOT
+- Do not expose any fair-lending adjustment field, flag, or endpoint in 
+  this API surface
+- Do not let a licensee's model version silently advance without an 
+  explicit version-bump action
+- Do not build new auth/rate-limit infrastructure when the existing 
+  B2B pattern already solves this
