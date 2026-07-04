@@ -1,0 +1,83 @@
+SPRINT 2b ADDENDUM: Mapping-version drift test + report-driven signoff creation
+
+1. MAPPING-VERSION MISMATCH TEST (new, test #51)
+
+Add to fairLendingAdjustment.test.ts:
+
+  "gate enforcement — mapping drift (critical)"
+  test: a fair_lending_signoff row exists, but its approved_mapping_version 
+  does NOT match the version hash of the currently-loaded mapping config
+  expected: resolveAdjustmentFlagState returns disabled, 
+  reason: "mapping_version_mismatch" — NOT "no_signoff_on_file" (distinct 
+  reason code so this is distinguishable in logs/monitoring from "never 
+  signed off at all")
+
+  Fixture setup: load the real mapping config, compute its hash, insert a 
+  signoff row with a deliberately different version string, confirm gate 
+  fails. Then insert a second signoff row with the matching current hash, 
+  confirm gate passes — proves the check is live against current config, 
+  not just "any row exists."
+
+  Also add: config-edit simulation test — mutate a single value in the 
+  mapping fixture (e.g. one tier's point value), recompute the hash, confirm 
+  it differs from the hash the existing signoff row references, confirm 
+  gate re-locks. This is the "someone edited the config after signoff" 
+  scenario — must fail closed.
+
+2. SIGNOFF CREATION — DRIVEN BY BIAS-TEST REPORT ARTIFACT, NOT BY ROLE
+
+fair_lending_signoff rows must be created programmatically as an output 
+step of buildDeltaReport() / the disparate-impact test run — not entered 
+manually by whoever happens to hold the "legal advisor" role at the time. 
+This decouples the gate from any specific person or firm.
+
+  New function: recordFairLendingSignoff(reportResult, attestedBy)
+    - reportResult: the actual disparate-impact test output (4/5ths ratio, 
+      residual-test result, distribution stats) — this is the artifact 
+      being signed off ON, and it gets stored alongside the signoff row, 
+      not just referenced by ID
+    - attestedBy: name/role of whoever is attesting at time of signoff 
+      (advisor may change — this field is metadata, not the trigger)
+    - Function computes approved_mapping_version from the mapping config 
+      that was active WHEN THE TEST WAS RUN (not current config — 
+      guards against "test ran against v1 mapping, someone quietly 
+      edited to v2 before signoff got recorded")
+    - Refuses to write a signoff row if reportResult fails the 4/5ths 
+      threshold or shows a significant residual effect — signoff creation 
+      itself enforces the pass/fail bar, it's not just a rubber stamp 
+      that any attester can force through
+
+  Update fair_lending_signoff schema:
+    - Add: disparate_impact_report (JSON, stores full reportResult)
+    - Add: report_generated_at
+    - attested_by remains free-text/metadata only — never part of the 
+      gate-check logic in resolveAdjustmentFlagState
+
+  Test additions:
+    - recordFairLendingSignoff REJECTS a report that fails 4/5ths rule 
+      (cannot create a passing signoff from a failing report)
+    - recordFairLendingSignoff REJECTS a report showing significant 
+      residual bias effect
+    - recordFairLendingSignoff SUCCEEDS and gate subsequently passes, 
+      given a genuinely passing report
+    - Changing attested_by on an existing signoff row (e.g. new advisor 
+      re-attesting to the same report) does NOT require re-running the 
+      disparate-impact test — proves advisor identity is metadata, not 
+      a gate dependency
+
+3. WIRE assertProductionSafety() INTO APP BOOTSTRAP (confirmed, blocking)
+
+On app startup, if NODE_ENV=production:
+  - If ENABLE_GEO_INCOME_ADJUSTMENT is true, verify a valid, current-hash-
+    matching fair_lending_signoff row exists RIGHT NOW at boot time
+  - If it doesn't (missing, mismatched version, or underlying report fails 
+    threshold checks on re-verification) -> FAIL STARTUP LOUDLY. Do not 
+    boot with a silently-degraded adjustment layer. This is a systemic 
+    misconfiguration, not a per-snapshot missing-data case, and it should 
+    block deploy, not degrade quietly.
+  - Log the specific reason for the boot failure (mismatch vs. missing vs. 
+    stale report) so whoever's on call doesn't have to reverse-engineer it
+
+  Test: boot sequence throws/exits non-zero when flag=true and no valid 
+  signoff exists; boots clean when flag=false regardless of signoff state; 
+  boots clean when flag=true and a valid matching signoff exists.

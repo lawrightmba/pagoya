@@ -30,7 +30,11 @@ import { FAIR_LENDING_MAPPING, FAIR_LENDING_MAPPING_VERSION } from "../config/fa
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type AdjustmentDisabledReason = "flag_off" | "no_signoff_on_file" | "fields_unavailable";
+export type AdjustmentDisabledReason =
+  | "flag_off"
+  | "no_signoff_on_file"
+  | "mapping_version_mismatch"
+  | "fields_unavailable";
 
 /**
  * Pre-resolved flag/gate state, computed by `resolveAdjustmentFlagState()`.
@@ -93,6 +97,52 @@ export interface FinalPTILogContext {
   declaredIncomeBucket?: string | null;
 }
 
+/**
+ * Output of a disparate-impact / bias test run. This is the artifact that
+ * gets attached to (and enforced by) `recordFairLendingSignoff()` — it is
+ * NOT just a reference ID, the full result is stored alongside the signoff
+ * row so the evidence for why the gate opened is permanently retained.
+ */
+export interface DisparateImpactReportResult {
+  /** Selection-rate ratio of the most-adversely-affected group vs. the most-favored group. Standard threshold: >= 0.8 (the "4/5ths rule"). */
+  fourFifthsRatio: number;
+  /** Whether a statistically significant residual disparate effect remains after controlling for legitimate behavioral factors. true = FAILS. */
+  residualEffectSignificant: boolean;
+  residualEffectPValue?: number;
+  sampleSize?: number;
+  notes?: string;
+}
+
+export interface RecordSignoffParams {
+  reportResult: DisparateImpactReportResult;
+  /** Name/role of whoever is attesting right now. Metadata only — never part of the gate-check logic. */
+  attestedBy: string;
+  /**
+   * The mapping-version hash that was ACTIVE when the disparate-impact test
+   * was run — not necessarily the currently-loaded config. Callers must
+   * capture this at test-run time (e.g. via computeMappingVersionHash())
+   * to guard against "test ran against v1, config quietly edited to v2
+   * before the signoff got recorded."
+   */
+  mappingVersionAtTestTime: string;
+  reportGeneratedAt?: Date;
+}
+
+export interface SignoffRecord {
+  id: number;
+  approvedMappingVersion: string;
+}
+
+/**
+ * Returns true only if the report clears BOTH bias thresholds. This is the
+ * single source of truth for "does this report justify activating the
+ * adjustment layer" — used both when creating a signoff row and when
+ * re-verifying an existing one at boot time.
+ */
+export function passesBiasThresholds(report: DisparateImpactReportResult): boolean {
+  return report.fourFifthsRatio >= 0.8 && !report.residualEffectSignificant;
+}
+
 // ─── Flag / gate resolution (async, hits DB) ───────────────────────────────
 
 /**
@@ -133,38 +183,149 @@ export async function resolveAdjustmentFlagState(): Promise<AdjustmentFlagState>
     return { enabled: true, reasonIfDisabled: null, flagRequested: true, gatePassed: true, mappingVersion };
   }
 
-  const gatePassed = await hasMatchingSignoff(mappingVersion);
-  if (!gatePassed) {
-    logger.warn({ mappingVersion }, "[fairLendingAdjustment] adjustment layer requested but no matching signoff on file");
-    return { enabled: false, reasonIfDisabled: "no_signoff_on_file", flagRequested: true, gatePassed: false, mappingVersion };
+  const { hasAnyRow, matches } = await checkSignoffStatus(mappingVersion);
+  if (!matches) {
+    // Distinct reason codes so monitoring/logs can tell "never signed off at
+    // all" apart from "was signed off, but against a different mapping
+    // version than the one currently loaded" (e.g. config edited post-signoff).
+    const reason: AdjustmentDisabledReason = hasAnyRow ? "mapping_version_mismatch" : "no_signoff_on_file";
+    logger.warn({ mappingVersion, reason }, "[fairLendingAdjustment] adjustment layer requested but gate check failed");
+    return { enabled: false, reasonIfDisabled: reason, flagRequested: true, gatePassed: false, mappingVersion };
   }
 
   return { enabled: true, reasonIfDisabled: null, flagRequested: true, gatePassed: true, mappingVersion };
 }
 
-async function hasMatchingSignoff(mappingVersion: string): Promise<boolean> {
+/**
+ * Checks the current gate state against the DB:
+ *   - hasAnyRow: does at least one fair_lending_signoff row exist at all?
+ *   - matches: does a row exist whose approved_mapping_version matches the
+ *     currently-loaded mapping hash?
+ *
+ * Separating these lets callers distinguish "never signed off" from
+ * "signed off against a stale mapping version" (config drift after signoff).
+ */
+async function checkSignoffStatus(mappingVersion: string): Promise<{ hasAnyRow: boolean; matches: boolean }> {
   const { db } = await import("@workspace/db");
-  const row = await db.execute(sql`
+  const matchRow = await db.execute(sql`
     SELECT id FROM fair_lending_signoff
     WHERE approved_mapping_version = ${mappingVersion}
     LIMIT 1
   `);
-  return row.rows.length > 0;
+  if (matchRow.rows.length > 0) {
+    return { hasAnyRow: true, matches: true };
+  }
+  const anyRow = await db.execute(sql`SELECT id FROM fair_lending_signoff LIMIT 1`);
+  return { hasAnyRow: anyRow.rows.length > 0, matches: false };
+}
+
+/**
+ * Records a fair-lending sign-off, DRIVEN BY the disparate-impact test
+ * report itself — not entered manually by whoever happens to hold a given
+ * role. This decouples the production gate from any specific attester.
+ *
+ * Refuses to write a row (throws) if the report fails either bias
+ * threshold — signoff creation enforces the pass/fail bar itself, it is
+ * never a rubber stamp an attester can force through with a failing report.
+ *
+ * `mappingVersionAtTestTime` must be the hash that was active WHEN THE TEST
+ * WAS RUN, not necessarily the currently-loaded config — callers capture
+ * this themselves (e.g. via computeMappingVersionHash()) at test-run time.
+ */
+export async function recordFairLendingSignoff(params: RecordSignoffParams): Promise<SignoffRecord> {
+  const { reportResult, attestedBy, mappingVersionAtTestTime, reportGeneratedAt } = params;
+
+  if (!passesBiasThresholds(reportResult)) {
+    throw new Error(
+      `[fairLendingAdjustment] Refusing to record signoff: disparate-impact report fails bias thresholds ` +
+        `(fourFifthsRatio=${reportResult.fourFifthsRatio}, residualEffectSignificant=${reportResult.residualEffectSignificant}). ` +
+        `A signoff row cannot be created from a failing report.`,
+    );
+  }
+
+  const { db } = await import("@workspace/db");
+  const row = await db.execute(sql`
+    INSERT INTO fair_lending_signoff (
+      signed_off_by, attested_by, approved_mapping_version,
+      disparate_impact_report, report_generated_at, bias_test_report_ref
+    ) VALUES (
+      ${attestedBy}, ${attestedBy}, ${mappingVersionAtTestTime},
+      ${JSON.stringify(reportResult)}::jsonb, ${reportGeneratedAt ?? new Date()}, ${reportResult.notes ?? null}
+    )
+    RETURNING id, approved_mapping_version
+  `);
+  const inserted = row.rows[0] as Record<string, unknown>;
+  logger.info(
+    { mappingVersion: mappingVersionAtTestTime, attestedBy },
+    "[fairLendingAdjustment] recorded fair-lending signoff from passing disparate-impact report",
+  );
+  return { id: Number(inserted.id), approvedMappingVersion: String(inserted.approved_mapping_version) };
 }
 
 /**
  * Startup safety assertion. Call once at process boot (from app.ts/index.ts)
- * so a misconfigured production deploy fails loudly instead of silently
- * degrading to "ignored bypass" at request time.
+ * and AWAIT it — a misconfigured production deploy must fail startup
+ * loudly instead of silently degrading to a disabled/ignored adjustment
+ * layer at request time. This is a systemic misconfiguration check, not a
+ * per-snapshot missing-data case, so it blocks boot rather than degrading.
  */
-export function assertProductionSafety(): void {
+export async function assertProductionSafety(): Promise<void> {
   const isProduction = process.env.NODE_ENV === "production";
   const stagingBypassRequested = process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING === "true";
   if (isProduction && stagingBypassRequested) {
     throw new Error(
-      "ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING must never be true when NODE_ENV=production. Fix deploy config.",
+      "[fairLendingAdjustment] BOOT FAILURE: ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING must never be true when " +
+        "NODE_ENV=production. Fix deploy config.",
     );
   }
+
+  if (!isProduction) return; // dev/staging: boots clean regardless of signoff state.
+
+  const flagRequested = process.env.ENABLE_GEO_INCOME_ADJUSTMENT === "true";
+  if (!flagRequested) return; // flag off: boots clean regardless of signoff state.
+
+  const mappingVersion = FAIR_LENDING_MAPPING_VERSION;
+  const { db } = await import("@workspace/db");
+  const row = await db.execute(sql`
+    SELECT id, disparate_impact_report, report_generated_at
+    FROM fair_lending_signoff
+    WHERE approved_mapping_version = ${mappingVersion}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+
+  if (row.rows.length === 0) {
+    const anyRow = await db.execute(sql`SELECT id FROM fair_lending_signoff LIMIT 1`);
+    const reason = anyRow.rows.length > 0 ? "mapping_version_mismatch" : "no_signoff_on_file";
+    logger.error(
+      { mappingVersion, reason },
+      "[fairLendingAdjustment] BOOT FAILURE: ENABLE_GEO_INCOME_ADJUSTMENT=true but no valid signoff exists for the current mapping version",
+    );
+    throw new Error(
+      `[fairLendingAdjustment] BOOT FAILURE: ENABLE_GEO_INCOME_ADJUSTMENT=true in production but reason="${reason}" ` +
+        `(mappingVersion=${mappingVersion}). Refusing to boot with a silently-degraded adjustment layer. ` +
+        `Either disable ENABLE_GEO_INCOME_ADJUSTMENT or record a matching fair_lending_signoff via recordFairLendingSignoff().`,
+    );
+  }
+
+  const signoffRow = row.rows[0] as Record<string, unknown>;
+  const report = signoffRow.disparate_impact_report as DisparateImpactReportResult | null;
+  if (!report || !passesBiasThresholds(report)) {
+    logger.error(
+      { mappingVersion, signoffId: signoffRow.id },
+      "[fairLendingAdjustment] BOOT FAILURE: matching signoff row found, but its stored disparate-impact report is missing or fails re-verification (stale report)",
+    );
+    throw new Error(
+      `[fairLendingAdjustment] BOOT FAILURE: reason="stale_report" — the fair_lending_signoff row for mappingVersion=${mappingVersion} ` +
+        `either has no disparate_impact_report on file or the stored report no longer passes bias thresholds on re-verification. ` +
+        `Refusing to boot with a silently-degraded adjustment layer.`,
+    );
+  }
+
+  logger.info(
+    { mappingVersion, signoffId: signoffRow.id },
+    "[fairLendingAdjustment] boot-time production safety check passed — valid, current, passing signoff on file",
+  );
 }
 
 // ─── Pure adjustment computation (no DB, no computePTI reference) ─────────

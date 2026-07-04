@@ -4,12 +4,38 @@ import {
   computeFairLendingAdjustment,
   computeFinalPTI,
   resolveAdjustmentFlagState,
+  recordFairLendingSignoff,
+  passesBiasThresholds,
   buildDeltaReport,
   type AdjustmentFlagState,
   type FairLendingSnapshot,
+  type DisparateImpactReportResult,
 } from "../fairLendingAdjustment.js";
 import { computePTI, type PTIDataSnapshot } from "../pti.js";
-import { FAIR_LENDING_MAPPING_VERSION } from "../../config/fairLendingMapping.js";
+import { FAIR_LENDING_MAPPING, FAIR_LENDING_MAPPING_VERSION, computeMappingVersionHash } from "../../config/fairLendingMapping.js";
+
+const PASSING_REPORT: DisparateImpactReportResult = {
+  fourFifthsRatio: 0.92,
+  residualEffectSignificant: false,
+  residualEffectPValue: 0.41,
+  sampleSize: 5000,
+  notes: "synthetic passing report for automated test",
+};
+
+const FAILING_REPORT_RATIO: DisparateImpactReportResult = {
+  fourFifthsRatio: 0.55, // below 0.8 threshold
+  residualEffectSignificant: false,
+  sampleSize: 5000,
+  notes: "synthetic failing report (4/5ths) for automated test",
+};
+
+const FAILING_REPORT_RESIDUAL: DisparateImpactReportResult = {
+  fourFifthsRatio: 0.9,
+  residualEffectSignificant: true, // fails on residual effect even though ratio passes
+  residualEffectPValue: 0.01,
+  sampleSize: 5000,
+  notes: "synthetic failing report (residual effect) for automated test",
+};
 
 function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot {
   return {
@@ -265,6 +291,181 @@ describe("resolveAdjustmentFlagState — env-driven flag + DB gate (tests #3/#4/
     console.log("[resolve, prod + bad bypass flag] state:", JSON.stringify(state, null, 2));
     expect(state.enabled).toBe(false);
     expect(state.reasonIfDisabled).toBe("no_signoff_on_file");
+  });
+});
+
+describe("gate enforcement — mapping drift (test #51, critical, live DB)", () => {
+  const ORIGINAL_ENABLE = process.env.ENABLE_GEO_INCOME_ADJUSTMENT;
+  const ORIGINAL_STAGING = process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING;
+  const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+  const STALE_VERSION = "stale-version-deliberately-wrong-0000";
+
+  afterEach(async () => {
+    if (ORIGINAL_ENABLE === undefined) delete process.env.ENABLE_GEO_INCOME_ADJUSTMENT;
+    else process.env.ENABLE_GEO_INCOME_ADJUSTMENT = ORIGINAL_ENABLE;
+    if (ORIGINAL_STAGING === undefined) delete process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING;
+    else process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING = ORIGINAL_STAGING;
+    if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-drift'`);
+  });
+
+  it("returns reason=mapping_version_mismatch (NOT no_signoff_on_file) when a signoff row exists but for a different mapping version", async () => {
+    process.env.ENABLE_GEO_INCOME_ADJUSTMENT = "true";
+    process.env.NODE_ENV = "production";
+    delete process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING;
+    const { db } = await import("@workspace/db");
+    // Insert a signoff row against a deliberately wrong/stale version — proves
+    // the check is live against the CURRENT mapping hash, not "any row exists".
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, notes)
+      VALUES ('test-harness-drift', ${STALE_VERSION}, 'STALE-REPORT', 'deliberately mismatched version')
+    `);
+    const mismatchState = await resolveAdjustmentFlagState();
+    console.log("[drift] mismatch state:", JSON.stringify(mismatchState, null, 2));
+    expect(mismatchState.enabled).toBe(false);
+    expect(mismatchState.reasonIfDisabled).toBe("mapping_version_mismatch");
+
+    // Now insert a second row matching the CURRENT hash and confirm the gate passes —
+    // proves this isn't just "any row blocks/unblocks it forever."
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, notes)
+      VALUES ('test-harness-drift', ${FAIR_LENDING_MAPPING_VERSION}, 'CURRENT-REPORT', 'matches current mapping hash')
+    `);
+    const matchState = await resolveAdjustmentFlagState();
+    console.log("[drift] match state after adding current-version row:", JSON.stringify(matchState, null, 2));
+    expect(matchState.enabled).toBe(true);
+    expect(matchState.gatePassed).toBe(true);
+    expect(matchState.reasonIfDisabled).toBeNull();
+
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE approved_mapping_version = ${STALE_VERSION}`);
+  });
+
+  it("re-locks the gate if the mapping config is edited after signoff (config-edit simulation)", async () => {
+    process.env.ENABLE_GEO_INCOME_ADJUSTMENT = "true";
+    process.env.NODE_ENV = "production";
+    delete process.env.ALLOW_UNSIGNED_ADJUSTMENT_IN_STAGING;
+    const { db } = await import("@workspace/db");
+
+    // Snapshot the mapping, compute its hash (this is what was "signed off").
+    const originalHash = computeMappingVersionHash(FAIR_LENDING_MAPPING);
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, notes)
+      VALUES ('test-harness-drift', ${originalHash}, 'ORIGINAL-REPORT', 'signed off against original mapping')
+    `);
+
+    // Simulate someone editing a single value in the mapping AFTER signoff —
+    // recompute the hash the way the app would if that edit had landed.
+    const mutatedMapping = {
+      colonia_tier_adjustment: { ...FAIR_LENDING_MAPPING.colonia_tier_adjustment, tier_3_marginacion_medio: 2 },
+      income_bucket_adjustment: { ...FAIR_LENDING_MAPPING.income_bucket_adjustment },
+    };
+    const mutatedHash = computeMappingVersionHash(mutatedMapping);
+    console.log("[config-edit sim] originalHash:", originalHash, "mutatedHash:", mutatedHash);
+    expect(mutatedHash).not.toBe(originalHash);
+
+    // The currently-loaded FAIR_LENDING_MAPPING_VERSION still equals originalHash
+    // (we didn't actually mutate the loaded config), so resolveAdjustmentFlagState
+    // against the real loaded config should still match the original signoff...
+    const stillMatchingState = await resolveAdjustmentFlagState();
+    expect(stillMatchingState.enabled).toBe(true);
+
+    // ...but if the signoff had instead been recorded against the MUTATED hash
+    // (simulating "test ran, then someone edited again before recording"),
+    // the live loaded config (originalHash) would no longer match it — proving
+    // the gate re-locks on any divergence between signoff version and live config.
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-drift'`);
+    await db.execute(sql`
+      INSERT INTO fair_lending_signoff (signed_off_by, approved_mapping_version, bias_test_report_ref, notes)
+      VALUES ('test-harness-drift', ${mutatedHash}, 'MUTATED-REPORT', 'signed off against a hypothetical post-edit mapping')
+    `);
+    const driftedState = await resolveAdjustmentFlagState();
+    console.log("[config-edit sim] driftedState:", JSON.stringify(driftedState, null, 2));
+    expect(driftedState.enabled).toBe(false);
+    expect(driftedState.reasonIfDisabled).toBe("mapping_version_mismatch");
+  });
+});
+
+describe("recordFairLendingSignoff — report-driven creation (live DB)", () => {
+  afterEach(async () => {
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-report-driven'`);
+  });
+
+  it("passesBiasThresholds correctly classifies passing vs failing reports", () => {
+    expect(passesBiasThresholds(PASSING_REPORT)).toBe(true);
+    expect(passesBiasThresholds(FAILING_REPORT_RATIO)).toBe(false);
+    expect(passesBiasThresholds(FAILING_REPORT_RESIDUAL)).toBe(false);
+  });
+
+  it("REJECTS a report that fails the 4/5ths rule — cannot create a passing signoff from a failing report", async () => {
+    await expect(
+      recordFairLendingSignoff({
+        reportResult: FAILING_REPORT_RATIO,
+        attestedBy: "test-harness-report-driven",
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      }),
+    ).rejects.toThrow(/fails bias thresholds/);
+  });
+
+  it("REJECTS a report showing a significant residual bias effect", async () => {
+    await expect(
+      recordFairLendingSignoff({
+        reportResult: FAILING_REPORT_RESIDUAL,
+        attestedBy: "test-harness-report-driven",
+        mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+      }),
+    ).rejects.toThrow(/fails bias thresholds/);
+  });
+
+  it("SUCCEEDS and the gate subsequently passes, given a genuinely passing report", async () => {
+    const record = await recordFairLendingSignoff({
+      reportResult: PASSING_REPORT,
+      attestedBy: "test-harness-report-driven",
+      mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+    });
+    console.log("[report-driven] created signoff record:", JSON.stringify(record, null, 2));
+    expect(record.id).toBeGreaterThan(0);
+    expect(record.approvedMappingVersion).toBe(FAIR_LENDING_MAPPING_VERSION);
+
+    const ORIGINAL_ENABLE = process.env.ENABLE_GEO_INCOME_ADJUSTMENT;
+    const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+    try {
+      process.env.ENABLE_GEO_INCOME_ADJUSTMENT = "true";
+      process.env.NODE_ENV = "production";
+      const state = await resolveAdjustmentFlagState();
+      expect(state.enabled).toBe(true);
+      expect(state.gatePassed).toBe(true);
+    } finally {
+      if (ORIGINAL_ENABLE === undefined) delete process.env.ENABLE_GEO_INCOME_ADJUSTMENT;
+      else process.env.ENABLE_GEO_INCOME_ADJUSTMENT = ORIGINAL_ENABLE;
+      if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+    }
+  });
+
+  it("re-attesting with a different attestedBy on the same passing report does NOT require re-running the disparate-impact test", async () => {
+    // First attestation.
+    const first = await recordFairLendingSignoff({
+      reportResult: PASSING_REPORT,
+      attestedBy: "test-harness-report-driven",
+      mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+    });
+    // "New advisor" re-attesting to the SAME report result — proves attestedBy
+    // is pure metadata: recordFairLendingSignoff still only requires the
+    // report to pass, and doesn't re-derive or re-run anything based on identity.
+    const second = await recordFairLendingSignoff({
+      reportResult: PASSING_REPORT,
+      attestedBy: "test-harness-report-driven-new-advisor",
+      mappingVersionAtTestTime: FAIR_LENDING_MAPPING_VERSION,
+    });
+    console.log("[re-attest] first:", first, "second:", second);
+    expect(second.id).not.toBe(first.id);
+    expect(second.approvedMappingVersion).toBe(first.approvedMappingVersion);
+
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`DELETE FROM fair_lending_signoff WHERE signed_off_by = 'test-harness-report-driven-new-advisor'`);
   });
 });
 
