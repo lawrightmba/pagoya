@@ -23,6 +23,28 @@
  *     it measures how fast an unbanked user adopts formal banking rails. (CF)
  *   + funding_channel_mix — ratio of bank-based (SPEI/card) vs. cash-based
  *     (OXXO) wallet loads, i.e. progression away from cash dependency. (CF)
+ *
+ * New signals (v4.2 — Sprint 4, July 2026): high-granularity, hard-to-
+ * replicate behavioral signals that require full transaction/message-level
+ * history most competitors never capture:
+ *   + recovery_after_miss — among payments in the last 6 months, the % of
+ *     late payments (bill_payments.days_from_due < 0) that are immediately
+ *     followed by an on-time/early payment. Distinguishes a one-off slip
+ *     from a genuine reliability problem — invisible to point-in-time
+ *     credit data. (BC)
+ *   + paula_response_latency — median minutes between an outbound Paula/
+ *     WhatsApp nudge (paula_send_queue.sent_at) and the user's next inbound
+ *     reply (paula_inbound_log.received_at). Fast, attentive responders
+ *     correlate with financial engagement; this requires message-level
+ *     timestamp data no bureau or bank has. PagoYa-specific — defaults to
+ *     a neutral score (not penalized) when absent, e.g. for licensees
+ *     without a Paula-equivalent channel. (BC)
+ *   + buffer_retention — share of money loaded into the wallet in the last
+ *     90 days that is still sitting in the balance today (currentBalance /
+ *     totalLoads), independent of absolute balance size. Measures a
+ *     propensity to keep a buffer vs. habitually draining to zero — uses
+ *     only fields already required by the portable snapshot, so it scores
+ *     identically for PagoYa users and licensees alike. (CF)
  *   NOTE: geography- and declared-income-based fields are deliberately
  *   EXCLUDED from this module (fair-lending risk of location/income-based
  *   credit signals). Any post-hoc adjustment using those fields lives
@@ -115,6 +137,11 @@ export interface PTIDataSnapshot {
   oxxoLoadCount: number;         // lifetime cash-based (OXXO) wallet loads
   speiLoadCount: number;         // lifetime bank-transfer (SPEI) wallet loads
   cardLoadCount: number;         // lifetime card wallet loads
+
+  // NEW (v4.2 — Sprint 4) high-granularity signals
+  lateRecoveryRatio: number;         // 0–1, % of late payments (last 6mo) immediately followed by on-time/early; NaN if never late
+  latePaymentCount: number;          // count of late payments (last 6mo), used to gate lateRecoveryRatio
+  paulaResponseLatencyMinutes: number; // median minutes from Paula nudge sent to next reply (last 90d); NaN if no data
 }
 
 export interface PTIConfidence {
@@ -181,6 +208,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
+    lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
   } = snapshot;
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -223,20 +251,19 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   // DIMENSION 2: BEHAVIORAL CONSISTENCY — max 20pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 2a. Session cadence — max 3pts
+  // 2a. Session cadence — max 2pts (reduced from 3 in v4.2 to fund new signals below)
   let sessionCadenceScore = 0;
-  if      (loginDays30 >= 20) sessionCadenceScore = 3;
-  else if (loginDays30 >= 12) sessionCadenceScore = 2;
+  if      (loginDays30 >= 20) sessionCadenceScore = 2;
+  else if (loginDays30 >= 12) sessionCadenceScore = 1;
   else if (loginDays30 >= 4)  sessionCadenceScore = 1;
 
-  // 2b. Routine score composite — max 3pts
+  // 2b. Routine score composite — max 2pts (reduced from 3 in v4.2)
   let routineScore = 0;
   {
     const hourNorm = Math.max(0, 1 - hourStd / 12);
     const domNorm  = Math.max(0, 1 - domStddev / 15);
     const routineRaw = (hourNorm + domNorm) / 2;
-    if      (routineRaw >= 0.70) routineScore = 3;
-    else if (routineRaw >= 0.50) routineScore = 2;
+    if      (routineRaw >= 0.70) routineScore = 2;
     else if (routineRaw >= 0.30) routineScore = 1;
   }
 
@@ -262,20 +289,44 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     paulaScore = Math.min(3, paulaScore + 1);
   }
 
-  // 2f. Push notification engagement — max 2pts
+  // 2f. Push notification engagement — max 1pt (reduced from 2 in v4.2)
   let pushScore = 0;
-  if      (pushOpens >= 6) pushScore = 2;
-  else if (pushOpens >= 2) pushScore = 1;
+  if (pushOpens >= 2) pushScore = 1;
 
-  // 2g. Financial curiosity index — max 4pts
+  // 2g. Financial curiosity index — max 3pts (reduced from 4 in v4.2)
   let curiosityScore = 0;
-  if      (curiosityIndex >= 0.20) curiosityScore = 4;
-  else if (curiosityIndex >= 0.10) curiosityScore = 3;
-  else if (curiosityIndex >= 0.05) curiosityScore = 2;
-  else if (curiosityIndex >= 0.02) curiosityScore = 1;
+  if      (curiosityIndex >= 0.20) curiosityScore = 3;
+  else if (curiosityIndex >= 0.10) curiosityScore = 2;
+  else if (curiosityIndex >= 0.05) curiosityScore = 1;
+
+  // 2h. Recovery after a missed/late payment — max 2pts (NEW v4.2)
+  // Among late payments in the last 6 months, what % are immediately
+  // followed by an on-time/early payment? A granular signal invisible to
+  // any point-in-time credit snapshot — it requires the ordered sequence
+  // of a user's own payment history. No misses at all scores the max
+  // (nothing to recover from); insufficient payment history scores 0,
+  // consistent with the other payCount-gated PR/BC signals.
+  let recoveryAfterMissScore = 0;
+  if (payCount >= 3) {
+    if      (latePaymentCount === 0)      recoveryAfterMissScore = 2;
+    else if (lateRecoveryRatio >= 0.75)   recoveryAfterMissScore = 2;
+    else if (lateRecoveryRatio >= 0.40)   recoveryAfterMissScore = 1;
+  }
+
+  // 2i. Paula/WhatsApp response latency — max 2pts (NEW v4.2)
+  // Median minutes from an outbound Paula nudge to the user's next reply
+  // over the last 90 days. Requires message-level timestamp pairing no
+  // bureau or bank captures. Absent for licensees without a Paula-
+  // equivalent channel — NaN is scored neutrally (0), never penalized
+  // beyond the missing points, matching the portable-mode philosophy.
+  let paulaLatencyScore = 0;
+  if (!isNaN(paulaResponseLatencyMinutes)) {
+    if      (paulaResponseLatencyMinutes <= 15) paulaLatencyScore = 2;
+    else if (paulaResponseLatencyMinutes <= 60) paulaLatencyScore = 1;
+  }
 
   const bcScore = sessionCadenceScore + routineScore + gameEngagementScore + loadRhythmScore
-                + paulaScore + pushScore + curiosityScore;
+                + paulaScore + pushScore + curiosityScore + recoveryAfterMissScore + paulaLatencyScore;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 3: ENGAGEMENT DEPTH — max 25pts
@@ -315,18 +366,18 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   // DIMENSION 4: CASH-FLOW STABILITY — max 25pts
   // ══════════════════════════════════════════════════════════════════════════
 
-  // 4a. Wallet balance — max 8pts
+  // 4a. Wallet balance — max 6pts (reduced from 8 in v4.2 to fund buffer_retention below)
   let walletScore = 0;
-  if      (currentBalance >= 500) walletScore = 8;
-  else if (currentBalance >= 200) walletScore = 5;
-  else if (currentBalance >= 50)  walletScore = 3;
+  if      (currentBalance >= 500) walletScore = 6;
+  else if (currentBalance >= 200) walletScore = 4;
+  else if (currentBalance >= 50)  walletScore = 2;
 
-  // 4b. Load/spend ratio (last 90 days) — max 4pts
+  // 4b. Load/spend ratio (last 90 days) — max 3pts (reduced from 4 in v4.2)
   let loadSpendRatio = 0;
   let loadSpendScore = 0;
   if (totalLoads > 0 && totalSpend > 0) {
     loadSpendRatio = totalLoads / totalSpend;
-    if      (loadSpendRatio >= 1.0) loadSpendScore = 4;
+    if      (loadSpendRatio >= 1.0) loadSpendScore = 3;
     else if (loadSpendRatio >= 0.7) loadSpendScore = 2;
     else if (loadSpendRatio >= 0.4) loadSpendScore = 1;
   }
@@ -372,8 +423,28 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     else if (fundingMixRatio >= 0.40) fundingMixScore = 1;
   }
 
+  // 4h. Buffer retention — max 3pts (NEW v4.2)
+  // Share of money loaded into the wallet in the last 90 days that is still
+  // sitting in the balance today (currentBalance / totalLoads), independent
+  // of absolute balance size — distinguishes "keeps a cushion" from
+  // "habitually drains to zero" at any income level. Uses only fields
+  // already required by the portable snapshot, so it scores identically
+  // for PagoYa users and licensees with no PagoYa wallet history at all.
+  let bufferRetentionScore = 0;
+  let bufferRetentionRatio = 0;
+  if (totalLoads > 0) {
+    bufferRetentionRatio = Math.max(0, Math.min(1, currentBalance / totalLoads));
+    if      (bufferRetentionRatio >= 0.30) bufferRetentionScore = 3;
+    else if (bufferRetentionRatio >= 0.15) bufferRetentionScore = 2;
+    else if (bufferRetentionRatio >= 0.05) bufferRetentionScore = 1;
+  } else if (currentBalance > 0) {
+    // No loads recorded in the window but a balance exists (e.g. older load) — treat as fully retained.
+    bufferRetentionRatio = 1;
+    bufferRetentionScore = 3;
+  }
+
   const cfScore = walletScore + loadSpendScore + volatilityScore + p2pScore + accountAgeScore
-                + bancarizationScore + fundingMixScore;
+                + bancarizationScore + fundingMixScore + bufferRetentionScore;
 
   // ── Total ─────────────────────────────────────────────────────────────────
   const total = Math.min(100, prScore + bcScore + edScore + cfScore);
@@ -394,13 +465,15 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     behavioral_consistency: {
       score: bcScore, max: 20, label: "Consistencia de Comportamiento",
       components: {
-        session_cadence:              { score: sessionCadenceScore, max: 3, value: loginDays30 },
-        routine_score:                { score: routineScore,        max: 3, value: Math.round((1 - hourStd / 12) * 100) },
-        game_engagement:              { score: gameEngagementScore, max: 3, value: totalEngagement },
-        wallet_load_rhythm:           { score: loadRhythmScore,     max: 2, value: loadCount30 },
-        paula_interaction_depth:      { score: paulaScore,          max: 3, value: paulaInteractions },
-        push_notification_engagement: { score: pushScore,           max: 2, value: pushOpens },
-        financial_curiosity_index:    { score: curiosityScore,      max: 4, value: Math.round(curiosityIndex * 100) },
+        session_cadence:              { score: sessionCadenceScore,     max: 2, value: loginDays30 },
+        routine_score:                { score: routineScore,            max: 2, value: Math.round((1 - hourStd / 12) * 100) },
+        game_engagement:               { score: gameEngagementScore,    max: 3, value: totalEngagement },
+        wallet_load_rhythm:           { score: loadRhythmScore,         max: 2, value: loadCount30 },
+        paula_interaction_depth:      { score: paulaScore,              max: 3, value: paulaInteractions },
+        push_notification_engagement: { score: pushScore,               max: 1, value: pushOpens },
+        financial_curiosity_index:    { score: curiosityScore,          max: 3, value: Math.round(curiosityIndex * 100) },
+        recovery_after_miss:          { score: recoveryAfterMissScore,  max: 2, value: isNaN(lateRecoveryRatio) ? -1 : Math.round(lateRecoveryRatio * 100) },
+        paula_response_latency:       { score: paulaLatencyScore,       max: 2, value: isNaN(paulaResponseLatencyMinutes) ? -1 : Math.round(paulaResponseLatencyMinutes) },
       },
     },
     engagement_depth: {
@@ -416,13 +489,14 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     cashflow_stability: {
       score: cfScore, max: 25, label: "Estabilidad de Flujo",
       components: {
-        wallet_balance:           { score: walletScore,        max: 8, value: currentBalance },
-        load_spend_ratio:         { score: loadSpendScore,     max: 4, value: Math.round(loadSpendRatio * 100) / 100 },
-        payment_amount_volatility:{ score: volatilityScore,    max: 3, value: Math.round(amountCV * 100) / 100 },
-        p2p_network_activity:     { score: p2pScore,           max: 3, value: p2pSendCount },
-        account_age:              { score: accountAgeScore,    max: 2, value: Math.floor(daysOld) },
-        bancarization_speed:      { score: bancarizationScore, max: 3, value: isNaN(daysToFirstSpei) ? -1 : Math.floor(daysToFirstSpei) },
-        funding_channel_mix:      { score: fundingMixScore,    max: 2, value: Math.round(fundingMixRatio * 100) },
+        wallet_balance:           { score: walletScore,           max: 6, value: currentBalance },
+        load_spend_ratio:         { score: loadSpendScore,        max: 3, value: Math.round(loadSpendRatio * 100) / 100 },
+        payment_amount_volatility:{ score: volatilityScore,       max: 3, value: Math.round(amountCV * 100) / 100 },
+        p2p_network_activity:     { score: p2pScore,              max: 3, value: p2pSendCount },
+        account_age:              { score: accountAgeScore,       max: 2, value: Math.floor(daysOld) },
+        bancarization_speed:      { score: bancarizationScore,    max: 3, value: isNaN(daysToFirstSpei) ? -1 : Math.floor(daysToFirstSpei) },
+        funding_channel_mix:      { score: fundingMixScore,       max: 2, value: Math.round(fundingMixRatio * 100) },
+        buffer_retention:         { score: bufferRetentionScore,  max: 3, value: Math.round(bufferRetentionRatio * 100) },
       },
     },
     total,
@@ -440,7 +514,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   return { breakdown, confidence };
 }
 
-export const PTI_MODEL_VERSION = "v4.1-behavioral";
+export const PTI_MODEL_VERSION = "v4.2-behavioral";
 
 export function getPTITier(score: number): { tier: string; color: string; label: string } {
   if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };
@@ -732,6 +806,59 @@ async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot
   `);
   const daysOld = Number((ageRow.rows[0] as Record<string,unknown>)?.days_old ?? 0);
 
+  // 2h. Recovery after a missed/late payment (NEW v4.2) — uses the
+  // days_from_due column already stored per bill_payments row (positive =
+  // early, negative = late). Windows the ordered payment sequence to find
+  // every late payment, then checks whether the NEXT payment (by created_at)
+  // was on-time/early.
+  const recoveryRow = await db.execute(sql`
+    WITH ordered AS (
+      SELECT
+        days_from_due,
+        LEAD(days_from_due) OVER (ORDER BY created_at) AS next_days_from_due
+      FROM bill_payments
+      WHERE telefono = ${telefono}
+        AND status IN ('completed','success','completed_ok','confirmed')
+        AND days_from_due IS NOT NULL
+        AND created_at > NOW() - INTERVAL '6 months'
+    )
+    SELECT
+      COUNT(*) FILTER (WHERE days_from_due < 0)::int AS late_count,
+      COUNT(*) FILTER (WHERE days_from_due < 0 AND next_days_from_due >= 0)::int AS recovered_count
+    FROM ordered
+    WHERE days_from_due < 0
+  `);
+  const recR = recoveryRow.rows[0] as Record<string,unknown>;
+  const latePaymentCount   = Number(recR?.late_count ?? 0);
+  const recoveredCount     = Number(recR?.recovered_count ?? 0);
+  const lateRecoveryRatio  = latePaymentCount > 0 ? recoveredCount / latePaymentCount : NaN;
+
+  // 2i. Paula/WhatsApp response latency (NEW v4.2) — median minutes from an
+  // outbound nudge (paula_send_queue.sent_at) to the user's NEXT inbound
+  // reply (paula_inbound_log.received_at) within 24h, over the last 90 days.
+  const latencyRow = await db.execute(sql`
+    SELECT
+      PERCENTILE_CONT(0.5) WITHIN GROUP (
+        ORDER BY EXTRACT(EPOCH FROM (i.first_reply_at - q.sent_at)) / 60.0
+      ) AS median_minutes
+    FROM paula_send_queue q
+    CROSS JOIN LATERAL (
+      SELECT MIN(il.received_at) AS first_reply_at
+      FROM paula_inbound_log il
+      WHERE il.telefono = q.telefono
+        AND il.received_at > q.sent_at
+        AND il.received_at < q.sent_at + INTERVAL '24 hours'
+    ) i
+    WHERE q.telefono = ${telefono}
+      AND q.status = 'SENT'
+      AND q.sent_at IS NOT NULL
+      AND q.sent_at > NOW() - INTERVAL '90 days'
+      AND i.first_reply_at IS NOT NULL
+  `);
+  const paulaResponseLatencyMinutes = Number(
+    (latencyRow.rows[0] as Record<string,unknown>)?.median_minutes ?? NaN,
+  );
+
   // 4f/4g. Bancarization speed + funding channel mix (NEW v4.1)
   const bankingRow = await db.execute(sql`
     SELECT
@@ -754,6 +881,7 @@ async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot
     billerCount, kycVerified, kycTier, utilityRatio, intentClicks, hoursToFirst, deviceScore,
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
+    lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
   };
 }
 

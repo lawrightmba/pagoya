@@ -45,6 +45,9 @@ function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot
     oxxoLoadCount: 0,
     speiLoadCount: 0,
     cardLoadCount: 0,
+    lateRecoveryRatio: NaN,
+    latePaymentCount: 0,
+    paulaResponseLatencyMinutes: NaN,
     ...overrides,
   };
 }
@@ -126,10 +129,10 @@ describe("computePTI — high-confidence power user", () => {
   it("maxes out or near-maxes every dimension", () => {
     console.log("[power-user] breakdown:", JSON.stringify(breakdown, null, 2));
     expect(breakdown.payment_reliability.score).toBe(25); // streak min(13,8)=8 + day 4 + advance 8 + self 5
-    expect(breakdown.behavioral_consistency.score).toBe(20); // 3+3+3+2+3+2+4
+    expect(breakdown.behavioral_consistency.score).toBe(18); // session 2+routine 2+game 3+load_rhythm 2+paula 3+push 1+curiosity 3+recovery 2(no misses)+latency 0(no data)
     expect(breakdown.engagement_depth.score).toBe(25); // 6+10+4(capped)+2+3
-    expect(breakdown.cashflow_stability.score).toBe(25); // wallet 8 + load/spend 4 + volatility 3 + p2p 3 + age 2 + bancarization 3 + funding mix 2
-    expect(breakdown.total).toBe(95);
+    expect(breakdown.cashflow_stability.score).toBe(24); // wallet 6 + load/spend 3 + volatility 3 + p2p 3 + age 2 + bancarization 3 + funding mix 2 + buffer_retention 2 (ratio 800/3000=0.27)
+    expect(breakdown.total).toBe(92);
   });
 
   it("lands in the 'excelente' tier", () => {
@@ -342,11 +345,60 @@ describe("computePTI — dimension sub-score boundary cases", () => {
       pushOpens: 100, curiosityIndex: 1, billerCount: 100, kycVerified: true, kycTier: "full",
       utilityRatio: 1, intentClicks: 10, hoursToFirst: 1, deviceScore: 100, currentBalance: 999999,
       totalLoads: 999999, totalSpend: 1, amountCV: 0, p2pSendCount: 100, p2pRecipientCount: 100,
-      daysOld: 9999,
+      daysOld: 9999, lateRecoveryRatio: 1, latePaymentCount: 1, paulaResponseLatencyMinutes: 1,
     });
     const { breakdown } = computePTI(snapshot);
     console.log("[max-out] total:", breakdown.total);
     expect(breakdown.total).toBeLessThanOrEqual(100);
+  });
+
+  it("recovery_after_miss: no misses scores max, high recovery ratio scores max, low ratio scores partial, insufficient history gates to 0", () => {
+    const cases = [
+      { payCount: 2, latePaymentCount: 3, lateRecoveryRatio: 1,    expected: 0 }, // <3 payments — gated
+      { payCount: 5, latePaymentCount: 0, lateRecoveryRatio: NaN,  expected: 2 }, // never late — full marks
+      { payCount: 5, latePaymentCount: 4, lateRecoveryRatio: 1,    expected: 2 }, // recovers every time
+      { payCount: 5, latePaymentCount: 4, lateRecoveryRatio: 0.75, expected: 2 }, // exactly at boundary
+      { payCount: 5, latePaymentCount: 4, lateRecoveryRatio: 0.5,  expected: 1 }, // partial recovery
+      { payCount: 5, latePaymentCount: 4, lateRecoveryRatio: 0.25, expected: 0 }, // poor recovery
+    ];
+    for (const { payCount, latePaymentCount, lateRecoveryRatio, expected } of cases) {
+      const { breakdown } = computePTI(baseSnapshot({ payCount, latePaymentCount, lateRecoveryRatio }));
+      console.log(`[payCount=${payCount},late=${latePaymentCount},ratio=${lateRecoveryRatio}] recovery_after_miss score:`, breakdown.behavioral_consistency.components.recovery_after_miss.score);
+      expect(breakdown.behavioral_consistency.components.recovery_after_miss.score).toBe(expected);
+    }
+  });
+
+  it("paula_response_latency: fast replies score max, slow replies score partial, no data scores 0 (never penalized beyond missing points)", () => {
+    const cases = [
+      { paulaResponseLatencyMinutes: NaN, expected: 0 }, // no Paula channel / no replies — neutral, not penalized
+      { paulaResponseLatencyMinutes: 15,  expected: 2 }, // boundary
+      { paulaResponseLatencyMinutes: 5,   expected: 2 },
+      { paulaResponseLatencyMinutes: 60,  expected: 1 }, // boundary
+      { paulaResponseLatencyMinutes: 45,  expected: 1 },
+      { paulaResponseLatencyMinutes: 120, expected: 0 },
+    ];
+    for (const { paulaResponseLatencyMinutes, expected } of cases) {
+      const { breakdown } = computePTI(baseSnapshot({ paulaResponseLatencyMinutes }));
+      console.log(`[latency=${paulaResponseLatencyMinutes}min] paula_response_latency score:`, breakdown.behavioral_consistency.components.paula_response_latency.score);
+      expect(breakdown.behavioral_consistency.components.paula_response_latency.score).toBe(expected);
+    }
+  });
+
+  it("buffer_retention: rewards keeping a larger share of loaded funds as balance, independent of absolute balance size, gated on having load/balance data", () => {
+    const cases = [
+      { currentBalance: 0,   totalLoads: 0,    expected: 0 }, // brand new — no data
+      { currentBalance: 30,  totalLoads: 1000, expected: 0 }, // ratio 0.03 — drains almost everything
+      { currentBalance: 50,  totalLoads: 1000, expected: 1 }, // ratio 0.05 — exactly at the >=0.05 boundary
+      { currentBalance: 100, totalLoads: 1000, expected: 1 }, // ratio 0.10
+      { currentBalance: 200, totalLoads: 1000, expected: 2 }, // ratio 0.20
+      { currentBalance: 400, totalLoads: 1000, expected: 3 }, // ratio 0.40 — keeps a strong buffer
+      { currentBalance: 50,  totalLoads: 0,    expected: 3 }, // no loads in window but has a balance — treated as fully retained
+    ];
+    for (const { currentBalance, totalLoads, expected } of cases) {
+      const { breakdown } = computePTI(baseSnapshot({ currentBalance, totalLoads }));
+      console.log(`[balance=${currentBalance},loads=${totalLoads}] buffer_retention score:`, breakdown.cashflow_stability.components.buffer_retention.score);
+      expect(breakdown.cashflow_stability.components.buffer_retention.score).toBe(expected);
+    }
   });
 });
 

@@ -8,7 +8,7 @@ description: PagoYa Trust Index — dual-model system, DB schema gotchas, cron s
 | Model | File | Storage | Schedule | Purpose |
 |---|---|---|---|---|
 | PagoScore | `api-server/src/services/pagoScore.ts` | `credit_profiles.pago_score` | Nightly 2AM MX | B2B credit profile, Paula AI context, 4-dim (trajectory/financial/routine/social) |
-| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v4.1-behavioral** (Sprint 2, July 2026) |
+| PTI Widget | `api-server/src/services/pti.ts` | `users.pti_score + pti_breakdown (jsonb)` | Monthly 1st 3AM MX | User-facing scorecard, **v4.2-behavioral** (Sprint 4, July 2026) |
 
 Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 
@@ -20,14 +20,21 @@ Both registered in `ptiCron.ts → startPtiCron()` called from `app.ts`.
 - `user_mission_progress` (NOT `user_missions`): columns `telefono`, `mission_id`, `completed_at`, `rewarded_at`.
 - `pti_behavioral_signals` table: per-computation audit trail + B2B export + model training dataset. Has `computed_at` indexed for time-series queries.
 
-## PTI v4.1-behavioral formula (pti.ts — current)
+## PTI v4.2-behavioral formula (pti.ts — current)
 
 | Dimension | Max | Components |
 |---|---|---|
 | Payment Reliability (PR) | 30 | payment_streak(20) + payment_day_consistency(10) |
-| Behavioral Consistency (BC) | 20 | session_cadence(5) + game_engagement(5) + wallet_load_rhythm(3) + paula_interaction_depth(4) + push_engagement(3) |
+| Behavioral Consistency (BC) | 20 | session_cadence(2) + routine(2) + game_engagement(3) + wallet_load_rhythm(2) + paula_interaction_depth(3) + push_engagement(1) + curiosity(3) + **recovery_after_miss(2)** + **paula_response_latency(2)** |
 | Engagement Depth (ED) | 25 | biller_diversity(8) + kyc_verified(10) + spend_category_mix(4) + signup_utilization_speed(3) |
-| Cash-Flow Stability (CF) | 25 | wallet_balance(8) + load_spend_ratio(4) + payment_amount_volatility(3) + p2p_network_activity(3) + account_age(2) + **bancarization_speed(3)** + **funding_channel_mix(2)** |
+| Cash-Flow Stability (CF) | 25 | wallet_balance(6) + load_spend_ratio(3) + payment_amount_volatility(3) + p2p_network_activity(3) + account_age(2) + bancarization_speed(3) + funding_channel_mix(2) + **buffer_retention(3)** |
+
+### Sprint 4 additions (recovery_after_miss, paula_response_latency, buffer_retention) — July 2026
+- `recovery_after_miss` (BC, max 2): gated on ≥3 total bill payments. Uses `bill_payments.days_from_due` (negative = late); `lateRecoveryRatio` = fraction of late payments followed by an on-time/early payment (via `LEAD() OVER (ORDER BY created_at)` SQL window), `latePaymentCount` = raw count. Never having been late scores max (2); ratio ≥0.75→2, ≥0.5→1, else 0.
+- `paula_response_latency` (BC, max 2): median minutes between a `paula_send_queue` (status='SENT') message and the next `paula_inbound_log` reply within 24h, last 90 days, via SQL `PERCENTILE_CONT(0.5)` + LATERAL join. No data (NaN, e.g. no WhatsApp replies yet) scores 0 — neutral, never penalized beyond the missing points. ≤15min→2, ≤60min→1, else 0.
+- `buffer_retention` (CF, max 3): reuses existing `currentBalance`/`totalLoads` fields (zero new queries) — ratio of balance kept vs. total loaded rewards NOT draining the wallet to zero after each load. Gated to 0 if both are 0 (brand new user); if `totalLoads=0` but `currentBalance>0` (no loads in window but funds present), defaults to full marks (3) since nothing was drained. Otherwise ratio ≥0.30→3, ≥0.15→2, ≥0.05→1, else 0.
+- Rebalance to make room: BC's session_cadence/routine/push/curiosity each shaved by ~1pt (freed 4pts for the 2 new BC components, dimension total unchanged at 20); CF's wallet_balance 8→6 and load_spend_ratio 4→3 (freed 3pts for buffer_retention, dimension total unchanged at 25).
+- All downstream snapshot-literal builders (`licenseeApi.ts` REQUIRED_SNAPSHOT_DEFAULTS, `licenseeSandboxFixtures.ts`, and any test file with its own local `baseSnapshot`/fixture helper) must add explicit defaults (`lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN`) for the new fields — a snapshot object literal that simply omits these keys behaves differently at runtime (`undefined` fails strict `=== 0`/`isNaN` checks the same way an explicit default does only for the NaN-gated components, not the `=== 0` gated `recovery_after_miss` count check) than one with the keys explicitly defaulted, causing silent divergence between `computePTI()` called directly vs. through a sanitize/default-filling layer.
 
 ### Sprint 2 additions (bancarization_speed, funding_channel_mix)
 - `bancarization_speed`: days from `users.created_at` to `users.first_spei_load_at` (≤7d→3, ≤30d→2, ≤90d→1, never/NaN→0). Rewards fast graduation from cash (OXXO) to bank-rail (SPEI) funding.

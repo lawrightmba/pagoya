@@ -17,6 +17,7 @@ function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot
     utilityRatio: 0, intentClicks: 0, hoursToFirst: NaN, deviceScore: 0,
     currentBalance: 0, totalLoads: 0, totalSpend: 0, amountCV: 1, p2pSendCount: 0, p2pRecipientCount: 0,
     daysOld: 0, daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
+    lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
     ...overrides,
   };
 }

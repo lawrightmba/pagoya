@@ -18,6 +18,7 @@ export interface SandboxFixture {
 
 const zeroDataSnapshot: PTIDataSnapshot = {
   streakMonths: 0, payCount: 0, domStddev: 0, dominantDay: 0, advanceDays: 0, selfRatio: 0,
+  lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
   loginDays30: 0, hourStd: 0, scratchPlays: 0, spinPlays: 0, missionsDone: 0,
   loadCount30: 0, loadDayStd: 0, paulaInteractions: 0, confirmed2fa: 0, declined2fa: 0,
   pushOpens: 0, curiosityIndex: 0,
@@ -85,6 +86,7 @@ export const SANDBOX_FIXTURES: SandboxFixture[] = [
     description: "Long tenure, consistent payments, deep engagement across all dimensions.",
     snapshot: {
       streakMonths: 10, payCount: 24, domStddev: 1, dominantDay: 1, advanceDays: 8, selfRatio: 0.95,
+      lateRecoveryRatio: 1, latePaymentCount: 2, paulaResponseLatencyMinutes: 8,
       loginDays30: 26, hourStd: 1.5, scratchPlays: 30, spinPlays: 20, missionsDone: 12,
       loadCount30: 12, loadDayStd: 2, paulaInteractions: 20, confirmed2fa: 10, declined2fa: 0,
       pushOpens: 10, curiosityIndex: 0.25,

@@ -316,6 +316,7 @@ export interface SanitizedPayload {
 
 const REQUIRED_SNAPSHOT_DEFAULTS: PTIDataSnapshot = {
   streakMonths: 0, payCount: 0, domStddev: 0, dominantDay: 0, advanceDays: 0, selfRatio: 0,
+  lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
   loginDays30: 0, hourStd: 0, scratchPlays: 0, spinPlays: 0, missionsDone: 0,
   loadCount30: 0, loadDayStd: 0, paulaInteractions: 0, confirmed2fa: 0, declined2fa: 0,
   pushOpens: 0, curiosityIndex: 0,
