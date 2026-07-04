@@ -26,19 +26,32 @@ import {
   hashLicenseeApiKey,
   getSandboxFixture,
   SANDBOX_FIXTURES,
+  classifyAdminToken,
+  validateProductionIssuanceFields,
+  writeLicenseeIssuanceLog,
   type LicenseeKeyRecord,
+  type IssuingTokenType,
 } from "../services/licenseeApi.js";
 
 const router = Router();
 
-// ─── Admin auth guard (reuses the same convention as routes/index.ts) ──────
-const adminAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
-  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
-  if (!key || !expected || key !== expected) {
+// ─── Admin auth guard (Sprint 3b: sandbox/production issuance authority) ──
+// Every admin request is classified by WHICH configured token it presented
+// (never just "some valid admin key") so production-only actions can never
+// be authorized by a low-friction sandbox credential, even if it happens to
+// be well-formed.
+interface AdminAuthedRequest extends Request {
+  adminTokenType?: IssuingTokenType;
+}
+
+const adminAuth = (req: AdminAuthedRequest, res: Response, next: NextFunction): void => {
+  const presented = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
+  const tokenType = classifyAdminToken(presented);
+  if (!tokenType) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  req.adminTokenType = tokenType;
   next();
 };
 
@@ -194,21 +207,54 @@ router.get("/model-versions", async (_req: Request, res: Response): Promise<void
 });
 
 // ── POST /api/v1/admin/keys ──────────────────────────────────────────────
-// Provisions a new licensee key. Sandbox keys can be self-serve in the
-// future, but for now every key (sandbox or production) requires admin
-// auth to provision, since this is a brand-new product surface.
-router.post("/admin/keys", adminAuth, async (req: Request, res: Response): Promise<void> => {
-  const { licenseeName, pinnedModelVersion, sandboxMode, rateLimitRpm, rateLimitPerDay } = req.body as {
+// Provisions a new licensee key.
+//
+// Sprint 3b: sandbox issuance stays self-serve/low-friction — any valid
+// admin token (sandbox or production) works, no approval fields required.
+// Production issuance (sandboxMode=false) is different: it REQUIRES the
+// PRODUCTION_ADMIN_TOKEN specifically (a SANDBOX_ADMIN_TOKEN is rejected
+// even if otherwise well-formed) plus approvedBy + agreementReference, and
+// every key of either kind gets a row in licensee_key_issuance_log at the
+// moment of creation.
+router.post("/admin/keys", adminAuth, async (req: AdminAuthedRequest, res: Response): Promise<void> => {
+  const {
+    licenseeName,
+    pinnedModelVersion,
+    sandboxMode,
+    rateLimitRpm,
+    rateLimitPerDay,
+    approvedBy,
+    agreementReference,
+    approvalDate,
+  } = req.body as {
     licenseeName?: string;
     pinnedModelVersion?: string;
     sandboxMode?: boolean;
     rateLimitRpm?: number;
     rateLimitPerDay?: number;
+    approvedBy?: string;
+    agreementReference?: string;
+    approvalDate?: string;
   };
+
+  const isSandboxMode = sandboxMode ?? true;
 
   if (!licenseeName || !pinnedModelVersion) {
     res.status(400).json({ error: "licenseeName and pinnedModelVersion are required" });
     return;
+  }
+
+  if (!isSandboxMode) {
+    if (req.adminTokenType !== "production") {
+      res.status(403).json({ error: "production_admin_token_required", detail: "Issuing a production (non-sandbox) licensee key requires PRODUCTION_ADMIN_TOKEN." });
+      return;
+    }
+    try {
+      validateProductionIssuanceFields({ approvedBy, agreementReference, approvalDate });
+    } catch (err) {
+      res.status(400).json({ error: err instanceof Error ? err.message : "invalid_production_issuance_fields" });
+      return;
+    }
   }
 
   try {
@@ -224,13 +270,26 @@ router.post("/admin/keys", adminAuth, async (req: Request, res: Response): Promi
 
     const inserted = await db.execute(sql`
       INSERT INTO licensee_api_keys (licensee_name, api_key_hash, pinned_model_version, sandbox_mode, rate_limit_rpm, rate_limit_per_day)
-      VALUES (${licenseeName}, ${apiKeyHash}, ${pinnedModelVersion}, ${sandboxMode ?? true}, ${rateLimitRpm ?? 60}, ${rateLimitPerDay ?? 1000})
+      VALUES (${licenseeName}, ${apiKeyHash}, ${pinnedModelVersion}, ${isSandboxMode}, ${rateLimitRpm ?? 60}, ${rateLimitPerDay ?? 1000})
       RETURNING key_id
     `);
-    const keyId = (inserted.rows[0] as Record<string, unknown>).key_id;
+    const keyId = String((inserted.rows[0] as Record<string, unknown>).key_id);
+
+    // Issuance-time audit: one row per key ever created, sandbox or
+    // production, so the full issuance history is queryable in one place.
+    await writeLicenseeIssuanceLog({
+      keyId,
+      licenseeName,
+      sandboxMode: isSandboxMode,
+      approvedBy: isSandboxMode ? undefined : approvedBy,
+      agreementReference: isSandboxMode ? undefined : agreementReference,
+      approvalDate: isSandboxMode ? undefined : (approvalDate ?? new Date().toISOString()),
+      pinnedModelVersion,
+      issuingTokenType: req.adminTokenType!,
+    });
 
     // The raw key is returned exactly once, at creation time, and never persisted in plaintext.
-    res.status(201).json({ key_id: keyId, api_key: rawKey, pinned_model_version: pinnedModelVersion, sandbox_mode: sandboxMode ?? true });
+    res.status(201).json({ key_id: keyId, api_key: rawKey, pinned_model_version: pinnedModelVersion, sandbox_mode: isSandboxMode });
   } catch (err) {
     logger.error({ err }, "licenseeApi: POST /admin/keys failed");
     res.status(500).json({ error: "internal_error" });
@@ -238,16 +297,40 @@ router.post("/admin/keys", adminAuth, async (req: Request, res: Response): Promi
 });
 
 // ── POST /api/v1/admin/keys/:keyId/version ───────────────────────────────
-router.post("/admin/keys/:keyId/version", adminAuth, async (req: Request, res: Response): Promise<void> => {
+// Sprint 3b: bumping the pinned model version on a PRODUCTION key requires
+// PRODUCTION_ADMIN_TOKEN + approvedBy — this changes a live licensee's
+// credit model, which is just as consequential as issuing the key itself.
+// Sandbox key version-bumps are unaffected (any valid admin token, no
+// approvedBy requirement).
+router.post("/admin/keys/:keyId/version", adminAuth, async (req: AdminAuthedRequest, res: Response): Promise<void> => {
   const keyId = String(req.params.keyId);
-  const { newVersion, reason } = req.body as { newVersion?: string; reason?: string };
+  const { newVersion, reason, approvedBy } = req.body as { newVersion?: string; reason?: string; approvedBy?: string };
   if (!newVersion) {
     res.status(400).json({ error: "newVersion is required" });
     return;
   }
 
   try {
-    await bumpLicenseeVersion({ keyId, newVersion, actionedBy: "admin", reason });
+    const { db } = await import("@workspace/db");
+    const keyRow = await db.execute(sql`SELECT sandbox_mode FROM licensee_api_keys WHERE key_id = ${keyId} LIMIT 1`);
+    const keyRecord = keyRow.rows[0] as { sandbox_mode: boolean } | undefined;
+    if (!keyRecord) {
+      res.status(404).json({ error: "unknown_licensee_key" });
+      return;
+    }
+
+    if (!keyRecord.sandbox_mode) {
+      if (req.adminTokenType !== "production") {
+        res.status(403).json({ error: "production_admin_token_required", detail: "Bumping a production licensee key's pinned model version requires PRODUCTION_ADMIN_TOKEN." });
+        return;
+      }
+      if (!approvedBy || !approvedBy.trim()) {
+        res.status(400).json({ error: "approvedBy is required to bump a production licensee key's model version" });
+        return;
+      }
+    }
+
+    await bumpLicenseeVersion({ keyId, newVersion, actionedBy: approvedBy ?? "admin", reason });
     res.status(200).json({ ok: true, key_id: keyId, new_version: newVersion });
   } catch (err) {
     logger.error({ err, keyId }, "licenseeApi: POST /admin/keys/:keyId/version failed");

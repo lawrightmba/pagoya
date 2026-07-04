@@ -191,6 +191,89 @@ export async function bumpLicenseeVersion(params: {
   );
 }
 
+// ─── Sprint 3b — sandbox/production issuance authority separation ─────────
+
+export type IssuingTokenType = "sandbox" | "production";
+
+/**
+ * Validates that the boot-time SANDBOX_ADMIN_TOKEN / PRODUCTION_ADMIN_TOKEN
+ * separation has not collapsed. Pure function (no process.exit) so it is
+ * independently unit-testable; index.ts calls this same logic at boot and
+ * exits the process if it fails there.
+ */
+export function isCredentialSeparationValid(params: {
+  sandboxAdminToken: string | undefined;
+  productionAdminToken: string | undefined;
+}): boolean {
+  const { sandboxAdminToken, productionAdminToken } = params;
+  if (!sandboxAdminToken) return true; // nothing configured yet — not this check's concern
+  return !!productionAdminToken && productionAdminToken !== sandboxAdminToken;
+}
+
+/**
+ * Determines which admin token (if any) a request presented, without ever
+ * treating a SANDBOX_ADMIN_TOKEN-authenticated request as production-authed.
+ * Returns null if neither configured token matches.
+ */
+export function classifyAdminToken(
+  presentedToken: string | undefined,
+): IssuingTokenType | null {
+  if (!presentedToken) return null;
+  const productionToken = process.env.PRODUCTION_ADMIN_TOKEN;
+  const sandboxToken = process.env.SANDBOX_ADMIN_TOKEN ?? process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
+  if (productionToken && presentedToken === productionToken) return "production";
+  if (sandboxToken && presentedToken === sandboxToken) return "sandbox";
+  return null;
+}
+
+export interface ProductionIssuanceFields {
+  approvedBy?: string;
+  agreementReference?: string;
+  approvalDate?: string;
+}
+
+/**
+ * Enforces the attributable-issuance requirements for a NON-sandbox
+ * (production) licensee key: approvedBy and agreementReference are
+ * required and must be non-empty. Sandbox-mode requests never reach this
+ * function — sandbox issuance stays deliberately frictionless.
+ */
+export function validateProductionIssuanceFields(fields: ProductionIssuanceFields): void {
+  if (!fields.approvedBy || !fields.approvedBy.trim()) {
+    throw new Error("approvedBy is required to issue a production licensee key");
+  }
+  if (!fields.agreementReference || !fields.agreementReference.trim()) {
+    throw new Error("agreementReference is required to issue a production licensee key");
+  }
+}
+
+/**
+ * Writes one row per licensee key ever created — sandbox or production —
+ * so the full issuance history is queryable from a single table. This is
+ * distinct from licensee_api_audit_log (per-request usage) and answers
+ * "when and why did this key come to exist."
+ */
+export async function writeLicenseeIssuanceLog(params: {
+  keyId: string;
+  licenseeName: string;
+  sandboxMode: boolean;
+  approvedBy?: string;
+  agreementReference?: string;
+  approvalDate?: string;
+  pinnedModelVersion: string;
+  issuingTokenType: IssuingTokenType;
+}): Promise<void> {
+  const { db } = await import("@workspace/db");
+  await db.execute(sql`
+    INSERT INTO licensee_key_issuance_log
+      (key_id, licensee_name, sandbox_mode, approved_by, agreement_reference, approval_date, pinned_model_version, issuing_token_type)
+    VALUES
+      (${params.keyId}, ${params.licenseeName}, ${params.sandboxMode},
+       ${params.approvedBy ?? null}, ${params.agreementReference ?? null},
+       ${params.approvalDate ?? null}, ${params.pinnedModelVersion}, ${params.issuingTokenType})
+  `);
+}
+
 // ─── Rate limiting (daily, reuses B2B pattern) ─────────────────────────────
 
 export async function checkLicenseeDailyRateLimit(key: LicenseeKeyRecord): Promise<{ ok: boolean; used: number }> {

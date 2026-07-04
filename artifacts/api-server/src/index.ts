@@ -29,6 +29,23 @@ await assertProductionSafety().catch((err) => {
   process.exit(1);
 });
 
+// Sprint 3b: refuse to start if the sandbox/production licensee-issuance
+// credential separation has silently collapsed. If SANDBOX_ADMIN_TOKEN is
+// configured, PRODUCTION_ADMIN_TOKEN must also be configured AND must not
+// equal SANDBOX_ADMIN_TOKEN — otherwise a copy-paste config error could let
+// a low-friction sandbox credential silently authorize production licensee
+// key issuance.
+const sandboxAdminToken = process.env.SANDBOX_ADMIN_TOKEN;
+const productionAdminToken = process.env.PRODUCTION_ADMIN_TOKEN;
+if (sandboxAdminToken) {
+  if (!productionAdminToken || productionAdminToken === sandboxAdminToken) {
+    logger.error(
+      "[licenseeApi] boot-time check failed: PRODUCTION_ADMIN_TOKEN is unset or equals SANDBOX_ADMIN_TOKEN — refusing to start to prevent silent credential collapse",
+    );
+    process.exit(1);
+  }
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
