@@ -78,6 +78,48 @@ Findings (seed 0xC0FFEE, n=8000):
   a proxy-driven gap this large; it cannot alone achieve four-fifths
   compliance — would need base-model changes too.
 
+## Ablation study — which fields drive the gap — `ptiAblationStudy.ts`
+Third script in the line. Same generator + seed (0xC0FFEE) + size (8000) → the
+baseline reproduces the confirmed gap EXACTLY (four-fifths 0.045, Cohen's d 0.90,
+16.4pt mean gap), so deltas are trustworthy.
+**Run:** `pnpm --filter @workspace/api-server exec tsx src/scripts/ptiAblationStudy.ts`
+Method: for each of the 39 PTI input fields, overwrite every user's value with
+one population constant (numeric→mean over FINITE values; kycVerified→majority
+bool; kycTier→majority string), leave all other fields real, recompute the whole
+population through the real computePTI, remeasure four-fifths + Cohen's d. A
+constant field has zero between-user variance so it cannot create a between-bucket
+gap — that isolates each field's contribution. Rank by |d| reduction (the
+four-fifths ratio is proportionally unstable near 0.045; a secondary
+four-fifths ranking is printed as a labelled cross-check only). Finite-score
+robustness guard mirrors the harness's anomaly filtering (0 dropped here).
+Findings:
+- **Top drivers (by |d| drop): currentBalance (+0.08) ≈ kycVerified (+0.08) >
+  deviceScore (+0.05) > daysToFirstSpei (+0.04) > kycTier (+0.03).** ALL FIVE are
+  the generator's DIRECT `ses`-drawn proxies — no generator-artifact false
+  positives in the top 5. The noise-link fields (dominantDay, utilityRatio) sit
+  mid/low with ~0 effect, as expected — good sanity signal.
+- No single field closes much alone: the biggest (currentBalance/kycVerified)
+  each shave d by ~0.08 and close ~14–20% of the mean gap. The gap is
+  **distributed across many correlated SES proxies**, not concentrated in one
+  removable field.
+- **Combined top-3 (currentBalance+kycVerified+deviceScore) removed together:
+  d 0.90→0.65, four-fifths 0.045→0.020, 42.6% of the mean gap closed. Pattern =
+  roughly additive / very slightly compounding** (combined Δd 0.25 vs sum-of-
+  individual 0.21, ratio 1.18). So these three carry largely INDEPENDENT SES
+  signal — but even removing all three leaves d=0.65 (still a large gap) because
+  the remaining ~7 direct proxies (rails mix, totalLoads, kycTier, daysToFirstSpei)
+  keep leaking. Confirms the earlier clamp-test conclusion: no small set of field
+  removals gets to four-fifths compliance; it's a structural model property.
+- **Counter-intuitive inverse finding: neutralizing payCount (Δd −0.06) or
+  totalSpend (Δd −0.07) WIDENS the gap.** These fields were partially
+  *compensating* — they give lower-income users with decent payment volume some
+  score back; flattening them removes that offset. Do NOT naively "remove the
+  proxies" — some correlated fields are gap-narrowing, and stripping them
+  backfires. This is the key nuance for any real de-biasing work.
+- four-fifths-after is very noisy (kycVerified & payCount push it to 0.000 by
+  zeroing the lowest bucket's already-tiny pass rate) — always read d, not
+  four-fifths, when ranking near this baseline.
+
 ## How to read the disparate-impact result honestly
 Grouping scores by the NEVER-scored income/colonia metadata shows strong proxy
 leakage (four-fifths ≈ 0.045, Cohen's d ≈ 0.9; persists on normal-only segment).

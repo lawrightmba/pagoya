@@ -1,0 +1,56 @@
+Follow-up to the PTI stress-test harness (syntheticPopulation.ts, 
+ptiStressTest.ts): the disparate-impact analysis found a real, structurally 
+significant income-correlated gap (four-fifths ratio ~0.045, Cohen's d ~0.9) 
+that persists even under the best-case fair-lending adjustment. We now need 
+to find WHICH specific inputs are driving that gap, not just confirm it 
+exists.
+
+TASK: Build an ablation study using the same 8,000-profile synthetic 
+population and the same seed (reuse PTI_STRESS_SEED for reproducibility — 
+this must be the identical population as the last two runs, not a new 
+random draw).
+
+1. Baseline: re-confirm the four-fifths ratio and Cohen's d on the full, 
+   unmodified population (should match the last run's ~0.045 / ~0.9 — 
+   confirm before proceeding, so we know the ablation is working from the 
+   same starting point).
+
+2. For each of PTI's 39 input fields (or grouped by dimension first if 
+   testing all 39 individually is impractical — your call on the most 
+   efficient structure, but individual-field results are the actual goal), 
+   run the population through computePTI with that ONE field neutralized — 
+   replaced with a constant/population-mean value so it can no longer 
+   vary or carry signal — while leaving all other fields untouched at 
+   their real synthetic values.
+
+3. After each single-field neutralization, recompute the four-fifths ratio 
+   and Cohen's d for that modified population. Record the delta from 
+   baseline for every field.
+
+4. Rank all 39 fields by how much neutralizing them shrinks the disparate-
+   impact gap. The fields at the top of this ranking are your strongest 
+   candidate proxy variables — the ones most responsible for the income-
+   correlated gap, even though income itself is never a scoring input.
+
+5. Sanity-check the top 3-5 findings qualitatively: does it make intuitive 
+   sense why that field would correlate with the generator's SES/income 
+   assumptions (e.g., an engagement-frequency field plausibly tracks free 
+   time/schedule flexibility, which correlates with income)? Flag if any 
+   top result looks like a generator artifact rather than a plausible 
+   real-world mechanism — that distinction matters for how seriously to 
+   take each finding.
+
+6. Separately, test combined removal of the top 3 ranked fields together 
+   (not just individually) — proxy effects can be redundant (removing one 
+   doesn't help because a correlated field carries the same signal) or 
+   compounding (removing the top 3 together closes far more of the gap 
+   than the sum of removing each alone). Report which pattern you see.
+
+Output a clear ranked table: field name, dimension it belongs to, 
+four-fifths ratio after removal, Cohen's d after removal, and a one-line 
+qualitative note on plausibility.
+
+Same constraints as before: dev/local only, no DB writes, no production 
+contact, reuse the existing harness code where possible rather than 
+rebuilding from scratch. Save findings to the same memory topic file as 
+the last two runs for continuity.
