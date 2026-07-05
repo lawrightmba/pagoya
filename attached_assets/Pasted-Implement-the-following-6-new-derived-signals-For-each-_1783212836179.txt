@@ -1,0 +1,50 @@
+Implement the following 6 new derived signals. For each, first verify data 
+quality (check for null rates / row counts) before implementing — if a signal 
+turns out to be based on mostly-null or near-empty data, STOP and report that 
+instead of shipping a broken metric. Do not touch the live scoring engine or 
+change PTI score outputs — these are new derived fields only, to be added 
+alongside existing ones for review before they're wired into any score.
+
+1. PAYMENT METHOD SWITCHING FREQUENCY
+   Using wallet_transactions.payment_source, compute how many distinct 
+   payment rails (oxxo/card/spei) each user has used, and how often they 
+   switch between rails over their last 90 days of loads.
+
+2. CONDITIONAL PAULA RESPONSE LATENCY
+   Using paula_trigger_log.trigger_type joined to the existing 
+   paulaResponseLatencyMinutes logic, compute response latency SPECIFICALLY 
+   for trigger_type IN ('stalled_14d', 'readiness_hard', 'winback_30d') 
+   (i.e., risk/disengagement-related triggers) as a separate metric from 
+   general average latency.
+
+3. INFLOW COEFFICIENT OF VARIATION
+   Mirror the existing amountCV logic (currently computed on bill payment 
+   amounts) onto wallet load amounts instead, using wallet_transactions 
+   filtered to load-type transactions with payment_source populated.
+
+4. KYC STALENESS
+   Compute days elapsed since kyc_verified_at for each verified user 
+   (now() - kyc_verified_at). Simple derived field, no new tables needed.
+
+5. BILLER CATEGORY DIVERSITY
+   First: check what % of bill_payments.categoria rows are non-null/non-empty 
+   in production. If populated (say >80% of rows), compute distinct category 
+   count per user as a new diversity metric. If mostly null, report the null 
+   rate and do NOT implement — flag it back to us instead.
+
+6. FAILED PAYMENT SIGNAL (PARTIAL COVERAGE)
+   Create a query/view that unions failed states from bill_payments 
+   (status IN ('fallido','failed')) and wallet_transactions (status = 'failed'), 
+   producing a per-user failed-attempt count over the last 90 days. 
+   Explicitly note in your report that this excludes raw stp_webhook_log 
+   failures and bill_payment_audit (which is unpopulated) — this is a 
+   known partial-coverage metric, not full attempt-level failure tracking.
+
+For each of the 6 items, report back:
+- Whether it was implemented or skipped (and why, if skipped)
+- The actual query/logic used
+- A sample output (a few real rows) so we can sanity-check the numbers
+- Where the new field/view lives in the codebase
+
+Do not wire any of these into the live PTI score calculation. This is 
+additive instrumentation only, pending review.

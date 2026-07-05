@@ -28,3 +28,4 @@
 - [PTI branding + fields 72-88](pti-fields-72-88.md) — "Predictive Trust Index" is the UI/narrative name (schema stays pti_*); 17 new fields shipped July 2026; field 82 internal-only; loan_outcomes table for partner calibration; safeSetTimeout fix for ptiCron monthly overflow
 - [Paula / DB codebase conventions](paula-db-conventions.md) — exact column names, template vars, dispatch pattern; paste CONVENTIONS block into every Paula/DB agent prompt to eliminate spec-vs-reality deviations
 - [enrichmentCron schema bugs](enrichment-cron-bugs.md) — 4 schema mismatches fixed July 2026; wallets.user_id=telefono (text); paula_inbound_log.message_body not body; users.referral_code/signup_ref_code not ref_code/referred_by
+- [Derived signals instrumentation](derived-signals-instrumentation.md) — additive-only PTI signals live in standalone service, not wired into scoring; drizzle sql tag mishandles array params for ANY(); data mostly near-empty as of July 2026
