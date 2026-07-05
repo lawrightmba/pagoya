@@ -1,0 +1,59 @@
+STOP — before any further signal or feature work, I need you to trace a 
+critical issue: bill_payments has 0 rows in what was reported as "production." 
+This table backs a large portion of the live PTI score (Payment Reliability, 
+Engagement Depth, Cash-Flow Stability), so if it's genuinely empty in a real 
+production environment, that's a broken write path affecting the score right 
+now for real users.
+
+This is a read-only investigation. Do not modify any code, schema, or write 
+any fixes yet — just report findings.
+
+1. CONFIRM ENVIRONMENT IDENTITY
+   - Which database URL/connection string was queried when you reported 
+     "0 rows in production" for bill_payments, kyc_verified_at, and 
+     paula_inbound_log?
+   - Is this genuinely the production database that real PagoYa users 
+     transact against (i.e., the one bound to the live pagoyamx.com app), 
+     or could this be a staging/dev database that's mislabeled?
+   - Show me the actual env var or config value used to determine which 
+     DB was queried, and confirm it matches what the live deployed app uses.
+
+2. TRACE THE BILL PAYMENT WRITE PATH
+   - Find the actual code path that executes when a user completes a bill 
+     payment in the live app (Taecel/SIPREL integration → payment confirmation).
+   - At the point of a successful payment, what table(s) does the code 
+     actually write to? Is it bill_payments, or does it write somewhere 
+     else (e.g., directly to wallet_transactions, or a different table 
+     entirely)?
+   - If it does write to bill_payments, check: has ANY row ever been 
+     inserted into that table, ever (not just recently)? Or has the 
+     table been empty since it was created?
+   - If there's a mismatch (code writes to Table X, but PTI reads from 
+     bill_payments), identify exactly where the disconnect is.
+
+3. TRACE THE KYC WRITE PATH
+   - Same exercise for kyc_verified_at: find the code that runs when a 
+     user's KYC is approved. Does it actually set kyc_verified_at on the 
+     users table? Has it ever fired successfully in production?
+
+4. TRACE THE PAULA INBOUND WRITE PATH
+   - Find the Twilio WhatsApp webhook handler for inbound messages. 
+     Does it write to paula_inbound_log? Has it ever fired? If inbound 
+     messages are being received by Twilio but not logged, identify 
+     where in the handler the write is missing or failing.
+
+5. SANITY CHECK AGAINST REAL ACTIVITY
+   - Independent of the three tables above, find ANY evidence of real 
+     user activity in production — e.g., row counts in the users table, 
+     wallet_transactions, or any table that clearly has live data. 
+     I need to know if this is "no users yet" (pre-launch/soft-launch 
+     state) or "users exist and are transacting, but specific tables 
+     aren't capturing it" (a bug).
+
+Report back with:
+- Confirmed environment identity (prod vs. not)
+- For each of the 3 write paths: WORKING / BROKEN / NEVER FIRED, with 
+  the specific file and line reference
+- Real user/activity counts from step 5, so we know which scenario we're in
+- If you find a genuine broken write path, describe the fix needed but 
+  do NOT implement it yet — flag it back to us first given the severity
