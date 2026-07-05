@@ -1,0 +1,47 @@
+Follow-up to the PTI stress-test harness: the fair-lending adjustment clamp 
+(±5/±2) was not actually validated in the last run — the adjustment mapping 
+used was all-zero placeholders, so "no breaches" was trivially true, not a 
+real pass. Need a genuine re-test.
+
+TASK: Re-run the fair-lending disparate-impact adjustment test using a 
+realistic, non-zero adjustment mapping — not placeholders — so the ±5/±2 
+clamp is actually exercised under load.
+
+1. Find the real adjustment mapping logic (or its intended design/spec if 
+   not yet implemented) for computeFairLendingAdjustment — what would 
+   actually determine a non-zero adjustment value for a given user (e.g., 
+   group membership inferred from the disparate-impact analysis, magnitude 
+   scaled to observed gap, etc.)? If no real mapping logic exists yet 
+   beyond the placeholder, don't invent production logic — instead, build 
+   a TEST-ONLY synthetic mapping for this stress test that assigns 
+   varied, realistic non-zero adjustment values (including deliberately 
+   extreme ones designed to try to exceed ±5/±2) across the same 8,000 
+   synthetic profiles from the last run.
+
+2. Re-run the same synthetic population through computeFairLendingAdjustment 
+   with this non-trivial mapping and confirm:
+   - The ±5/±2 caps hold under every case, including the deliberately 
+     extreme ones designed to try to breach them.
+   - Confirm what actually happens at the boundary — does it clamp cleanly 
+     to exactly ±5/±2, or is there any off-by-one/rounding issue right at 
+     the edge?
+   - Confirm the adjustment layer still cannot activate in production 
+     without a passing disparate-impact report (re-verify this gate is 
+     still structurally enforced, unaffected by this test).
+
+3. Also using this same non-trivial run: re-check whether applying the 
+   fair-lending adjustment actually narrows the disparate-impact gap found 
+   in the last run (four-fifths ratio ~0.045, Cohen's d ~0.9) — even 
+   partially — or whether the adjustment as designed doesn't meaningfully 
+   address the specific type of gap that was found. This tells us whether 
+   the adjustment layer, if it were ever activated for real, would even 
+   solve the problem it's meant to solve.
+
+Report back with: whether real adjustment-mapping logic already exists 
+or had to be test-only synthesized (be explicit about which), clamp 
+behavior at the boundary, confirmation the production activation gate 
+is untouched, and whether the adjustment meaningfully narrows the gap 
+found in the last run or not.
+
+This is dev/local only — same constraints as before, no DB writes, no 
+production contact.
