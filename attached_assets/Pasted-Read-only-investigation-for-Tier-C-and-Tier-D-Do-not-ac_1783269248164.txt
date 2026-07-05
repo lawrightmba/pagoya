@@ -1,0 +1,52 @@
+Read-only investigation for Tier C and Tier D. Do not activate any templates 
+or modify code yet.
+
+TIER C — Reply-parsing verification (address_tenure, employment_profile, 
+remittance_profile)
+
+These three templates send a numbered question (e.g. "Responde 1, 2 o 3") 
+expecting a short numeric reply from the user.
+
+1. Find the inbound WhatsApp message handler (whatsapp-agent.ts or 
+   equivalent) and confirm: does it currently detect when an inbound 
+   message is a reply to one of these three specific outbound trigger 
+   types (address_tenure/employment_profile/remittance_profile), or does 
+   it only handle general conversational intent (payment/help/confirm/deny/
+   etc.) with no awareness of what question was just asked?
+2. If a user replies "2" right now, what actually happens? Does anything 
+   parse that as an answer to a pending profile question and write it 
+   somewhere (e.g. a users column, an enrichment table), or does it fall 
+   through to general intent parsing and get ignored/misclassified?
+3. Confirm whether any DB column or table exists to actually store the 
+   answers to these three questions even if parsing worked (e.g. does 
+   users have an address_tenure_response column, or does nothing exist 
+   downstream to receive the data)?
+
+Verdict needed: WORKING (parses and stores correctly), PARTIAL (parses 
+but doesn't store, or vice versa), or NOT IMPLEMENTED (sends the question, 
+completely ignores any reply).
+
+TIER D — Follow-up conversation path verification (late_payment_1, 
+pattern_late_2x, pti_drop_7d)
+
+These three templates ask the user something implying a follow-up 
+conversation, e.g. "¿Quieres que te avise unos días antes?" or offers to 
+help adjust reminders.
+
+1. For each of these three, confirm: is there actual code that handles 
+   a "yes" or "no" reply to that specific offer, or does the message 
+   just ask the question with nothing listening for the answer?
+2. If a user says "sí, avísame," does anything change in their reminder/
+   notification settings, or does the message just generate a reply with 
+   no functional follow-through?
+
+Verdict needed: same three-way classification as Tier C.
+
+TIER D CONTENT/TONE CHECK
+
+3. Pull the full verbatim content of all three Tier D templates 
+   (late_payment_1, pattern_late_2x, pti_drop_7d) so they can be reviewed 
+   for tone before activation — these are the first negative-signal 
+   messages in the system and haven't been read together as a set yet.
+
+Report findings only. Do not activate anything, do not modify code.
