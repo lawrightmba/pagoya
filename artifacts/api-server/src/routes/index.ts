@@ -309,6 +309,24 @@ router.post("/admin/backfill-payment-counters", async (_req: Request, res: Respo
   }
 });
 
+// POST /api/admin/activate-tier-b-modules — ONE-OFF: activates the 5 Tier B
+// module_unlock_1..5 paula_messages templates in production. Idempotent —
+// safe to call more than once (UPDATE only touches rows currently active=false).
+router.post("/admin/activate-tier-b-modules", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(drizzleSql`
+      UPDATE paula_messages
+      SET active = true
+      WHERE trigger_type IN ('module_unlock_1', 'module_unlock_2', 'module_unlock_3', 'module_unlock_4', 'module_unlock_5')
+      RETURNING trigger_type, active;
+    `);
+    res.json({ ok: true, updated: rows });
+  } catch (err) {
+    logger.error({ err }, "admin/activate-tier-b-modules: failed");
+    res.status(500).json({ error: "Tier B activation failed — check server logs." });
+  }
+});
+
 // POST /api/admin/seed-paula-messages-step3 — ONE-OFF: Step 3 of the paula_messages
 // production data-gap fix. Inserts the 23 dev-export templates, excluding
 // readiness_hard_step2, all forced to active=false. Idempotent via
