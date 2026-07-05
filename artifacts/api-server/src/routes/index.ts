@@ -309,30 +309,6 @@ router.post("/admin/backfill-payment-counters", async (_req: Request, res: Respo
   }
 });
 
-// POST /api/admin/activate-tier-d-copy-revision — ONE-OFF: writes the approved
-// revised Spanish copy for late_payment_1 and pattern_late_2x (removing the
-// unfulfillable "adjust reminder" offer, keeping non-judgmental tone) and
-// activates both. Idempotent — safe to call more than once.
-router.post("/admin/activate-tier-d-copy-revision", async (_req: Request, res: Response) => {
-  try {
-    const rows = await db.execute(drizzleSql`
-      UPDATE paula_messages
-      SET
-        template_es = CASE trigger_type
-          WHEN 'late_payment_1' THEN 'Hola {{nombre}}. Tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. Solo quería que lo supieras. Aquí sigo, acompañándote en cada pago. 💪'
-          WHEN 'pattern_late_2x' THEN '{{nombre}}, noto un patrón: dos pagos tardíos en 30 días. No es un juicio — es una señal digna de atención antes de que se vuelva costumbre. Sigo aquí, acompañándote en tus próximos pagos.'
-        END,
-        active = true
-      WHERE trigger_type IN ('late_payment_1', 'pattern_late_2x')
-      RETURNING trigger_type, active, template_es;
-    `);
-    res.json({ ok: true, updated: rows });
-  } catch (err) {
-    logger.error({ err }, "admin/activate-tier-d-copy-revision: failed");
-    res.status(500).json({ error: "Tier D copy revision failed — check server logs." });
-  }
-});
-
 // POST /api/admin/seed-paula-messages-step3 — ONE-OFF: Step 3 of the paula_messages
 // production data-gap fix. Inserts the 23 dev-export templates, excluding
 // readiness_hard_step2, all forced to active=false. Idempotent via
