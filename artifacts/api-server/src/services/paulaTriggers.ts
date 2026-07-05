@@ -310,14 +310,11 @@ export async function evaluateTriggersForUser(
   // EDUCATIONAL TRIGGERS (PTI milestone-gated)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Module 1 unlock: PTI < 30, fires after first payment
-  // "Welcome to your credit journey" — frames everything that follows
-  // cooldown_days = 9999, fires exactly once per user lifetime
-  if (
-    totalPaid >= 1 &&
-    ptiScore < 30 &&
-    !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_1, templates))
-  ) {
+  // ── Module 1 fire helper (incl. deferred follow-ups) ──────────────────────
+  // Extracted so the catch-up path below (fired when a user's PTI has already
+  // passed module 1's zone without it ever going out) triggers the exact same
+  // enrichment follow-ups as the normal path.
+  async function fireModule1(): Promise<void> {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
     fired++;
     // ── Three deferred follow-ups queued from Module 1 ─────────────────────
@@ -366,9 +363,9 @@ export async function evaluateTriggersForUser(
     }
   }
 
-  // Module 2 unlock: PTI 30–49
-  if (ptiScore >= 30 && ptiScore < 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_2, ctx, templates);
+  // ── Module 2/3 shared fire helper (incl. income-collection follow-up) ─────
+  async function fireModule2Or3(trigger: typeof TRIGGER.MODULE_UNLOCK_2 | typeof TRIGGER.MODULE_UNLOCK_3): Promise<void> {
+    await fireTrigger(db, telefono, trigger, ctx, templates);
     fired++;
     // Income collection follow-up — standalone approach, fires once (NULL guard at send + parse)
     // whatsapp-agent.ts intercepts the numeric reply and writes users.declared_income_bucket
@@ -385,34 +382,68 @@ export async function evaluateTriggersForUser(
     }
   }
 
-  // Module 3 unlock: PTI 50–64
-  // Also check income_bucket here to catch users who skipped Module 2 follow-up
-  if (ptiScore >= 50 && ptiScore < 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_3, ctx, templates);
-    fired++;
-    if (ctx.declared_income_bucket == null) {
-      const logRow = await db.execute(sql`
-        INSERT INTO paula_trigger_log
-          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES
-          (${telefono}, 'income_collection', '{}'::jsonb, ${INCOME_BUCKET_MSG}, FALSE, NOW())
-        RETURNING id
-      `).catch(() => ({ rows: [{ id: 0 }] }));
-      const incLogId = Number((logRow.rows[0] as Record<string,unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId).catch(() => {});
+  // Module 1 unlock: PTI < 30, fires after first payment
+  // "Welcome to your credit journey" — frames everything that follows
+  // cooldown_days = 9999, fires exactly once per user lifetime
+  // No prerequisite — this is the start of the sequence.
+  const module1Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_1, templates);
+  if (totalPaid >= 1 && ptiScore < 30 && !module1Fired) {
+    await fireModule1();
+  }
+
+  // Module 2 unlock: PTI >= 30. Requires module_unlock_1 to have already fired —
+  // sequential gate so users can't receive module 2's content (which assumes
+  // module 1 was read) before module 1 itself. If module 1 hasn't fired yet
+  // (e.g. the user's very first scored PTI was already >= 30, so module 1's own
+  // "< 30" condition can never be true again), we queue module 1 as a catch-up
+  // instead of firing module 2 this cycle. Module 2 will fire on a later cycle
+  // once module 1 has gone out and the prerequisite check below passes.
+  if (ptiScore >= 30 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
+    if (!module1Fired) {
+      await fireModule1();
+    } else if (ptiScore < 50) {
+      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
     }
+    // else: ptiScore >= 50 already past module 2's own zone — module 3's
+    // block below will catch module 2 up (its prerequisite) if still unfired.
   }
 
-  // Module 4 unlock: PTI 65–79
-  if (ptiScore >= 65 && ptiScore < 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
-    fired++;
+  // Module 3 unlock: PTI >= 50. Requires module_unlock_2 to have already fired —
+  // same sequential gate/catch-up pattern as module 2 above.
+  if (ptiScore >= 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
+    const module2Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates);
+    if (!module2Fired) {
+      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
+    } else if (ptiScore < 65) {
+      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+    }
+    // else: ptiScore >= 65 already past module 3's own zone — module 4's
+    // block below will catch module 3 up (its prerequisite) if still unfired.
   }
 
-  // Module 5 unlock: PTI 80+
+  // Module 4 unlock: PTI >= 65. Requires module_unlock_3 to have already fired.
+  if (ptiScore >= 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates))) {
+    const module3Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates);
+    if (!module3Fired) {
+      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+    } else if (ptiScore < 80) {
+      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
+      fired++;
+    }
+    // else: ptiScore >= 80 already past module 4's own zone — module 5's
+    // block below will catch module 4 up (its prerequisite) if still unfired.
+  }
+
+  // Module 5 unlock: PTI >= 80. Requires module_unlock_4 to have already fired.
   if (ptiScore >= 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_5, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
-    fired++;
+    const module4Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates);
+    if (!module4Fired) {
+      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
+      fired++;
+    } else {
+      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
+      fired++;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
