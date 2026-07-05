@@ -309,6 +309,24 @@ router.post("/admin/backfill-payment-counters", async (_req: Request, res: Respo
   }
 });
 
+// POST /api/admin/activate-pti-drop-7d — ONE-OFF: activates the pti_drop_7d
+// paula_messages template in production. Idempotent — safe to call more than
+// once (UPDATE only touches the row if currently active=false).
+router.post("/admin/activate-pti-drop-7d", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(drizzleSql`
+      UPDATE paula_messages
+      SET active = true
+      WHERE trigger_type = 'pti_drop_7d'
+      RETURNING trigger_type, active;
+    `);
+    res.json({ ok: true, updated: rows });
+  } catch (err) {
+    logger.error({ err }, "admin/activate-pti-drop-7d: failed");
+    res.status(500).json({ error: "pti_drop_7d activation failed — check server logs." });
+  }
+});
+
 // POST /api/admin/seed-paula-messages-step3 — ONE-OFF: Step 3 of the paula_messages
 // production data-gap fix. Inserts the 23 dev-export templates, excluding
 // readiness_hard_step2, all forced to active=false. Idempotent via
