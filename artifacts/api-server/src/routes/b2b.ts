@@ -30,7 +30,6 @@ const router = Router();
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TELEFONO_HASH_SALT = "pagoya2026";
 const K_ANON_MIN = 5;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -39,8 +38,25 @@ function hashApiKey(rawKey: string): string {
   return crypto.createHash("sha256").update(rawKey).digest("hex");
 }
 
+// Telefono hashing uses HMAC-SHA256 keyed by TELEFONO_HASH_SECRET (env-only,
+// never baked into code or DDL). Replaces the old hardcoded 'pagoya2026' salt.
+function getTelefonoHashSecret(): string {
+  const secret = process.env.TELEFONO_HASH_SECRET;
+  if (!secret) {
+    throw new Error("TELEFONO_HASH_SECRET environment variable is required but not set.");
+  }
+  return secret;
+}
+
 function hashTelefono(telefono: string): string {
-  return crypto.createHash("sha256").update(telefono + TELEFONO_HASH_SALT).digest("hex");
+  return crypto.createHmac("sha256", getTelefonoHashSecret()).update(telefono).digest("hex");
+}
+
+// SQL fragment computing the same HMAC hash inside a query, for matching a
+// raw telefono column (e.g. "u.telefono") against a hashed_id path param.
+// columnRef must be a fixed, code-controlled identifier — never user input.
+function hmacSqlFor(columnRef: string) {
+  return sql`encode(hmac(${sql.raw(columnRef)}, ${getTelefonoHashSecret()}, 'sha256'), 'hex')`;
 }
 
 interface B2BPartner {
@@ -120,6 +136,14 @@ async function writeAuditLog(params: {
   response_ms: number;
   status_code: number;
 }): Promise<void> {
+  // NOTE: a plain JS array bound via `${arr}::text[]` does NOT serialize as a
+  // Postgres array literal here — it spreads into multiple placeholders and
+  // fails with "malformed array literal". Build an explicit ARRAY[...] instead.
+  const hashedIdsArraySql =
+    params.hashed_user_ids.length > 0
+      ? sql`ARRAY[${sql.join(params.hashed_user_ids.map(id => sql`${id}`), sql`, `)}]::text[]`
+      : sql`ARRAY[]::text[]`;
+
   await db.execute(sql`
     INSERT INTO b2b_audit_log
       (partner_name, api_key_hash, endpoint, http_method, query_params,
@@ -132,13 +156,13 @@ async function writeAuditLog(params: {
       ${params.method},
       ${JSON.stringify(params.query_params)}::jsonb,
       ${params.records_returned},
-      ${params.hashed_user_ids}::text[],
+      ${hashedIdsArraySql},
       ${params.purpose_code},
       ${params.ip_address},
       ${params.response_ms},
       ${params.status_code}
     )
-  `).catch(err => logger.error({ err }, "b2b: audit log write failed"));
+  `).catch(err => logger.error({ err, endpoint: params.endpoint }, "b2b: audit log write failed"));
 }
 
 // ── Per-key daily rate limiter ────────────────────────────────────────────────
@@ -267,22 +291,24 @@ router.get("/user/:hashed_id", async (req: Request, res: Response) => {
   try {
     const rows = await db.execute(sql`
       SELECT
-        hashed_user_id, colonia,
-        pti_score, pti_score_band,
-        pr_score, bc_score, ed_score, cf_score,
-        model_version,
-        TO_CHAR(score_month, 'YYYY-MM') AS score_month,
-        pti_b2b_score, pti_trajectory,
-        avg_monthly_load_amount, load_amount_stddev, income_regularity_score,
-        dominant_payday_window, payday_consistency,
-        monthly_bill_obligations, wallet_load_to_bill_ratio, essential_bill_ratio,
-        platform_tenure_days, active_months, longest_gap_days
-      FROM pti_export_safe
-      WHERE hashed_user_id = ${hashed_id}
+        p.colonia,
+        p.pti_score, p.pti_score_band,
+        p.pr_score, p.bc_score, p.ed_score, p.cf_score,
+        p.model_version,
+        TO_CHAR(p.score_month, 'YYYY-MM') AS score_month,
+        p.pti_b2b_score, p.pti_trajectory,
+        p.avg_monthly_load_amount, p.load_amount_stddev, p.income_regularity_score,
+        p.dominant_payday_window, p.payday_consistency,
+        p.monthly_bill_obligations, p.wallet_load_to_bill_ratio, p.essential_bill_ratio,
+        p.platform_tenure_days, p.active_months, p.longest_gap_days
+      FROM users u
+      JOIN pti_export_safe p ON p.user_id = u.id
+      WHERE ${hmacSqlFor("u.telefono")} = ${hashed_id}
       LIMIT 1
     `);
 
-    const user = rows.rows[0] as Record<string, unknown> | undefined;
+    const userRow = rows.rows[0] as Record<string, unknown> | undefined;
+    const user = userRow ? { hashed_user_id: hashed_id, ...userRow } : undefined;
     const ms = Date.now() - t0;
 
     if (!user) {
@@ -522,7 +548,7 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
         ON ra.telefono = u.telefono AND ra.gate_status = 'READY'
       LEFT JOIN paula_pending_handoffs pph
         ON pph.telefono = u.telefono AND pph.status = 'consented'
-      WHERE encode(sha256((u.telefono || 'pagoya2026')::bytea), 'hex') = ${hashed_id}
+      WHERE ${hmacSqlFor("u.telefono")} = ${hashed_id}
       ORDER BY ra.created_at DESC
       LIMIT 1
     `);
@@ -577,17 +603,18 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
     // ── 2. Load PTI trajectory + core signals ────────────────────────────────
     const ptiRow = await db.execute(sql`
       SELECT
-        hashed_user_id, colonia,
-        pti_score, pti_score_band, pti_b2b_score, pti_trajectory,
-        pr_score, bc_score, ed_score, cf_score,
-        model_version,
-        TO_CHAR(score_month, 'YYYY-MM') AS score_month,
-        avg_monthly_load_amount, load_amount_stddev, income_regularity_score,
-        dominant_payday_window, payday_consistency,
-        monthly_bill_obligations, wallet_load_to_bill_ratio, essential_bill_ratio,
-        platform_tenure_days, active_months, longest_gap_days
-      FROM pti_export_safe
-      WHERE hashed_user_id = ${hashed_id}
+        p.colonia,
+        p.pti_score, p.pti_score_band, p.pti_b2b_score, p.pti_trajectory,
+        p.pr_score, p.bc_score, p.ed_score, p.cf_score,
+        p.model_version,
+        TO_CHAR(p.score_month, 'YYYY-MM') AS score_month,
+        p.avg_monthly_load_amount, p.load_amount_stddev, p.income_regularity_score,
+        p.dominant_payday_window, p.payday_consistency,
+        p.monthly_bill_obligations, p.wallet_load_to_bill_ratio, p.essential_bill_ratio,
+        p.platform_tenure_days, p.active_months, p.longest_gap_days
+      FROM pti_export_safe p
+      JOIN users u ON u.id = p.user_id
+      WHERE u.telefono = ${telefono}
       LIMIT 1
     `);
 
@@ -874,9 +901,9 @@ router.post("/loan-outcomes", async (req: Request, res: Response) => {
   try {
     // Verify the hashed_user_id exists
     const userCheck = await db.execute(sql`
-      SELECT encode(sha256((u.telefono || 'pagoya2026')::bytea), 'hex') AS computed_hash
+      SELECT ${hmacSqlFor("u.telefono")} AS computed_hash
       FROM users u
-      WHERE encode(sha256((u.telefono || 'pagoya2026')::bytea), 'hex') = ${hashed_user_id}
+      WHERE ${hmacSqlFor("u.telefono")} = ${hashed_user_id}
       LIMIT 1
     `);
     if (userCheck.rows.length === 0) {
