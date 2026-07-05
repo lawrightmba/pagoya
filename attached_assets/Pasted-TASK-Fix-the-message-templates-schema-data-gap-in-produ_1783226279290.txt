@@ -1,0 +1,49 @@
+TASK: Fix the message_templates schema/data gap in production. This is the 
+root cause of outbound Paula nudges being completely non-functional in prod 
+(logs show "No active templates found — aborting batch").
+
+This involves writing to production, so proceed carefully and in stages. 
+Do NOT enable any live message-sending to real users as part of this task — 
+that is a separate decision Lloyd will make explicitly afterward.
+
+STAGE 1 — Confirm scope (read-only, report back before proceeding)
+- Show the full dev schema for message_templates (or paula_messages, whichever 
+  is the correct/current table name — confirm which) including all columns, 
+  types, and constraints.
+- Export the actual 24 active template rows from dev — full content, not a 
+  summary — so we can review real copy before it goes to production.
+- Confirm whether any Paula trigger/feature flags (e.g. TRIGGER_EVALUATOR_ENABLED, 
+  CONVERSATIONAL_PAULA_ENABLED, or PagoYa's equivalent) are currently set to 
+  true in production. This matters: if a flag is already on and templates 
+  suddenly become available, nudges could start firing to real users 
+  immediately once this fix lands. I need to know this BEFORE proceeding, 
+  not after.
+
+STOP after Stage 1 and wait for explicit go-ahead before touching production.
+
+STAGE 2 — Migrate schema (only after go-ahead)
+- Since drizzle-kit push doesn't work reliably in this project, write the 
+  message_templates table creation as a direct, additive SQL migration 
+  (CREATE TABLE IF NOT EXISTS — no destructive operations, nothing that 
+  touches any existing table).
+- Do not run it yet — show me the exact SQL first.
+
+STAGE 3 — Seed data (only after go-ahead)
+- Insert the 24 active templates from dev into the new production table, 
+  matching content exactly.
+- After inserting, run a read-only verification query confirming row count 
+  and that a sample template renders correctly with the existing Mustache 
+  variable-injection logic.
+
+STAGE 4 — Verify without sending
+- Confirm the MessageEngine now logs "Loaded 24 active templates" instead 
+  of the previous error, using whatever dry-run/log-check mechanism exists 
+  that does NOT actually dispatch a WhatsApp message to a real user.
+- Explicitly confirm: did this fix cause any flag-gated process to start 
+  actually sending messages? If unsure, treat it as yes and flag it 
+  immediately rather than assuming it's safe.
+
+Report back after each stage. Do not proceed to the next stage without 
+explicit confirmation. The goal of this task is ONLY to fix the data gap — 
+whether to actually start sending nudges to production users is a separate 
+decision to be made afterward, deliberately.
