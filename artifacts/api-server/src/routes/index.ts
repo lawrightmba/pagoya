@@ -361,6 +361,22 @@ router.post("/admin/activate-paula-templates-tier-a", async (_req: Request, res:
   }
 });
 
+// POST /api/admin/run-paula-trigger-batch — ONE-OFF: manually fires
+// runPaulaTriggerBatch() immediately instead of waiting for the 6h cron
+// cycle. Used only to verify Tier A dry-run activation. Does not touch
+// PAULA_SENDING_ENABLED — sends still gated by that flag as usual. Remove
+// once Tier A verification is complete.
+router.post("/admin/run-paula-trigger-batch", async (_req: Request, res: Response) => {
+  try {
+    const { runPaulaTriggerBatch } = await import("../services/paulaTriggers.js");
+    await runPaulaTriggerBatch();
+    res.json({ ok: true, message: "Batch complete — check paula_send_queue / paula_trigger_log." });
+  } catch (err) {
+    logger.error({ err }, "admin/run-paula-trigger-batch: failed");
+    res.status(500).json({ error: "Batch run failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
