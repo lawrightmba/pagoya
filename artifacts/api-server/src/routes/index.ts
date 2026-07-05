@@ -350,6 +350,38 @@ router.post("/admin/activate-paula-templates-stage1", async (_req: Request, res:
   }
 });
 
+// POST /api/admin/fix-paula-send-queue-status-constraint — ONE-OFF: production's
+// paula_send_queue.valid_status check constraint was missing SKIPPED_DRY_RUN
+// (dev already had it — schema drift). This table isn't tracked in the Drizzle
+// schema, so the publish diff never syncs it. Idempotent — checks current
+// constraint def first and no-ops if SKIPPED_DRY_RUN is already present.
+router.post("/admin/fix-paula-send-queue-status-constraint", async (_req: Request, res: Response) => {
+  try {
+    const before = await db.execute(drizzleSql`
+      SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'valid_status'
+    `);
+    const currentDef = (before.rows[0] as { def?: string } | undefined)?.def ?? "";
+    if (currentDef.includes("SKIPPED_DRY_RUN")) {
+      res.json({ ok: true, alreadyFixed: true, currentDef });
+      return;
+    }
+    await db.execute(drizzleSql`
+      ALTER TABLE paula_send_queue DROP CONSTRAINT valid_status
+    `);
+    await db.execute(drizzleSql`
+      ALTER TABLE paula_send_queue ADD CONSTRAINT valid_status
+        CHECK (status IN ('PENDING', 'SENDING', 'SENT', 'FAILED', 'DEAD', 'SKIPPED_DRY_RUN'))
+    `);
+    const after = await db.execute(drizzleSql`
+      SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'valid_status'
+    `);
+    res.json({ ok: true, alreadyFixed: false, newDef: (after.rows[0] as { def?: string } | undefined)?.def });
+  } catch (err) {
+    logger.error({ err }, "admin/fix-paula-send-queue-status-constraint: failed");
+    res.status(500).json({ error: "Constraint fix failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
