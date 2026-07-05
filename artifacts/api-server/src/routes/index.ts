@@ -330,53 +330,6 @@ router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Respo
   }
 });
 
-// POST /api/admin/activate-paula-templates-tier-a — ONE-OFF: activates the 5
-// Tier A dry-run templates (pti_cross_40, pti_cross_60, pti_cross_80,
-// milestone_90d, free_credit_nudge). Must only be called while
-// PAULA_SENDING_ENABLED=false so this stays a dry run — do not call this
-// after Stage 1 live sending has been enabled. Idempotent.
-const PAULA_TIER_A_TRIGGERS = [
-  "pti_cross_40", "pti_cross_60", "pti_cross_80", "milestone_90d", "free_credit_nudge",
-] as const;
-router.post("/admin/activate-paula-templates-tier-a", async (_req: Request, res: Response) => {
-  try {
-    const sendingEnabled = process.env.PAULA_SENDING_ENABLED === "true";
-    if (sendingEnabled) {
-      res.status(409).json({
-        error: "Refusing to activate Tier A — PAULA_SENDING_ENABLED is already true. " +
-          "Activating now would send real messages instead of dry-running them.",
-      });
-      return;
-    }
-    const result = await db.execute(drizzleSql`
-      UPDATE paula_messages
-      SET active = true
-      WHERE trigger_type IN (${drizzleSql.join(PAULA_TIER_A_TRIGGERS.map(t => drizzleSql`${t}`), drizzleSql`, `)})
-      RETURNING trigger_type, active
-    `);
-    res.json({ ok: true, updated: result.rows });
-  } catch (err) {
-    logger.error({ err }, "admin/activate-paula-templates-tier-a: failed");
-    res.status(500).json({ error: "Activation failed — check server logs." });
-  }
-});
-
-// POST /api/admin/run-paula-trigger-batch — ONE-OFF: manually fires
-// runPaulaTriggerBatch() immediately instead of waiting for the 6h cron
-// cycle. Used only to verify Tier A dry-run activation. Does not touch
-// PAULA_SENDING_ENABLED — sends still gated by that flag as usual. Remove
-// once Tier A verification is complete.
-router.post("/admin/run-paula-trigger-batch", async (_req: Request, res: Response) => {
-  try {
-    const { runPaulaTriggerBatch } = await import("../services/paulaTriggers.js");
-    await runPaulaTriggerBatch();
-    res.json({ ok: true, message: "Batch complete — check paula_send_queue / paula_trigger_log." });
-  } catch (err) {
-    logger.error({ err }, "admin/run-paula-trigger-batch: failed");
-    res.status(500).json({ error: "Batch run failed — check server logs." });
-  }
-});
-
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
