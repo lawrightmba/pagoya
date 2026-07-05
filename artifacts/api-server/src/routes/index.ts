@@ -330,6 +330,50 @@ router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Respo
   }
 });
 
+// POST /api/admin/reset-paula-test-number-cooldown — ONE-OFF: clears the
+// stalled_14d cooldown for a single known test telefono (+523221839799,
+// part of the existing 5-user dry-run test pool) so it becomes eligible
+// again on the next paulaTriggerBatch run. Used to confirm the first real
+// Stage 1 send now that PAULA_SENDING_ENABLED=true. Scoped to exactly one
+// hardcoded telefono — never touches any other row.
+const PAULA_TEST_TELEFONO = "+523221839799";
+router.post("/admin/reset-paula-test-number-cooldown", async (_req: Request, res: Response) => {
+  try {
+    // Null the FK from paula_send_queue first (circular FK with paula_trigger_log)
+    await db.execute(drizzleSql`
+      UPDATE paula_send_queue SET trigger_log_id = NULL
+      WHERE telefono = ${PAULA_TEST_TELEFONO}
+        AND trigger_log_id IN (
+          SELECT id FROM paula_trigger_log
+          WHERE telefono = ${PAULA_TEST_TELEFONO} AND trigger_type = 'stalled_14d'
+        )
+    `);
+    const result = await db.execute(drizzleSql`
+      DELETE FROM paula_trigger_log
+      WHERE telefono = ${PAULA_TEST_TELEFONO} AND trigger_type = 'stalled_14d'
+      RETURNING id
+    `);
+    res.json({ ok: true, telefono: PAULA_TEST_TELEFONO, deletedRows: result.rows.length });
+  } catch (err) {
+    logger.error({ err }, "admin/reset-paula-test-number-cooldown: failed");
+    res.status(500).json({ error: "Reset failed — check server logs." });
+  }
+});
+
+// POST /api/admin/run-paula-trigger-batch — ONE-OFF: manually fires
+// runPaulaTriggerBatch() immediately instead of waiting for the 6h cron
+// cycle. Used only to verify the real Stage 1 send for the test telefono.
+router.post("/admin/run-paula-trigger-batch", async (_req: Request, res: Response) => {
+  try {
+    const { runPaulaTriggerBatch } = await import("../services/paulaTriggers.js");
+    await runPaulaTriggerBatch();
+    res.json({ ok: true, message: "Batch complete — check paula_send_queue / paula_trigger_log." });
+  } catch (err) {
+    logger.error({ err }, "admin/run-paula-trigger-batch: failed");
+    res.status(500).json({ error: "Batch run failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
