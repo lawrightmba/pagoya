@@ -20,6 +20,13 @@ import { getPartnerDisplayName } from "./readinessGate.js";
 const MAX_ATTEMPTS = 3;
 const BATCH_SIZE   = 10;
 
+// ── Kill switch ───────────────────────────────────────────────────────────────
+// Fail-safe: defaults to false (no sending) unless explicitly set to 'true'.
+// Only gates the final Twilio delivery step below — does NOT touch the
+// trigger evaluator, queue enqueueing, or any other part of the pipeline,
+// so we can still see what WOULD have been sent via logs.
+const PAULA_SENDING_ENABLED = process.env.PAULA_SENDING_ENABLED === "true";
+
 // ── Enqueue a WhatsApp send ───────────────────────────────────────────────────
 export async function enqueueWhatsApp(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
@@ -76,7 +83,14 @@ export async function processSendQueue(): Promise<void> {
     `);
 
     try {
-      await sendWhatsApp(telefono, message);
+      if (PAULA_SENDING_ENABLED) {
+        await sendWhatsApp(telefono, message);
+      } else {
+        logger.info(
+          { id, telefono, triggerType },
+          "[SendQueue] PAULA_SENDING_ENABLED=false — skipping send",
+        );
+      }
 
       await db.execute(sql`
         UPDATE paula_send_queue

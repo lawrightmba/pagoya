@@ -1,0 +1,58 @@
+TASK: Fix the missing message_templates schema/data gap in production, with 
+a safety-first approach given two risks identified in investigation:
+(1) there is no existing kill switch — the trigger-evaluator and send-queue 
+crons run unconditionally in production every 6hrs / 2min respectively, so 
+the moment active templates exist, real sends could begin within one cron 
+cycle with nothing to stop them;
+(2) one template (readiness_hard_step2) promises a microcrédito/insurance 
+referral backed by a partner_programs row that has no evidence of being a 
+real, contracted, integrated partnership.
+
+Proceed in this exact order. Do not skip steps or combine them.
+
+STEP 1 — Build a kill switch (new code, not yet wired to anything live)
+Add an environment-variable gate, e.g. PAULA_SENDING_ENABLED, checked at the 
+top of processSendQueue's sendWhatsApp() call path in the queue processor. 
+Default it to 'false' if unset (fail-safe). When false, the queue processor 
+should log that it's skipping actual delivery (e.g. "PAULA_SENDING_ENABLED=false 
+— skipping send") but otherwise run normally, so we can see what WOULD have 
+sent without anything actually reaching Twilio. Do not touch the trigger 
+evaluator itself — only gate the final send step.
+
+Show me this code before proceeding to Step 2.
+
+STEP 2 — Schema migration (additive only)
+Write the message_templates (or paula_messages — confirm correct existing 
+table name from dev) CREATE TABLE IF NOT EXISTS migration as direct SQL, 
+matching the dev schema exactly. No destructive operations. Show me the SQL 
+before running it.
+
+STEP 3 — Seed data, with one exclusion and all rows inactive by default
+Insert all 24 templates from the dev export, but:
+- Set active = false on EVERY row, regardless of what it was in dev.
+- Exclude the readiness_hard_step2 row entirely for now — do not insert it 
+  at all. (We'll revisit once the microcrédito partner status is resolved 
+  with Lloyd directly.)
+So the result should be 23 rows inserted, all active=false.
+
+After inserting, run a read-only verification: row count (should be 23), 
+confirm readiness_hard_step2 is absent, confirm all active flags are false.
+
+STEP 4 — Verify the fix without enabling anything
+Confirm MessageEngine's log output changes from "No active templates found — 
+aborting batch" to something reflecting 0 ELIGIBLE (not zero rows, but zero 
+active) — i.e. confirm the original bug (missing schema) is now structurally 
+fixed, while functionally nothing can send yet because (a) PAULA_SENDING_ENABLED 
+defaults false and (b) every template row is inactive. Two independent 
+safety layers, both confirmed.
+
+STOP after Step 4. Do not set PAULA_SENDING_ENABLED=true and do not activate 
+any template rows. Report back with:
+- The kill-switch code added
+- The migration SQL used
+- Confirmation of 23/24 rows inserted correctly with active=false
+- Confirmation of both safety layers verified independently
+- A restated list of what remains as manual follow-up: (1) deciding which 
+  templates to activate and when, (2) resolving readiness_hard_step2 / 
+  microcrédito partner status separately, (3) deciding when to flip 
+  PAULA_SENDING_ENABLED to true
