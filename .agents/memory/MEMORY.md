@@ -31,3 +31,4 @@
 - [Derived signals instrumentation](derived-signals-instrumentation.md) — additive-only PTI signals live in standalone service, not wired into scoring; drizzle sql tag mishandles array params for ANY(); data mostly near-empty as of July 2026
 - [Prod admin route pattern](prod-admin-route-pattern.md) — standard 9-step cycle for one-off prod DB writes: add route→test local→deploy→confirm publish→call prod→verify data→remove→redeploy→verify 404
 - [Paula paula_messages Tier D](paula-tier-d.md) — late_payment_1/pattern_late_2x/pti_drop_7d all active in prod as of July 2026; first two had copy revised to drop unfulfillable "adjust reminder" offer (no reply-intercept exists for it)
+- [PTI synthetic stress-test harness](pti-stress-test.md) — DEV-only seeded population + runner exercising real computePTI; tsx run cmd; domStddev payment-derived vs hourStd login-derived (reachability of gaming vectors); leakage magnitude is generator-assumption-dependent
