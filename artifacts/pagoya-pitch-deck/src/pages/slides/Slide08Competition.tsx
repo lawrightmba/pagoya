@@ -15,45 +15,45 @@ export default function Slide08Competition() {
       <div className="relative z-10 flex h-full">
         <div className="flex flex-col justify-start" style={{ padding: "6vh 5vw 5vh 8vw", width: "52%" }}>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "1.8vh" }}>
-            {es ? "P2P: Siguiente Fase" : "P2P: Next Phase"}
+            {es ? "El Verdadero Foso" : "The Real Moat"}
           </p>
-          <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "1.5vh" }}>
+          <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4.4vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "1.5vh" }}>
             {es
-              ? "Los pagos se convierten en\ninfraestructura social."
-              : "Payments become\nsocial infrastructure."}
+              ? "Mercado Pago mueve dinero.\nPagoYa mide confianza."
+              : "Mercado Pago moves money.\nPagoYa measures trust."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "3.5vh" }} />
 
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "2vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.6, marginBottom: "2.5vh" }}>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", color: "rgba(255,255,255,0.65)", lineHeight: 1.6, marginBottom: "2.5vh" }}>
             {es
-              ? "Las transferencias P2P ya están desarrolladas en el backend. La siguiente fase permite dividir gastos, enviar saldo y pagarse entre sí directamente en WhatsApp."
-              : "P2P transfers are already built in the backend. The next phase lets users split expenses, send balance, and pay each other directly in WhatsApp."}
+              ? "Mercado Pago, OXXO y Telcel Pagos compiten en el mismo eje: rieles de pago — velocidad, costo, distribución. Ninguno construye un expediente de comportamiento financiero para los 65M de mexicanos sin buró. Esa no es su pelea. Es la nuestra."
+              : "Mercado Pago, OXXO, and Telcel Pagos compete on the same axis: payment rails — speed, cost, distribution. None of them build a behavioral financial record for Mexico's 65M credit-invisible consumers. That's not their fight. It's ours."}
           </p>
 
           <div style={{ background: "rgba(0,200,117,0.1)", borderLeft: "0.4vw solid #00C875", padding: "2vh 2vw", borderRadius: "0 0.6vw 0.6vw 0" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.9vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.5, fontStyle: "italic" }}>
               {es
-                ? '"Paga tu mitad del CFE" — un mensaje convierte un pago en una transacción social que llega a un nuevo usuario.'
-                : '"Pay your half of the CFE" — one message turns a payment into a social transaction that reaches a new user.'}
+                ? '"El pago es el sensor. El Payment Trust Index es el producto."'
+                : '"The payment is the sensor. The Payment Trust Index is the product."'}
             </p>
           </div>
         </div>
 
         <div className="flex flex-col justify-start" style={{ flex: 1, padding: "6vh 8vw 5vh 4vw", gap: "2.2vh" }}>
           <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.9vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-            {es ? "El efecto de red" : "The network effect"}
+            {es ? "Por qué no competimos ahí" : "Why we're not competing there"}
           </p>
 
           <div className="flex items-start gap-[1.2vw]">
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#00C875", marginTop: "0.3vh" }} />
             <div>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.3vh" }}>
-                {es ? "Cada pago = demo del producto" : "Every payment = product demo"}
+                {es ? "Los rieles de pago son un commodity" : "Payment rails are a commodity"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
                 {es
-                  ? "El receptor ve la confirmación en WhatsApp y pregunta cómo registrarse. El ciclo viral no requiere gasto en publicidad."
-                  : "The recipient sees the WhatsApp confirmation and asks how to sign up. The viral cycle requires zero ad spend."}
+                  ? "Mercado Pago y OXXO ganan por escala y presencia física. PagoYa ya es rentable a $25 MXN por transacción vía rieles directos — no necesitamos ganar esa guerra para ganar la nuestra."
+                  : "Mercado Pago and OXXO win on scale and physical footprint. PagoYa is already profitable at $25 MXN per transaction via direct rails — we don't need to win that war to win ours."}
               </p>
             </div>
           </div>
@@ -61,12 +61,12 @@ export default function Slide08Competition() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#00C875", marginTop: "0.3vh" }} />
             <div>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.3vh" }}>
-                {es ? "Los usuarios se convierten en nodos de distribución" : "Users become distribution nodes"}
+                {es ? "El dato es el foso, no la app" : "The data is the moat, not the app"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
                 {es
-                  ? "Cada envío P2P es adquisición orgánica. Más usuarios pagándose entre sí = superficie de referidos exponencial."
-                  : "Every P2P send is organic acquisition. More users paying each other = exponential referral surface."}
+                  ? "Cada pago alimenta el Payment Trust Index — 7 dimensiones de comportamiento real que ningún buró de crédito ha capturado para esta población."
+                  : "Every payment feeds the Payment Trust Index — 7 dimensions of real behavior no credit bureau has ever captured for this population."}
               </p>
             </div>
           </div>
@@ -74,12 +74,12 @@ export default function Slide08Competition() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#FF5C1A", marginTop: "0.3vh" }} />
             <div>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.3vh" }}>
-                {es ? "CAC se acerca a cero" : "CAC approaches zero"}
+                {es ? "Los comparables reales son otros" : "The real comparables are different"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
                 {es
-                  ? "El rep activa 1 usuario → la actividad P2P de ese usuario activa a 3–5 más. Sin marketing pagado."
-                  : "Rep activates 1 user → that user's P2P activity activates 3–5 more. Zero paid marketing."}
+                  ? "Lenddo/EFL, Destacame, Tala, Branch — calificadores de datos alternativos. Ninguno posee el riel de pago Y el dato en la misma pila como PagoYa."
+                  : "Lenddo/EFL, Destacame, Tala, Branch — alternative-data underwriters. None of them own the payment rail and the data in the same stack the way PagoYa does."}
               </p>
             </div>
           </div>
@@ -87,12 +87,12 @@ export default function Slide08Competition() {
             <div style={{ width: "0.35vw", minWidth: "0.35vw", height: "2.5vh", background: "#FF5C1A", marginTop: "0.3vh" }} />
             <div>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.85vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.3vh" }}>
-                {es ? "Backend ya desarrollado" : "Backend already built"}
+                {es ? "El modelo de ingresos evoluciona" : "The revenue model evolves"}
               </p>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
                 {es
-                  ? "La arquitectura billetera-a-billetera está implementada en la API. La activación es una decisión de producto, no técnica."
-                  : "The wallet-to-wallet architecture is implemented in the API. Activation is a product decision, not a technical one."}
+                  ? "De comisión por transacción a licenciamiento de datos B2B2C — prestamistas, aseguradoras y fintechs que hoy no pueden calificar a los no bancarizados."
+                  : "From per-transaction fees to B2B2C data licensing — lenders, insurers, and fintechs who today can't underwrite the unbanked."}
               </p>
             </div>
           </div>
