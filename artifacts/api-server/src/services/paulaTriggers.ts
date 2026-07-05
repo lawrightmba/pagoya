@@ -317,6 +317,7 @@ export async function evaluateTriggersForUser(
   async function fireModule1(): Promise<void> {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
     fired++;
+    logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_1}`);
     // ── Three deferred follow-ups queued from Module 1 ─────────────────────
     // All fire once per lifetime (NULL guard at parse time in whatsapp-agent.ts).
     // Staggered delays avoid message fatigue and prevent last_trigger conflicts.
@@ -367,6 +368,7 @@ export async function evaluateTriggersForUser(
   async function fireModule2Or3(trigger: typeof TRIGGER.MODULE_UNLOCK_2 | typeof TRIGGER.MODULE_UNLOCK_3): Promise<void> {
     await fireTrigger(db, telefono, trigger, ctx, templates);
     fired++;
+    logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${trigger}`);
     // Income collection follow-up — standalone approach, fires once (NULL guard at send + parse)
     // whatsapp-agent.ts intercepts the numeric reply and writes users.declared_income_bucket
     if (ctx.declared_income_bucket == null) {
@@ -444,6 +446,7 @@ export async function evaluateTriggersForUser(
     } else if (ptiScore < 80) {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
       fired++;
+      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
       moduleFiredThisCycle = true;
     }
     // else: ptiScore >= 80 already past module 4's own zone — module 5's
@@ -456,10 +459,12 @@ export async function evaluateTriggersForUser(
     if (!module4Fired) {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
       fired++;
+      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
       moduleFiredThisCycle = true;
     } else {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
       fired++;
+      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_5}`);
       moduleFiredThisCycle = true;
     }
   }
