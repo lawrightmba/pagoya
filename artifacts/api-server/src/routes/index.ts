@@ -309,6 +309,27 @@ router.post("/admin/backfill-payment-counters", async (_req: Request, res: Respo
   }
 });
 
+// POST /api/admin/seed-paula-messages-step3 — ONE-OFF: Step 3 of the paula_messages
+// production data-gap fix. Inserts the 23 dev-export templates, excluding
+// readiness_hard_step2, all forced to active=false. Idempotent via
+// ON CONFLICT (trigger_type) DO NOTHING — safe to call more than once.
+router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Response) => {
+  try {
+    const { seedPaulaMessagesStep3, PAULA_MESSAGES_STEP3_EXPECTED_COUNT, PAULA_MESSAGES_STEP3_EXCLUDED_TRIGGER } =
+      await import("../services/seedPaulaMessagesStep3.js");
+    const result = await seedPaulaMessagesStep3(db);
+    res.json({
+      ok: true,
+      expected: PAULA_MESSAGES_STEP3_EXPECTED_COUNT,
+      excludedTrigger: PAULA_MESSAGES_STEP3_EXCLUDED_TRIGGER,
+      ...result,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/seed-paula-messages-step3: failed");
+    res.status(500).json({ error: "Seed failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
