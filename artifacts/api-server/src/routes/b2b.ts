@@ -194,13 +194,13 @@ router.get("/cohort", async (req: Request, res: Response) => {
     // Build WHERE conditions
     const conditions: string[] = [];
     const values: (string | number)[] = [];
-    if (colonia)     { conditions.push(`colonia_label ILIKE '%' || $${values.push(colonia)}     || '%'`); }
+    if (colonia)     { conditions.push(`colonia ILIKE '%' || $${values.push(colonia)}     || '%'`); }
     if (score_band)  { conditions.push(`pti_score_band = $${values.push(parseInt(score_band))}`); }
     if (month)       { conditions.push(`score_month = DATE_TRUNC('month', $${values.push(month + '-01')}::date)`); }
 
     const rows = await db.execute(sql`
       SELECT
-        colonia_label,
+        colonia,
         pti_score_band,
         TO_CHAR(score_month, 'YYYY-MM') AS score_month,
         cohort_size,
@@ -267,7 +267,7 @@ router.get("/user/:hashed_id", async (req: Request, res: Response) => {
   try {
     const rows = await db.execute(sql`
       SELECT
-        hashed_user_id, colonia_label,
+        hashed_user_id, colonia,
         pti_score, pti_score_band,
         pr_score, bc_score, ed_score, cf_score,
         model_version,
@@ -354,7 +354,7 @@ router.post("/batch", async (req: Request, res: Response) => {
     const idList = validIds.map(id => `'${id.replace(/'/g, "")}'`).join(", ");
     const rows = await db.execute(sql`
       SELECT
-        hashed_user_id, colonia_label,
+        hashed_user_id, colonia,
         pti_score, pti_score_band,
         pr_score, bc_score, ed_score, cf_score,
         model_version,
@@ -577,7 +577,7 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
     // ── 2. Load PTI trajectory + core signals ────────────────────────────────
     const ptiRow = await db.execute(sql`
       SELECT
-        hashed_user_id, colonia_label,
+        hashed_user_id, colonia,
         pti_score, pti_score_band, pti_b2b_score, pti_trajectory,
         pr_score, bc_score, ed_score, cf_score,
         model_version,
@@ -724,7 +724,7 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
 
     const profile = {
       hashed_user_id:  hashed_id,
-      colonia:         pti.colonia_label,
+      colonia:         pti.colonia,
       score_month:     pti.score_month,
       model_version:   pti.model_version,
 
