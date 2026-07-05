@@ -85,22 +85,30 @@ export async function processSendQueue(): Promise<void> {
     try {
       if (PAULA_SENDING_ENABLED) {
         await sendWhatsApp(telefono, message);
+
+        await db.execute(sql`
+          UPDATE paula_send_queue
+          SET status = 'SENT', sent_at = NOW()
+          WHERE id = ${id}
+        `);
       } else {
         logger.info(
           { id, telefono, triggerType },
           "[SendQueue] PAULA_SENDING_ENABLED=false — skipping send",
         );
-      }
 
-      await db.execute(sql`
-        UPDATE paula_send_queue
-        SET status = 'SENT', sent_at = NOW()
-        WHERE id = ${id}
-      `);
+        await db.execute(sql`
+          UPDATE paula_send_queue
+          SET status = 'SKIPPED_DRY_RUN'
+          WHERE id = ${id}
+        `);
+      }
 
       // When a readiness_hard message is confirmed sent — write pending handoff to DB.
       // DB-backed so the handoff offer survives server restarts.
-      if (triggerType === 'readiness_hard') {
+      // Gated on PAULA_SENDING_ENABLED: a dry-run "would-have-sent" must never
+      // advance a real user's handoff-consent state.
+      if (triggerType === 'readiness_hard' && PAULA_SENDING_ENABLED) {
         try {
           const latestAssessment = await db.execute(sql`
             SELECT id FROM readiness_assessments
@@ -130,14 +138,19 @@ export async function processSendQueue(): Promise<void> {
       }
 
       if (triggerLogId != null) {
+        // whatsapp_sent only reflects a real, confirmed delivery — never a dry run.
+        // send_queue_id is still linked either way for traceability.
         await db.execute(sql`
           UPDATE paula_trigger_log
-          SET whatsapp_sent = TRUE, send_queue_id = ${id}
+          SET whatsapp_sent = ${PAULA_SENDING_ENABLED}, send_queue_id = ${id}
           WHERE id = ${triggerLogId}
         `).catch(() => {});
       }
 
-      logger.info({ id, telefono }, "[SendQueue] Message sent");
+      logger.info(
+        { id, telefono, sent: PAULA_SENDING_ENABLED },
+        PAULA_SENDING_ENABLED ? "[SendQueue] Message sent" : "[SendQueue] Dry run recorded",
+      );
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       const nextStatus = attempts >= MAX_ATTEMPTS ? "DEAD" : "FAILED";
