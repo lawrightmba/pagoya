@@ -1,0 +1,53 @@
+I need a read-only investigation of the current schema and data model — 
+do NOT modify any code, schema, or scoring logic. This is purely to answer 
+questions before we scope new PTI signal work.
+
+Please inspect and report back on the following, with actual field names, 
+types, and a sample of real column definitions (not just "yes/no"):
+
+1. BALANCE HISTORY
+   - Is currentBalance in PTIDataSnapshot sourced from a point-in-time 
+     wallet balance only, or is there a balance_history / balance_snapshot 
+     table that tracks balance over time?
+   - If historical balance data exists, show the table schema and how 
+     far back it goes / at what granularity (daily, per-transaction, etc.)
+
+2. PAYMENT RAIL TAGGING
+   - Show the schema/query logic behind oxxoLoadCount, speiLoadCount, 
+     and cardLoadCount. Are these derived from a single transactions 
+     table with a "rail" or "method" column, or from separate counters/tables?
+
+3. KYC DATA
+   - Show the KYC-related table(s). Does it store a verification timestamp 
+     (when KYC was completed/last verified)?
+   - Does it log failed or rejected KYC attempts, or only the final 
+     verified/unverified status?
+
+4. BILLERS TABLE
+   - Show the billers table schema. Does it have a category, type, or 
+     sector column (e.g., utility, telecom, rent), or only name/id?
+
+5. PAULA TRIGGER LOG
+   - Show the schema for paula_trigger_log. Does it tag the trigger TYPE 
+     (e.g., "missed_payment", "general_checkin", "literacy_nudge"), or 
+     is trigger type not currently distinguishable?
+
+6. PAYMENT ATTEMPTS / FAILURES
+   - Is there any existing log — from Taecel, SIPREL, STP, or elsewhere — 
+     of DECLINED or FAILED payment attempts (not just completed payments)? 
+   - If yes, show where it lives and whether it's currently surfaced to 
+     any downstream table or just sitting in a webhook/provider log.
+
+7. SCORE HISTORY / TREND INFRASTRUCTURE
+   - Confirm the current structure of pti_score_history and the 30d trend 
+     view — specifically, is the trend logic generic enough to apply to 
+     a raw input field (e.g., loginDays30 over time), or is it hardcoded 
+     to only the final PTI score?
+
+For each of the 7 items above, give me a clear verdict: 
+"ALREADY WIRED" (data exists, just needs a query/aggregation), 
+"PARTIAL" (some structure exists but incomplete), or 
+"NOT PRESENT" (would need new instrumentation or schema changes).
+
+Do not write or suggest code changes yet — just report findings so we can 
+scope the actual work afterward.
