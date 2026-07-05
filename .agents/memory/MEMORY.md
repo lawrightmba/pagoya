@@ -29,3 +29,5 @@
 - [Paula / DB codebase conventions](paula-db-conventions.md) — exact column names, template vars, dispatch pattern; paste CONVENTIONS block into every Paula/DB agent prompt to eliminate spec-vs-reality deviations
 - [enrichmentCron schema bugs](enrichment-cron-bugs.md) — 4 schema mismatches fixed July 2026; wallets.user_id=telefono (text); paula_inbound_log.message_body not body; users.referral_code/signup_ref_code not ref_code/referred_by
 - [Derived signals instrumentation](derived-signals-instrumentation.md) — additive-only PTI signals live in standalone service, not wired into scoring; drizzle sql tag mishandles array params for ANY(); data mostly near-empty as of July 2026
+- [Prod admin route pattern](prod-admin-route-pattern.md) — standard 9-step cycle for one-off prod DB writes: add route→test local→deploy→confirm publish→call prod→verify data→remove→redeploy→verify 404
+- [Paula paula_messages Tier D](paula-tier-d.md) — late_payment_1/pattern_late_2x/pti_drop_7d all active in prod as of July 2026; first two had copy revised to drop unfulfillable "adjust reminder" offer (no reply-intercept exists for it)
