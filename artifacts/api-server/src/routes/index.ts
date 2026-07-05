@@ -330,6 +330,26 @@ router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Respo
   }
 });
 
+// POST /api/admin/activate-paula-templates-stage1 — ONE-OFF: activates the 4
+// Stage 1 dry-run templates (winback_30d, stalled_14d, first_payment,
+// streak_5). Does NOT touch PAULA_SENDING_ENABLED — sending stays gated off.
+// Idempotent — re-running is a no-op if already active.
+const PAULA_STAGE1_TRIGGERS = ["winback_30d", "stalled_14d", "first_payment", "streak_5"] as const;
+router.post("/admin/activate-paula-templates-stage1", async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(drizzleSql`
+      UPDATE paula_messages
+      SET active = true
+      WHERE trigger_type IN (${drizzleSql.join(PAULA_STAGE1_TRIGGERS.map(t => drizzleSql`${t}`), drizzleSql`, `)})
+      RETURNING trigger_type, active
+    `);
+    res.json({ ok: true, updated: result.rows });
+  } catch (err) {
+    logger.error({ err }, "admin/activate-paula-templates-stage1: failed");
+    res.status(500).json({ error: "Activation failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
