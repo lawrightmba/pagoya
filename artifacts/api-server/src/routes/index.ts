@@ -382,6 +382,52 @@ router.post("/admin/fix-paula-send-queue-status-constraint", async (_req: Reques
   }
 });
 
+// POST /api/admin/reset-paula-stage1-dry-run — ONE-OFF: clears the 5
+// stalled_14d rows stuck in paula_send_queue (status=DEAD) and their
+// paula_trigger_log entries so the next paulaTriggerBatch cycle can
+// re-evaluate + re-fire them cleanly now that the SKIPPED_DRY_RUN constraint
+// bug is fixed. Scoped to trigger_type = 'stalled_14d' only — does not touch
+// any other trigger history. Does not touch PAULA_SENDING_ENABLED.
+// Exact 5 telefonos from the July 5, 2026 Stage 1 dry-run batch that got
+// stuck DEAD due to the (now-fixed) missing SKIPPED_DRY_RUN constraint value.
+// Scoped to these + stalled_14d only — must NOT touch any other trigger
+// history (dev has unrelated smoke-test rows for this trigger_type).
+const PAULA_STAGE1_RESET_TELEFONOS = [
+  "8118963105", "+523222304213", "52 322 183 9799", "5555550001", "+523221839799",
+] as const;
+router.post("/admin/reset-paula-stage1-dry-run", async (_req: Request, res: Response) => {
+  try {
+    const telefonoList = drizzleSql.join(
+      PAULA_STAGE1_RESET_TELEFONOS.map(t => drizzleSql`${t}`),
+      drizzleSql`, `,
+    );
+    // paula_send_queue.trigger_log_id <-> paula_trigger_log.send_queue_id is a
+    // circular FK pair — null out one side before either table can be deleted.
+    await db.execute(drizzleSql`
+      UPDATE paula_trigger_log SET send_queue_id = NULL
+      WHERE trigger_type = 'stalled_14d' AND telefono IN (${telefonoList})
+    `);
+    const deletedQueue = await db.execute(drizzleSql`
+      DELETE FROM paula_send_queue
+      WHERE trigger_type = 'stalled_14d' AND telefono IN (${telefonoList})
+      RETURNING id, telefono, status
+    `);
+    const deletedLog = await db.execute(drizzleSql`
+      DELETE FROM paula_trigger_log
+      WHERE trigger_type = 'stalled_14d' AND telefono IN (${telefonoList})
+      RETURNING id, telefono
+    `);
+    res.json({
+      ok: true,
+      deletedQueueRows: deletedQueue.rows,
+      deletedLogRows: deletedLog.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/reset-paula-stage1-dry-run: failed");
+    res.status(500).json({ error: "Reset failed — check server logs." });
+  }
+});
+
 // GET /api/admin/stats — command center overview including loyalty
 router.get("/admin/stats", async (_req: Request, res: Response) => {
   try {
