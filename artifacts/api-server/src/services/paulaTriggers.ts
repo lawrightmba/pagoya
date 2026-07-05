@@ -382,13 +382,22 @@ export async function evaluateTriggersForUser(
     }
   }
 
+  // Pacing guard: at most ONE educational module (whether a "natural" fire or
+  // a sequencing catch-up) may go out per batch cycle for a given user. Blocks
+  // below are walked in strict 1→5 order and each checks `!moduleFiredThisCycle`
+  // before doing anything, so if an earlier block fires, every later block is a
+  // no-op this cycle. This spreads a multi-module catch-up across the normal
+  // cadence (oldest-missing-first) instead of bursting 2-4 messages at once.
+  let moduleFiredThisCycle = false;
+
   // Module 1 unlock: PTI < 30, fires after first payment
   // "Welcome to your credit journey" — frames everything that follows
   // cooldown_days = 9999, fires exactly once per user lifetime
   // No prerequisite — this is the start of the sequence.
   const module1Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_1, templates);
-  if (totalPaid >= 1 && ptiScore < 30 && !module1Fired) {
+  if (!moduleFiredThisCycle && totalPaid >= 1 && ptiScore < 30 && !module1Fired) {
     await fireModule1();
+    moduleFiredThisCycle = true;
   }
 
   // Module 2 unlock: PTI >= 30. Requires module_unlock_1 to have already fired —
@@ -398,51 +407,60 @@ export async function evaluateTriggersForUser(
   // "< 30" condition can never be true again), we queue module 1 as a catch-up
   // instead of firing module 2 this cycle. Module 2 will fire on a later cycle
   // once module 1 has gone out and the prerequisite check below passes.
-  if (ptiScore >= 30 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
+  if (!moduleFiredThisCycle && ptiScore >= 30 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
     if (!module1Fired) {
       await fireModule1();
+      moduleFiredThisCycle = true;
     } else if (ptiScore < 50) {
       await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
+      moduleFiredThisCycle = true;
     }
     // else: ptiScore >= 50 already past module 2's own zone — module 3's
-    // block below will catch module 2 up (its prerequisite) if still unfired.
+    // block below will catch module 2 up (its prerequisite) if still unfired,
+    // on this cycle if module 2 is the first gap found, or a later cycle otherwise.
   }
 
   // Module 3 unlock: PTI >= 50. Requires module_unlock_2 to have already fired —
   // same sequential gate/catch-up pattern as module 2 above.
-  if (ptiScore >= 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
+  if (!moduleFiredThisCycle && ptiScore >= 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
     const module2Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates);
     if (!module2Fired) {
       await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
+      moduleFiredThisCycle = true;
     } else if (ptiScore < 65) {
       await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+      moduleFiredThisCycle = true;
     }
     // else: ptiScore >= 65 already past module 3's own zone — module 4's
     // block below will catch module 3 up (its prerequisite) if still unfired.
   }
 
   // Module 4 unlock: PTI >= 65. Requires module_unlock_3 to have already fired.
-  if (ptiScore >= 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates))) {
+  if (!moduleFiredThisCycle && ptiScore >= 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates))) {
     const module3Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates);
     if (!module3Fired) {
       await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+      moduleFiredThisCycle = true;
     } else if (ptiScore < 80) {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
       fired++;
+      moduleFiredThisCycle = true;
     }
     // else: ptiScore >= 80 already past module 4's own zone — module 5's
     // block below will catch module 4 up (its prerequisite) if still unfired.
   }
 
   // Module 5 unlock: PTI >= 80. Requires module_unlock_4 to have already fired.
-  if (ptiScore >= 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_5, templates))) {
+  if (!moduleFiredThisCycle && ptiScore >= 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_5, templates))) {
     const module4Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates);
     if (!module4Fired) {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
       fired++;
+      moduleFiredThisCycle = true;
     } else {
       await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
       fired++;
+      moduleFiredThisCycle = true;
     }
   }
 
