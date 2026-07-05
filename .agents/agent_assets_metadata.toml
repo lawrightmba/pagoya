@@ -359,3 +359,9 @@ id = "KR7iO7PAywfFv42NVHUPh"
 uri = "file://artifacts/pagoya/public/ai-avatar.png"
 type = "image"
 title = "Paula / PagoYa AI avatar (225x225 PNG, in-app chat icon)"
+
+[[outputs]]
+id = "lQS7HIW2isvHWrA2n4x8Q"
+uri = "file://.agents/outputs/paula_messages_dev_export_24_active.csv"
+type = "table"
+title = "24 active paula_messages rows (dev) — full content for review"
