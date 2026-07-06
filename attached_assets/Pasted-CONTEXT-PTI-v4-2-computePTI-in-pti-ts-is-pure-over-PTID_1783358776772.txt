@@ -1,0 +1,56 @@
+CONTEXT: PTI v4.2. computePTI() in pti.ts is pure over PTIDataSnapshot. computePTIForUser() hydrates it. derivedSignals.ts is quarantined — do not touch.
+
+SCHEMA GROUND TRUTH (confirmed):
+- bill_payments has NO due_date/paid_at. Timing signal is days_from_due (working assumption: negative = late, positive = early/on-time, per recovery_after_miss's existing convention — not yet data-verifiable at current N; re-check once real payments exist), plus created_at (timestamp WITHOUT time zone).
+- Canonical bill amount column / fallback rule: [INSERT result of Prompt 0.5].
+- v4.2 already has recovery_after_miss in Behavioral Consistency. Do not duplicate it.
+
+ISOLATION REGEX GROUND TRUTH (confirmed, narrower than a generic name-collision risk):
+- pti.ts guard forbids the substrings colonia and declared_income_bucket/declaredIncomeBucket appearing in source.
+- licenseeApi.ts guard forbids importing/requiring fairLendingAdjustment, and forbids the call-sites computeFinalPTI( and computeFairLendingAdjustment(, and references to fair_lending_signoff.
+- New field names in this task are safe as long as they avoid those specific substrings/call-sites. Do not import anything from fairLendingAdjustment.ts in this task.
+
+FIXTURE INVENTORY — the following ELEVEN locations construct or assert on a full PTIDataSnapshot and must ALL be updated whenever the snapshot shape changes. This list is confirmed from a codebase read, not assumed:
+1. services/pti.ts (type def + computePTI)
+2. services/licenseeApi.ts (REQUIRED_SNAPSHOT_DEFAULTS)
+3. services/licenseeSandboxFixtures.ts
+4. services/syntheticPopulation.ts
+5. services/fairLendingAdjustment.ts
+6. scripts/ptiStressTest.ts
+7. scripts/ptiAblationStudy.ts
+8. scripts/fairLendingClampStressTest.ts
+9. services/tests/pti.test.ts
+10. services/tests/licenseeApi.test.ts
+11. services/tests/fairLendingAdjustment.test.ts
+Before writing the schema-completeness test (Part C below), re-grep the codebase yourself for any additional PTIDataSnapshot construction/assertion sites beyond these eleven — this list is a floor, not a ceiling; a fixture-completeness test that only checks these eleven is only as good as this inventory being actually exhaustive.
+
+PRE-FLIGHT: confirm the eleven-location list above by independent grep before proceeding.
+
+TASK — new module ptiDerivedFeatures.ts:
+
+Part A — Payment-timing distribution features, built against days_from_due:
+1. paymentTimingMeanDays: mean(days_from_due) over trailing 90 days.
+2. paymentTimingVarianceDays: variance(days_from_due) over the same window. Primary signal.
+3. cureTimeMedianHours is NOT built — duplicates recovery_after_miss at worse granularity. Document this decision.
+
+Part B — Generic temporal-derivative transform layer:
+Apply ONLY to existing snapshot inputs that are simple event counts/amounts over time — NOT anything requiring balance reconstruction (Stage 1.5 handles that).
+4. rolling30dStdDev, rolling60dStdDev, rolling90dStdDev per qualifying input.
+5. velocity30d: first difference of consecutive 30-day means.
+6. interEventRegularity: normalized entropy of inter-event intervals, minimum 5 events else null. (Given current production volumes — 0 bill_payments, 3 wallet_transactions, 0 user_billers — expect this to return null for essentially the entire population today. That is expected, not a bug.)
+Implement as generic pure functions, unit-tested on synthetic arrays first, then applied per qualifying input.
+
+Part C — Integration at ZERO weight:
+7. Extend PTIDataSnapshot with new fields from Parts A–B only.
+8. computePTI() must return byte-identical scores for identical v4.2 inputs — add the regression test.
+9. Update ALL ELEVEN fixture locations in this same PR. Add a schema-completeness test that scans all eleven (plus any additional sites found via the pre-flight grep) and fails if any is missing a snapshot field.
+
+Part D — Ablation readiness:
+10. Extend syntheticPopulation.ts / ptiStressTest.ts / ptiAblationStudy.ts / fairLendingClampStressTest.ts (all four, per the corrected inventory) to generate plausible values for new fields and report per-feature distributions/correlations against existing flagged proxy variables.
+
+Part E — categoria capture-point fix:
+11. Find the write path inserting into bill_payments (same paths identified in Prompt 0.5); populate categoria from the biller record going forward. No backfill.
+
+GUARDRAILS: no touching derivedSignals.ts, weights, or fair-lending code. All isolation tests pass. All existing tests pass.
+
+DEFINITION OF DONE: v4.2 scores unchanged; Parts A–B fields in snapshot + all eleven fixtures + all four ablation/stress scripts; cureTimeMedianHours explicitly not built with reasoning documented; fixture-completeness test scans all eleven locations plus any new ones found by grep; categoria populating on new inserts; suite green.
