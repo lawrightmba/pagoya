@@ -48,6 +48,18 @@ import {
   OPENING_BALANCE_MXN,
 } from "./walletBalanceReconstruction.js";
 
+/**
+ * Categorical classification of a user's response to a detected bill-shock
+ * event (see classifyBillShockResponse in ptiEventFeatures.ts). Defined HERE
+ * (not in ptiEventFeatures.ts) because ptiEventFeatures.ts already imports
+ * from this module — declaring it here keeps the import direction one-way.
+ */
+export type BillShockResponseCategory =
+  | "paid_full_ontime"
+  | "paid_partial"
+  | "paid_late"
+  | "unpaid_30d";
+
 export interface DerivedFeatureSet {
   paymentTimingMeanDaysFromDue: number;      // mean days-from-due, winsorized to +/-20
   paymentTimingVarianceDaysFromDue: number;  // sample variance of the same winsorized series
@@ -70,6 +82,7 @@ export interface DerivedFeatureSet {
   sequencingStability: number | null;      // scarcity-event biller-priority consistency; null if <2 events (incl. 0 billers)
   shockPaidFullRate: number;               // fraction of bill-shock-threshold ATTEMPTS ultimately paid successfully
   billShockWalletResponseRate: number;     // of successful shock events with a known channel, fraction paid via wallet_balance
+  billShockResponse: BillShockResponseCategory | null; // categorical response to most recent classifiable shock; null if no shock event
 }
 
 // Zero-weight defaults — every site that builds a PTIDataSnapshot should
@@ -90,6 +103,7 @@ export const DERIVED_FEATURE_DEFAULTS: DerivedFeatureSet = {
   sequencingStability: null,
   shockPaidFullRate: 0,
   billShockWalletResponseRate: 0,
+  billShockResponse: null,
 };
 
 // 20 days rather than a round 30 (a full month): the bound is meant to cap

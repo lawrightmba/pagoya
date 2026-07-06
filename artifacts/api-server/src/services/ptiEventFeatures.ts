@@ -47,7 +47,7 @@
  */
 
 import { toComparableTimestamp } from "./walletBalanceReconstruction.js";
-import type { UserBillerInput } from "./ptiDerivedFeatures.js";
+import type { UserBillerInput, BillShockResponseCategory } from "./ptiDerivedFeatures.js";
 
 const EXCLUDED_STATUSES = new Set(["fallido", "solicitud_manual"]);
 const SHOCK_MULTIPLIER = 1.5;
@@ -59,6 +59,11 @@ export interface BillPaymentInput {
   status: string;
   channel: string | null; // "wallet_balance" | "card_direct" | null (pre-channel-field rows)
   createdAt: Date; // naive timestamp, per bill_payments.created_at — run through toComparableTimestamp
+  // Optional — used only by classifyBillShockResponse. amount_due_mxn is
+  // almost never populated in production (CFE/Telmex only, and even then
+  // sparsely); days_from_due is null when the user has no user_billers row.
+  amountDueMxn?: number | null; // bill_payments.amount_due_mxn (billed face value)
+  daysFromDue?: number | null;  // bill_payments.days_from_due (positive = early, negative = late)
 }
 
 function median(values: number[]): number {
@@ -90,6 +95,18 @@ export interface ShockEvent {
  * row is computed from that same service_id's non-excluded history strictly
  * before this row (chronological, no look-ahead), so a shock event can
  * never be its own baseline input.
+ *
+ * TRANSACTED vs BILLED — deliberate choice, not an oversight: bill-shock
+ * detection is based on the TRANSACTED amount (`monto`), not the billed
+ * face value (`amount_due_mxn`), because amount_due_mxn is never populated
+ * in production (confirmed earlier in this plan — it is only ever written
+ * for CFE/Telmex bill lookups, and even those rows are overwhelmingly
+ * null). This means "shock" here means "the user's payment for this
+ * service spiked vs their own trailing history," which is a real,
+ * observable cash-flow event — NOT "the provider billed an unusually large
+ * amount," which we cannot observe today. If amount_due_mxn ever becomes
+ * reliably populated, a billed-amount variant should be added alongside
+ * (not silently swapped in for) this transacted-amount definition.
  */
 export function detectBillShockEvents(payments: BillPaymentInput[]): ShockEvent[] {
   const byService = new Map<string, BillPaymentInput[]>();
@@ -181,6 +198,99 @@ export function computeBillShockWalletResponseRate(events: ShockEvent[]): number
   if (withChannel.length === 0) return 0;
   const walletCount = withChannel.filter((e) => e.channel === "wallet_balance").length;
   return walletCount / withChannel.length;
+}
+
+const UNPAID_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Classifies the user's response to their most recent classifiable
+ * bill-shock event into exactly one of the 4 categories specified in the
+ * original Prompt 2 Part C item 9, or null when NO shock event ever
+ * occurred (null is "no shock to respond to," NOT a 5th category).
+ *
+ * Shock candidates use the WIDER attempt set (same as
+ * computeShockPaidFullRate): any row — including fallido/solicitud_manual —
+ * whose `monto` is >= 1.5x that service's trailing-6-median of NON-excluded
+ * history. A failed attempt still evidences the user FACING a shock; only
+ * non-excluded rows feed the baseline.
+ *
+ * Classification of the most recent candidate, walking backwards until one
+ * is classifiable:
+ * - Successful (non-excluded) attempt:
+ *     paid_partial       if amountDueMxn is known and monto < amountDueMxn
+ *     paid_late          if daysFromDue is known and < 0
+ *     paid_full_ontime   otherwise (bill_payments has no partial-payment
+ *                        concept — a non-excluded row IS a completed
+ *                        payment for its full monto, and with no
+ *                        days_from_due signal we cannot call it late)
+ * - Failed/manual attempt: look for the NEXT successful payment for the
+ *   same service within 30 days after the attempt:
+ *     found     -> classify that successful payment per the rules above
+ *                  (it cured the shock; paid_late applies if its
+ *                  daysFromDue < 0)
+ *     none, and >= 30 days have elapsed between attempt and asOf
+ *               -> unpaid_30d
+ *     none, and < 30 days have elapsed
+ *               -> indeterminate (too soon to call unpaid_30d) — skip to
+ *                  the previous candidate; if none remain, null.
+ */
+export function classifyBillShockResponse(
+  payments: BillPaymentInput[],
+  asOf: Date,
+): BillShockResponseCategory | null {
+  const byService = new Map<string, BillPaymentInput[]>();
+  for (const p of payments) {
+    if (!byService.has(p.serviceId)) byService.set(p.serviceId, []);
+    byService.get(p.serviceId)!.push(p);
+  }
+
+  // Collect every shock-threshold-crossing attempt (wider candidate set).
+  const candidates: BillPaymentInput[] = [];
+  for (const rows of byService.values()) {
+    const sorted = [...rows].sort((a, b) => orderedMs(a) - orderedMs(b));
+    const cleanHistory: number[] = [];
+    for (const row of sorted) {
+      const isExcluded = EXCLUDED_STATUSES.has(row.status);
+      const trailing = cleanHistory.slice(-TRAILING_MEDIAN_WINDOW);
+      if (trailing.length >= TRAILING_MEDIAN_WINDOW) {
+        const baseline = median(trailing);
+        if (baseline > 0 && row.monto >= SHOCK_MULTIPLIER * baseline) {
+          candidates.push(row);
+        }
+      }
+      if (!isExcluded) cleanHistory.push(row.monto);
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  const classifySuccess = (row: BillPaymentInput): BillShockResponseCategory => {
+    if (row.amountDueMxn != null && row.monto < row.amountDueMxn) return "paid_partial";
+    if (row.daysFromDue != null && row.daysFromDue < 0) return "paid_late";
+    return "paid_full_ontime";
+  };
+
+  // Most recent first; walk backwards until one candidate is classifiable.
+  const ordered = [...candidates].sort((a, b) => orderedMs(b) - orderedMs(a));
+  for (const attempt of ordered) {
+    if (!EXCLUDED_STATUSES.has(attempt.status)) {
+      return classifySuccess(attempt);
+    }
+    // Failed/manual attempt — 30-day lookforward for a curing success.
+    const attemptMs = orderedMs(attempt);
+    const cure = payments
+      .filter((p) => p.serviceId === attempt.serviceId)
+      .filter((p) => !EXCLUDED_STATUSES.has(p.status))
+      .filter((p) => {
+        const ms = orderedMs(p);
+        return ms > attemptMs && ms <= attemptMs + UNPAID_LOOKBACK_MS;
+      })
+      .sort((a, b) => orderedMs(a) - orderedMs(b))[0];
+    if (cure) return classifySuccess(cure);
+    if (asOf.getTime() - attemptMs >= UNPAID_LOOKBACK_MS) return "unpaid_30d";
+    // < 30 days elapsed and unpaid: indeterminate — try the previous candidate.
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────

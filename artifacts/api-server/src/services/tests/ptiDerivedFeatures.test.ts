@@ -34,6 +34,7 @@ describe("ptiDerivedFeatures — DERIVED_FEATURE_DEFAULTS", () => {
       sequencingStability: null,
       shockPaidFullRate: 0,
       billShockWalletResponseRate: 0,
+      billShockResponse: null,
     });
   });
 });
@@ -190,9 +191,14 @@ describe("computeDaysAtZeroPerMonth (Prompt 2, Part A)", () => {
     expect(computeDaysAtZeroPerMonth(series, asOf)).toBe(0);
   });
 
-  it("counts calendar days where end-of-day balance is exactly 0", () => {
+  it("counts calendar days where end-of-day balance is exactly 0 — exact count", () => {
+    // Balance goes to 0 on Jan 11 (bp(10, 0) = midnight UTC Jan 11) and is
+    // refunded at midnight UTC on Jan 16 (bp(15, 50)). Under the documented
+    // forward-fill end-of-day semantics, the end-of-day balance is 0 for
+    // exactly Jan 11, 12, 13, 14, 15 — the refund lands at Jan 16 00:00, so
+    // Jan 16's end-of-day balance is 50, not 0. Exactly 5 days, not "some".
     const series = [bp(0, 100), bp(10, 0), bp(15, 50)];
-    expect(computeDaysAtZeroPerMonth(series, asOf)).toBeGreaterThan(0);
+    expect(computeDaysAtZeroPerMonth(series, asOf)).toBe(5);
   });
 
   it("zero-balance start (no transactions before window) does not count as zero days once funded", () => {

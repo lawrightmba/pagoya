@@ -1,0 +1,56 @@
+# Prompt — Stage 2 Remediation (wire the 10 disconnected fields, build the missing categorical feature)
+
+```
+Closeout verification of the prior Prompt 2 work found two serious gaps, not cosmetic ones. Fix them in this order. Do not report completion without pasting the actual code and actual test/query output for every item — prior summary language in this task ("wired," "flows through," "mirrors existing pattern") was checked and found to be false for the most important claim, so this task will be re-verified line-by-line against evidence, not against a description.
+
+GAP 1 (CRITICAL, fix first): buildPTISnapshotFromDb() does not call any of the 10 new compute functions and its return object omits all 10 fields. Every real production user silently falls back to DERIVED_FEATURE_DEFAULTS forever, because the fields are optional and nothing errors. This means Stage 2 currently produces zero real signal in production despite being fully built and tested in isolation.
+
+GAP 2: billShockResponse — the 4-category classification (paid_full_ontime / paid_partial / paid_late / unpaid_30d) specified in the original Prompt 2 — was never built. Only two rate-based aggregates (computeShockPaidFullRate, computeBillShockWalletResponseRate) exist, and neither is a categorical classification.
+
+---
+
+FIX GAP 1 — wire all 10 fields into buildPTISnapshotFromDb()
+
+1. For each of the 10 fields, add the actual function call inside buildPTISnapshotFromDb(), using the real data already available in that function's scope (it already queries whatever powers the existing fields like currentBalance, totalLoads, streakMonths, etc. — reuse those queries/results where the new functions need the same underlying rows rather than re-querying from scratch, unless the new function needs data not already fetched there, in which case add the minimal additional query needed):
+   - minBalanceBuffer30d ← computeMinBalanceBuffer30d, fed by reconstructBalanceSeries() (Stage 1.5) over this user's real wallet_transactions
+   - daysAtZeroPerMonth ← computeDaysAtZeroPerMonth, same balance series
+   - drawdownVelocity ← computeDrawdownVelocity, same balance series
+   - loadIntervalEntropy ← computeLoadIntervalEntropy, real load events
+   - loadAmountCV ← computeLoadAmountCV, real load events
+   - preDueStagingIndex ← computePreDueStagingIndex, real user_billers + balance series (expect null for this user if they have 0 user_billers rows — that's correct behavior, not a bug)
+   - loadToObligationRatio ← computeLoadToObligationRatio, same
+   - sequencingStability ← computeSequencingStability / detectScarcityEvents, real bill_payments + user_billers
+   - shockPaidFullRate ← computeShockPaidFullRate, real bill_payments filtered per the status exclusion rule
+   - billShockWalletResponseRate ← computeBillShockWalletResponseRate, same
+
+2. Add all 10 fields to buildPTISnapshotFromDb()'s return object, using the real computed values (not DERIVED_FEATURE_DEFAULTS — that constant is for fixtures/tests that don't have real data, not for the live path; the live path should always attempt real computation and only naturally end up null/default when the underlying data is genuinely absent, e.g. zero user_billers).
+
+3. Write an integration test (or extend an existing one) that calls buildPTISnapshotFromDb() against a seeded test-database user with realistic wallet_transactions/bill_payments/user_billers rows, and asserts that the returned snapshot's 10 new fields are populated with computed values that are NOT simply equal to DERIVED_FEATURE_DEFAULTS (i.e., prove they're actually being computed, not just present-but-defaulted). This is the test that would have caught this gap — build it now.
+
+4. Re-run: grep -rn "minBalanceBuffer30d\|daysAtZeroPerMonth\|drawdownVelocity\|loadIntervalEntropy\|loadAmountCV\|preDueStagingIndex\|loadToObligationRatio\|sequencingStability\|shockPaidFullRate\|billShockWalletResponseRate" src/ routes/ and paste the full output. Confirm buildPTISnapshotFromDb (pti.ts) and, if it exists as a separate live route file, routes/pti.ts now both appear in the match list — not just test/script files.
+
+5. Confirm v4.2 byte-identical regression test still passes after this change (it should — these are additive fields, not modifications to existing computation — but verify, don't assume).
+
+---
+
+FIX GAP 2 — build billShockResponse
+
+1. In ptiEventFeatures.ts, add a function (e.g. classifyBillShockResponse) that, for a detected bill-shock event (per the existing detectBillShockEvents logic), classifies the user's response into exactly one of: paid_full_ontime, paid_partial, paid_late, unpaid_30d. Base this on the same bill_payments row(s) already used for shock detection — status, monto relative to the billed amount, and days_from_due — plus a 30-day lookback to distinguish "unpaid_30d" from "paid_late."
+2. Wire this into buildPTISnapshotFromDb() alongside the Gap 1 fixes — it's a field this task's original spec (Prompt 2 Part C item 9) required alongside shockPaidFullRate, and it was skipped, not deferred.
+3. Add DERIVED_FEATURE_DEFAULTS entry, add to schema-completeness test, add to all 9 fixture sites, add unit tests covering all 4 categories plus the "no shock event occurred" case (should be null, not a 5th category).
+4. Unit-test explicitly: a shock event followed by full on-time payment, partial payment, late payment, and no payment within 30 days — confirm each classifies correctly.
+
+---
+
+CLOSING VERIFICATION — do not report done without all of the following pasted verbatim:
+
+1. The new buildPTISnapshotFromDb() code showing all 10 original fields plus billShockResponse being computed from real function calls (not left as defaults).
+2. The new integration test proving computed values differ from DERIVED_FEATURE_DEFAULTS for a realistic seeded user, with actual pass/fail output.
+3. The grep output showing production code paths (not just tests/scripts) now reference these field names.
+4. classifyBillShockResponse's 4 category-specific unit tests, verbatim, with pass/fail output.
+5. v4.2 byte-identical regression test output, confirming no change to existing scoring behavior.
+6. Full test suite pass/fail counts, plus explicit confirmation of whether the pre-existing billpay.test.ts DB-pollution failures (7 tests, unrelated) are still the only failures, or whether anything new failed.
+7. git diff confirming services/fairLendingAdjustment.ts remains untouched, and confirming exactly which files were changed in this remediation pass.
+
+Report using: one-word verdict (CONFIRMED / DEVIATION / NOT DONE) per item above, evidence pasted directly beneath each, no summary paragraph at the top.
+```

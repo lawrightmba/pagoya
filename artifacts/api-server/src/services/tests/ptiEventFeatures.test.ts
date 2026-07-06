@@ -5,6 +5,7 @@ import {
   computeBillShockWalletResponseRate,
   detectScarcityEvents,
   computeSequencingStability,
+  classifyBillShockResponse,
   type BillPaymentInput,
   type BalanceLookup,
 } from "../ptiEventFeatures.js";
@@ -200,5 +201,129 @@ describe("computeSequencingStability", () => {
       { dueDateMs: 3, atRiskBillerIds: ["cfe"], paidFirstBillerId: null },
     ];
     expect(computeSequencingStability(events)).toBe(1);
+  });
+});
+
+describe("classifyBillShockResponse (Prompt 2 Part C item 9 — Stage 2 remediation)", () => {
+  // Baseline of 6 payments at 200 MXN establishes a trailing median of 200;
+  // shock threshold = 1.5 * 200 = 300.
+  const asOf = new Date(Date.UTC(2026, 2, 15)); // Mar 15 2026
+
+  it("returns null when there are no payments at all", () => {
+    expect(classifyBillShockResponse([], asOf)).toBeNull();
+  });
+
+  it("returns null when no payment ever crosses the shock threshold", () => {
+    const rows = baselineRun("cfe", [200, 200, 200, 200, 200, 200, 250], 1);
+    expect(classifyBillShockResponse(rows, asOf)).toBeNull();
+  });
+
+  it("classifies a successful shock payment with no due metadata as paid_full_ontime", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({ serviceId: "cfe", monto: 400, createdAt: new Date(Date.UTC(2026, 0, 20)) }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_full_ontime");
+  });
+
+  it("classifies as paid_partial when monto < amountDueMxn on the shock payment", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, amountDueMxn: 600,
+        createdAt: new Date(Date.UTC(2026, 0, 20)),
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_partial");
+  });
+
+  it("classifies as paid_late when daysFromDue < 0 on the shock payment", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, daysFromDue: -3,
+        createdAt: new Date(Date.UTC(2026, 0, 20)),
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_late");
+  });
+
+  it("partial takes precedence over late when both signals present", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, amountDueMxn: 600, daysFromDue: -3,
+        createdAt: new Date(Date.UTC(2026, 0, 20)),
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_partial");
+  });
+
+  it("classifies a failed shock attempt with no cure and >=30d elapsed as unpaid_30d", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, status: "fallido",
+        createdAt: new Date(Date.UTC(2026, 0, 20)), // 54 days before asOf
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("unpaid_30d");
+  });
+
+  it("a failed shock attempt cured by a successful payment within 30d classifies the cure", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, status: "fallido",
+        createdAt: new Date(Date.UTC(2026, 0, 20)),
+      }),
+      pay({
+        serviceId: "cfe", monto: 400, daysFromDue: -2,
+        createdAt: new Date(Date.UTC(2026, 0, 25)),
+      }),
+    ];
+    // Most recent candidate is the successful 400 payment itself (it also
+    // crosses the threshold) → classified directly as paid_late.
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_late");
+  });
+
+  it("a failed shock cured by a NON-shock-magnitude success classifies the cure (paid_partial here)", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 400, status: "fallido",
+        createdAt: new Date(Date.UTC(2026, 0, 20)),
+      }),
+      // Cure is only 250 (< 1.5×200 = 300, so NOT itself a shock candidate),
+      // and 250 < amountDueMxn 400 → the cure classifies as paid_partial.
+      pay({
+        serviceId: "cfe", monto: 250, amountDueMxn: 400,
+        createdAt: new Date(Date.UTC(2026, 0, 28)),
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_partial");
+  });
+
+  it("a recent failed attempt (<30d, uncured) is indeterminate — falls back to earlier candidate", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({ serviceId: "cfe", monto: 400, createdAt: new Date(Date.UTC(2026, 0, 20)) }), // earlier success
+      pay({
+        serviceId: "cfe", monto: 500, status: "fallido",
+        createdAt: new Date(Date.UTC(2026, 2, 10)), // 5 days before asOf, uncured
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBe("paid_full_ontime");
+  });
+
+  it("a recent failed attempt (<30d, uncured) with no earlier candidate returns null", () => {
+    const rows = [
+      ...baselineRun("cfe", [200, 200, 200, 200, 200, 200], 1),
+      pay({
+        serviceId: "cfe", monto: 500, status: "fallido",
+        createdAt: new Date(Date.UTC(2026, 2, 10)),
+      }),
+    ];
+    expect(classifyBillShockResponse(rows, asOf)).toBeNull();
   });
 });

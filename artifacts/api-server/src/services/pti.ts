@@ -56,7 +56,32 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
-import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
+import {
+  DERIVED_FEATURE_DEFAULTS,
+  computeMinBalanceBuffer30d,
+  computeDaysAtZeroPerMonth,
+  computeDrawdownVelocity,
+  computeLoadIntervalEntropy,
+  computeLoadAmountCV,
+  computePreDueStagingIndex,
+  computeLoadToObligationRatio,
+  type BillShockResponseCategory,
+  type UserBillerInput,
+} from "./ptiDerivedFeatures.js";
+import {
+  detectBillShockEvents,
+  detectScarcityEvents,
+  computeSequencingStability,
+  computeShockPaidFullRate,
+  computeBillShockWalletResponseRate,
+  classifyBillShockResponse,
+  type BillPaymentInput,
+} from "./ptiEventFeatures.js";
+import {
+  reconstructBalanceSeries,
+  OPENING_BALANCE_MXN,
+  type WalletTransactionInput,
+} from "./walletBalanceReconstruction.js";
 
 // ─── Public interfaces ────────────────────────────────────────────────────────
 
@@ -169,6 +194,7 @@ export interface PTIDataSnapshot {
   sequencingStability?: number | null;   // scarcity-event biller-priority consistency; null if <2 events
   shockPaidFullRate?: number;            // fraction of bill-shock-threshold attempts ultimately paid successfully
   billShockWalletResponseRate?: number;  // of successful shock events, fraction paid via wallet_balance channel
+  billShockResponse?: BillShockResponseCategory | null; // categorical response to most recent classifiable shock; null if none
 }
 
 /**
@@ -199,6 +225,7 @@ const PTI_DATA_SNAPSHOT_FIELD_MAP: Record<keyof PTIDataSnapshot, true> = {
   loadIntervalEntropy: true, loadAmountCV: true,
   preDueStagingIndex: true, loadToObligationRatio: true,
   sequencingStability: true, shockPaidFullRate: true, billShockWalletResponseRate: true,
+  billShockResponse: true,
 };
 
 export const PTI_DATA_SNAPSHOT_FIELDS: string[] = Object.keys(PTI_DATA_SNAPSHOT_FIELD_MAP);
@@ -296,6 +323,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     sequencingStability = DERIVED_FEATURE_DEFAULTS.sequencingStability,
     shockPaidFullRate = DERIVED_FEATURE_DEFAULTS.shockPaidFullRate,
     billShockWalletResponseRate = DERIVED_FEATURE_DEFAULTS.billShockWalletResponseRate,
+    billShockResponse = DERIVED_FEATURE_DEFAULTS.billShockResponse,
   } = snapshot;
   void minBalanceBuffer30d;
   void daysAtZeroPerMonth;
@@ -307,6 +335,7 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   void sequencingStability;
   void shockPaidFullRate;
   void billShockWalletResponseRate;
+  void billShockResponse;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)
@@ -670,8 +699,12 @@ export async function computePTIForUser(telefono: string): Promise<PTIBreakdown>
  * and assembles them into a portable PTIDataSnapshot. This is the ONLY place
  * in the engine that touches the database — everything downstream of this
  * (computePTI) is pure and works identically for a partner's synthetic data.
+ *
+ * Exported (Stage 2 remediation) so integration tests can seed a test user
+ * and prove the Prompt 2 derived fields are actually computed from real
+ * rows, not silently left at DERIVED_FEATURE_DEFAULTS.
  */
-async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot> {
+export async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot> {
   const { db } = await import("@workspace/db");
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -971,6 +1004,140 @@ async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot
   const speiLoadCount   = Number(bankingR?.spei_load_count ?? 0);
   const cardLoadCount   = Number(bankingR?.card_load_count ?? 0);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // PTI Signal Expansion Prompt 2 / Stage 2 — LIVE wiring of the derived
+  // features (zero weight in scoring, but computed from real rows here so
+  // production snapshots carry real signal instead of silently falling back
+  // to DERIVED_FEATURE_DEFAULTS).
+  //
+  // Three raw datasets power all 11 fields, fetched ONCE each:
+  //   1. Full wallet_transactions history (all types/statuses — filtering is
+  //      reconstructBalanceSeries's job, per Stage 1.5).
+  //   2. Full bill_payments history (all statuses — the shock functions need
+  //      the wider attempt set including fallido/solicitud_manual).
+  //   3. user_billers via user_profiles.phone (0 rows for every real user
+  //      today — the Part B/D functions return null in that case, which is
+  //      correct behavior, not a bug).
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const walletTxnRows = await db.execute(sql`
+    SELECT wt.id::text AS id, wt.type, wt.status,
+           wt.amount_mxn::numeric AS amount_mxn, wt.created_at, wt.confirmed_at
+    FROM wallet_transactions wt
+    JOIN wallets w ON wt.wallet_id = w.id
+    WHERE w.user_id = ${telefono}
+  `);
+  const billPaymentRows = await db.execute(sql`
+    SELECT service_id, monto::numeric AS monto, status, channel, created_at,
+           amount_due_mxn::numeric AS amount_due_mxn, days_from_due
+    FROM bill_payments
+    WHERE telefono = ${telefono}
+  `);
+  const userBillerRows = await db.execute(sql`
+    SELECT ub.biller_id, ub.payment_day, ub.typical_amount::numeric AS typical_amount
+    FROM user_billers ub
+    JOIN user_profiles up ON ub.profile_id = up.id
+    WHERE up.phone = ${telefono}
+      AND ub.payment_day IS NOT NULL
+      AND ub.typical_amount IS NOT NULL
+  `);
+
+  // Live-path guarantee with a LOUD failure mode: computation is always
+  // attempted from real rows; only a thrown error (e.g. an unrecognized
+  // wallet_transactions.type not yet enumerated in TYPE_DIRECTION) falls
+  // back to defaults, and that fallback is logged at WARN — never silent.
+  let derivedLive: Pick<PTIDataSnapshot,
+    "minBalanceBuffer30d" | "daysAtZeroPerMonth" | "drawdownVelocity" |
+    "loadIntervalEntropy" | "loadAmountCV" | "preDueStagingIndex" |
+    "loadToObligationRatio" | "sequencingStability" | "shockPaidFullRate" |
+    "billShockWalletResponseRate" | "billShockResponse">;
+  try {
+    const asOf = new Date();
+
+    const walletTxns: WalletTransactionInput[] = walletTxnRows.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: String(row.id),
+        type: String(row.type),
+        status: String(row.status),
+        amountMxn: Number(row.amount_mxn),
+        createdAt: new Date(row.created_at as string | Date),
+        confirmedAt: row.confirmed_at == null ? null : new Date(row.confirmed_at as string | Date),
+      };
+    });
+
+    const billPayments: BillPaymentInput[] = billPaymentRows.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        serviceId: String(row.service_id),
+        monto: Number(row.monto),
+        status: String(row.status),
+        channel: row.channel == null ? null : String(row.channel),
+        createdAt: new Date(row.created_at as string | Date),
+        amountDueMxn: row.amount_due_mxn == null ? null : Number(row.amount_due_mxn),
+        daysFromDue: row.days_from_due == null ? null : Number(row.days_from_due),
+      };
+    });
+
+    const billers: UserBillerInput[] = userBillerRows.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        billerId: String(row.biller_id),
+        paymentDay: Number(row.payment_day),
+        typicalAmount: Number(row.typical_amount),
+      };
+    });
+
+    const series = reconstructBalanceSeries(walletTxns);
+    // Forward-filled balance lookup over the reconstructed series (series is
+    // already chronological, per reconstructBalanceSeries's contract).
+    const balanceLookup = {
+      balanceAsOf(atMs: number): number {
+        let balance = OPENING_BALANCE_MXN;
+        for (const point of series) {
+          if (point.timestamp.getTime() <= atMs) balance = point.balance;
+          else break;
+        }
+        return balance;
+      },
+    };
+
+    const shockEvents = detectBillShockEvents(billPayments);
+    const scarcityEvents = detectScarcityEvents(billers, balanceLookup, billPayments, asOf);
+
+    derivedLive = {
+      minBalanceBuffer30d: computeMinBalanceBuffer30d(series, asOf),
+      daysAtZeroPerMonth: computeDaysAtZeroPerMonth(series, asOf),
+      drawdownVelocity: computeDrawdownVelocity(walletTxns),
+      loadIntervalEntropy: computeLoadIntervalEntropy(walletTxns),
+      loadAmountCV: computeLoadAmountCV(walletTxns, asOf),
+      preDueStagingIndex: computePreDueStagingIndex(billers, series, asOf),
+      loadToObligationRatio: computeLoadToObligationRatio(billers, walletTxns, asOf),
+      sequencingStability: computeSequencingStability(scarcityEvents),
+      shockPaidFullRate: computeShockPaidFullRate(billPayments),
+      billShockWalletResponseRate: computeBillShockWalletResponseRate(shockEvents),
+      billShockResponse: classifyBillShockResponse(billPayments, asOf),
+    };
+  } catch (err) {
+    logger.warn(
+      { err, telefono },
+      "pti: Prompt 2 derived-feature computation FAILED — falling back to DERIVED_FEATURE_DEFAULTS for this user (investigate: this should never happen for well-formed rows)",
+    );
+    derivedLive = {
+      minBalanceBuffer30d: DERIVED_FEATURE_DEFAULTS.minBalanceBuffer30d,
+      daysAtZeroPerMonth: DERIVED_FEATURE_DEFAULTS.daysAtZeroPerMonth,
+      drawdownVelocity: DERIVED_FEATURE_DEFAULTS.drawdownVelocity,
+      loadIntervalEntropy: DERIVED_FEATURE_DEFAULTS.loadIntervalEntropy,
+      loadAmountCV: DERIVED_FEATURE_DEFAULTS.loadAmountCV,
+      preDueStagingIndex: DERIVED_FEATURE_DEFAULTS.preDueStagingIndex,
+      loadToObligationRatio: DERIVED_FEATURE_DEFAULTS.loadToObligationRatio,
+      sequencingStability: DERIVED_FEATURE_DEFAULTS.sequencingStability,
+      shockPaidFullRate: DERIVED_FEATURE_DEFAULTS.shockPaidFullRate,
+      billShockWalletResponseRate: DERIVED_FEATURE_DEFAULTS.billShockWalletResponseRate,
+      billShockResponse: DERIVED_FEATURE_DEFAULTS.billShockResponse,
+    };
+  }
+
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
     loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
@@ -979,6 +1146,20 @@ async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataSnapshot
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    // Prompt 2 / Stage 2 derived features — REAL computed values (see block
+    // above). Not spread from DERIVED_FEATURE_DEFAULTS: that constant is for
+    // fixtures/tests without real data, never the live path.
+    minBalanceBuffer30d: derivedLive.minBalanceBuffer30d,
+    daysAtZeroPerMonth: derivedLive.daysAtZeroPerMonth,
+    drawdownVelocity: derivedLive.drawdownVelocity,
+    loadIntervalEntropy: derivedLive.loadIntervalEntropy,
+    loadAmountCV: derivedLive.loadAmountCV,
+    preDueStagingIndex: derivedLive.preDueStagingIndex,
+    loadToObligationRatio: derivedLive.loadToObligationRatio,
+    sequencingStability: derivedLive.sequencingStability,
+    shockPaidFullRate: derivedLive.shockPaidFullRate,
+    billShockWalletResponseRate: derivedLive.billShockWalletResponseRate,
+    billShockResponse: derivedLive.billShockResponse,
   };
 }
 
