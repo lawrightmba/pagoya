@@ -1,0 +1,123 @@
+# Replit Agent Prompts — PTI Signal Expansion (v4.2 → v4.3) — REV 5
+### Final pre-handoff pass. Folds in Prompt 0.5's status-filter and monto-semantics findings. Prompts 0, 0.5, 1.5, 3, 4 are unchanged from REV 4 — only Prompts 1 and 2 are amended below. No code changed yet.
+
+**Changes from REV 4:**
+1. **Canonical amount column resolved:** `monto` (numeric, notNull), written identically by all four insert paths in `billpay/routes/billpay.ts`, already used by every v4.2 scoring path. `platform_fee_mxn` is the fee. `amount_due_mxn` is never populated — do not use. `bill_amount` is a legacy non-ORM orphan — ignore.
+2. **New required constraint — status filtering.** `bill_payments` rows include `status='fallido'` (real `monto`, never actually paid) and `status='solicitud_manual'` (can carry `monto='0.00'`). Every amount- and timing-based feature in Stage 1/2 must exclude these or risk ingesting zero-amount and never-paid noise as if it were real payment behavior. This is now an explicit filter clause in both prompts below, not left to inference.
+3. **`monto` semantics clarified:** it is amount *transacted*, not amount *billed* — `amount_due_mxn` (the true face value) is always NULL until a future biller-API pull. Bill-shock and any future "paid vs. owed" feature must be defined on transacted amount and documented as such, so nobody later assumes it measures deviation from a true bill amount.
+4. **Biller grouping key confirmed as `service_id`**, in preference to `service_name`/`empresa` (a legacy column) — the two follow-up UPDATE paths use `COALESCE(service_name, empresa, ...)` for display purposes only, which is not stable enough for grouping.
+
+**Execution order: 0 → 0.5 → 1 → 1.5 → 2 → 3 → 4. Both 0 and 0.5 are now closed.**
+
+---
+
+## PROMPT 1 — Stage 1: payment-timing (corrected) + generic transforms + categoria fix (REV 5)
+
+```
+CONTEXT: PTI v4.2. computePTI() in pti.ts is pure over PTIDataSnapshot. computePTIForUser() hydrates it. derivedSignals.ts is quarantined — do not touch.
+
+SCHEMA GROUND TRUTH (confirmed):
+- bill_payments has NO due_date/paid_at. Timing signal is days_from_due (working assumption: negative = late, positive = early/on-time, per recovery_after_miss's existing convention — not yet data-verifiable at current N; re-check once real payments exist), plus created_at (timestamp WITHOUT time zone).
+- Canonical bill amount column: monto (numeric, notNull). Written identically by all four insert paths in billpay/routes/billpay.ts and already used by every v4.2 scoring path (pti.ts, enrichmentCron, kycUpgradeService). platform_fee_mxn is the fee (confirmed by direct assignment, default "15.00") — never treat as an amount signal. amount_due_mxn is never populated (reserved for a future biller-API pull) — do not use, and do not COALESCE onto it (it would be a pure no-op today). bill_amount is a legacy column not in the Drizzle schema — ignore entirely.
+- monto is amount TRANSACTED, not amount BILLED. There is no "paid vs. owed" distinction available today. Any feature built on monto must be documented as measuring transacted-amount behavior, not deviation from a true bill face value.
+- REQUIRED FILTER: every feature in this task that aggregates over bill_payments rows must exclude status IN ('fallido', 'solicitud_manual'). Fallido rows have a real monto but were never actually paid; solicitud_manual rows can carry monto='0.00'. Apply this filter at the query/snapshot-builder level, once, rather than per-feature, so it can't be silently forgotten in a later feature addition.
+- v4.2 already has recovery_after_miss in Behavioral Consistency. Do not duplicate it.
+
+ISOLATION REGEX GROUND TRUTH: pti.ts guard forbids the substrings colonia and declared_income_bucket/declaredIncomeBucket. licenseeApi.ts guard forbids import/require of fairLendingAdjustment, the call-sites computeFinalPTI(/computeFairLendingAdjustment(, and references to fair_lending_signoff. New field names in this task are safe as long as they avoid those specific substrings/call-sites.
+
+FIXTURE INVENTORY — the following ELEVEN locations construct or assert on a full PTIDataSnapshot and must ALL be updated whenever the snapshot shape changes:
+1. services/pti.ts (type def + computePTI)
+2. services/licenseeApi.ts (REQUIRED_SNAPSHOT_DEFAULTS)
+3. services/licenseeSandboxFixtures.ts
+4. services/syntheticPopulation.ts
+5. services/fairLendingAdjustment.ts
+6. scripts/ptiStressTest.ts
+7. scripts/ptiAblationStudy.ts
+8. scripts/fairLendingClampStressTest.ts
+9. services/tests/pti.test.ts
+10. services/tests/licenseeApi.test.ts
+11. services/tests/fairLendingAdjustment.test.ts
+Before writing the schema-completeness test (Part C), re-grep the codebase for any additional PTIDataSnapshot construction/assertion sites beyond these eleven — this list is a floor, not a ceiling.
+
+TASK — new module ptiDerivedFeatures.ts:
+
+Part A — Payment-timing distribution features, built against days_from_due, on the filtered row set (status NOT IN ('fallido','solicitud_manual')):
+1. paymentTimingMeanDays: mean(days_from_due) over trailing 90 days.
+2. paymentTimingVarianceDays: variance(days_from_due) over the same window. Primary signal.
+3. cureTimeMedianHours is NOT built — duplicates recovery_after_miss at worse granularity. Document this decision.
+
+Part B — Generic temporal-derivative transform layer:
+Apply ONLY to existing snapshot inputs that are simple event counts/amounts over time — NOT anything requiring balance reconstruction (Stage 1.5 handles that). Where an input is bill_payments-derived, apply the same status filter as Part A.
+4. rolling30dStdDev, rolling60dStdDev, rolling90dStdDev per qualifying input.
+5. velocity30d: first difference of consecutive 30-day means.
+6. interEventRegularity: normalized entropy of inter-event intervals, minimum 5 events else null. (Expect null for essentially the entire current population given production volumes — expected, not a bug.)
+Implement as generic pure functions, unit-tested on synthetic arrays first, then applied per qualifying input.
+
+Part C — Integration at ZERO weight:
+7. Extend PTIDataSnapshot with new fields from Parts A–B only.
+8. computePTI() must return byte-identical scores for identical v4.2 inputs — add the regression test.
+9. Update ALL ELEVEN fixture locations in this same PR. Add a schema-completeness test scanning all eleven (plus any additional sites found via pre-flight grep) that fails if any is missing a snapshot field.
+
+Part D — Ablation readiness:
+10. Extend syntheticPopulation.ts / ptiStressTest.ts / ptiAblationStudy.ts / fairLendingClampStressTest.ts to generate plausible values for new fields, including synthetic rows with status='fallido'/'solicitud_manual' specifically to verify the filter excludes them correctly. Report per-feature distributions/correlations against existing flagged proxy variables.
+
+Part E — categoria capture-point fix:
+11. Populate categoria from the biller record at all four bill_payments insert paths identified in billpay/routes/billpay.ts (lines 267, 332, 447, 1051). No backfill.
+
+GUARDRAILS: no touching derivedSignals.ts, weights, or fair-lending code. All isolation tests pass. All existing tests pass.
+
+DEFINITION OF DONE: v4.2 scores unchanged; status filter applied once at the query/snapshot-builder level and verified via synthetic fallido/solicitud_manual rows in the stress harness; Parts A–B fields in snapshot + all eleven fixtures + all four ablation/stress scripts; cureTimeMedianHours explicitly not built with reasoning documented; fixture-completeness test scans all eleven locations plus any new ones found by grep; categoria populating at all four insert paths; suite green.
+```
+
+---
+
+## PROMPT 2 — Stage 2: cash-flow features (via balance helper) + event detection + Paula mechanics (conditional) (REV 5)
+
+```
+CONTEXT: Stage 1 and 1.5 merged. Same guardrails: no weight changes, no derivedSignals.ts changes, all eleven fixtures updated in this PR, fixture-completeness test stays green.
+
+CONFIRMED FROM PROMPT 0 / 0.5 (do not re-derive, do not re-litigate):
+- message_templates does not exist in production or dev. paula_inbound_log has 0 rows in the last 30 days even though paula_send_queue has 6 outbound attempts. TWO independent blockers — Part D is skipped.
+- user_billers has 0 rows in production. Forward-obligation features are buildable but will return null for the entire current population.
+- Canonical amount column: monto, notNull, status-filtered (exclude 'fallido','solicitud_manual'), semantically "transacted" not "billed."
+- Biller grouping key: service_id (notNull, stable) — prefer over service_name/empresa, which are display-only and COALESCE'd for presentation, not reliable for grouping.
+
+PART LETTERING: Part A = cash-flow micro-structure. Part B = forward-obligation features. Part C = event detection (scarcity + bill-shock) — NO Paula dependency, ALWAYS BUILD. Part D = Paula interaction mechanics — SKIP (both blockers confirmed; do not attempt).
+
+Part A — Cash-flow micro-structure (uses reconstructBalanceSeries, no fresh reconstruction; wallet_transactions has no status-filter concern since it's a separate table from bill_payments, but confirm no analogous failed/pending states exist on wallet_transactions before assuming otherwise):
+1. minBalanceBuffer30d: minimum value of the reconstructed balance series over trailing 30 days.
+2. daysAtZeroPerMonth: reconstructBalanceSeries returns per-transaction points, not per-calendar-day. Add an explicit forward-fill step: for each calendar day in the trailing 30, take the balance as of the last transaction at or before end-of-day (via toComparableTimestamp() for tz alignment), count days where that value = 0. Implement and unit-test this bucketing step explicitly.
+3. drawdownVelocity: for each load, sum all spend-type transactions within 72 hours of that load's timestamp, divide by the load amount, cap at 1.0. Document in-code that this is an attribution convention (balance is commingled), not a traced-dollar claim. Median across loads.
+4. loadIntervalEntropy: reuse Stage 1's entropy transform on load events.
+5. loadAmountCV: coefficient of variation of load amounts, trailing 90 days.
+
+Part B — Forward-obligation features, anchored to user_billers:
+6. preDueStagingIndex: using user_billers.payment_day + typical_amount + the reconstructed balance series, fraction of predicted due-dates in trailing 90 days where balance ≥ typical_amount at least 48h prior. Return null for users with zero saved billers — currently ALL users. Verify this null-case behaves correctly against a real query today (this is directly testable now, unlike most of Stage 2).
+7. loadToObligationRatio: same null-handling.
+
+Part C — Event-detection features (new module ptiEventFeatures.ts), on the status-filtered bill_payments row set — ALWAYS BUILD:
+8. Scarcity event: balance < sum of upcoming user_billers obligations within 7 days. Record which biller (grouped by service_id) got paid first. Feature: sequencingStability (null if < 2 events).
+9. Bill-shock event: a bill_payments row (status NOT IN ('fallido','solicitud_manual')) where monto ≥ 1.5× that service_id's trailing-6-payment median of monto. Feature: billShockResponse categorical, plus shockPaidFullRate. Document explicitly in this feature's code comment/docstring: this measures a spike in transacted amount relative to the user's own payment history for that biller — it is NOT a measure of deviation from the true bill face value, since amount_due_mxn (the actual billed amount) is never populated. Do not let this distinction get lost in later documentation.
+Unit-test on synthetic data covering: single bill, same-day bills, zero-balance start, a user with no user_billers rows (the current real-world case for 100% of users), and synthetic fallido/solicitud_manual rows to confirm they're excluded from the trailing-6 median calculation.
+
+Part D — SKIP. Do not build. Note in your summary that both blockers (missing table, zero inbound replies) were independently confirmed in the Prompt 0 production report.
+
+Part E — Integration: snapshot extension at zero weight, all eleven fixtures updated, all four ablation/stress scripts extended, v4.2 regression test still passing.
+
+DEFINITION OF DONE: every balance-dependent feature uses the Stage 1.5 helper; daysAtZeroPerMonth's calendar-bucketing step implemented and tested; drawdownVelocity's attribution rule documented in-code; bill-shock keyed on service_id and its "transacted not billed" limitation documented in-code; status filter applied to every bill_payments-derived feature and verified via synthetic fallido/solicitud_manual rows; forward-obligation features correctly return null across the board given zero user_billers rows (verify against a real query); Part C always built; Part D skipped with evidence cited.
+```
+
+---
+
+## Prompts 0, 0.5, 1.5, 3, 4 — unchanged from REV 4
+
+Prompt 0 (production verification) and Prompt 0.5 (amount-column trace) are both closed — their findings are now baked into Prompts 1 and 2 above as ground truth rather than open placeholders. Prompt 1.5 (balance reconstruction helper), Prompt 3 (quarantine tier), and Prompt 4 (v4.3 rebalancing/signoff) carry forward from REV 4 with no changes — none of Prompt 0.5's findings touch wallet_transactions type classification, the quarantine tier, or the rebalancing/signoff mechanics.
+
+---
+
+## Sequencing notes — final
+
+- **Both blockers are closed.** Canonical amount column: `monto`. Fixture inventory: eleven locations. Paula mechanics: confirmed skip on two independent grounds. `user_billers`: confirmed empty, buildable-not-validatable.
+- **The status filter is the one item that would have caused silent bad data if missed**, not a build failure — features would have computed and returned plausible-looking numbers built partly on payments that never happened. It's now applied once at the snapshot-builder level per Part A of Prompt 1, rather than left as a per-feature judgment call.
+- **The "transacted vs. billed" distinction on bill-shock is a documentation requirement now, not a nice-to-have** — it's the kind of thing that reads correctly in code review and gets misremembered in a pitch deck six months later if it isn't written into the feature itself.
+- **Ready for handoff.** Run Prompt 1 next.
