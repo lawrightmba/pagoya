@@ -1,0 +1,43 @@
+CONTEXT: wallet_transactions has no balance-after column and no signed-amount column (amount_mxn is unsigned). type is plain text() with NO central enum — it is populated across 13 write sites scattered through the codebase, so the vocabulary must be enumerated from those sites directly, not assumed from a schema/type definition.
+
+STATUS/TYPE GROUND TRUTH (confirmed from all 13 non-test write sites):
+
+TYPES (9, no central enum):
+- Credits: load_oxxo (pending→confirmed, OXXO cash), load_card (pending→confirmed, card top-up), spei_in (pending→confirmed via creditWallet() in stpWebhook.ts, STP/SPEI webhook), load_banco (pending→confirmed via creditWallet() in belvo-connect.ts, written as any, Belvo — deprioritized integration), admin_credit (confirmed, manual admin action), SIGNUP_BONUS (uppercase — non-standard casing, written with status='completed' by signupBonusService.ts, no creditWallet() call), transfer_receive (confirmed, P2P in).
+- Debits: bill_pay (confirmed, wallet-funded bill payment), transfer_send (confirmed, P2P out).
+
+STATUSES (4, not 3): pending, confirmed, failed, completed.
+Balance-real states: {confirmed, completed}. NOT confirmed alone — SIGNUP_BONUS uses completed, and a confirmed-only filter silently drops all signup bonus money, which is a core product mechanic essentially every user has.
+Not-balance-real states: {pending, failed}.
+
+PRE-FLIGHT (resolved during planning — confirm still holds, do not re-derive from scratch):
+1. Enumerate every wallet_transactions write site in the codebase (expect ~13, cross-check against the list above — if you find more or fewer, reconcile the discrepancy explicitly rather than silently trusting either count).
+2. RESOLVED: spei_in (stpWebhook.ts:217) and load_banco (belvo-connect.ts) are both inserted pending and immediately transitioned to confirmed with confirmed_at set, via creditWallet() (wallet/services/wallet.ts:44) called in the same request handler right after insert. Confirm this still holds in the current codebase; if a code change has altered this path, treat it as a regression to flag, not a new discovery to re-investigate from zero.
+3. Confirmed_at nullability per type, resolved: admin_credit, transfer_receive, bill_pay, transfer_send set confirmed_at at write time. load_oxxo/load_card/spei_in/load_banco are confirmed_at-null only transiently while pending, then get it set by creditWallet() upon confirmation — so among rows that pass the balance-real filter, these are NOT null. SIGNUP_BONUS is the sole exception: written directly with status='completed' and no creditWallet() call, so it remains confirmed_at-null even after passing the balance-real filter. This makes SIGNUP_BONUS the only row type that will ever exercise the COALESCE(confirmed_at, created_at) fallback in step 3(b) below — treat its unit test as the load-bearing proof of that logic, not just one case among many.
+
+TASK — new module walletBalanceReconstruction.ts:
+1. Type classification: explicit credit/debit mapping for all 9 confirmed types (including the uppercase SIGNUP_BONUS and the as-any load_banco). Throw on any type not in this set.
+2. Status classification: explicit balance-real/not-balance-real mapping — balance-real = {confirmed, completed}, not-balance-real = {pending, failed}. Throw on any status not in this set (mirrors the type guard; a future status literal must not silently fall through either bucket).
+3. reconstructBalanceSeries(userTransactions):
+   a. Filter to rows where status classifies as balance-real. Exclude pending/failed entirely, regardless of type.
+   b. Order the remaining rows by COALESCE(confirmed_at, created_at), applied uniformly across all types — no per-type branch. This one rule correctly orders both confirmed_at-bearing rows (bill_pay, transfer_send, transfer_receive, admin_credit) and confirmed_at-null rows (SIGNUP_BONUS, and any load_* type once it reaches a balance-real status without a populated confirmed_at).
+   c. Return a running-balance series as {timestamp, balance} points, using the resolved COALESCE timestamp.
+   d. Document the opening-balance assumption as a named constant.
+4. toComparableTimestamp(): normalizes bill_payments.created_at (naive) to the tz assumption used by wallet_transactions, for cross-table comparisons.
+5. Unit tests, covering ALL of the following:
+   - single transaction
+   - same-timestamp transactions (order ambiguity)
+   - a full month of interleaved loads/spends (synthetic, covering multiple types)
+   - an unrecognized type (must throw)
+   - an unrecognized status (must throw)
+   - zero transactions (empty series, not error)
+   - a pending-then-confirmed load: balance rises at confirmed_at, not created_at, and doesn't appear while pending
+   - a failed load: never affects balance
+   - a SIGNUP_BONUS row (status='completed', confirmed_at=null): must be INCLUDED in the balance series, ordered by created_at via the COALESCE fallback, and must count as credit — this is the specific case that was wrong in an earlier revision, is the ONLY row type that exercises the COALESCE fallback at all, and must have a dedicated test proving it's now right. Treat this as the load-bearing test of the entire ordering logic, not one case among many.
+   - a spei_in row that transitions pending → confirmed within the same synthetic sequence, verifying it's excluded while pending and included (with its confirmed_at, not created_at) once confirmed
+   - a mix of confirmed and completed rows for the same user, verifying both count as balance-real
+6. Do NOT wire into PTIDataSnapshot yet.
+
+GUARDRAILS: no dependency on pti.ts. Pure functions, fully unit tested, no live DB writes.
+
+DEFINITION OF DONE: type classification covers all 9 confirmed types; status classification uses {confirmed, completed} as balance-real, not confirmed alone; ordering uses COALESCE(confirmed_at, created_at) uniformly with no per-type branch; the SIGNUP_BONUS test explicitly passes and is understood as the sole proof of the COALESCE fallback; the spei_in pending→confirmed test passes; unrecognized type AND unrecognized status both throw.
