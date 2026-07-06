@@ -1,0 +1,93 @@
+# Replit Agent Prompts — PTI Signal Expansion (v4.2 → v4.3) — REV 6
+### Final hardening pass. Fixes a real balance-corruption bug in Prompt 1.5 and two days_from_due notes. No code changed yet.
+
+**Changes from REV 5:**
+1. **Real bug fixed — Prompt 1.5 now filters `wallet_transactions` by status and orders by `confirmed_at`, not `created_at`.** `wallet_transactions.status` (notNull, default `'pending'`) has vocabulary `pending` / `confirmed` / `failed`. Only `confirmed` rows are real balance. Without this filter, `reconstructBalanceSeries` would have counted pending OXXO vouchers and failed card loads as spendable money — the exact same class of error as the `bill_payments` `fallido` issue, but silently corrupting every Stage 2 cash-flow feature (`minBalanceBuffer30d`, `daysAtZeroPerMonth`, `drawdownVelocity`, load features) rather than just the timing ones. Additionally, credits must be ordered by `confirmed_at` (tz-aware) — a load created `pending` on the 1st and confirmed on the 5th only becomes spendable on the 5th; ordering by `created_at` would credit it four days early and skew both the 30-day buffer minimum and `drawdownVelocity`'s 72-hour attribution window.
+2. `days_from_due` sign convention upgraded from "working assumption" to **confirmed by code**: schema comment states positive = early, negative = late, and the populating formula (`payment_day − EXTRACT(DAY FROM NOW())`) mathematically produces exactly that. No re-check caveat needed.
+3. **New known limitation documented, not yet fixed:** that same formula has no month-rollover handling — a bill due the 2nd, paid the 28th, computes as −26 (reads as wildly late) rather than the true few-day lateness, and the reverse near the other boundary. This inflates `paymentTimingVarianceDays`, the designated primary timing signal, with boundary artifacts rather than real behavioral variance. Documented as a docstring caveat in Prompt 1; fixing the underlying formula is out of scope for this round (it lives in existing v4.2 code, not new code) but flagged for a future pass since it affects a feature this plan is built around.
+4. Prompt 2 Part A's hedge ("confirm no analogous states exist... before assuming otherwise") is removed — the analogous state was found, and the fix lives once in the Stage 1.5 helper. Part A now simply states the filtering is handled upstream and must not be re-applied downstream.
+
+**Execution order: 0 → 0.5 → 1 → 1.5 → 2 → 3 → 4. All discovery items are now closed.**
+
+---
+
+## PROMPT 1 — Stage 1: payment-timing (corrected) + generic transforms + categoria fix (REV 6 — one docstring addition only)
+
+```
+[Identical to REV 5's Prompt 1, with this addition to the SCHEMA GROUND TRUTH block:]
+
+- days_from_due sign convention is CONFIRMED BY CODE (not a working assumption): schema comment states positive = paid early, negative = paid late; the populating formula in billpay.ts (days_from_due = payment_day − EXTRACT(DAY FROM NOW())) mathematically produces this. No re-verification needed once real data exists.
+- KNOWN LIMITATION — month-boundary artifact: the populating formula does naive day-of-month subtraction with no month-rollover handling. A bill due day 2, paid on the 28th, computes as −26 (reads as 26 days late) instead of a true ~5-day lateness; the reverse distortion occurs near the other boundary. This means days_from_due magnitudes beyond roughly ±15 are more likely to be month-boundary artifacts than genuine extreme lateness/earliness.
+  - Add this as an explicit code comment on paymentTimingMeanDays and paymentTimingVarianceDays (Part A #1–2), since variance is the primary signal and boundary noise directly inflates it.
+  - Additionally: winsorize/clamp days_from_due to a reasonable range (e.g. ±20) before computing paymentTimingVarianceDays, so a handful of month-boundary artifacts don't dominate the variance calculation for an otherwise-consistent payer. Document the clamp bound and rationale in-code.
+  - Do NOT attempt to fix the underlying populating formula in billpay.ts as part of this task — that's existing v4.2 logic, out of scope here. Flag it in your summary as a separate follow-up worth scoping later, since it affects the accuracy of a feature this plan treats as primary.
+
+[Rest of Prompt 1 — Parts A through E, guardrails, definition of done — unchanged from REV 5.]
+```
+
+---
+
+## PROMPT 1.5 — Balance reconstruction helper (REV 6 — status filter + confirmed_at ordering, the substantive fix)
+
+```
+CONTEXT: wallet_transactions has no balance-after column and no signed-amount column (amount_mxn is unsigned). Credit/debit must be inferred from `type`. Production data currently contains only load_oxxo and load_card (3 rows total) — the full type vocabulary cannot be enumerated from data and must come from the application's type definitions in code.
+
+STATUS GROUND TRUTH (confirmed by code read): wallet_transactions.status is notNull, default 'pending', with a dedicated wallet_tx_status_idx. Confirmed vocabulary: pending (voucher issued/card intent created, no money in wallet yet), confirmed (cash deposited/card charged, confirmed_at is set — this is the ONLY balance-real state), failed (abandoned/declined load). This is the same class of problem as bill_payments' fallido rows, and it lives in this helper because every Stage 2 feature depends on it.
+
+PRE-FLIGHT:
+1. Find the authoritative source of wallet_transactions.type values in code (enum/type union) — do not rely on the 2 distinct values seen in production.
+2. Confirm the status column's exact vocabulary and the confirmed_at column's nullability (should be null unless status='confirmed') by reading the write paths.
+3. Confirm bill_payments.created_at is naive and wallet_transactions.created_at/confirmed_at are tz-aware.
+
+TASK — new module walletBalanceReconstruction.ts:
+1. Explicit, exhaustive credit/debit classification for EVERY type value found in the code-level enum (not just the two observed in prod). Throw on any truly unrecognized value.
+2. reconstructBalanceSeries(userTransactions): 
+   a. FILTER to status = 'confirmed' before doing anything else. Pending and failed rows are excluded entirely — they are not balance events regardless of type.
+   b. ORDER confirmed rows by confirmed_at (not created_at) for credit-type transactions, since a load only becomes spendable balance at confirmation, not at initiation. If debit-type transactions (spends/transfers) don't have a separate confirmed_at distinct from created_at, use created_at for those specifically, but document this asymmetry explicitly in-code rather than assuming a uniform timestamp field across all types — confirm the actual columns available on debit-type rows before deciding.
+   c. Return a running-balance series as {timestamp, balance} points after each confirmed transaction, using the resolved timestamp from (b).
+   d. Document the opening-balance assumption as a named constant.
+3. toComparableTimestamp(): normalizes bill_payments.created_at (naive) to the same tz assumption as wallet_transactions, for every future cross-table comparison.
+4. Unit tests, covering ALL of the following (not a subset):
+   - single transaction
+   - same-timestamp transactions (order ambiguity)
+   - a full month of interleaved loads/spends (synthetic)
+   - an unrecognized type (must throw)
+   - zero transactions (empty series, not error)
+   - a pending-then-confirmed load: balance must rise at confirmed_at, NOT at created_at, and must not appear in the series at all while still pending
+   - a failed load: must never affect the balance series at any point, at any timestamp
+   - a mix of confirmed and non-confirmed rows for the same user in the same window, verifying only confirmed rows are counted
+5. Do NOT wire into PTIDataSnapshot yet.
+
+GUARDRAILS: no dependency on pti.ts. Pure functions, fully unit tested, no live DB writes.
+
+DEFINITION OF DONE: reconstructBalanceSeries() filters to status='confirmed' and orders by confirmed_at for credits (with the debit-timestamp question explicitly resolved and documented, not assumed); toComparableTimestamp() exists; all eight unit-test cases above pass, including the pending/failed exclusion tests; unrecognized types throw.
+```
+
+---
+
+## PROMPT 2 — Stage 2: cash-flow features (via balance helper) + event detection + Paula mechanics (conditional) (REV 6 — one clarification only)
+
+```
+[Identical to REV 5's Prompt 2, with Part A's opening line replaced:]
+
+Part A — Cash-flow micro-structure (uses reconstructBalanceSeries — status filtering to 'confirmed' and confirmed_at-based ordering are handled INSIDE the Stage 1.5 helper; do not re-filter or re-order in this stage, and do not re-derive whether analogous pending/failed states exist on wallet_transactions — they do, and Stage 1.5 already accounts for them):
+1. minBalanceBuffer30d: minimum value of the reconstructed balance series over trailing 30 days.
+[items 2–5 unchanged from REV 5]
+
+[Rest of Prompt 2 — Parts B through E, guardrails, definition of done — unchanged from REV 5.]
+```
+
+---
+
+## Prompts 0, 0.5, 3, 4 — unchanged from REV 5 / REV 4
+
+No findings from this review round touch production verification, the amount-column trace, the quarantine tier, or the v4.3 rebalancing/signoff mechanics.
+
+---
+
+## Sequencing notes — final
+
+- **The Stage 1.5 fix is the one that mattered.** A balance-reconstruction helper that counts pending or failed loads as real money doesn't fail loudly — it produces plausible-looking wrong numbers across every single downstream cash-flow feature, silently, for as long as nobody thinks to ask "wait, was that money actually there?" Catching it in a helper used once by everything is exactly why Stage 1.5 was pulled out as its own stage in the first place.
+- **`days_from_due`'s month-boundary artifact is a known, documented limitation, not a blocker.** It doesn't corrupt data the way the status-filter bug would have — it adds noise to a variance calculation. Winsorizing handles it well enough for this round; fixing the root formula is separate, future work in existing v4.2 code, not this expansion.
+- **Note on the unrelated finding:** the `pagoya-twilio-demo` workflow failure mentioned in the review is confirmed pre-existing and unrelated — no action needed as part of this plan.
+- **Ready for handoff. Run Prompt 1, then 1.5 (with the corrected status/timestamp logic), then proceed.**
