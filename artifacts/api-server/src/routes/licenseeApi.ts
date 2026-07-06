@@ -33,6 +33,10 @@ import {
   type LicenseeKeyRecord,
   type IssuingTokenType,
 } from "../services/licenseeApi.js";
+import {
+  PTI_V4_3_FIELD_DISPOSITION,
+  PTI_V4_3_FAIR_LENDING_SIGNOFF,
+} from "../config/ptiV4_3Disposition.js";
 
 const router = Router();
 
@@ -194,6 +198,20 @@ router.get("/data-card", (_req: Request, res: Response): void => {
     ],
     versioning: "Licensee keys are pinned to a specific model version at issue time and never auto-upgrade. See GET /api/v1/model-versions.",
     sandbox: "Sandbox keys score only pre-built synthetic fixtures (GET /api/v1/model-versions has no fixture listing; fixtures are selected via { fixture: <key> } in the /score request body).",
+    field_disposition: {
+      description:
+        "v4.3-signal-expansion added 15 new behavioral fields to the underlying data model. " +
+        "All 15 are computed and stored but contribute ZERO points to any score in this " +
+        "version — v4.3 is scoring-identical to v4.2. This block documents why, per field, " +
+        "for licensees and auditors reviewing the methodology.",
+      signoff_statement: PTI_V4_3_FAIR_LENDING_SIGNOFF,
+      fields: Object.entries(PTI_V4_3_FIELD_DISPOSITION).map(([field, d]) => ({
+        field,
+        dimension: d.dimension,
+        status: d.status,
+        rationale: d.rationale,
+      })),
+    },
   });
 });
 

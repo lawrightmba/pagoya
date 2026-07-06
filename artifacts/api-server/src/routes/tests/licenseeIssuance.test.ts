@@ -260,6 +260,19 @@ describe("POST /api/v1/admin/keys — production issuance authority", () => {
       const v43 = versions.find((v) => v.version === "v4.3-signal-expansion");
       expect(v43?.signoff_status).toBe("approved");
     });
+
+    it("GET /api/v1/data-card surfaces the v4.3 fair-lending signoff and per-field disposition", async () => {
+      const res = await request(app).get("/api/v1/data-card");
+      expect(res.status).toBe(200);
+      expect(res.body.field_disposition).toBeTruthy();
+      expect(res.body.field_disposition.signoff_statement).toMatch(/APPROVED, zero-weight release/);
+      const fields = res.body.field_disposition.fields as Array<{ field: string; status: string; rationale: string }>;
+      expect(fields.length).toBe(15);
+      const preDueStaging = fields.find((f) => f.field === "preDueStagingIndex");
+      expect(preDueStaging?.status).toBe("provisional_zero_weight");
+      const minBalanceBuffer = fields.find((f) => f.field === "minBalanceBuffer30d");
+      expect(minBalanceBuffer?.status).toBe("permanent_non_scoring");
+    });
   });
 
   it("a production key can also be issued by presenting a token that classifies as production even via query param (back-compat path)", async () => {
