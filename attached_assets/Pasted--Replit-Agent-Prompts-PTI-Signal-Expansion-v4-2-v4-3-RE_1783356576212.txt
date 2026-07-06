@@ -1,0 +1,89 @@
+# Replit Agent Prompts — PTI Signal Expansion (v4.2 → v4.3) — REV 7
+### Corrects REV 6's incomplete status vocabulary. This is the last discovery item. No code changed yet.
+
+**Changes from REV 6:**
+1. **Real bug fixed — REV 6's `status='confirmed'` filter would have dropped signup bonuses.** `wallet_transactions.type` is plain `text()` with no central enum, populated across 13 write sites. Full vocabulary: 9 types (`load_oxxo`, `load_card`, `spei_in`, `load_banco`, `admin_credit`, `SIGNUP_BONUS` — uppercase, non-standard — `transfer_receive` as credits; `bill_pay`, `transfer_send` as debits) and 4 statuses (`pending`, `confirmed`, `failed`, `completed`). `signupBonusService.ts` writes the $150 signup bonus with `status='completed'`, not `'confirmed'`. REV 6's filter would have excluded real bonus money from balance reconstruction for essentially every user, understating `minBalanceBuffer30d` and falsely inflating `daysAtZeroPerMonth` — the same silent-plausible-wrong-numbers failure Stage 1.5 exists to prevent, reintroduced by its own fix.
+2. **Filter corrected to a status classification, not a literal match:** balance-real = `{confirmed, completed}`, not-balance-real = `{pending, failed}`, implemented as an explicit per-status classification that throws on any unrecognized status — mirroring the type-classification guard, so a future status literal can't silently fall through either side.
+3. **Ordering corrected to `COALESCE(confirmed_at, created_at)`, applied uniformly** — not `confirmed_at` alone, and not a per-type branch. `SIGNUP_BONUS`/`spei_in`/`load_banco` are written without `confirmed_at`; `bill_pay`/`transfer_send`/`transfer_receive`/`admin_credit` set it at write time. `COALESCE` handles both cases with one rule, which also resolves the debit-timestamp asymmetry REV 6 had left as an open per-type question — that hedge is removed.
+4. **New unresolved pre-flight, escalate-if-unclear:** whether `spei_in`/`load_banco` pending rows ever transition to a balance-real status is not confirmed from the code read alone. If they never do, STP/SPEI — a live, primary wallet-funding rail — would be silently excluded from every balance feature. This must be resolved before Stage 1.5's output is trusted, not deferred to Stage 2.
+
+**Execution order: 0 → 0.5 → 1 → 1.5 → 2 → 3 → 4. This closes discovery — REV 7 is the version to build from, contingent on the spei_in/load_banco pre-flight resolving cleanly inside Prompt 1.5 itself.**
+
+---
+
+## PROMPT 1.5 — Balance reconstruction helper (REV 7 — corrected vocabulary, the final fix)
+
+```
+CONTEXT: wallet_transactions has no balance-after column and no signed-amount column (amount_mxn is unsigned). type is plain text() with NO central enum — it is populated across 13 write sites scattered through the codebase, so the vocabulary must be enumerated from those sites directly, not assumed from a schema/type definition.
+
+STATUS/TYPE GROUND TRUTH (confirmed from all 13 non-test write sites):
+
+TYPES (9, no central enum):
+- Credits: load_oxxo (pending→confirmed, OXXO cash), load_card (pending→confirmed, card top-up), spei_in (pending→confirmed?, STP/SPEI webhook — lifecycle UNVERIFIED, see pre-flight below), load_banco (written as `any`, pending, Belvo — deprioritized integration), admin_credit (confirmed, manual admin action), SIGNUP_BONUS (uppercase — non-standard casing, written with status='completed' by signupBonusService.ts), transfer_receive (confirmed, P2P in).
+- Debits: bill_pay (confirmed, wallet-funded bill payment), transfer_send (confirmed, P2P out).
+
+STATUSES (4, not 3): pending, confirmed, failed, completed.
+Balance-real states: {confirmed, completed}. NOT confirmed alone — SIGNUP_BONUS uses completed, and a confirmed-only filter silently drops all signup bonus money, which is a core product mechanic essentially every user has.
+Not-balance-real states: {pending, failed}.
+
+PRE-FLIGHT (mandatory, resolve before writing reconstructBalanceSeries):
+1. Enumerate every wallet_transactions write site in the codebase (expect ~13, cross-check against the list above — if you find more or fewer, reconcile the discrepancy explicitly rather than silently trusting either count).
+2. For spei_in and load_banco specifically: trace whether any code path ever transitions a pending row for these types to confirmed or completed (e.g. a webhook handler, a reconciliation job, loadMethodCounters.ts or similar). 
+   - If YES: confirm the exact trigger and status value it transitions to, and proceed.
+   - If NO (these types only ever exist as pending in the data you can find): STOP and escalate this finding explicitly in your summary before proceeding to write the balance filter. SPEI is described as a primary wallet-funding rail — if it never reaches a balance-real state in the current codebase, that's either (a) a real gap in the SPEI integration worth flagging as a separate bug, or (b) a status-lifecycle path this pre-flight failed to find and needs a second look. Do not silently build the filter to exclude spei_in loads without surfacing this either way.
+3. Confirm confirmed_at nullability per type: which of the 9 types set confirmed_at at write time (expected: admin_credit, transfer_receive, bill_pay, transfer_send) versus which are written with confirmed_at null (expected: SIGNUP_BONUS, and pending-state load_oxxo/load_card/spei_in/load_banco before any confirmation step).
+
+TASK — new module walletBalanceReconstruction.ts:
+1. Type classification: explicit credit/debit mapping for all 9 confirmed types (including the uppercase SIGNUP_BONUS and the as-any load_banco). Throw on any type not in this set.
+2. Status classification: explicit balance-real/not-balance-real mapping — balance-real = {confirmed, completed}, not-balance-real = {pending, failed}. Throw on any status not in this set (mirrors the type guard; a future status literal must not silently fall through either bucket).
+3. reconstructBalanceSeries(userTransactions):
+   a. Filter to rows where status classifies as balance-real. Exclude pending/failed entirely, regardless of type.
+   b. Order the remaining rows by COALESCE(confirmed_at, created_at), applied uniformly across all types — no per-type branch. This one rule correctly orders both confirmed_at-bearing rows (bill_pay, transfer_send, transfer_receive, admin_credit) and confirmed_at-null rows (SIGNUP_BONUS, and any load_* type once it reaches a balance-real status without a populated confirmed_at).
+   c. Return a running-balance series as {timestamp, balance} points, using the resolved COALESCE timestamp.
+   d. Document the opening-balance assumption as a named constant.
+4. toComparableTimestamp(): normalizes bill_payments.created_at (naive) to the tz assumption used by wallet_transactions, for cross-table comparisons.
+5. Unit tests, covering ALL of the following:
+   - single transaction
+   - same-timestamp transactions (order ambiguity)
+   - a full month of interleaved loads/spends (synthetic, covering multiple types)
+   - an unrecognized type (must throw)
+   - an unrecognized status (must throw)
+   - zero transactions (empty series, not error)
+   - a pending-then-confirmed load: balance rises at confirmed_at, not created_at, and doesn't appear while pending
+   - a failed load: never affects balance
+   - a SIGNUP_BONUS row (status='completed', confirmed_at=null): must be INCLUDED in the balance series, ordered by created_at via the COALESCE fallback, and must count as credit — this is the specific case that was wrong in REV 6 and must have a dedicated test proving it's now right
+   - a mix of confirmed and completed rows for the same user, verifying both count as balance-real
+   - if the spei_in/load_banco pre-flight found they never reach balance-real status: a test documenting that these currently produce zero contribution to balance, with a comment linking to the escalation note so this isn't mistaken for an oversight later
+6. Do NOT wire into PTIDataSnapshot yet.
+
+GUARDRAILS: no dependency on pti.ts. Pure functions, fully unit tested, no live DB writes.
+
+DEFINITION OF DONE: type classification covers all 9 confirmed types; status classification uses {confirmed, completed} as balance-real, not confirmed alone; ordering uses COALESCE(confirmed_at, created_at) uniformly with no per-type branch; the SIGNUP_BONUS test explicitly passes (proving the REV 6 bug is fixed, not just theoretically addressed); the spei_in/load_banco lifecycle pre-flight is resolved and its outcome — either a confirmed transition path or an explicit escalation — is documented in the summary; unrecognized type AND unrecognized status both throw.
+```
+
+---
+
+## Prompt 1, Prompt 2 Part A reference — one wording update
+
+Prompt 1 is unchanged from REV 6. Prompt 2 Part A's parenthetical should read:
+
+```
+(uses reconstructBalanceSeries — balance-real filtering (status IN {confirmed, completed}, not confirmed alone) and COALESCE(confirmed_at, created_at) ordering are handled INSIDE the Stage 1.5 helper; do not re-filter or re-order in this stage)
+```
+
+replacing REV 6's version, which still said "filter to status='confirmed'" in spirit even where it deferred to the helper — worth making the corrected rule explicit here too, so anyone reading Prompt 2 in isolation doesn't reconstruct the wrong assumption.
+
+---
+
+## Prompts 0, 0.5, 3, 4 — unchanged
+
+No findings from this round touch production verification, the amount-column trace, the quarantine tier, or v4.3 rebalancing/signoff.
+
+---
+
+## Sequencing notes — final
+
+- **This is the fourth distinct silent-corruption bug caught before any Stage 1.5 code was written**, and the second one specifically in balance reconstruction. That's not a sign the plan is fragile — it's what happens when every write site actually gets read instead of inferred from a schema comment. `type` being plain `text()` with no central enum across 13 scattered sites is exactly the kind of codebase condition where "the obvious filter" is reliably wrong.
+- **The spei_in/load_banco pre-flight is the one item that could still block Stage 1.5 from shipping cleanly.** If SPEI top-ups never reach a balance-real status in the current code, that's a separate, real product bug (a primary funding rail whose money the system can't see) — worth surfacing to you directly rather than letting the agent quietly route around it by excluding SPEI from the feature set without comment.
+- **Once Prompt 1.5's SIGNUP_BONUS unit test passes, that's the concrete proof this class of bug is closed** — not the vocabulary list itself, which is documentation, but the test asserting a completed/SIGNUP_BONUS row actually shows up as credited balance.
+- **Ready for handoff pending that one pre-flight answer.** Run Prompt 1 (unchanged), then Prompt 1.5 as revised here — and read the pre-flight's spei_in/load_banco finding before treating Stage 1.5's output as trustworthy for Stage 2.
