@@ -1,0 +1,18 @@
+This is a small, read-only verification task. Do not modify any code. Two of three closeout checks for the Prompt 3 quarantine tier are already confirmed (the isolation-guard regex additions, and a direct grep proving zero references to the three new quarantined field names in pti.ts / licenseeApi.ts / routes/licenseeApi.ts / routes/b2b.ts today). The remaining item is a naming-collision check that was in Prompt 3's original requirements and has not yet been explicitly done: confirm the three new quarantined field names don't share a prefix, substring, or naming pattern with any currently-scored PTIDataSnapshot field, such that a FUTURE broadened regex or a maintainer's quick pattern-match could accidentally treat one as the other. This is distinct from the grep already done — that grep proved the strings don't co-occur in one file TODAY; this check is about whether the names themselves are similar enough to cause a mistake LATER.
+
+TASK:
+
+1. Produce the full, current list of PTIDataSnapshot field names — the original v4.2 fields plus the 4 fields added in Stage 1 (paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue, activityVelocity30d, interEventRegularityScore) plus the 11 fields added in Stage 2 (minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV, preDueStagingIndex, loadToObligationRatio, sequencingStability, shockPaidFullRate, billShockWalletResponseRate, billShockResponse) — derive this from the actual PTIDataSnapshot type definition in pti.ts, not from memory or from this prompt's list (paste the type definition or the canonical field-list export if one exists from the schema-completeness work, and confirm it matches the count expected: original v4.2 count + 4 + 11).
+
+2. Against that full list, check each of the three quarantined names for prefix/substring/word-fragment overlap:
+   - quincenaAlignmentIndex
+   - loadChannelFormalityMix
+   - sessionTimeOfDayConcentration (and its sibling lateNightSessionFraction)
+
+3. Specifically flag anything that shares a word fragment — e.g., does any scored field contain "load" (loadIntervalEntropy, loadAmountCV, loadToObligationRatio already do — confirm none of them could be confused with loadChannelFormalityMix under a loosely-written future regex like /load.*mix/ or similar), "session", "channel", "concentration", "alignment", or "quincena". List every scored field that shares any such fragment with a quarantined field, even if you judge the collision risk to be low — the point is to make the judgment call visible and reviewable, not to silently conclude "no risk" without showing the candidates that were considered.
+
+4. For each flagged pair (scored field vs. quarantined field sharing a fragment), give a one-line verdict: genuinely low collision risk (explain why — e.g., different enough word order, different enough context) or worth a naming tweak now while it's cheap. Do not rename anything as part of this task — this is a read-only judgment call for the human to act on, not an automatic fix.
+
+5. Confirm this check is now complete by explicitly stating: "All 3 quarantined field names checked against all [N] scored PTIDataSnapshot fields for prefix/substring collision risk — see flagged list above" (fill in N with the actual count from step 1).
+
+FORMAT: verdict (CONFIRMED / FLAGGED-FOR-REVIEW) at the top, followed by the full field list from step 1, the fragment-overlap analysis from step 3, and the per-pair verdicts from step 4. No code changes of any kind in this task.
