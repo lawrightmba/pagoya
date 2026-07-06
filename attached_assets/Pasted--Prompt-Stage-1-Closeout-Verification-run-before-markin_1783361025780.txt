@@ -1,0 +1,48 @@
+# Prompt — Stage 1 Closeout Verification (run before marking Prompt 1 complete)
+
+```
+This is a READ-ONLY verification task against code you (or a prior session) just wrote for the PTI Signal Expansion Prompt 1 (payment-timing features, generic transforms, DERIVED_FEATURE_DEFAULTS, schema-completeness test, categoria regression guard). Do not modify any code. Produce a written report answering each item below with direct evidence — file paths, line numbers, and pasted snippets or test output — not summary claims like "done" or "passing." If something was not built as specified, say so plainly rather than describing what was intended.
+
+1. DERIVED_FEATURE_DEFAULTS — single source of truth, or nine copies pretending to be one?
+   - Paste the full definition of DERIVED_FEATURE_DEFAULTS from ptiDerivedFeatures.ts, including every field and its default value.
+   - For EACH of the 9 fixture files in the single fixture inventory (licenseeApi.ts, licenseeSandboxFixtures.ts x2 sites, syntheticPopulation.ts, ptiAblationStudy.ts, ptiStressTest.ts, fairLendingClampStressTest.ts, pti.test.ts, licenseeApi.test.ts, fairLendingAdjustment.test.ts): show the exact line(s) where it references DERIVED_FEATURE_DEFAULTS (e.g. ...DERIVED_FEATURE_DEFAULTS or an explicit import/spread). If any site instead hand-lists the new field values independently rather than referencing the constant, name that site explicitly as a deviation — do not describe it as compliant.
+   - Confirm the two `as`-cast sites (licenseeSandboxFixtures.ts:80, fairLendingClampStressTest.ts:77) were updated by hand and carry the required comment flagging them as compiler-invisible.
+
+2. Schema-completeness test — exact key-set equality, with REQUIRED_SNAPSHOT_DEFAULTS named individually
+   - Paste the full text of the schema-completeness test.
+   - Confirm it performs actual key-set comparison (e.g. Object.keys(x) vs. a canonical field list) rather than a partial/soft check (e.g. checking only that specific known fields exist).
+   - Confirm the canonical PTIDataSnapshot field list used for comparison is derived once (via keyof or an exported array next to the type) and reused — not hand-typed a second time inside the test.
+   - Confirm REQUIRED_SNAPSHOT_DEFAULTS has its own individually-named assertion in this test, separate from a generic loop over all ten sites. Quote that specific assertion.
+   - Run the test now and paste the actual pass/fail output.
+
+3. v4.2 byte-identical regression test — does it test the right case?
+   - Paste the test. Confirm it specifically constructs a v4.2-shaped input with the new optional fields entirely ABSENT (not present-with-defaults) and asserts computePTI() returns the same score as before this change. A test that only checks "fields present with default values produce the same score" does not prove backward compatibility for existing callers who never send the new fields at all — if that's what was built, say so.
+   - Run it now and paste the actual output.
+
+4. services/fairLendingAdjustment.ts — untouched?
+   - Run: grep -n "PTIDataSnapshot" services/fairLendingAdjustment.ts
+   - Paste the raw output. Expected: zero matches. If there are any matches, stop and report this as a violation of the isolation boundary, not something to reconcile quietly.
+
+5. categoria regression guard — tripwire only, insert paths untouched?
+   - Run a diff (git diff or equivalent) restricted to billpay/routes/billpay.ts and confirm zero changes to lines 267, 332, 447, 1051 (the four categoria-setting insert statements) as part of this task's changes. Paste the diff or confirm it's empty for those lines.
+   - Paste the new regression test that asserts each insert path sets a non-empty categoria value, and confirm it passes.
+
+6. cureTimeMedianHours — confirmed not built
+   - Confirm no field, function, or test named cureTimeMedianHours (or equivalent) was added anywhere in this change. grep for it if useful.
+   - Quote the in-code comment or summary note documenting why it wasn't built (duplicates recovery_after_miss).
+
+7. Isolation tests — still passing
+   - Run: vitest run pti.test.ts licenseeApi.test.ts -t "isolation"
+   - Paste the actual output (file count, test count, pass/fail).
+
+8. Full suite
+   - Run the full test suite (whatever the project's standard command is) and paste the summary line (passed/failed/skipped counts). If anything failed, list which tests and why — do not omit failures from the report.
+
+9. New fields — actually optional?
+   - Paste the relevant portion of the PTIDataSnapshot type definition in pti.ts showing the new fields from this task, confirming each is marked optional (?) rather than required.
+
+10. Winsorization / month-boundary comment
+   - Confirm paymentTimingVarianceDays clamps days_from_due to the documented bound (e.g. ±20) before computing variance, and paste the code comment documenting the month-boundary artifact and the clamp rationale.
+
+FORMAT: number your answers 1–10 matching the items above. For each, lead with a one-word verdict (CONFIRMED / DEVIATION / NOT DONE) before the supporting evidence. Do not summarize at the top — the verdicts and evidence are the report. If you did not actually run a command referenced above (e.g. the test suite), say so explicitly rather than presenting expected output as if it were observed.
+```
