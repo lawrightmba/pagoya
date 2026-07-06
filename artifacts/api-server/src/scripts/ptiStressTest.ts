@@ -125,6 +125,9 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
   } = u;
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
@@ -137,6 +140,14 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     ...DERIVED_FEATURE_DEFAULTS,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    // Prompt 2, Stage 2 fields: same treatment as v4.3 above — the synthetic
+    // generator does not compute these either, so they pull through as
+    // `undefined` and fall back to DERIVED_FEATURE_DEFAULTS in computePTI()'s
+    // destructuring defaults. Listed explicitly (not just left to the spread)
+    // so a future generator update flows through without touching this file.
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
   };
 }
 

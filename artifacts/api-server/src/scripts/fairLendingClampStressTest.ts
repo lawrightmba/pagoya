@@ -68,6 +68,9 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
   } = u;
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
@@ -80,6 +83,9 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     ...DERIVED_FEATURE_DEFAULTS,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
     // COMPILER-INVISIBLE CAST: the `as PTIDataSnapshot` below bypasses
     // TypeScript's structural checking on this object literal. If a new
     // field is ever added to PTIDataSnapshot or DerivedFeatureSet, this site

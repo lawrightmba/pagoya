@@ -154,6 +154,21 @@ export interface PTIDataSnapshot {
   paymentTimingVarianceDaysFromDue?: number;  // sample variance of the same winsorized series
   activityVelocity30d?: number;               // generic first-derivative (avg delta) of a 30d activity series
   interEventRegularityScore?: number;         // 0-1, regularity of inter-event spacing
+
+  // NEW (PTI Signal Expansion, Prompt 2 / Stage 2) — cash-flow micro-structure
+  // and forward-obligation derived features, ZERO WEIGHT. Same pattern as the
+  // v4.3 block above: optional, defaulted via DERIVED_FEATURE_DEFAULTS,
+  // computed in ptiDerivedFeatures.ts, not used in any dimension score yet.
+  minBalanceBuffer30d?: number;        // min reconstructed balance, trailing 30d, MXN
+  daysAtZeroPerMonth?: number;         // count of calendar days (trailing 30) with balance === 0
+  drawdownVelocity?: number;           // median post-load spend-within-72h ratio, capped at 1.0
+  loadIntervalEntropy?: number;        // 0-1 regularity of wallet-load event spacing
+  loadAmountCV?: number;               // coefficient of variation of load amounts, trailing 90d
+  preDueStagingIndex?: number | null;  // fraction of predicted due-dates funded >=48h prior; null if 0 billers
+  loadToObligationRatio?: number | null; // trailing-90d loads / trailing-90d predicted obligations; null if 0 billers
+  sequencingStability?: number | null;   // scarcity-event biller-priority consistency; null if <2 events
+  shockPaidFullRate?: number;            // fraction of bill-shock-threshold attempts ultimately paid successfully
+  billShockWalletResponseRate?: number;  // of successful shock events, fraction paid via wallet_balance channel
 }
 
 /**
@@ -180,6 +195,10 @@ const PTI_DATA_SNAPSHOT_FIELD_MAP: Record<keyof PTIDataSnapshot, true> = {
   lateRecoveryRatio: true, latePaymentCount: true, paulaResponseLatencyMinutes: true,
   paymentTimingMeanDaysFromDue: true, paymentTimingVarianceDaysFromDue: true,
   activityVelocity30d: true, interEventRegularityScore: true,
+  minBalanceBuffer30d: true, daysAtZeroPerMonth: true, drawdownVelocity: true,
+  loadIntervalEntropy: true, loadAmountCV: true,
+  preDueStagingIndex: true, loadToObligationRatio: true,
+  sequencingStability: true, shockPaidFullRate: true, billShockWalletResponseRate: true,
 };
 
 export const PTI_DATA_SNAPSHOT_FIELDS: string[] = Object.keys(PTI_DATA_SNAPSHOT_FIELD_MAP);
@@ -264,6 +283,30 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   void paymentTimingVarianceDaysFromDue;
   void activityVelocity30d;
   void interEventRegularityScore;
+
+  // Prompt 2 / Stage 2 derived features — same zero-weight treatment.
+  const {
+    minBalanceBuffer30d = DERIVED_FEATURE_DEFAULTS.minBalanceBuffer30d,
+    daysAtZeroPerMonth = DERIVED_FEATURE_DEFAULTS.daysAtZeroPerMonth,
+    drawdownVelocity = DERIVED_FEATURE_DEFAULTS.drawdownVelocity,
+    loadIntervalEntropy = DERIVED_FEATURE_DEFAULTS.loadIntervalEntropy,
+    loadAmountCV = DERIVED_FEATURE_DEFAULTS.loadAmountCV,
+    preDueStagingIndex = DERIVED_FEATURE_DEFAULTS.preDueStagingIndex,
+    loadToObligationRatio = DERIVED_FEATURE_DEFAULTS.loadToObligationRatio,
+    sequencingStability = DERIVED_FEATURE_DEFAULTS.sequencingStability,
+    shockPaidFullRate = DERIVED_FEATURE_DEFAULTS.shockPaidFullRate,
+    billShockWalletResponseRate = DERIVED_FEATURE_DEFAULTS.billShockWalletResponseRate,
+  } = snapshot;
+  void minBalanceBuffer30d;
+  void daysAtZeroPerMonth;
+  void drawdownVelocity;
+  void loadIntervalEntropy;
+  void loadAmountCV;
+  void preDueStagingIndex;
+  void loadToObligationRatio;
+  void sequencingStability;
+  void shockPaidFullRate;
+  void billShockWalletResponseRate;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)

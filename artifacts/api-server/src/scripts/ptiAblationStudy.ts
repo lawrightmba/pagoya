@@ -69,7 +69,7 @@ function header(title: string) {
 //              ses signal via ses = 0.25*reliability + 0.75*noise
 //   noise    — field is essentially random given its gate (no ses/rel/eng link)
 
-type Dim = "PaymentReliability" | "BehavioralConsistency" | "EngagementDepth" | "CashFlowStability" | "v4.2Signals" | "v4.3DerivedFeatures";
+type Dim = "PaymentReliability" | "BehavioralConsistency" | "EngagementDepth" | "CashFlowStability" | "v4.2Signals" | "v4.3DerivedFeatures" | "Prompt2Stage2Features";
 type SesLink = "direct" | "indirect" | "noise";
 interface FieldMeta { field: keyof PTIDataSnapshot; dim: Dim; sesLink: SesLink; note: string; }
 
@@ -117,6 +117,16 @@ const FIELD_META: FieldMeta[] = [
   { field: "paymentTimingVarianceDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
   { field: "activityVelocity30d", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
   { field: "interEventRegularityScore", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "minBalanceBuffer30d", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "daysAtZeroPerMonth", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "drawdownVelocity", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "loadIntervalEntropy", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "loadAmountCV", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "preDueStagingIndex", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "loadToObligationRatio", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "sequencingStability", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "shockPaidFullRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "billShockWalletResponseRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
 ];
 
 const NUMERIC_FIELDS = FIELD_META.map((m) => m.field).filter((f) => f !== "kycVerified" && f !== "kycTier") as (keyof PTIDataSnapshot)[];
@@ -134,6 +144,9 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
   } = u;
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
@@ -146,6 +159,9 @@ export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     ...DERIVED_FEATURE_DEFAULTS,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV,
+    preDueStagingIndex, loadToObligationRatio,
+    sequencingStability, shockPaidFullRate, billShockWalletResponseRate,
   };
 }
 

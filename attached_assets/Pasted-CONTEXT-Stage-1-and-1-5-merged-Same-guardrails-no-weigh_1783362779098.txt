@@ -1,0 +1,35 @@
+CONTEXT: Stage 1 and 1.5 merged. Same guardrails: no weight changes, no derivedSignals.ts changes, fixture-completeness test (from Prompt 1) stays green.
+
+FIXTURE INVENTORY: use the single, already-established fixture inventory (9 files / ~12 sites). Do NOT re-embed a separate copy of this list in this prompt or in any code comment — reference it. services/fairLendingAdjustment.ts (non-test) remains permanently excluded; if any new feature in this task seems to need something from that file, stop and ask rather than reaching into it.
+
+DEFAULTS PATTERN: any new field this task adds to PTIDataSnapshot must be added to the same DERIVED_FEATURE_DEFAULTS constant introduced in Prompt 1 (extend it, don't create a second constant), and must be declared optional, for the same compiler-safety reasons established in Prompt 1 — assume zero TypeScript enforcement across all fixture sites. Extend Prompt 1's schema-completeness test to cover the new fields; do not write a second, separate completeness test.
+
+CONFIRMED FROM PROMPT 0 / 0.5 (do not re-derive, do not re-litigate):
+- message_templates does not exist in production or dev. paula_inbound_log has 0 rows in the last 30 days even though paula_send_queue has 6 outbound attempts. TWO independent blockers — Part D is skipped.
+- user_billers has 0 rows in production. Forward-obligation features are buildable but will return null for the entire current population.
+- Canonical amount column: monto, notNull, status-filtered (exclude 'fallido','solicitud_manual'), semantically "transacted" not "billed."
+- Biller grouping key: service_id (notNull, stable) — prefer over service_name/empresa, display-only fields.
+
+PART LETTERING: Part A = cash-flow micro-structure. Part B = forward-obligation features. Part C = event detection (scarcity + bill-shock) — NO Paula dependency, ALWAYS BUILD. Part D = Paula interaction mechanics — SKIP (both blockers confirmed; do not attempt).
+
+Part A — Cash-flow micro-structure (uses reconstructBalanceSeries from Stage 1.5 — balance-real filtering to {confirmed, completed} and COALESCE(confirmed_at, created_at) ordering are handled INSIDE that helper; do not re-filter or re-order in this stage, and do not re-derive whether analogous pending/failed states exist on wallet_transactions — they do, and Stage 1.5 already accounts for them, including SIGNUP_BONUS):
+1. minBalanceBuffer30d: minimum value of the reconstructed balance series over trailing 30 days.
+2. daysAtZeroPerMonth: reconstructBalanceSeries returns per-transaction points, not per-calendar-day. Add an explicit forward-fill step: for each calendar day in the trailing 30, take the balance as of the last transaction at or before end-of-day (via toComparableTimestamp() for tz alignment), count days where that value = 0. Implement and unit-test this bucketing step explicitly.
+3. drawdownVelocity: for each load, sum all spend-type transactions within 72 hours of that load's timestamp, divide by the load amount, cap at 1.0. Document in-code that this is an attribution convention (balance is commingled), not a traced-dollar claim. Median across loads.
+4. loadIntervalEntropy: reuse Stage 1's entropy transform on load events.
+5. loadAmountCV: coefficient of variation of load amounts, trailing 90 days.
+
+Part B — Forward-obligation features, anchored to user_billers:
+6. preDueStagingIndex: using user_billers.payment_day + typical_amount + the reconstructed balance series, fraction of predicted due-dates in trailing 90 days where balance ≥ typical_amount at least 48h prior. Return null for users with zero saved billers — currently ALL users. Verify this null-case behaves correctly against a real query today.
+7. loadToObligationRatio: same null-handling.
+
+Part C — Event-detection features (new module ptiEventFeatures.ts), on the status-filtered bill_payments row set — ALWAYS BUILD:
+8. Scarcity event: balance < sum of upcoming user_billers obligations within 7 days. Record which biller (grouped by service_id) got paid first. Feature: sequencingStability (null if < 2 events).
+9. Bill-shock event: a bill_payments row (status NOT IN ('fallido','solicitud_manual')) where monto ≥ 1.5× that service_id's trailing-6-payment median of monto. Feature: billShockResponse categorical, plus shockPaidFullRate. Document explicitly: this measures a spike in transacted amount relative to the user's own payment history for that biller — NOT deviation from the true bill face value, since amount_due_mxn is never populated.
+Unit-test on synthetic data covering: single bill, same-day bills, zero-balance start, a user with no user_billers rows (the current real-world case for 100% of users), and synthetic fallido/solicitud_manual rows to confirm exclusion from the trailing-6 median.
+
+Part D — SKIP. Do not build. Note in your summary that both blockers were independently confirmed in the Prompt 0 production report.
+
+Part E — Integration: snapshot extension at zero weight via DERIVED_FEATURE_DEFAULTS, all 9 fixture files/~12 sites updated in this PR, all four ablation/stress scripts extended, v4.2 regression test still passing, schema-completeness test extended (not duplicated) to cover the new fields.
+
+DEFINITION OF DONE: every balance-dependent feature uses the Stage 1.5 helper as-is; daysAtZeroPerMonth's calendar-bucketing step implemented and tested; drawdownVelocity's attribution rule documented in-code; bill-shock keyed on service_id with its "transacted not billed" limitation documented in-code; status filter verified via synthetic fallido/solicitud_manual rows; forward-obligation features correctly return null given zero user_billers rows (verified against a real query); Part C always built; Part D skipped with evidence cited; new fields added to the SAME DERIVED_FEATURE_DEFAULTS constant and the SAME schema-completeness test from Prompt 1, not duplicated; services/fairLendingAdjustment.ts confirmed untouched.
