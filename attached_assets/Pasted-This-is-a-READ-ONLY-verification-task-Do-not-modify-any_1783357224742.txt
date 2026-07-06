@@ -1,0 +1,18 @@
+This is a READ-ONLY verification task. Do not modify any code, schema, or data. Produce a written report only.
+
+PRE-FLIGHT (run all, paste results into the report):
+1. SELECT column_name FROM information_schema.columns WHERE table_name = 'message_templates';
+2. SELECT COUNT(*), COUNT(*) FILTER (WHERE active = true) FROM message_templates;  -- run against PRODUCTION, not dev
+3. SELECT COUNT(*) FROM paula_send_queue WHERE created_at > NOW() - INTERVAL '30 days';
+4. SELECT COUNT(*) FROM paula_inbound_log WHERE created_at > NOW() - INTERVAL '30 days';
+5. SELECT COUNT(*), COUNT(categoria) FROM bill_payments;  -- confirm categoria population rate in prod
+6. SELECT column_name FROM information_schema.columns WHERE table_name IN ('bill_payments','wallet_transactions','paula_send_queue','paula_inbound_log') ORDER BY table_name, ordinal_position;
+
+REPORT REQUIREMENTS:
+A. message_templates production status: does the schema exist in prod? How many active templates (expected: 24 if the known fix landed; 0 means the fix is still open)? Is paula_send_queue receiving rows in the last 30 days? This gates all Paula-signal work in Stage 2.
+B. Confirm bill_payments.categoria population rate (expected ~0%).
+C. Inventory every snapshot fixture location that must be updated when PTIDataSnapshot gains fields. Known locations: REQUIRED_SNAPSHOT_DEFAULTS in licenseeApi.ts, licenseeSandboxFixtures.ts, and all test snapshot fixtures referenced by pti.test.ts and licenseeApi.test.ts. Search the codebase for any additional files that construct or assert on a full PTIDataSnapshot object and list them exhaustively — a missed fixture caused silent scoring divergence in a prior version bump.
+D. Confirm the source-scan isolation tests in pti.test.ts and licenseeApi.test.ts are passing on current main, and document exactly which import/field patterns they forbid, so new modules can be named to comply.
+E. Confirm which timestamps exist on bill_payments (due date, paid-at) and wallet_transactions (created_at, amount, direction/type, balance-after if present). Flag any field the Stage 1–2 features assume but that does not exist.
+
+Output: a single markdown report. No code changes.
