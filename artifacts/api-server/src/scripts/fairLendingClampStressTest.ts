@@ -27,6 +27,7 @@
  */
 
 import { computePTI, type PTIDataSnapshot } from "../services/pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "../services/ptiDerivedFeatures.js";
 import {
   computeFairLendingAdjustment,
   type AdjustmentFlagState,
@@ -56,7 +57,7 @@ function header(title: string) {
   console.log("  " + title);
   console.log("═".repeat(78));
 }
-function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
+export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
   const {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
     loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
@@ -76,8 +77,15 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    ...DERIVED_FEATURE_DEFAULTS,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
+    // COMPILER-INVISIBLE CAST: the `as PTIDataSnapshot` below bypasses
+    // TypeScript's structural checking on this object literal. If a new
+    // field is ever added to PTIDataSnapshot or DerivedFeatureSet, this site
+    // will NOT produce a compile error even if that field is missing here —
+    // it must be checked manually or via the schema-completeness test
+    // (tests/pti.test.ts, "PTIDataSnapshot schema completeness").
   } as PTIDataSnapshot;
 }
 
@@ -382,7 +390,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Guarded so this file's exports (e.g. toSnapshot) can be imported by tests
+// (tests/pti.test.ts schema-completeness suite) without triggering the full
+// console-report run as a side effect of import.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

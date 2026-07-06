@@ -1,8 +1,40 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { computePTI, computePTIConfidence, getPTITier, PTI_MODEL_VERSION, type PTIDataSnapshot } from "../pti.js";
+import { computePTI, computePTIConfidence, getPTITier, PTI_MODEL_VERSION, PTI_DATA_SNAPSHOT_FIELDS, type PTIDataSnapshot } from "../pti.js";
 import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
+import { REQUIRED_SNAPSHOT_DEFAULTS } from "../licenseeApi.js";
+import { SANDBOX_FIXTURES } from "../licenseeSandboxFixtures.js";
+import {
+  synthFromLatents,
+  coldBaseline,
+  buildColdStart,
+  buildContradictory,
+  makeRng,
+  type SyntheticUser,
+} from "../syntheticPopulation.js";
+import { toSnapshot as ablationToSnapshot } from "../../scripts/ptiAblationStudy.js";
+import { toSnapshot as stressTestToSnapshot } from "../../scripts/ptiStressTest.js";
+import { toSnapshot as fairLendingClampToSnapshot } from "../../scripts/fairLendingClampStressTest.js";
+
+/**
+ * Wraps a plain PTIDataSnapshot as a SyntheticUser so it can be fed into the
+ * three scripts' toSnapshot(u: SyntheticUser) functions, which only read the
+ * PTIDataSnapshot-shaped fields off `u` — the metadata fields below are
+ * never consulted by any toSnapshot() implementation, they only exist to
+ * satisfy the SyntheticUser type.
+ */
+function asSyntheticUser(snap: PTIDataSnapshot): SyntheticUser {
+  return {
+    ...snap,
+    _segment: "normal",
+    _id: 0,
+    colonia: "Marina Vallarta",
+    coloniaTier: "tier_1_marginacion_muy_bajo",
+    declaredIncomeBucket: "bucket_3",
+    _ses: 0.5,
+  };
+}
 
 /**
  * Baseline snapshot: everything at zero / cold-start defaults.
@@ -454,6 +486,108 @@ describe("computePTI — v4.3 derived-features isolation guard (zero-weight)", (
     console.log("[v4.3 derived-features guard] with/without derived fields produce identical scores:", a.breakdown.total, b.breakdown.total);
     expect(b.breakdown).toEqual(a.breakdown);
     expect(b.confidence).toEqual(a.confidence);
+  });
+});
+
+describe("PTIDataSnapshot schema completeness", () => {
+  const canonical = [...PTI_DATA_SNAPSHOT_FIELDS].sort();
+
+  function assertExactKeys(label: string, obj: object) {
+    const actual = Object.keys(obj).sort();
+    const missing = canonical.filter((k) => !actual.includes(k));
+    const extra = actual.filter((k) => !canonical.includes(k));
+    console.log(`[schema-completeness] ${label}: ${actual.length}/${canonical.length} fields, missing=[${missing.join(",")}], extra=[${extra.join(",")}]`);
+    expect(missing).toEqual([]);
+    expect(extra).toEqual([]);
+  }
+
+  it("REQUIRED_SNAPSHOT_DEFAULTS matches canonical PTIDataSnapshot fields", () => {
+    assertExactKeys("REQUIRED_SNAPSHOT_DEFAULTS (licenseeApi.ts)", REQUIRED_SNAPSHOT_DEFAULTS);
+  });
+
+  it("licenseeSandboxFixtures.ts: zeroDataSnapshot (via zero_data fixture) matches canonical fields", () => {
+    const fixture = SANDBOX_FIXTURES.find((f) => f.key === "zero_data");
+    expect(fixture).toBeDefined();
+    assertExactKeys("zero_data fixture", fixture!.snapshot);
+  });
+
+  it("licenseeSandboxFixtures.ts: high_confidence fixture matches canonical fields", () => {
+    const fixture = SANDBOX_FIXTURES.find((f) => f.key === "high_confidence");
+    expect(fixture).toBeDefined();
+    assertExactKeys("high_confidence fixture", fixture!.snapshot);
+  });
+
+  it("licenseeSandboxFixtures.ts: portable_no_wallet_rail fixture matches canonical fields minus the 4 intentionally-omitted wallet-rail keys (INDIRECT reference only — see note)", () => {
+    // NOTE: this fixture does NOT itself spread DERIVED_FEATURE_DEFAULTS. It
+    // only carries the v4.3 fields because its construction spreads
+    // `...zeroDataSnapshot`, which does spread DERIVED_FEATURE_DEFAULTS. This
+    // is an indirect reference, not a direct one — flagged per the closeout
+    // review finding. If the `...zeroDataSnapshot` spread is ever removed
+    // from this fixture, this test will start failing even though nothing
+    // else about the fixture changed, which is the intended tripwire.
+    //
+    // This fixture ALSO intentionally `delete`s daysToFirstSpei,
+    // oxxoLoadCount, speiLoadCount, and cardLoadCount at runtime (see
+    // licenseeSandboxFixtures.ts) to simulate a real licensee payload that
+    // never supplied wallet-rail fields at all. So the correct completeness
+    // check here is "canonical minus those 4 keys", not an exact match —
+    // an exact-match assertion would fail on this fixture by design and
+    // mask real gaps instead of the deliberate one.
+    const INTENTIONALLY_OMITTED = ["daysToFirstSpei", "oxxoLoadCount", "speiLoadCount", "cardLoadCount"];
+    const fixture = SANDBOX_FIXTURES.find((f) => f.key === "portable_no_wallet_rail");
+    expect(fixture).toBeDefined();
+    const actual = Object.keys(fixture!.snapshot).sort();
+    const expectedCanonical = canonical.filter((k) => !INTENTIONALLY_OMITTED.includes(k));
+    const missing = expectedCanonical.filter((k) => !actual.includes(k));
+    const extra = actual.filter((k) => !expectedCanonical.includes(k));
+    console.log(`[schema-completeness] portable_no_wallet_rail fixture (indirect via zeroDataSnapshot spread, minus 4 intentional omissions): ${actual.length}/${expectedCanonical.length} fields, missing=[${missing.join(",")}], extra=[${extra.join(",")}]`);
+    expect(missing).toEqual([]);
+    expect(extra).toEqual([]);
+    for (const key of INTENTIONALLY_OMITTED) {
+      expect(actual).not.toContain(key);
+    }
+  });
+
+  it("syntheticPopulation.ts: synthFromLatents matches canonical fields", () => {
+    const rng = makeRng(42);
+    const snap = synthFromLatents({ reliability: 0.5, engagement: 0.5, ses: 0.5 }, rng, 1);
+    assertExactKeys("synthFromLatents", snap);
+  });
+
+  it("syntheticPopulation.ts: coldBaseline matches canonical fields", () => {
+    assertExactKeys("coldBaseline", coldBaseline());
+  });
+
+  it("syntheticPopulation.ts: buildColdStart matches canonical fields", () => {
+    const rng = makeRng(7);
+    assertExactKeys("buildColdStart", buildColdStart(rng));
+  });
+
+  it("syntheticPopulation.ts: buildContradictory matches canonical fields", () => {
+    const rng = makeRng(99);
+    assertExactKeys("buildContradictory", buildContradictory(rng));
+  });
+
+  it("ptiAblationStudy.ts: toSnapshot matches canonical fields", () => {
+    const rng = makeRng(1);
+    const user = asSyntheticUser(synthFromLatents({ reliability: 0.6, engagement: 0.4, ses: 0.3 }, rng, 1));
+    assertExactKeys("ptiAblationStudy.toSnapshot", ablationToSnapshot(user));
+  });
+
+  it("ptiStressTest.ts: toSnapshot matches canonical fields", () => {
+    const rng = makeRng(2);
+    const user = asSyntheticUser(synthFromLatents({ reliability: 0.4, engagement: 0.6, ses: 0.7 }, rng, 1));
+    assertExactKeys("ptiStressTest.toSnapshot", stressTestToSnapshot(user));
+  });
+
+  it("fairLendingClampStressTest.ts: toSnapshot matches canonical fields", () => {
+    const rng = makeRng(3);
+    const user = asSyntheticUser(synthFromLatents({ reliability: 0.7, engagement: 0.3, ses: 0.2 }, rng, 1));
+    assertExactKeys("fairLendingClampStressTest.toSnapshot", fairLendingClampToSnapshot(user));
+  });
+
+  it("pti.test.ts: baseSnapshot() matches canonical fields", () => {
+    assertExactKeys("pti.test.ts baseSnapshot()", baseSnapshot());
   });
 });
 

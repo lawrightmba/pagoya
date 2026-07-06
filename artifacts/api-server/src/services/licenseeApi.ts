@@ -315,7 +315,7 @@ export interface SanitizedPayload {
   forbiddenFieldsPresent: string[];
 }
 
-const REQUIRED_SNAPSHOT_DEFAULTS: PTIDataSnapshot = {
+export const REQUIRED_SNAPSHOT_DEFAULTS: PTIDataSnapshot = {
   streakMonths: 0, payCount: 0, domStddev: 0, dominantDay: 0, advanceDays: 0, selfRatio: 0,
   lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
   loginDays30: 0, hourStd: 0, scratchPlays: 0, spinPlays: 0, missionsDone: 0,

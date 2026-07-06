@@ -1,0 +1,69 @@
+# Prompt — Stage 1 Gap Closure (fixes the 5 deviations found in closeout verification)
+
+```
+Five gaps were found in a closeout review of the prior PTI Signal Expansion Prompt 1 work. Fix them in the order below — do not skip to later items if an earlier one surfaces a problem. This is a code-writing task; make the changes, then verify each one the same way the closeout review did (paste evidence, not summary claims).
+
+PRIORITY ORDER AND RATIONALE: Item 1 (schema-completeness test) goes first because it was never built and is the actual safety mechanism the rest of this plan depends on — until it exists, none of the "looks correct today" findings below have a tripwire against future regression. Item 2 (DERIVED_FEATURE_DEFAULTS in the three script files) goes second because fixing it is what the new test in item 1 will actually exercise and prove. Items 3–5 are documentation/hygiene fixes with no behavioral risk and can go last.
+
+---
+
+ITEM 1 — Build the schema-completeness test (was never built; this is the priority fix)
+
+Add a test asserting exact key-set equality between the canonical PTIDataSnapshot field list and each of the fixture construction sites. Specifically:
+
+1. Derive the canonical field list ONCE — either via a TypeScript keyof-based runtime helper, or an explicit exported array of field names kept adjacent to the PTIDataSnapshot type definition in pti.ts. Do not hand-type this list a second time inside the test.
+2. For each of the following sites, obtain the actual runtime object (call the function with representative/synthetic inputs where the site is a function) and assert Object.keys(result) matches the canonical list exactly (no missing fields, no unexpected extras unless explicitly allowlisted):
+   - REQUIRED_SNAPSHOT_DEFAULTS (licenseeApi.ts) — give this its OWN individually-named test case (e.g. "REQUIRED_SNAPSHOT_DEFAULTS matches canonical PTIDataSnapshot fields"), separate from the loop over the other sites, since this is the specific constant with a demonstrated history of causing a real production divergence.
+   - licenseeSandboxFixtures.ts: zeroDataSnapshot
+   - licenseeSandboxFixtures.ts: the high_confidence fixture
+   - licenseeSandboxFixtures.ts: the portable_no_wallet_rail fixture (flag if this one only passes via its indirect ...zeroDataSnapshot spread — note in a test comment that this is an indirect reference, not a direct one, per the closeout finding)
+   - syntheticPopulation.ts: all four functions (synthFromLatents, coldBaseline, buildColdStart, buildContradictory)
+   - ptiAblationStudy.ts: toSnapshot()
+   - ptiStressTest.ts: toSnapshot()
+   - fairLendingClampStressTest.ts: the constructed snapshot object
+   - pti.test.ts: baseSnapshot()
+   - licenseeApi.test.ts: baseSnapshot()
+   - fairLendingAdjustment.test.ts: baseSnapshot()
+3. Run the test now. Paste the actual pass/fail output. If it fails against current code (likely, given item 2 below hasn't been fixed yet), that's expected — paste the failure, don't suppress it, then proceed to item 2.
+
+---
+
+ITEM 2 — Fix DERIVED_FEATURE_DEFAULTS non-compliance in the three script files
+
+ptiAblationStudy.ts, ptiStressTest.ts, and fairLendingClampStressTest.ts currently hand-list the 4 new field names in their toSnapshot()/object-construction logic instead of spreading DERIVED_FEATURE_DEFAULTS. Fix each:
+
+1. In each of the three files, replace the hand-listed field assignments with a spread of DERIVED_FEATURE_DEFAULTS (overridden by any specific synthetic values the function already computes for those fields, same pattern as pti.test.ts/licenseeApi.test.ts already use).
+2. Import DERIVED_FEATURE_DEFAULTS in each of the three files if not already imported.
+3. Re-run the item 1 schema-completeness test — it should now pass for these three sites specifically. Paste the output.
+4. As a forward-looking check: add one more field temporarily to DerivedFeatureSet/DERIVED_FEATURE_DEFAULTS in a scratch/local test only (not committed), confirm the schema-completeness test fails for any site not using the spread pattern, then revert the scratch field. This proves the fix actually closes the propagation gap rather than just matching today's four fields by coincidence. Report the result of this check; do not skip it.
+
+---
+
+ITEM 3 — Add compiler-invisibility comments to both as-cast sites
+
+Confirmed locations (corrected from the original prompt's line numbers): licenseeSandboxFixtures.ts:82 (`return full as unknown as PTIDataSnapshot;`) and fairLendingClampStressTest.ts:81 (`} as PTIDataSnapshot;`).
+
+1. Add a comment directly above each cast explicitly stating: this cast bypasses TypeScript's structural checking; if a new field is ever added to PTIDataSnapshot or DerivedFeatureSet, this site will NOT produce a compile error if the field is missing, and must be checked manually or via the schema-completeness test (item 1).
+2. licenseeSandboxFixtures.ts already has a pre-existing comment near line 61-66 about wallet-rail-key safety — do not replace it; add the new comment as a distinct addition addressing the v4.3 field risk specifically, since the existing comment covers a different concern.
+
+---
+
+ITEM 4 — Document why cureTimeMedianHours was not built
+
+Add an in-code comment (in ptiDerivedFeatures.ts, near the payment-timing feature functions, is the natural location) stating explicitly: an hour-granularity "cure time after late payment" feature was considered and deliberately not built, because (a) no event log supports hour-level granularity on bill_payments, and (b) a day-granularity equivalent already exists as recovery_after_miss in the Behavioral Consistency dimension — building a second version would duplicate an existing signal at worse precision. This must live in the codebase, not only in a chat summary, so a future engineer doesn't reintroduce it believing it's a gap.
+
+---
+
+ITEM 5 — Add the month-boundary rationale comment
+
+Near WINSOR_BOUND_DAYS and the winsorize() function in ptiDerivedFeatures.ts, add a comment explaining WHY the ±20 bound exists, specifically: the days_from_due populating formula (payment_day − EXTRACT(DAY FROM NOW())) does naive day-of-month subtraction with no month-rollover handling, so a bill due day 2 paid on the 28th computes as approximately −26 instead of its true ~5-day lateness (and the reverse near the other month boundary). Values beyond roughly ±15-20 are more likely to be month-boundary artifacts than genuine extreme lateness/earliness, which is why they're clamped before entering the variance calculation. The current comment ("so a single wildly early/late outlier can't dominate the average") is generic and should be extended, not replaced, with this specific rationale.
+
+---
+
+CLOSING VERIFICATION (after all 5 items): 
+- Re-run the full schema-completeness test suite from item 1 and paste output — all sites should now pass, including the three script files fixed in item 2.
+- Re-run the v4.2 byte-identical regression test (pti.test.ts) and paste output — confirm it still passes after these changes (it should be unaffected, but verify rather than assume).
+- Re-run the isolation tests (vitest run pti.test.ts licenseeApi.test.ts -t "isolation") and paste output.
+- Confirm via git diff that items 3-5 only added comments and did not change any executable logic (diff should show only comment lines added, no logic changes, except for item 2's intentional refactor of the three script files).
+- Report using the same format as the closeout review: one-word verdict (CONFIRMED / DEVIATION / NOT DONE) per item, followed by evidence. Do not summarize at the top.
+```

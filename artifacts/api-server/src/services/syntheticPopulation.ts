@@ -61,7 +61,7 @@ export function mulberry32(seed: number): () => number {
 
 // ─── Distribution helpers ─────────────────────────────────────────────────────
 
-function makeRng(seed: number) {
+export function makeRng(seed: number) {
   const r = mulberry32(seed);
 
   const uniform = (min: number, max: number) => min + (max - min) * r();
@@ -164,7 +164,7 @@ function assignMetadata(ses: number, rng: Rng): { colonia: string; coloniaTier: 
 // with reliability (kept weak on purpose so the disparate-impact test measures
 // real proxy leakage rather than a hand-planted result).
 
-interface Latents {
+export interface Latents {
   reliability: number;
   engagement: number;
   ses: number;
@@ -183,7 +183,7 @@ function drawLatents(rng: Rng): Latents {
  * `scale` (0..1) globally attenuates activity — used by the gradient sweep to
  * densely span the whole 0..100 score range for boundary coverage.
  */
-function synthFromLatents(l: Latents, rng: Rng, scale = 1): PTIDataSnapshot {
+export function synthFromLatents(l: Latents, rng: Rng, scale = 1): PTIDataSnapshot {
   const { reliability: rel, engagement: eng, ses } = l;
 
   // Account age — right-skewed, older accounts more common among engaged users.
@@ -265,7 +265,7 @@ function synthFromLatents(l: Latents, rng: Rng, scale = 1): PTIDataSnapshot {
 
 // ─── The zero/cold-start baseline (matches pti.test.ts baseSnapshot) ──────────
 
-function coldBaseline(): PTIDataSnapshot {
+export function coldBaseline(): PTIDataSnapshot {
   return {
     streakMonths: 0, payCount: 0, domStddev: 15, dominantDay: 0, advanceDays: 0, selfRatio: 0,
     loginDays30: 0, hourStd: 12, scratchPlays: 0, spinPlays: 0, missionsDone: 0, loadCount30: 0, loadDayStd: 30,
@@ -281,7 +281,7 @@ function coldBaseline(): PTIDataSnapshot {
 
 // ─── Per-segment builders ─────────────────────────────────────────────────────
 
-function buildColdStart(rng: Rng): PTIDataSnapshot {
+export function buildColdStart(rng: Rng): PTIDataSnapshot {
   // Only 1–2 real data points; everything else at cold defaults.
   const s = coldBaseline();
   s.daysOld = Math.round(rng.uniform(0, 5));
@@ -292,7 +292,7 @@ function buildColdStart(rng: Rng): PTIDataSnapshot {
   return s;
 }
 
-function buildContradictory(rng: Rng): PTIDataSnapshot {
+export function buildContradictory(rng: Rng): PTIDataSnapshot {
   // High engagement, zero payment history — tests that BC/ED can accrue while
   // PR stays gated to (near) zero, and that nothing NaN/negative results.
   const eng = clamp(rng.normal(0.85, 0.1), 0.5, 1);

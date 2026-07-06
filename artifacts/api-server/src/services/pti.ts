@@ -156,6 +156,34 @@ export interface PTIDataSnapshot {
   interEventRegularityScore?: number;         // 0-1, regularity of inter-event spacing
 }
 
+/**
+ * Canonical, single-source-of-truth field list for PTIDataSnapshot, derived
+ * ONCE here (not hand-typed again in tests). `PTI_DATA_SNAPSHOT_FIELD_MAP` is
+ * typed as `Record<keyof PTIDataSnapshot, true>`, so if a field is ever added
+ * to or removed from the interface above and this map isn't updated to
+ * match, TypeScript will fail to compile this file — the list cannot
+ * silently drift out of sync with the type. `PTI_DATA_SNAPSHOT_FIELDS` is
+ * just `Object.keys()` of that map, exported for schema-completeness tests
+ * (see tests/pti.test.ts) to assert exact key-set equality against every
+ * fixture/snapshot-construction site in the codebase.
+ */
+const PTI_DATA_SNAPSHOT_FIELD_MAP: Record<keyof PTIDataSnapshot, true> = {
+  streakMonths: true, payCount: true, domStddev: true, dominantDay: true, advanceDays: true, selfRatio: true,
+  loginDays30: true, hourStd: true, scratchPlays: true, spinPlays: true, missionsDone: true,
+  loadCount30: true, loadDayStd: true, paulaInteractions: true, confirmed2fa: true, declined2fa: true,
+  pushOpens: true, curiosityIndex: true,
+  billerCount: true, kycVerified: true, kycTier: true, utilityRatio: true, intentClicks: true,
+  hoursToFirst: true, deviceScore: true,
+  currentBalance: true, totalLoads: true, totalSpend: true, amountCV: true,
+  p2pSendCount: true, p2pRecipientCount: true, daysOld: true,
+  daysToFirstSpei: true, oxxoLoadCount: true, speiLoadCount: true, cardLoadCount: true,
+  lateRecoveryRatio: true, latePaymentCount: true, paulaResponseLatencyMinutes: true,
+  paymentTimingMeanDaysFromDue: true, paymentTimingVarianceDaysFromDue: true,
+  activityVelocity30d: true, interEventRegularityScore: true,
+};
+
+export const PTI_DATA_SNAPSHOT_FIELDS: string[] = Object.keys(PTI_DATA_SNAPSHOT_FIELD_MAP);
+
 export interface PTIConfidence {
   level: "high" | "medium" | "low";
   score: number;       // 0–1, continuous data-sufficiency signal

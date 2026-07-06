@@ -22,7 +22,7 @@ import {
   getThresholdOwnerHistory,
   verifyThresholdOwnerAuthorization,
 } from "../fairLendingOwnership.js";
-import { computePTI, type PTIDataSnapshot } from "../pti.js";
+import { computePTI, PTI_DATA_SNAPSHOT_FIELDS, type PTIDataSnapshot } from "../pti.js";
 import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
 import {
   FAIR_LENDING_MAPPING,
@@ -151,6 +151,18 @@ const TEST_FIXTURE_ADJUSTMENT = (snapshot: FairLendingSnapshot): number => {
   if (snapshot.declaredIncomeBucket) raw += bucketPoints[snapshot.declaredIncomeBucket] ?? 0;
   return raw;
 };
+
+describe("PTIDataSnapshot schema completeness (fairLendingAdjustment.test.ts)", () => {
+  it("baseSnapshot() matches canonical PTIDataSnapshot fields", () => {
+    const canonical = [...PTI_DATA_SNAPSHOT_FIELDS].sort();
+    const actual = Object.keys(baseSnapshot()).sort();
+    const missing = canonical.filter((k) => !actual.includes(k));
+    const extra = actual.filter((k) => !canonical.includes(k));
+    console.log(`[schema-completeness] fairLendingAdjustment.test.ts baseSnapshot(): ${actual.length}/${canonical.length} fields, missing=[${missing.join(",")}], extra=[${extra.join(",")}]`);
+    expect(missing).toEqual([]);
+    expect(extra).toEqual([]);
+  });
+});
 
 describe("computePTI — regression: byte-identical with or without fair-lending fields (test #1)", () => {
   it("is unaffected by colonia/declared_income_bucket presence on the snapshot", () => {

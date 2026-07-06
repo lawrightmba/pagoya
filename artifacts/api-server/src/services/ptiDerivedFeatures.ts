@@ -39,6 +39,13 @@ export const DERIVED_FEATURE_DEFAULTS: DerivedFeatureSet = {
   interEventRegularityScore: 0,
 };
 
+// 20 days rather than a round 30 (a full month): the bound is meant to cap
+// outliers within a single billing cycle, not span one. Most bills here are
+// due on a fixed day-of-month, so a payment more than ~20 days early/late is
+// already bleeding into the adjacent cycle's own due date — at that point
+// it's better modeled as "paid against the wrong month" than as an extreme
+// value of the same distribution, so clamping stops short of the 30-day
+// month boundary instead of running up to it.
 const WINSOR_BOUND_DAYS = 20;
 
 function winsorize(value: number, bound: number): number {
@@ -48,6 +55,15 @@ function winsorize(value: number, bound: number): number {
 
 // ─────────────────────────────────────────────────────────────────────────
 // Part A: payment-timing features
+//
+// A third candidate signal, `cureTimeMedianHours` (median hours between a
+// payment going late and the user curing it), was considered alongside
+// `paymentTimingMeanDaysFromDue`/`paymentTimingVarianceDaysFromDue` and
+// rejected for this pass: cure-time needs a "late -> paid" event pair per
+// payment, which isn't reliably derivable from the days-from-due series
+// alone (a late-but-never-cured payment and a payment that cured same-day
+// both collapse to similar days-from-due values). Revisit only alongside a
+// proper late/cure event log, not by approximating it off this array.
 // ─────────────────────────────────────────────────────────────────────────
 
 /**

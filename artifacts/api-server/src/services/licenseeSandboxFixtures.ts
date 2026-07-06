@@ -79,6 +79,15 @@ export const SANDBOX_FIXTURES: SandboxFixture[] = [
       delete full.oxxoLoadCount;
       delete full.speiLoadCount;
       delete full.cardLoadCount;
+      // COMPILER-INVISIBLE CAST (separate concern from the wallet-rail-key
+      // comment above): `as unknown as PTIDataSnapshot` bypasses TypeScript's
+      // structural checking entirely. If a new field is ever added to
+      // PTIDataSnapshot or DerivedFeatureSet, this site will NOT produce a
+      // compile error if that field is missing from `full` — it must be
+      // checked manually or via the schema-completeness test (tests/pti.test.ts,
+      // "PTIDataSnapshot schema completeness"). Today this site is protected
+      // only indirectly, via the `...zeroDataSnapshot` spread above (line 68),
+      // which itself spreads DERIVED_FEATURE_DEFAULTS.
       return full as unknown as PTIDataSnapshot;
     })(),
   },

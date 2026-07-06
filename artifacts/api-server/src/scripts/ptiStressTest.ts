@@ -16,6 +16,7 @@
  */
 
 import { computePTI, getPTITier, PTI_MODEL_VERSION, type PTIDataSnapshot } from "../services/pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "../services/ptiDerivedFeatures.js";
 import {
   computeFairLendingAdjustment,
   type AdjustmentFlagState,
@@ -113,7 +114,7 @@ function scoreAll(pop: SyntheticUser[]): Scored[] {
   return out;
 }
 
-function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
+export function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
   const {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
     loginDays30, hourStd, scratchPlays, spinPlays, missionsDone, loadCount30, loadDayStd,
@@ -133,6 +134,7 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    ...DERIVED_FEATURE_DEFAULTS,
     paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
     activityVelocity30d, interEventRegularityScore,
   };
@@ -560,4 +562,9 @@ function main() {
   console.log(line("█"));
 }
 
-main();
+// Guarded so this file's exports (e.g. toSnapshot) can be imported by tests
+// (tests/pti.test.ts schema-completeness suite) without triggering the full
+// console-report run as a side effect of import.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

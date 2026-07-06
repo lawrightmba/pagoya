@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { computePTI, type PTIDataSnapshot } from "../pti.js";
+import { computePTI, PTI_DATA_SNAPSHOT_FIELDS, type PTIDataSnapshot } from "../pti.js";
 import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
 import {
   sanitizeLicenseePayload,
@@ -192,5 +192,17 @@ describe("licenseeSandboxFixtures — synthetic-only, never real user data", () 
       expect(breakdown.total).toBeGreaterThanOrEqual(0);
       expect(breakdown.total).toBeLessThanOrEqual(100);
     }
+  });
+});
+
+describe("PTIDataSnapshot schema completeness (licenseeApi.test.ts)", () => {
+  it("baseSnapshot() matches canonical PTIDataSnapshot fields", () => {
+    const canonical = [...PTI_DATA_SNAPSHOT_FIELDS].sort();
+    const actual = Object.keys(baseSnapshot()).sort();
+    const missing = canonical.filter((k) => !actual.includes(k));
+    const extra = actual.filter((k) => !canonical.includes(k));
+    console.log(`[schema-completeness] licenseeApi.test.ts baseSnapshot(): ${actual.length}/${canonical.length} fields, missing=[${missing.join(",")}], extra=[${extra.join(",")}]`);
+    expect(missing).toEqual([]);
+    expect(extra).toEqual([]);
   });
 });
