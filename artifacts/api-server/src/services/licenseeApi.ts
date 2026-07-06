@@ -23,6 +23,7 @@ import crypto from "crypto";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePTI, getPTITier, type PTIDataSnapshot, type PTIBreakdown, type PTIConfidence } from "./pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
 import { getSandboxFixture, SANDBOX_FIXTURES } from "./licenseeSandboxFixtures.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -324,6 +325,7 @@ const REQUIRED_SNAPSHOT_DEFAULTS: PTIDataSnapshot = {
   hoursToFirst: NaN, deviceScore: 0,
   currentBalance: 0, totalLoads: 0, totalSpend: 0, amountCV: 0, p2pSendCount: 0, p2pRecipientCount: 0,
   daysOld: 0, daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
+  ...DERIVED_FEATURE_DEFAULTS,
 };
 
 /**

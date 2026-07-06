@@ -1780,3 +1780,27 @@ describe('17. "Error inesperado" + "En proceso" edge case', () => {
     expect(raw.transID).toBe("TX_EI_PRESERVE");
   });
 });
+
+describe("18. categoria regression tripwire (Part E)", () => {
+  // bill_payments.categoria feeds biller-category-diversity signal work
+  // (see derivedSignals.ts) and is currently 0% populated in prod only
+  // because bill_payments has 0 rows — NOT because the app fails to set it.
+  // This is a source-level guard (not a DB-round-trip test) that every
+  // billPaymentsTable insert path in billpay.ts explicitly sets categoria,
+  // so a future edit can't silently drop it and reintroduce the gap.
+  it("every billPaymentsTable insert in billpay.ts explicitly sets categoria", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const routePath = fileURLToPath(new URL("../routes/billpay.ts", import.meta.url));
+    const source = readFileSync(routePath, "utf-8");
+
+    const insertBlocks = source.match(/\.insert\(billPaymentsTable\)\.values\(\{[\s\S]*?\}\)/g) ?? [];
+    console.log(`[categoria tripwire] found ${insertBlocks.length} billPaymentsTable insert block(s) in billpay.ts`);
+    expect(insertBlocks.length).toBeGreaterThan(0);
+
+    for (const [i, block] of insertBlocks.entries()) {
+      console.log(`[categoria tripwire] insert block #${i + 1} sets categoria:`, /categoria\s*:/.test(block));
+      expect(block).toMatch(/categoria\s*:/);
+    }
+  });
+});

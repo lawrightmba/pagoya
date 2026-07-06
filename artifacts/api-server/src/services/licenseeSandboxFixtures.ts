@@ -8,6 +8,7 @@
  */
 
 import type { PTIDataSnapshot } from "./pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
 
 export interface SandboxFixture {
   key: string;
@@ -26,6 +27,7 @@ const zeroDataSnapshot: PTIDataSnapshot = {
   hoursToFirst: NaN, deviceScore: 0,
   currentBalance: 0, totalLoads: 0, totalSpend: 0, amountCV: 0, p2pSendCount: 0, p2pRecipientCount: 0,
   daysOld: 1, daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
+  ...DERIVED_FEATURE_DEFAULTS,
 };
 
 export const SANDBOX_FIXTURES: SandboxFixture[] = [
@@ -95,6 +97,7 @@ export const SANDBOX_FIXTURES: SandboxFixture[] = [
       currentBalance: 800, totalLoads: 6000, totalSpend: 5200, amountCV: 0.08,
       p2pSendCount: 8, p2pRecipientCount: 5, daysOld: 300,
       daysToFirstSpei: 5, oxxoLoadCount: 2, speiLoadCount: 20, cardLoadCount: 4,
+      ...DERIVED_FEATURE_DEFAULTS,
     },
   },
 ];

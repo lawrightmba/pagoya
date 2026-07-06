@@ -65,6 +65,8 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
+    activityVelocity30d, interEventRegularityScore,
   } = u;
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
@@ -74,6 +76,8 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
+    activityVelocity30d, interEventRegularityScore,
   } as PTIDataSnapshot;
 }
 

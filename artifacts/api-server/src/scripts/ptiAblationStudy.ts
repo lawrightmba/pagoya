@@ -68,7 +68,7 @@ function header(title: string) {
 //              ses signal via ses = 0.25*reliability + 0.75*noise
 //   noise    — field is essentially random given its gate (no ses/rel/eng link)
 
-type Dim = "PaymentReliability" | "BehavioralConsistency" | "EngagementDepth" | "CashFlowStability" | "v4.2Signals";
+type Dim = "PaymentReliability" | "BehavioralConsistency" | "EngagementDepth" | "CashFlowStability" | "v4.2Signals" | "v4.3DerivedFeatures";
 type SesLink = "direct" | "indirect" | "noise";
 interface FieldMeta { field: keyof PTIDataSnapshot; dim: Dim; sesLink: SesLink; note: string; }
 
@@ -112,6 +112,10 @@ const FIELD_META: FieldMeta[] = [
   { field: "lateRecoveryRatio", dim: "v4.2Signals", sesLink: "indirect", note: "recovery-after-late; weak SES via reliability; NaN-gated" },
   { field: "latePaymentCount", dim: "v4.2Signals", sesLink: "indirect", note: "late-payment count; weak (inverse) via reliability; gated payCount≥3" },
   { field: "paulaResponseLatencyMinutes", dim: "v4.2Signals", sesLink: "indirect", note: "assistant reply latency; weak SES via engagement; NaN-gated" },
+  { field: "paymentTimingMeanDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "paymentTimingVarianceDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "activityVelocity30d", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "interEventRegularityScore", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
 ];
 
 const NUMERIC_FIELDS = FIELD_META.map((m) => m.field).filter((f) => f !== "kycVerified" && f !== "kycTier") as (keyof PTIDataSnapshot)[];
@@ -127,6 +131,8 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
+    activityVelocity30d, interEventRegularityScore,
   } = u;
   return {
     streakMonths, payCount, domStddev, dominantDay, advanceDays, selfRatio,
@@ -136,6 +142,8 @@ function toSnapshot(u: SyntheticUser): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue,
+    activityVelocity30d, interEventRegularityScore,
   };
 }
 

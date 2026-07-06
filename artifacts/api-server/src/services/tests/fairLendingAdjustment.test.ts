@@ -23,6 +23,7 @@ import {
   verifyThresholdOwnerAuthorization,
 } from "../fairLendingOwnership.js";
 import { computePTI, type PTIDataSnapshot } from "../pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
 import {
   FAIR_LENDING_MAPPING,
   FAIR_LENDING_MAPPING_VERSION,
@@ -120,6 +121,8 @@ function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot
     intentClicks: 0, hoursToFirst: NaN, deviceScore: 0, currentBalance: 0, totalLoads: 0,
     totalSpend: 0, amountCV: 1, p2pSendCount: 0, p2pRecipientCount: 0, daysOld: 0,
     daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
+    lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
+    ...DERIVED_FEATURE_DEFAULTS,
     ...overrides,
   };
 }

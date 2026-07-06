@@ -56,6 +56,7 @@
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
 
 // ─── Public interfaces ────────────────────────────────────────────────────────
 
@@ -142,6 +143,17 @@ export interface PTIDataSnapshot {
   lateRecoveryRatio: number;         // 0–1, % of late payments (last 6mo) immediately followed by on-time/early; NaN if never late
   latePaymentCount: number;          // count of late payments (last 6mo), used to gate lateRecoveryRatio
   paulaResponseLatencyMinutes: number; // median minutes from Paula nudge sent to next reply (last 90d); NaN if no data
+
+  // NEW (v4.3 — PTI Signal Expansion, Prompt 1) derived features, ZERO WEIGHT.
+  // Optional: computed via ptiDerivedFeatures.ts. Accepted here with
+  // null-safe defaults (DERIVED_FEATURE_DEFAULTS) but NOT used in any
+  // dimension score yet — see the byte-identical regression guard in
+  // tests/pti.test.ts. All producers of a PTIDataSnapshot should spread
+  // DERIVED_FEATURE_DEFAULTS in so the fields are always present.
+  paymentTimingMeanDaysFromDue?: number;      // mean days-from-due, winsorized to +/-20
+  paymentTimingVarianceDaysFromDue?: number;  // sample variance of the same winsorized series
+  activityVelocity30d?: number;               // generic first-derivative (avg delta) of a 30d activity series
+  interEventRegularityScore?: number;         // 0-1, regularity of inter-event spacing
 }
 
 export interface PTIConfidence {
@@ -210,6 +222,20 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
   } = snapshot;
+
+  // v4.3 derived features — null-safe defaulted, ZERO WEIGHT (not used
+  // anywhere below; destructured only so a future scoring change has a
+  // single, already-defaulted place to read them from).
+  const {
+    paymentTimingMeanDaysFromDue = DERIVED_FEATURE_DEFAULTS.paymentTimingMeanDaysFromDue,
+    paymentTimingVarianceDaysFromDue = DERIVED_FEATURE_DEFAULTS.paymentTimingVarianceDaysFromDue,
+    activityVelocity30d = DERIVED_FEATURE_DEFAULTS.activityVelocity30d,
+    interEventRegularityScore = DERIVED_FEATURE_DEFAULTS.interEventRegularityScore,
+  } = snapshot;
+  void paymentTimingMeanDaysFromDue;
+  void paymentTimingVarianceDaysFromDue;
+  void activityVelocity30d;
+  void interEventRegularityScore;
 
   // ══════════════════════════════════════════════════════════════════════════
   // DIMENSION 1: PAYMENT RELIABILITY — max 30pts (v4.0-behavioral)

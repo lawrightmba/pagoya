@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { computePTI, computePTIConfidence, getPTITier, PTI_MODEL_VERSION, type PTIDataSnapshot } from "../pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
 
 /**
  * Baseline snapshot: everything at zero / cold-start defaults.
@@ -48,6 +49,7 @@ function baseSnapshot(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot
     lateRecoveryRatio: NaN,
     latePaymentCount: 0,
     paulaResponseLatencyMinutes: NaN,
+    ...DERIVED_FEATURE_DEFAULTS,
     ...overrides,
   };
 }
@@ -425,6 +427,31 @@ describe("computePTI — fair-lending isolation guard (Sprint 2b)", () => {
     const withExtraFields = { ...base, colonia: "Roma Norte", declaredIncomeBucket: "bucket_3" } as PTIDataSnapshot;
     const a = computePTI(base);
     const b = computePTI(withExtraFields);
+    expect(b.breakdown).toEqual(a.breakdown);
+    expect(b.confidence).toEqual(a.confidence);
+  });
+});
+
+describe("computePTI — v4.3 derived-features isolation guard (zero-weight)", () => {
+  it("produces byte-identical output whether or not the v4.3 derived-feature fields are present on the snapshot", () => {
+    const withoutDerived = baseSnapshot({ payCount: 5, daysOld: 60 });
+    delete (withoutDerived as Partial<PTIDataSnapshot>).paymentTimingMeanDaysFromDue;
+    delete (withoutDerived as Partial<PTIDataSnapshot>).paymentTimingVarianceDaysFromDue;
+    delete (withoutDerived as Partial<PTIDataSnapshot>).activityVelocity30d;
+    delete (withoutDerived as Partial<PTIDataSnapshot>).interEventRegularityScore;
+
+    const withDerived = baseSnapshot({
+      payCount: 5,
+      daysOld: 60,
+      paymentTimingMeanDaysFromDue: 12,
+      paymentTimingVarianceDaysFromDue: 40,
+      activityVelocity30d: -3,
+      interEventRegularityScore: 0.75,
+    });
+
+    const a = computePTI(withoutDerived);
+    const b = computePTI(withDerived);
+    console.log("[v4.3 derived-features guard] with/without derived fields produce identical scores:", a.breakdown.total, b.breakdown.total);
     expect(b.breakdown).toEqual(a.breakdown);
     expect(b.confidence).toEqual(a.confidence);
   });

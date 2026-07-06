@@ -21,6 +21,7 @@
  */
 
 import type { PTIDataSnapshot } from "./pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
 
 // ─── Segment taxonomy ─────────────────────────────────────────────────────────
 
@@ -258,6 +259,7 @@ function synthFromLatents(l: Latents, rng: Rng, scale = 1): PTIDataSnapshot {
     currentBalance, totalLoads, totalSpend, amountCV, p2pSendCount, p2pRecipientCount, daysOld,
     daysToFirstSpei, oxxoLoadCount, speiLoadCount, cardLoadCount,
     lateRecoveryRatio, latePaymentCount, paulaResponseLatencyMinutes,
+    ...DERIVED_FEATURE_DEFAULTS,
   };
 }
 
@@ -273,6 +275,7 @@ function coldBaseline(): PTIDataSnapshot {
     currentBalance: 0, totalLoads: 0, totalSpend: 0, amountCV: 1, p2pSendCount: 0, p2pRecipientCount: 0, daysOld: 0,
     daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
     lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
+    ...DERIVED_FEATURE_DEFAULTS,
   };
 }
 
