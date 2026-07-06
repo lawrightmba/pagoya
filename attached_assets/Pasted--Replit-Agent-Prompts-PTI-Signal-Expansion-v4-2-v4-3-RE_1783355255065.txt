@@ -1,0 +1,207 @@
+# Replit Agent Prompts — PTI Signal Expansion (v4.2 → v4.3) — REV 4
+### Incorporates Prompt 0 production findings. One item still open (canonical amount column — code trace in progress). No code changed yet.
+
+**Changes from REV 3, per the Prompt 0 production report:**
+1. **Fixture inventory expanded from 3 to 11 confirmed locations.** The schema-completeness test in Prompt 1 must scan all eleven, not three. The two easy-to-miss ones — `scripts/ptiAblationStudy.ts` and `scripts/fairLendingClampStressTest.ts` — plus the fair-lending fixtures (`services/fairLendingAdjustment.ts`, `services/tests/fairLendingAdjustment.test.ts`) are exactly where a silent divergence would hide, since nobody routinely opens them when editing the scorer.
+2. **Canonical bill-amount column is a code-trace task, not resolvable from data** — production `bill_payments` has 0 rows. `platform_fee_mxn` is confirmed as the fee column by elimination; the true bill-amount column is one of `bill_amount` / `amount_due_mxn` / `monto` and must be confirmed by reading the insert path before Stage 1 runs. **This is now Prompt 0.5, a standalone code-read task, run before Prompt 1.**
+3. Stage 2 Part D (Paula mechanics) confirmed SKIP on two independent blockers: `message_templates` doesn't exist in production, and `paula_inbound_log` has zero rows in the last 30 days even though `paula_send_queue` has six outbound attempts. Even if the template table existed, there's no inbound-reply data yet to compute latency from. Not revisiting this until both are fixed.
+4. Isolation regex confirmed narrower than assumed: it forbids specific substrings (`colonia`, `declared_income_bucket`) and specific import/call-site patterns for the fair-lending module — not arbitrary field-name matching. This *lowers* naming-collision risk for Stage 1/2 fields but makes Stage 3's forbidden-list extension the only real collision point, exactly as before.
+5. `days_from_due` sign convention, `wallet_transactions.type` vocabulary, and `user_billers` obligation data are all confirmed **not derivable from current production data** (tables are empty or near-empty). These must be built from the application code's known vocabulary/logic, with validation deferred to the backtest. This isn't a new risk — REV 3's throw-on-unrecognized-type guard in Stage 1.5 already exists specifically because of this — but it's now a confirmed fact rather than a precaution.
+
+**Execution order: 0 → 0.5 → 1 → 1.5 → 2 → 3 → 4. Do not skip 0.5 or 1.5.**
+
+---
+
+## PROMPT 0.5 — Canonical amount column resolution (code trace, no DB, no data changes)
+
+```
+READ-ONLY code inspection task. No schema, data, or code changes. Production bill_payments has 0 rows, so this cannot be resolved by sampling data — trace the application code instead.
+
+TASK:
+1. Find every code path that INSERTs into bill_payments (API route handlers, service functions, webhook processors — check all of them, there may be more than one entry point, e.g. manual payment vs. Paula-initiated payment vs. B2B webhook).
+2. For each insert path, identify which of bill_amount, amount_due_mxn, monto, and platform_fee_mxn receives: (a) the face value of the bill as owed by the user, (b) PagoYa's platform fee, (c) any other derived/computed value. platform_fee_mxn is presumed to be the fee column — confirm this explicitly rather than assuming it.
+3. If more than one insert path exists and they populate columns inconsistently (e.g. one path writes to monto, another to amount_due_mxn for the same logical value), flag this as a data-quality risk for Stage 1/2 — features built on "the canonical amount column" will silently misread rows written by the inconsistent path.
+4. Report: the single column name to use as "canonical bill amount" for all Stage 1/2 features, with the insert-path evidence supporting that choice. If no single column is safe to use as-is (per #3), report the required fallback logic (e.g. COALESCE order, or a per-path branch) instead of picking one column by default.
+
+DEFINITION OF DONE: canonical amount column named with code-path evidence, OR a documented fallback/COALESCE rule if no single column is safe.
+```
+
+---
+
+## PROMPT 1 — Stage 1: payment-timing (corrected) + generic transforms + categoria fix
+
+```
+CONTEXT: PTI v4.2. computePTI() in pti.ts is pure over PTIDataSnapshot. computePTIForUser() hydrates it. derivedSignals.ts is quarantined — do not touch.
+
+SCHEMA GROUND TRUTH (confirmed):
+- bill_payments has NO due_date/paid_at. Timing signal is days_from_due (working assumption: negative = late, positive = early/on-time, per recovery_after_miss's existing convention — not yet data-verifiable at current N; re-check once real payments exist), plus created_at (timestamp WITHOUT time zone).
+- Canonical bill amount column / fallback rule: [INSERT result of Prompt 0.5].
+- v4.2 already has recovery_after_miss in Behavioral Consistency. Do not duplicate it.
+
+ISOLATION REGEX GROUND TRUTH (confirmed, narrower than a generic name-collision risk):
+- pti.ts guard forbids the substrings colonia and declared_income_bucket/declaredIncomeBucket appearing in source.
+- licenseeApi.ts guard forbids importing/requiring fairLendingAdjustment, and forbids the call-sites computeFinalPTI( and computeFairLendingAdjustment(, and references to fair_lending_signoff.
+- New field names in this task are safe as long as they avoid those specific substrings/call-sites. Do not import anything from fairLendingAdjustment.ts in this task.
+
+FIXTURE INVENTORY — the following ELEVEN locations construct or assert on a full PTIDataSnapshot and must ALL be updated whenever the snapshot shape changes. This list is confirmed from a codebase read, not assumed:
+1. services/pti.ts (type def + computePTI)
+2. services/licenseeApi.ts (REQUIRED_SNAPSHOT_DEFAULTS)
+3. services/licenseeSandboxFixtures.ts
+4. services/syntheticPopulation.ts
+5. services/fairLendingAdjustment.ts
+6. scripts/ptiStressTest.ts
+7. scripts/ptiAblationStudy.ts
+8. scripts/fairLendingClampStressTest.ts
+9. services/tests/pti.test.ts
+10. services/tests/licenseeApi.test.ts
+11. services/tests/fairLendingAdjustment.test.ts
+Before writing the schema-completeness test (Part C below), re-grep the codebase yourself for any additional PTIDataSnapshot construction/assertion sites beyond these eleven — this list is a floor, not a ceiling; a fixture-completeness test that only checks these eleven is only as good as this inventory being actually exhaustive.
+
+PRE-FLIGHT: confirm the eleven-location list above by independent grep before proceeding.
+
+TASK — new module ptiDerivedFeatures.ts:
+
+Part A — Payment-timing distribution features, built against days_from_due:
+1. paymentTimingMeanDays: mean(days_from_due) over trailing 90 days.
+2. paymentTimingVarianceDays: variance(days_from_due) over the same window. Primary signal.
+3. cureTimeMedianHours is NOT built — duplicates recovery_after_miss at worse granularity. Document this decision.
+
+Part B — Generic temporal-derivative transform layer:
+Apply ONLY to existing snapshot inputs that are simple event counts/amounts over time — NOT anything requiring balance reconstruction (Stage 1.5 handles that).
+4. rolling30dStdDev, rolling60dStdDev, rolling90dStdDev per qualifying input.
+5. velocity30d: first difference of consecutive 30-day means.
+6. interEventRegularity: normalized entropy of inter-event intervals, minimum 5 events else null. (Given current production volumes — 0 bill_payments, 3 wallet_transactions, 0 user_billers — expect this to return null for essentially the entire population today. That is expected, not a bug.)
+Implement as generic pure functions, unit-tested on synthetic arrays first, then applied per qualifying input.
+
+Part C — Integration at ZERO weight:
+7. Extend PTIDataSnapshot with new fields from Parts A–B only.
+8. computePTI() must return byte-identical scores for identical v4.2 inputs — add the regression test.
+9. Update ALL ELEVEN fixture locations in this same PR. Add a schema-completeness test that scans all eleven (plus any additional sites found via the pre-flight grep) and fails if any is missing a snapshot field.
+
+Part D — Ablation readiness:
+10. Extend syntheticPopulation.ts / ptiStressTest.ts / ptiAblationStudy.ts / fairLendingClampStressTest.ts (all four, per the corrected inventory) to generate plausible values for new fields and report per-feature distributions/correlations against existing flagged proxy variables.
+
+Part E — categoria capture-point fix:
+11. Find the write path inserting into bill_payments (same paths identified in Prompt 0.5); populate categoria from the biller record going forward. No backfill.
+
+GUARDRAILS: no touching derivedSignals.ts, weights, or fair-lending code. All isolation tests pass. All existing tests pass.
+
+DEFINITION OF DONE: v4.2 scores unchanged; Parts A–B fields in snapshot + all eleven fixtures + all four ablation/stress scripts; cureTimeMedianHours explicitly not built with reasoning documented; fixture-completeness test scans all eleven locations plus any new ones found by grep; categoria populating on new inserts; suite green.
+```
+
+---
+
+## PROMPT 1.5 — Balance reconstruction helper (build once, reuse everywhere)
+
+```
+CONTEXT: wallet_transactions has no balance-after column and no signed-amount column (amount_mxn is unsigned). Credit/debit must be inferred from `type`. Production data currently contains only load_oxxo and load_card (3 rows total) — the full type vocabulary CANNOT be enumerated from data and must come from the application's type definitions/enums in code.
+
+PRE-FLIGHT:
+1. Find the authoritative source of wallet_transactions.type values in code (enum, constant list, or type union) — do not rely on the 2 distinct values seen in production, since spends/transfers/SPEI loads exist in the product but haven't occurred yet in this small dataset.
+2. Confirm bill_payments.created_at is naive and wallet_transactions/paula_* are tz-aware (confirmed in Prompt 0).
+
+TASK — new module walletBalanceReconstruction.ts:
+1. Explicit, exhaustive credit/debit classification for EVERY type value found in the code-level enum/type definition (not just the two observed in prod). Throw on any value truly not in that enum (defense against future schema drift), but do not treat "not yet observed in prod" as "doesn't exist" — the classification must cover the full known vocabulary from day one.
+2. reconstructBalanceSeries(userTransactions): given a user's transactions ordered by created_at, return a running-balance series as {timestamp, balance} points after each transaction. Document the opening-balance assumption as a named constant.
+3. toComparableTimestamp(): normalizes bill_payments.created_at (naive) to the same tz assumption as wallet_transactions, for every future cross-table comparison.
+4. Unit tests: single transaction; same-timestamp transactions; a full month of interleaved loads/spends (synthetic — cannot use real data at current volume); an unrecognized type (must throw); zero transactions (empty series, not error). Since real data can't exercise most of the type vocabulary yet, lean on synthetic fixtures covering every enum value, not just load_oxxo/load_card.
+5. Do NOT wire into PTIDataSnapshot yet.
+
+GUARDRAILS: no dependency on pti.ts. Pure functions, fully unit tested, no live DB writes.
+
+DEFINITION OF DONE: reconstructBalanceSeries() and toComparableTimestamp() exist, are pure, are unit tested against every known type value (not just the two seen in prod) plus the edge cases above, and unrecognized types throw.
+```
+
+---
+
+## PROMPT 2 — Stage 2: cash-flow features (via balance helper) + event detection + Paula mechanics (conditional)
+
+```
+CONTEXT: Stage 1 and 1.5 merged. Same guardrails: no weight changes, no derivedSignals.ts changes, all eleven fixtures updated in this PR, fixture-completeness test stays green.
+
+CONFIRMED FROM PROMPT 0 (do not re-derive, do not re-litigate):
+- message_templates does not exist in production or dev. paula_inbound_log has 0 rows in the last 30 days even though paula_send_queue has 6 outbound attempts. TWO independent blockers.
+- user_billers has 0 rows in production (not 3, as earlier assumed). Forward-obligation features are buildable but will return null for the entire current population.
+- Canonical amount column: [INSERT Prompt 0.5 result].
+
+PART LETTERING: Part A = cash-flow micro-structure. Part B = forward-obligation features. Part C = event detection (scarcity + bill-shock) — NO Paula dependency, ALWAYS BUILD. Part D = Paula interaction mechanics — SKIP (both blockers confirmed above; do not attempt, do not build partial versions pending a future fix).
+
+Part A — Cash-flow micro-structure (uses reconstructBalanceSeries, no fresh reconstruction):
+1. minBalanceBuffer30d: minimum value of the reconstructed balance series over trailing 30 days.
+2. daysAtZeroPerMonth: reconstructBalanceSeries returns per-transaction points, not per-calendar-day. Add an explicit forward-fill step: for each calendar day in the trailing 30, take the balance as of the last transaction at or before end-of-day (via toComparableTimestamp() for any tz alignment), count days where that value = 0. Implement and unit-test this bucketing step explicitly — do not treat the raw series as one-row-per-day.
+3. drawdownVelocity: for each load, sum all spend-type transactions within 72 hours of that load's timestamp, divide by the load amount, cap at 1.0. Document in-code that this is an attribution convention (balance is commingled), not a traced-dollar claim. Take the median across loads.
+4. loadIntervalEntropy: reuse Stage 1's entropy transform on load events.
+5. loadAmountCV: coefficient of variation of load amounts, trailing 90 days.
+
+Part B — Forward-obligation features, anchored to user_billers:
+6. preDueStagingIndex: using user_billers.payment_day + typical_amount + the reconstructed balance series, fraction of predicted due-dates in trailing 90 days where balance ≥ typical_amount at least 48h prior. Return null (not zero) for users with zero saved billers — which, per Prompt 0, is currently ALL users. Confirm the function behaves correctly on this all-null case (this is directly testable right now, unlike most other Stage 2 features).
+7. loadToObligationRatio: same null-handling.
+
+Part C — Event-detection features (new module ptiEventFeatures.ts) — ALWAYS BUILD:
+8. Scarcity event: balance < sum of upcoming user_billers obligations within 7 days. Record which biller (by the code-confirmed grouping key — likely service_id, confirm via Prompt 0.5's insert-path trace) got paid first. Feature: sequencingStability (null if < 2 events).
+9. Bill-shock event: a bill_payments row where the canonical amount column ≥ 1.5× that biller's trailing-6-payment median. Feature: billShockResponse categorical, plus shockPaidFullRate.
+Unit-test on synthetic data covering: single bill, same-day bills, zero-balance start, a user with no user_billers rows (the current real-world case for 100% of users).
+
+Part D — SKIP. Do not build. Note in your summary that both blockers (missing table, zero inbound replies) were independently confirmed in the Prompt 0 production report.
+
+Part E — Integration: snapshot extension at zero weight, all eleven fixtures updated, all four ablation/stress scripts extended, v4.2 regression test still passing.
+
+DEFINITION OF DONE: every balance-dependent feature uses the Stage 1.5 helper; daysAtZeroPerMonth's calendar-bucketing step is implemented and tested; drawdownVelocity's attribution rule is documented in-code; bill-shock grouping key matches Prompt 0.5's finding; forward-obligation features correctly return null across the board given zero user_billers rows (verify this against a real query, not just synthetic data, since it's actually testable today); Part C always built; Part D skipped with evidence cited, not attempted.
+```
+
+---
+
+## PROMPT 3 — Stage 3: P2 quarantine tier (extend derivedSignals.ts only)
+
+```
+CONTEXT: Touches ONLY derivedSignals.ts and its tests. These signals must never be reachable from computePTI().
+
+ISOLATION REGEX GROUND TRUTH (confirmed from code read): the pti.ts guard forbids the literal substrings colonia and declared_income_bucket/declaredIncomeBucket. The licenseeApi.ts guard forbids import/require of fairLendingAdjustment plus the call-sites computeFinalPTI(/computeFairLendingAdjustment( and references to fair_lending_signoff. This is narrower than generic name-matching — the real requirement is (a) don't name a quarantined field colonia or anything containing declared_income_bucket, and (b) extend these specific forbidden-pattern lists to include the three new quarantined field names below, so they can never legally appear in pti.ts or licenseeApi.ts even by accident later.
+
+PRE-FLIGHT: read derivedSignals.ts fully; confirm the exact regex definitions in pti.test.ts/licenseeApi.test.ts before editing them.
+
+ADD three quarantined signals:
+1. quincenaAlignmentIndex: fraction of loads + payments within ±2 days of the 15th or last day of month, trailing 90 days.
+2. loadChannelFormalityMix: distribution of load amounts by rail type, fraction via formal banking rails.
+3. sessionTimeOfDayConcentration: normalized entropy of session start hours, trailing 30 days, plus lateNightSessionFraction (00:00–05:00 local).
+
+REQUIREMENTS:
+- Same computed-logged-never-scored pattern as existing signals in this file.
+- Extend the pti.ts and licenseeApi.ts forbidden-pattern tests to explicitly include these three field names.
+- Add an export function producing the quarantined-signal corpus per synthetic-population run, keyed on the HMAC-hashed identifier (pti_export_safe pattern) — never raw telefono.
+
+DEFINITION OF DONE: three signals in the quarantine tier; forbidden-pattern lists extended and verified against the actual regex (not assumed); export function producing the fairness-analysis corpus; zero changes outside derivedSignals.ts and tests.
+```
+
+---
+
+## PROMPT 4 — Stage 4: v4.3 rebalancing, signoff, licensee version
+
+```
+CONTEXT: Stages 1–3 merged. All new signals present at zero weight.
+
+CAVEAT TO CARRY INTO SIGNOFF: production currently has 0 bill_payments, 3 wallet_transactions (2 load_oxxo, 1 load_card), and 0 user_billers. Every ablation run behind this signoff is against synthetic data only — not "mostly synthetic," entirely synthetic, since real volumes are effectively zero for every feature family except the two observed wallet-load types. Record the v4.3 fair-lending signoff as "approved against synthetic distributions; pending re-validation against the MFI backtest dataset," and note specifically that forward-obligation and Paula-latency-adjacent feature families have NO production data whatsoever to validate against pre-backtest — not even a thin sample.
+
+INPUTS I WILL PROVIDE (fill in before running):
+- List of signals approved for scoring, with point allocations per dimension (PR 30 / CF 25 / BC 25 / Biller 20, rebalanced within-dimension only).
+- Signals remaining at zero weight.
+
+TASK:
+1. Apply weight allocations in computePTI(). Version-stamp as v4.3.
+2. Update reason-code generation for every newly-weighted signal.
+3. Fair-lending signoff: create v4.3 signoff as PENDING with the caveat above. Wire classifyReportOutcome() to the expanded field set. Keep fair-lending adjustment layer inert pending fresh signoff. v4.3 not servable to licensees while PENDING — enforce in code.
+4. Register v4.3 in the version registry. Default sandbox and new-licensee defaults to v4.3 once signoff flips to approved. Retain bumpLicenseeVersion() opt-in for pinned licensees.
+5. Regression: fixture-completeness test (all eleven locations) green; v4.2 remains computable and servable; full suite green.
+
+DEFINITION OF DONE: v4.3 scoring live behind PENDING signoff gate with the synthetic-only caveat explicitly recorded; reason codes complete; sandbox defaults staged; v4.2 untouched and still servable.
+```
+
+---
+
+## Sequencing notes
+
+- **0.5 is new and blocks Stage 1.** Canonical amount column cannot come from data (0 rows) — it's a code trace, scoped as its own tiny task so it doesn't get skipped or guessed at inside Prompt 1.
+- **Fixture completeness now means eleven locations, verified by grep, not assumed at three.** This is the single most valuable correction from the Prompt 0 report — the ablation/stress scripts and fair-lending fixtures are precisely the files that don't get opened during normal scorer edits.
+- **Stage 2 Part D is a confirmed skip on two independent blockers, not a conditional.** No table, and even if there were, zero inbound replies. Nothing about this changes without both the schema fix landing AND real Paula conversations happening — treat re-litigating this mid-build as a signal something else went wrong.
+- **user_billers at 0 rows (not 3) means Part B is currently unfalsifiable in production.** The one thing you *can* verify today is that it degrades correctly (returns null everywhere, doesn't throw) — the prompt calls this out as directly testable now, unlike almost everything else in Stage 2.
+- **Next action:** run Prompt 0.5 (code trace, no DB access needed) to close the last open item, then proceed to Prompt 1.
