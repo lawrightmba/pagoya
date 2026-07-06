@@ -1,0 +1,29 @@
+# Prompt — Pull Ablation & Proxy-Correlation Data for the 15 New Fields (Prompt 4 weight-allocation input)
+
+```
+This is a data-pull task, not a code change. Run the existing synthetic-population harness (syntheticPopulation.ts / ptiStressTest.ts / ptiAblationStudy.ts) against the 15 fields added in Stage 1 (4 fields) and Stage 2 (11 fields), and report the following for EACH field individually. Do not aggregate across fields or summarize early — one row of data per field, all 15 rows, so a weight-allocation decision can be made field-by-field.
+
+THE 15 FIELDS:
+Stage 1: paymentTimingMeanDaysFromDue, paymentTimingVarianceDaysFromDue, activityVelocity30d, interEventRegularityScore
+Stage 2: minBalanceBuffer30d, daysAtZeroPerMonth, drawdownVelocity, loadIntervalEntropy, loadAmountCV, preDueStagingIndex, loadToObligationRatio, sequencingStability, shockPaidFullRate, billShockWalletResponseRate, billShockResponse
+
+FOR EACH FIELD, REPORT:
+
+1. Ablation delta: using the existing ablation-study harness pattern, compute the change in model discriminatory power (whatever metric the harness already uses — AUC, Gini, or score-separation between the synthetic population's designed high-risk vs low-risk cohorts) when this field is (a) included at a nominal test weight vs (b) zeroed out / held at its DERIVED_FEATURE_DEFAULTS value. Report the actual delta number, not a qualitative "high/medium/low."
+
+2. Coverage / null rate: what fraction of the synthetic population has a non-null, non-default value for this field? (Separately, note the known real-production coverage — e.g., preDueStagingIndex and loadToObligationRatio are null for 100% of real users today given 0 user_billers rows — so the ablation number and the real-world-usable number are reported as two distinct facts, not conflated.)
+
+3. Correlation with existing SCORED fields (multicollinearity check): report the top 3 existing scored PTIDataSnapshot fields this new field correlates with most strongly in the synthetic population, and the correlation coefficients. A new field that's 0.9+ correlated with an existing scored field adds redundant signal, not new signal, and that's relevant to how much weight it deserves.
+
+4. Correlation with the flagged income-proxy variables: report this field's correlation against each of the 7-8 variables already flagged in the original disparate-impact stress test as income-correlated proxies. This is the single most important number for the weight decision — a field with high ablation lift AND low proxy-correlation is the ideal candidate for real scoring weight; a field with high ablation lift AND high proxy-correlation is exactly the pattern that produced the 0.045 four-fifths ratio finding and should be weighted cautiously or not at all regardless of its predictive power.
+
+5. Four-fifths ratio impact: using the existing fairLendingClampStressTest.ts harness, report what the four-fifths ratio becomes if this field alone were added to scoring at a moderate test weight (pick a consistent test weight across all 15 fields, e.g. 3 points, so the comparison is apples-to-apples), holding all other current weights constant. Report the number, not just "within/outside threshold."
+
+6. Monotonicity check: does the field's relationship with the synthetic population's designed risk cohort move in a single, sensible direction (e.g., does higher minBalanceBuffer30d monotonically associate with lower designed-risk, with no reversal in the middle of the distribution)? Report any non-monotonic fields explicitly — a non-monotonic relationship is a red flag for a linear/weighted-sum scoring model regardless of raw predictive power, since it means a "higher score should mean lower risk" design assumption doesn't hold cleanly for that field.
+
+7. Stability across synthetic cohorts: does the ablation delta from item 1 hold consistently across the different synthetic cohort types the harness already generates (coldBaseline, buildColdStart, buildContradictory, etc.), or does it swing wildly between them? A field whose apparent predictive power depends heavily on which synthetic cohort you look at is less trustworthy than one that's stable across all of them.
+
+OUTPUT FORMAT: a table, one row per field, columns: field name | ablation delta | synthetic coverage % | real-production coverage % (if different) | top-3 correlated scored fields + coefficients | max correlation with a flagged proxy variable (name the proxy) | four-fifths ratio at test weight | monotonic (yes/no, note reversal point if no) | stable across cohorts (yes/no).
+
+Do not recommend weight allocations in this task — that's a separate human decision informed by this data. Just report the numbers, completely and per-field, with the actual harness output pasted for at least 2-3 fields as spot-check evidence (not just the summary table) so the table's numbers can be checked against real output rather than trusted as a clean restatement.
+```
