@@ -1,0 +1,18 @@
+CONTEXT: This task touches ONLY derivedSignals.ts and its tests. These signals are computed and logged but must NEVER be imported by pti.ts or reachable from computePTI(). The source-scan isolation tests enforce this — they must pass, and you must extend them to cover the new field names.
+
+CONFIRMED ISOLATION-REGEX GROUND TRUTH (from the actual passing test run, established earlier in this plan): the pti.ts guard forbids the substrings colonia and declared_income_bucket/declaredIncomeBucket at the source-text level. The licenseeApi.ts guard forbids importing/requiring fairLendingAdjustment, the call-sites computeFinalPTI( and computeFairLendingAdjustment(, and references to fair_lending_signoff. Your three new quarantined field names must be added to these same forbidden-pattern lists — extend the existing regex/pattern arrays, do not create a parallel second mechanism.
+
+PRE-FLIGHT: read derivedSignals.ts fully and follow its existing pattern (as used by paymentRailSwitching, kycStaleness, inflowCV) exactly. Also confirm none of the three new field names below collide with anything already scored in PTIDataSnapshot (the current field list, including the 14 fields added across Stage 1 and Stage 2, is the one to diff against) — a quarantined field that shares a name pattern with a scored field is exactly the kind of naming collision this plan has flagged before.
+
+ADD three quarantined signals:
+1. quincenaAlignmentIndex: fraction of loads + payments occurring within ±2 days of the 15th or last day of month, trailing 90 days.
+2. loadChannelFormalityMix: distribution of load amounts by rail type (SPEI / card / cash-network), expressed as fraction via formal banking rails.
+3. sessionTimeOfDayConcentration: normalized entropy of session start hours, trailing 30 days, plus lateNightSessionFraction (00:00–05:00 local).
+
+REQUIREMENTS:
+- Same computed-logged-never-scored pattern as the existing signals in this file.
+- Extend the isolation regex tests so these three field names are explicitly forbidden in pti.ts / licenseeApi.ts.
+- Add an export path (CSV or JSON dump function) producing the quarantined-signal corpus per synthetic-population run, formatted for external fair-lending analysis — this corpus is the test set for the fairness re-engagement. No PII: keyed on the HMAC-hashed identifier consistent with the pti_export_safe approach, never raw telefono.
+- Given what Stage 2 just surfaced: do not assume "the function exists and is tested" means "it's producing real values in the export corpus." Include an integration-level test analogous to Stage 2's — run the export against seeded/synthetic data and confirm the actual output contains non-default, plausible values for all three fields, not just that the function compiles and unit-tests pass in isolation.
+
+DEFINITION OF DONE: three signals computing in the quarantine tier; isolation tests extended and green; export function producing the fairness-analysis corpus with actual non-default values demonstrated against seeded data, not just unit-level correctness; zero changes outside derivedSignals.ts and tests.

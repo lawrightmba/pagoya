@@ -132,8 +132,12 @@ export async function updateMissionProgress(
         `);
         newValue = Number((r.rows[0] as { cnt: number }).cnt);
       } else if (m.goal_type === "distinct_billers" && eventType === "bill_payment") {
+        // bill_payments has service_name, not biller_name (biller_name lives on
+        // user_billers/profiles). Using biller_name here made this query throw
+        // "column does not exist" on every call, silently swallowed by the
+        // non-fatal catch — so distinct_billers missions never progressed.
         const r = await db.execute(sql`
-          SELECT COUNT(DISTINCT biller_name)::int AS cnt
+          SELECT COUNT(DISTINCT service_name)::int AS cnt
           FROM bill_payments
           WHERE telefono = ${telefono} AND status = 'completed'
         `);
