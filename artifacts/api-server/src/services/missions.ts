@@ -143,11 +143,16 @@ export async function updateMissionProgress(
         `);
         newValue = Number((r.rows[0] as { cnt: number }).cnt);
       } else if (m.goal_type === "wallet_loads" && eventType === "wallet_load") {
+        // wallets is keyed by user_id (references users.telefono), not phone.
+        // Using w.phone here made this query throw "column does not exist" on
+        // every call, silently swallowed by the non-fatal catch — so
+        // wallet_loads missions never progressed. Same bug class as the
+        // distinct_billers biller_name fix above.
         const r = await db.execute(sql`
           SELECT COUNT(*)::int AS cnt
           FROM wallet_transactions wt
           JOIN wallets w ON w.id = wt.wallet_id
-          WHERE w.phone = ${telefono}
+          WHERE w.user_id = ${telefono}
             AND wt.type IN ('load_oxxo', 'spei_in', 'load_card')
             AND wt.status = 'confirmed'
         `);

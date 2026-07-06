@@ -38,6 +38,13 @@ describe("licenseeApi — fair-lending isolation guard (Sprint 3)", () => {
     /computeFairLendingAdjustment\s*\(/,
     /computeFinalPTI\s*\(/,
     /\bfair_lending_signoff\b/i,
+    // Prompt 3 quarantine-tier field names (derivedSignals.ts only — never
+    // exposed through the licensee API). Regexes match both camelCase and
+    // snake_case spellings.
+    /quincena.?alignment.?index/i,
+    /load.?channel.?formality.?mix/i,
+    /session.?time.?of.?day.?concentration/i,
+    /late.?night.?session.?fraction/i,
   ];
 
   it("service module never imports or calls into the fair-lending adjustment layer", () => {

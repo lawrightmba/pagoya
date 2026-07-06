@@ -451,6 +451,20 @@ describe("computePTI — fair-lending isolation guard (Sprint 2b)", () => {
     expect(source).not.toMatch(/declared_income_bucket|declaredIncomeBucket/i);
   });
 
+  it("never references quarantined derived-signal fields (Prompt 3 quarantine tier)", () => {
+    // The quarantine-tier signals live exclusively in derivedSignals.ts and
+    // are computed-and-logged only — never scored. These regexes match both
+    // camelCase and snake_case spellings of each quarantined field name.
+    const thisFileUrl = import.meta.url;
+    const ptiPath = fileURLToPath(new URL("../pti.ts", thisFileUrl));
+    const source = readFileSync(ptiPath, "utf-8");
+    console.log("[quarantine guard] scanned pti.ts for quarantined derived-signal field names");
+    expect(source).not.toMatch(/quincena.?alignment.?index/i);
+    expect(source).not.toMatch(/load.?channel.?formality.?mix/i);
+    expect(source).not.toMatch(/session.?time.?of.?day.?concentration/i);
+    expect(source).not.toMatch(/late.?night.?session.?fraction/i);
+  });
+
   it("produces byte-identical output whether or not fair-lending fields exist on the snapshot", () => {
     // computePTI's own PTIDataSnapshot type has no colonia/income fields at all,
     // so this just re-affirms that passing extra unrelated properties (as a
