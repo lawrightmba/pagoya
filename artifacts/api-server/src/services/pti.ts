@@ -51,6 +51,19 @@
  *   exclusively in the isolated, feature-flagged fairLendingAdjustment.ts
  *   module — never here. A regression test in pti.test.ts enforces this by
  *   scanning this file's source for those forbidden field names.
+ *
+ * v4.3 WEIGHT ALLOCATION DECISION (Prompt 4, PTI Signal Expansion):
+ *   All 15 fields added below (v4.3 block + Prompt2Stage2Features block) ship
+ *   at ZERO scoring weight in this release. Dimension totals are unchanged
+ *   from v4.2. This is a release decision, not a placeholder — 5 of the 15
+ *   are additionally reclassified as PERMANENT non-scoring (structural
+ *   redundancy or proxy-load, not a coverage problem) and the remaining 10
+ *   are provisional-zero pending the MFI backtest. Per-field disposition,
+ *   rationale, and the fair-lending signoff text live in
+ *   src/config/ptiV4_3Disposition.ts — see PTI_V4_3_FIELD_DISPOSITION and
+ *   PTI_V4_3_FAIR_LENDING_SIGNOFF. Do not assign nonzero weight to any of
+ *   these fields from the synthetic ablation study alone (see
+ *   ptiNewFieldStudy.ts) — only real MFI backtest data can do that.
  */
 
 import { sql } from "drizzle-orm";
@@ -640,7 +653,11 @@ export function computePTI(snapshot: PTIDataSnapshot): { breakdown: PTIBreakdown
   return { breakdown, confidence };
 }
 
-export const PTI_MODEL_VERSION = "v4.2-behavioral";
+// v4.3-signal-expansion: ships the 15 zero-weight Signal Expansion fields
+// (see PTI_V4_3_FIELD_DISPOSITION in ptiV4_3Disposition.ts). Scoring-identical
+// to v4.2-behavioral by design — the version bump reflects schema/field
+// presence, not a change in any dimension score or weight.
+export const PTI_MODEL_VERSION = "v4.3-signal-expansion";
 
 export function getPTITier(score: number): { tier: string; color: string; label: string } {
   if (score >= 80) return { tier: "excelente",  color: "#00C875", label: "Excelente" };

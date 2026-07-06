@@ -1,0 +1,50 @@
+# Prompt 4 — Weight Allocation Decision (v4.3)
+### Fills in the "INPUTS I WILL PROVIDE" block from Prompt 4. Decision: ship v4.3 with all 15 new fields at zero scoring weight, with 5 formally reclassified toward permanent non-scoring status. This is a release decision, not a placeholder.
+
+---
+
+## Why zero weight, not partial weight
+
+The ablation/proxy-correlation study (n=8,000 synthetic, seed 0xc0ffee) found that **coverage, not signal quality, is the binding constraint**: production has 13 users, 0 `bill_payments` rows, 0 `user_billers` rows. Every positive ablation delta in the study is a function of a synthesis assumption written into the generator — the study can validly rule fields *out* (redundancy with an existing scored field, or proxy-load, are structural properties independent of real data) but cannot validly rule any field *in*, because doing so would mean trusting a number that is, by the study's own documentation, measuring the modeler's assumption back at itself.
+
+Assigning nonzero weight to any of these 15 fields today would mean setting real scoring weight from data everyone involved already knows is circular. The correct release posture is: ship the fields (they're built, tested, and wired — Stage 1/2 work stands), keep them at zero weight, and let the MFI backtest be the thing that actually promotes any of them to real weight.
+
+---
+
+## Disposition table (all 15 fields, zero weight in v4.3)
+
+| Field | Dimension (for future reference) | Disposition | Rationale |
+|---|---|---|---|
+| `minBalanceBuffer30d` | Cash-Flow Stability | **Permanent non-scoring** (move toward quarantine-equivalent treatment) | r=0.88 with already-scored `currentBalance` — pure redundancy. Δd=−0.008 (negative separation). No future version of this field earns weight without a fundamentally different construction. |
+| `activityVelocity30d` | Behavioral Consistency | **Permanent non-scoring** | Δd=−0.009 even under favorable synthesis; the construction (an undirected derivative) has no directional prior to separate on. Not a coverage problem — a design problem. |
+| `daysAtZeroPerMonth` | Cash-Flow Stability | **Permanent non-scoring** | Δd=−0.003, and the strongest negative SES gradient among non-shock fields (r(_ses)=−0.38, deviceScore −0.34). Penalizes thin margins, not unreliability — this is the proxy pattern the original disparate-impact study exists to catch. |
+| `billShockWalletResponseRate` | Payment Reliability / resilience | **Permanent non-scoring** | Highest direct SES correlation in the entire set (r=0.49, deviceScore 0.38) paired with essentially zero lift (Δd=+0.002) and a worsened four-fifths ratio (0.043, below the 0.045 baseline). Close to a pure income detector. |
+| `loadAmountCV` | Cash-Flow Stability | **Permanent non-scoring** | Δd=+0.001. Whatever it measures is already captured by the existing scored `amountCV`. |
+| `paymentTimingMeanDaysFromDue` | Payment Reliability | **Provisional — zero weight, pending backtest** | STRONG-confidence synthesis, best-behaved of the Stage 1 fields, but −0.76/−0.54 correlation with already-scored `advanceDays`/`selfRatio` means its real incremental content (beyond those existing fields) is unknown until real data separates them. Candidate as a *refinement* of an existing signal, not a new one. |
+| `paymentTimingVarianceDaysFromDue` | Payment Reliability | **Provisional — zero weight, pending backtest** | Same caveat as above (0.71 correlation with `domStddev`). Keep paired with the mean feature in any future backtest evaluation — they're likely redundant with each other, not just with existing fields. |
+| `interEventRegularityScore` | Behavioral Consistency | **Provisional — zero weight, pending backtest** | MODERATE assumption confidence, tolerable proxy profile (r(_ses)=0.18), but only 12–37% coverage even synthetically and ~15% in the small real sample. Needs real volume before its lift claim means anything. |
+| `preDueStagingIndex` | Cash-Flow Stability | **Provisional — zero weight, pending backtest** | Best Δd-per-proxy-risk profile in the set (+0.051, monotonic), but 0% real coverage today (zero `user_billers` rows) and the delta is a circularity-inflated upper bound by the study's own admission. Highest-priority field to re-evaluate once `user_billers` has real volume. |
+| `loadToObligationRatio` | Cash-Flow Stability | **Provisional — zero weight, pending backtest, discount heavily** | WEAK-confidence synthesis assumption (the study's own words: "no behavioral data behind it"), r(_ses)=0.31, and its lift is explicitly attributed to the SES term written into its own synthesis. Keep in the registry, but treat any future backtest result on this field with extra skepticism given how thin its prior is. |
+| `drawdownVelocity` | Cash-Flow Stability | **Provisional — zero weight, pending backtest** | Second-best profile in the set (+0.029, monotonic), MODERATE confidence, but 0% real coverage (0 users with ≥1 load in trailing 30d in the current tiny sample). |
+| `loadIntervalEntropy` | Behavioral Consistency | **Provisional — zero weight, pending backtest** | Small positive lift, tolerable proxy profile, low coverage (36.6% synthetic, 0% real: 0 users with ≥3 loads/30d). |
+| `sequencingStability` | Payment Reliability / resilience | **Provisional — zero weight, pending backtest** | WEAK confidence ("no data behind it" per the study), lowest synthetic coverage of the set (12.6%), stable across cohorts at least. Needs real scarcity events to mean anything — none exist yet. |
+| `shockPaidFullRate` | Payment Reliability / resilience | **Provisional — zero weight, pending backtest** | MODERATE confidence, small positive lift, but sign-flips across cohorts (not stable) and low real coverage. |
+| `billShockResponse` | Payment Reliability / resilience | **Provisional — zero weight, pending backtest** | MODERATE confidence, monotonicity failure (reversal at decile 2) and sign-flips across cohorts. Categorical construction makes it the hardest of the 15 to validate cleanly even once real data exists — worth revisiting whether an ordinal/rate construction (closer to `shockPaidFullRate`) is more tractable than the 4-category classification. |
+
+**Point allocation:** all 15 fields = 0 points, across all four dimensions. Dimension totals remain exactly PR 30 / CF 25 / BC 25 / Biller 20 — v4.3 changes zero scoring weight relative to v4.2. This is the point of the zero-weight staging architecture built across Stages 1–2: v4.3 ships as a strictly additive, non-scoring release.
+
+**Signals remaining at zero weight (all 15):** as listed above. No field graduates to nonzero weight in this version.
+
+---
+
+## Amendment to Prompt 4's fair-lending signoff language
+
+Replace the original "approved against synthetic distributions; pending re-validation against the MFI backtest dataset" caveat with the following, since v4.3 is now a zero-weight release rather than a partially-weighted one:
+
+> v4.3 fair-lending signoff: APPROVED, zero-weight release. All 15 new fields are present in the schema and computed from real data where production volume allows, but contribute zero points to any score in this version — v4.3 is scoring-identical to v4.2 by design (proven by the existing byte-identical regression test). Of the 15, five (`minBalanceBuffer30d`, `activityVelocity30d`, `daysAtZeroPerMonth`, `billShockWalletResponseRate`, `loadAmountCV`) are reclassified as permanent non-scoring pending a fundamentally different construction, based on structural findings (redundancy with existing scored fields, or proxy-load with negative/negligible lift) that do not depend on further data volume. The remaining ten are provisional-zero, pending real-loan-level validation via the MFI backtest; none should be assigned nonzero weight based on the current synthetic ablation study alone, as that study's own methodology cannot distinguish genuine predictive lift from the modeler's synthesis assumptions given near-zero current production coverage (13 users, 0 bill_payments, 0 user_billers). This signoff does not need to be revisited for a future version that assigns real weight to any of the ten provisional fields **using real backtest data** — that would be a new signoff cycle, evaluated against actual loan outcomes rather than synthetic distributions.
+
+---
+
+## Recommended immediate next step (not part of Prompt 4, but the natural follow-on)
+
+The `preDueStagingIndex` / `loadToObligationRatio` pair and the `drawdownVelocity` field are the highest-value targets for the MFI backtest data-spec, specifically *because* they're the ones with the best synthetic profile and the least real coverage — that's exactly the combination the backtest exists to resolve. Worth flagging to whoever builds the backtest data-spec that these three fields should be prioritized for inclusion, defined rail-agnostically per the original Signal Expansion plan, so the backtest produces a real answer on the fields most likely to actually matter.

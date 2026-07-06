@@ -113,21 +113,27 @@ const FIELD_META: FieldMeta[] = [
   { field: "lateRecoveryRatio", dim: "v4.2Signals", sesLink: "indirect", note: "recovery-after-late; weak SES via reliability; NaN-gated" },
   { field: "latePaymentCount", dim: "v4.2Signals", sesLink: "indirect", note: "late-payment count; weak (inverse) via reliability; gated payCount≥3" },
   { field: "paulaResponseLatencyMinutes", dim: "v4.2Signals", sesLink: "indirect", note: "assistant reply latency; weak SES via engagement; NaN-gated" },
-  { field: "paymentTimingMeanDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "paymentTimingVarianceDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "activityVelocity30d", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "interEventRegularityScore", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "minBalanceBuffer30d", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "daysAtZeroPerMonth", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "drawdownVelocity", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "loadIntervalEntropy", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "loadAmountCV", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "preDueStagingIndex", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
-  { field: "loadToObligationRatio", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
-  { field: "sequencingStability", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
-  { field: "shockPaidFullRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
-  { field: "billShockWalletResponseRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "paymentTimingMeanDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "paymentTimingVarianceDaysFromDue", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "activityVelocity30d", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: permanent_non_scoring) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "interEventRegularityScore", dim: "v4.3DerivedFeatures", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "minBalanceBuffer30d", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: permanent_non_scoring) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "daysAtZeroPerMonth", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: permanent_non_scoring) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "drawdownVelocity", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "loadIntervalEntropy", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "loadAmountCV", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: permanent_non_scoring) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "preDueStagingIndex", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight, backtest-priority) — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "loadToObligationRatio", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight, backtest-priority, discount heavily) — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "sequencingStability", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — null for all synthetic users (zero user_billers, matches production); ablating must show zero effect" },
+  { field: "shockPaidFullRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: provisional_zero_weight) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
+  { field: "billShockWalletResponseRate", dim: "Prompt2Stage2Features", sesLink: "noise", note: "ZERO WEIGHT (v4.3 disposition: permanent_non_scoring) — not computed by the synthetic generator (always default 0); ablating must show zero effect" },
 ];
+
+// billShockResponse is categorical (not in NUMERIC_FIELDS ablation) but is
+// part of the v4.3 15-field set — disposition: provisional_zero_weight.
+// See PTI_V4_3_FIELD_DISPOSITION in src/config/ptiV4_3Disposition.ts for the
+// full 15-field disposition registry (all fields, not just the ones ablated
+// numerically here) and PTI_V4_3_FAIR_LENDING_SIGNOFF for the signoff text.
 
 const NUMERIC_FIELDS = FIELD_META.map((m) => m.field).filter((f) => f !== "kycVerified" && f !== "kycTier") as (keyof PTIDataSnapshot)[];
 
