@@ -1,11 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import { computePTI, PTI_DATA_SNAPSHOT_FIELDS, type PTIDataSnapshot } from "../pti.js";
 import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
 import {
   sanitizeLicenseePayload,
   computeLicenseeScore,
+  resolveModelVersion,
+  registerModelVersion,
+  setModelVersionSignoffStatus,
+  DEFAULT_LICENSEE_MODEL_VERSION,
 } from "../licenseeApi.js";
 import { SANDBOX_FIXTURES, getSandboxFixture } from "../licenseeSandboxFixtures.js";
 
@@ -211,5 +217,42 @@ describe("PTIDataSnapshot schema completeness (licenseeApi.test.ts)", () => {
     console.log(`[schema-completeness] licenseeApi.test.ts baseSnapshot(): ${actual.length}/${canonical.length} fields, missing=[${missing.join(",")}], extra=[${extra.join(",")}]`);
     expect(missing).toEqual([]);
     expect(extra).toEqual([]);
+  });
+});
+
+// ── 6. Model version signoff gate (Prompt 4 closeout) ───────────────────────
+describe("resolveModelVersion — signoff gate enforcement", () => {
+  const TEST_VERSION = "__test_signoff_gate_version__";
+
+  afterAll(async () => {
+    await db.execute(sql`DELETE FROM licensee_model_versions WHERE version = ${TEST_VERSION}`);
+  });
+
+  it("blocks serving a version registered with signoff_status='pending'", async () => {
+    await registerModelVersion({ version: TEST_VERSION, signoffStatus: "pending" });
+    const resolution = await resolveModelVersion(TEST_VERSION);
+    expect(resolution.ok).toBe(false);
+    expect(resolution.reason).toBe("version_pending_signoff");
+  });
+
+  it("allows serving the SAME version once flipped to signoff_status='approved'", async () => {
+    await setModelVersionSignoffStatus(TEST_VERSION, "approved");
+    const resolution = await resolveModelVersion(TEST_VERSION);
+    expect(resolution.ok).toBe(true);
+    expect(resolution.record?.signoff_status).toBe("approved");
+  });
+
+  it("real registry: v4.1-behavioral, v4.2-behavioral, and v4.3-signal-expansion are all approved and servable", async () => {
+    for (const version of ["v4.1-behavioral", "v4.2-behavioral", "v4.3-signal-expansion"]) {
+      const resolution = await resolveModelVersion(version);
+      expect(resolution.ok).toBe(true);
+      expect(resolution.record?.signoff_status).toBe("approved");
+    }
+  });
+
+  it("DEFAULT_LICENSEE_MODEL_VERSION points at an approved, servable version", async () => {
+    expect(DEFAULT_LICENSEE_MODEL_VERSION).toBe("v4.3-signal-expansion");
+    const resolution = await resolveModelVersion(DEFAULT_LICENSEE_MODEL_VERSION);
+    expect(resolution.ok).toBe(true);
   });
 });

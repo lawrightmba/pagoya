@@ -1,0 +1,30 @@
+# Prompt — Prompt 4 Closeout Verification (licensee registry, signoff gate mechanism, reason codes)
+
+```
+This is a verification task, checking Prompt 4's implementation against its original spec. Three items from the spec don't appear in the completion summary. For each, either paste evidence that it was done, or confirm explicitly that it wasn't and fix it now. Do not describe intent — paste actual code/test output.
+
+1. LICENSEE VERSION REGISTRY — appears to be missing entirely
+   The original spec required: "Register v4.3 in the version registry. Default the sandbox and all new-licensee defaults to v4.3 once signoff flips to approved. Retain bumpLicenseeVersion() opt-in for any pinned licensee." The completed-files list (ptiV4_3Disposition.ts, pti.ts, ptiAblationStudy.ts) doesn't include licenseeApi.ts or wherever the version registry actually lives.
+   - grep for the version registry mechanism (however versions are currently registered — search for v4.2-behavioral, bumpLicenseeVersion, or similar in licenseeApi.ts and related files) and paste what you find.
+   - If v4.3 was never added to this registry: add it now. Confirm what "sandbox defaults to v4.3" and "new-licensee defaults to v4.3" actually mean in this codebase's existing mechanism (e.g., is there a DEFAULT_MODEL_VERSION constant, a per-licensee config row, something else?) — trace it, don't guess.
+   - Since signoff is APPROVED (not PENDING) for this zero-weight release, confirm new licensees/sandbox now actually receive v4.3-computed snapshots (which, being zero-weight, should be score-identical to v4.2 — verify this with an actual test/call, don't just assert it by design).
+   - Confirm bumpLicenseeVersion() (or equivalent) still allows an existing licensee to stay pinned to v4.2 if desired, and paste the relevant code.
+
+2. SIGNOFF GATE MECHANISM — confirm it's a real enforcement, not just a status string
+   The original spec required the PENDING state to actually block licensee access in code. This release ships APPROVED directly, so that path was never exercised this round. Before closing out:
+   - Find and paste the actual code that would block a PENDING-status model version from being served to a licensee.
+   - If no such enforcement code exists yet (only a status field that happens to say APPROVED), build it now: a PENDING-status version must fail to serve, not just be documented as pending. Add a test that sets a version's signoff to PENDING and confirms a request for that version is rejected/blocked, then confirms it succeeds once flipped to APPROVED.
+   - This matters because the NEXT version bump (whenever real weight is assigned to any of the 10 provisional fields after the backtest) will actually need this gate to work correctly the first time — verify it now while it's cheap, not later under time pressure.
+
+3. REASON CODES — confirm N/A is deliberate, not an oversight
+   The original spec required reason-code updates for newly-weighted signals. Since v4.3 assigns zero weight to all 15 new fields, state explicitly whether any reason-code changes were needed and made, or whether none were needed and why (e.g., reason-code generation only fires for nonzero-weight fields, so there was nothing to update this round). Paste the relevant check/logic showing reason-code generation correctly skips zero-weight fields rather than either erroring on them or silently generating incorrect/empty reason codes for them.
+
+CLOSING VERIFICATION — paste all of the following:
+- The version-registry code showing v4.3 is now registered and what "default" means concretely in this system
+- The signoff-gate enforcement code and its test (new or pre-existing) proving PENDING actually blocks serving
+- The reason-code confirmation from item 3
+- Full test suite pass/fail counts after these changes
+- git diff --stat showing exactly which files changed in this closeout pass
+
+Format: one-word verdict (CONFIRMED / DEVIATION / NOT DONE) per item, evidence pasted beneath each, no summary paragraph at the top.
+```

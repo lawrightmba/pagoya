@@ -29,6 +29,7 @@ import {
   classifyAdminToken,
   validateProductionIssuanceFields,
   writeLicenseeIssuanceLog,
+  DEFAULT_LICENSEE_MODEL_VERSION,
   type LicenseeKeyRecord,
   type IssuingTokenType,
 } from "../services/licenseeApi.js";
@@ -78,7 +79,13 @@ router.post("/score", licenseeAuth, async (req: AuthedRequest, res: Response): P
 
   const versionResolution = await resolveModelVersion(key.pinned_model_version);
   if (!versionResolution.ok) {
-    const status = versionResolution.reason === "version_retired" ? 410 : 500;
+    // version_pending_signoff: the pinned version exists in the registry but
+    // has not been approved yet — never served, distinct from a retired
+    // (410, was live, now gone) or unknown (500, data-integrity issue) version.
+    const status =
+      versionResolution.reason === "version_retired" ? 410 :
+      versionResolution.reason === "version_pending_signoff" ? 403 :
+      500;
     res.status(status).json({ error: versionResolution.reason ?? "model_version_error" });
     return;
   }
@@ -195,7 +202,7 @@ router.get("/model-versions", async (_req: Request, res: Response): Promise<void
   try {
     const { db } = await import("@workspace/db");
     const rows = await db.execute(sql`
-      SELECT version, status, deprecation_notice_days, deprecated_at, retires_at
+      SELECT version, status, signoff_status, deprecation_notice_days, deprecated_at, retires_at
       FROM licensee_model_versions
       ORDER BY created_at ASC
     `);
@@ -238,9 +245,14 @@ router.post("/admin/keys", adminAuth, async (req: AdminAuthedRequest, res: Respo
   };
 
   const isSandboxMode = sandboxMode ?? true;
+  // Sandbox and new-licensee issuance default to the current approved model
+  // version (DEFAULT_LICENSEE_MODEL_VERSION) when the caller omits it — the
+  // caller can still pin an older version explicitly (e.g. "v4.2-behavioral")
+  // if they want that instead.
+  const resolvedPinnedModelVersion = pinnedModelVersion ?? DEFAULT_LICENSEE_MODEL_VERSION;
 
-  if (!licenseeName || !pinnedModelVersion) {
-    res.status(400).json({ error: "licenseeName and pinnedModelVersion are required" });
+  if (!licenseeName) {
+    res.status(400).json({ error: "licenseeName is required" });
     return;
   }
 
@@ -259,9 +271,16 @@ router.post("/admin/keys", adminAuth, async (req: AdminAuthedRequest, res: Respo
 
   try {
     const { db } = await import("@workspace/db");
-    const versionRow = await db.execute(sql`SELECT version FROM licensee_model_versions WHERE version = ${pinnedModelVersion} LIMIT 1`);
+    const versionRow = await db.execute(sql`SELECT version, signoff_status FROM licensee_model_versions WHERE version = ${resolvedPinnedModelVersion} LIMIT 1`);
     if (versionRow.rows.length === 0) {
       res.status(400).json({ error: "unknown_model_version" });
+      return;
+    }
+    const versionRecord = versionRow.rows[0] as { signoff_status: string };
+    if (versionRecord.signoff_status !== "approved") {
+      // Never issue a key pinned to a version that hasn't been approved —
+      // it would never be able to serve a single /score request anyway.
+      res.status(400).json({ error: "version_pending_signoff", detail: `Model version "${resolvedPinnedModelVersion}" has not been approved for serving yet.` });
       return;
     }
 
@@ -270,7 +289,7 @@ router.post("/admin/keys", adminAuth, async (req: AdminAuthedRequest, res: Respo
 
     const inserted = await db.execute(sql`
       INSERT INTO licensee_api_keys (licensee_name, api_key_hash, pinned_model_version, sandbox_mode, rate_limit_rpm, rate_limit_per_day)
-      VALUES (${licenseeName}, ${apiKeyHash}, ${pinnedModelVersion}, ${isSandboxMode}, ${rateLimitRpm ?? 60}, ${rateLimitPerDay ?? 1000})
+      VALUES (${licenseeName}, ${apiKeyHash}, ${resolvedPinnedModelVersion}, ${isSandboxMode}, ${rateLimitRpm ?? 60}, ${rateLimitPerDay ?? 1000})
       RETURNING key_id
     `);
     const keyId = String((inserted.rows[0] as Record<string, unknown>).key_id);
@@ -284,12 +303,12 @@ router.post("/admin/keys", adminAuth, async (req: AdminAuthedRequest, res: Respo
       approvedBy: isSandboxMode ? undefined : approvedBy,
       agreementReference: isSandboxMode ? undefined : agreementReference,
       approvalDate: isSandboxMode ? undefined : (approvalDate ?? new Date().toISOString()),
-      pinnedModelVersion,
+      pinnedModelVersion: resolvedPinnedModelVersion,
       issuingTokenType: req.adminTokenType!,
     });
 
     // The raw key is returned exactly once, at creation time, and never persisted in plaintext.
-    res.status(201).json({ key_id: keyId, api_key: rawKey, pinned_model_version: pinnedModelVersion, sandbox_mode: isSandboxMode });
+    res.status(201).json({ key_id: keyId, api_key: rawKey, pinned_model_version: resolvedPinnedModelVersion, sandbox_mode: isSandboxMode });
   } catch (err) {
     logger.error({ err }, "licenseeApi: POST /admin/keys failed");
     res.status(500).json({ error: "internal_error" });

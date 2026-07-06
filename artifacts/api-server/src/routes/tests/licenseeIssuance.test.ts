@@ -194,6 +194,74 @@ describe("POST /api/v1/admin/keys — production issuance authority", () => {
     expect(issuance.issuing_token_type).toBe("sandbox");
   });
 
+  // ── Prompt 4 closeout: default model version + signoff gate ─────────────
+  describe("pinnedModelVersion default + signoff gate at issuance", () => {
+    it("defaults a sandbox key's pinned_model_version to v4.3-signal-expansion when omitted", async () => {
+      const licenseeName = `${TEST_LICENSEE_PREFIX}default_version_sandbox`;
+      const res = await request(app)
+        .post("/api/v1/admin/keys")
+        .set("x-admin-key", SANDBOX_TOKEN!)
+        .send({ licenseeName, sandboxMode: true });
+      expect(res.status).toBe(201);
+      expect(res.body.pinned_model_version).toBe("v4.3-signal-expansion");
+      createdKeyIds.push(res.body.key_id);
+    });
+
+    it("defaults a production key's pinned_model_version too when omitted", async () => {
+      const licenseeName = `${TEST_LICENSEE_PREFIX}default_version_prod`;
+      const res = await request(app)
+        .post("/api/v1/admin/keys")
+        .set("x-admin-key", PRODUCTION_TOKEN!)
+        .send({
+          licenseeName,
+          sandboxMode: false,
+          approvedBy: "Jane Doe",
+          agreementReference: "CONTRACT-DEFAULT-VERSION",
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.pinned_model_version).toBe("v4.3-signal-expansion");
+      createdKeyIds.push(res.body.key_id);
+    });
+
+    it("still honors an explicitly requested older version (v4.2-behavioral)", async () => {
+      const licenseeName = `${TEST_LICENSEE_PREFIX}explicit_v42`;
+      const res = await request(app)
+        .post("/api/v1/admin/keys")
+        .set("x-admin-key", SANDBOX_TOKEN!)
+        .send({ licenseeName, pinnedModelVersion: "v4.2-behavioral", sandboxMode: true });
+      expect(res.status).toBe(201);
+      expect(res.body.pinned_model_version).toBe("v4.2-behavioral");
+      createdKeyIds.push(res.body.key_id);
+    });
+
+    it("rejects issuance pinned to a version registered but not yet signed off", async () => {
+      const pendingVersion = "__test_issuance_pending_version__";
+      await db.execute(sql`
+        INSERT INTO licensee_model_versions (version, status, signoff_status)
+        VALUES (${pendingVersion}, 'supported', 'pending')
+        ON CONFLICT (version) DO UPDATE SET signoff_status = 'pending'
+      `);
+      try {
+        const res = await request(app)
+          .post("/api/v1/admin/keys")
+          .set("x-admin-key", SANDBOX_TOKEN!)
+          .send({ licenseeName: `${TEST_LICENSEE_PREFIX}pending_version`, pinnedModelVersion: pendingVersion, sandboxMode: true });
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe("version_pending_signoff");
+      } finally {
+        await db.execute(sql`DELETE FROM licensee_model_versions WHERE version = ${pendingVersion}`);
+      }
+    });
+
+    it("GET /api/v1/model-versions exposes signoff_status for every registered version", async () => {
+      const res = await request(app).get("/api/v1/model-versions");
+      expect(res.status).toBe(200);
+      const versions = res.body.versions as Array<{ version: string; signoff_status: string }>;
+      const v43 = versions.find((v) => v.version === "v4.3-signal-expansion");
+      expect(v43?.signoff_status).toBe("approved");
+    });
+  });
+
   it("a production key can also be issued by presenting a token that classifies as production even via query param (back-compat path)", async () => {
     // Sanity check that the adminAuth guard's classification (not just header) still gates correctly.
     const res = await request(app)

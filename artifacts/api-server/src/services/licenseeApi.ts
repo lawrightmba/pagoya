@@ -39,14 +39,25 @@ export interface LicenseeKeyRecord {
 }
 
 export type ModelVersionStatus = "supported" | "deprecated";
+export type ModelVersionSignoffStatus = "pending" | "approved";
 
 export interface ModelVersionRecord {
   version: string;
   status: ModelVersionStatus;
+  signoff_status: ModelVersionSignoffStatus;
   deprecation_notice_days: number;
   deprecated_at: string | null;
   retires_at: string | null;
 }
+
+/**
+ * Default pinned model version for new licensee/sandbox key issuance when
+ * the caller does not explicitly request a version. v4.3 is a zero-weight
+ * release (see ptiV4_3Disposition.ts) whose fair-lending signoff is
+ * APPROVED, so new keys default here once that signoff lands — existing
+ * pinned keys are never silently moved (see bumpLicenseeVersion()).
+ */
+export const DEFAULT_LICENSEE_MODEL_VERSION = "v4.3-signal-expansion";
 
 /**
  * Wallet-rail field keys that, when ALL absent from the raw payload, trigger
@@ -102,7 +113,7 @@ export async function authenticateLicenseeKey(rawKey: string | undefined): Promi
 
 export interface ModelVersionResolution {
   ok: boolean;
-  reason?: "version_not_found" | "version_retired";
+  reason?: "version_not_found" | "version_retired" | "version_pending_signoff";
   record?: ModelVersionRecord;
   inDeprecationWindow: boolean;
 }
@@ -112,11 +123,20 @@ export interface ModelVersionResolution {
  * being "deprecated" does not immediately stop serving it — only once
  * `retires_at` (deprecated_at + deprecation_notice_days) has passed does
  * the version stop serving entirely (version_retired).
+ *
+ * SIGNOFF GATE: a version whose `signoff_status` is 'pending' must never
+ * be served to any licensee, regardless of `status` — this is the real
+ * enforcement behind "a PENDING model version cannot go live," not just a
+ * status string. Only 'approved' versions score requests. This matters
+ * most for the NEXT version bump (whenever real weight is assigned to any
+ * of the 10 provisional v4.3 fields after the MFI backtest) — that new
+ * version can be registered here as 'pending' and iterated on safely
+ * before being flipped to 'approved' via setModelVersionSignoffStatus().
  */
 export async function resolveModelVersion(pinnedVersion: string): Promise<ModelVersionResolution> {
   const { db } = await import("@workspace/db");
   const row = await db.execute(sql`
-    SELECT version, status, deprecation_notice_days, deprecated_at, retires_at
+    SELECT version, status, signoff_status, deprecation_notice_days, deprecated_at, retires_at
     FROM licensee_model_versions
     WHERE version = ${pinnedVersion}
     LIMIT 1
@@ -124,6 +144,10 @@ export async function resolveModelVersion(pinnedVersion: string): Promise<ModelV
   const record = row.rows[0] as unknown as ModelVersionRecord | undefined;
   if (!record) {
     return { ok: false, reason: "version_not_found", inDeprecationWindow: false };
+  }
+
+  if (record.signoff_status !== "approved") {
+    return { ok: false, reason: "version_pending_signoff", record, inDeprecationWindow: false };
   }
 
   const now = Date.now();
@@ -134,6 +158,49 @@ export async function resolveModelVersion(pinnedVersion: string): Promise<ModelV
 
   const inDeprecationWindow = record.status === "deprecated" && retiresAt !== null && now < retiresAt;
   return { ok: true, record, inDeprecationWindow };
+}
+
+/**
+ * Registers a new model version in the licensee registry (upsert by
+ * version). Defaults to signoff_status='pending' so a newly-registered
+ * version is never accidentally servable until explicitly approved via
+ * `setModelVersionSignoffStatus()` — the caller must opt into 'approved'.
+ */
+export async function registerModelVersion(params: {
+  version: string;
+  signoffStatus?: ModelVersionSignoffStatus;
+  status?: ModelVersionStatus;
+}): Promise<ModelVersionRecord> {
+  const { version, signoffStatus = "pending", status = "supported" } = params;
+  const { db } = await import("@workspace/db");
+  const row = await db.execute(sql`
+    INSERT INTO licensee_model_versions (version, status, signoff_status)
+    VALUES (${version}, ${status}, ${signoffStatus})
+    ON CONFLICT (version) DO UPDATE SET status = EXCLUDED.status, signoff_status = EXCLUDED.signoff_status
+    RETURNING version, status, signoff_status, deprecation_notice_days, deprecated_at, retires_at
+  `);
+  return row.rows[0] as unknown as ModelVersionRecord;
+}
+
+/**
+ * The ONLY sanctioned way to flip a model version's signoff status. Used
+ * once a fair-lending/bias-testing signoff is actually recorded (APPROVED)
+ * for a version that was registered 'pending' — never a direct table edit.
+ */
+export async function setModelVersionSignoffStatus(
+  version: string,
+  signoffStatus: ModelVersionSignoffStatus,
+): Promise<ModelVersionRecord> {
+  const { db } = await import("@workspace/db");
+  const row = await db.execute(sql`
+    UPDATE licensee_model_versions
+    SET signoff_status = ${signoffStatus}
+    WHERE version = ${version}
+    RETURNING version, status, signoff_status, deprecation_notice_days, deprecated_at, retires_at
+  `);
+  const record = row.rows[0] as unknown as ModelVersionRecord | undefined;
+  if (!record) throw new Error(`Cannot set signoff status — unknown model version: ${version}`);
+  return record;
 }
 
 /**
