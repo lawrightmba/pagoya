@@ -1,0 +1,39 @@
+# Prompt — Stage 2 Closeout Verification (run before marking Prompt 2 complete)
+
+```
+This is a READ-ONLY verification task against the just-completed Prompt 2 work (cash-flow micro-structure, forward-obligation features, event detection). Do not modify any code. Produce a written report with direct evidence — pasted code, pasted test output, pasted query results — for each item below. Prior summary claims for this task included vague language ("referenced in the existing no-op/void block") that needs to be replaced with the actual code, and at least one specified feature may be missing under its expected name. Do not restate prior claims as evidence; verify them fresh.
+
+1. THE WIRING QUESTION — are the 10 new fields actually computed from real data, or just defaulted?
+   - Paste the exact code in pti.ts (or wherever it actually lives) that was described as "the existing no-op/void block." Show the literal lines, not a description of them.
+   - For EACH of the 10 new fields, trace it from computePTIForUser() (the DB-hydrating wrapper) through to the PTIDataSnapshot object it builds. Confirm explicitly, per field: is this field populated by calling one of the new compute functions (computeMinBalanceBuffer30d, computeDaysAtZeroPerMonth, computeDrawdownVelocity, computeLoadIntervalEntropy, computeLoadAmountCV, computePreDueStagingIndex, computeLoadToObligationRatio, detectScarcityEvents/computeSequencingStability, detectBillShockEvents/computeShockPaidFullRate, etc.) against real user data — OR is it left at its DERIVED_FEATURE_DEFAULTS value with no live computation path?
+   - If any of the 10 fields has no live computation path wired into computePTIForUser(), say so explicitly and name which ones. A field existing in DERIVED_FEATURE_DEFAULTS and passing the schema-completeness test does NOT mean it's actually computed — the completeness test only checks that keys exist, not that they're populated from real data. Do not conflate these two things in your answer.
+
+2. THE MISSING CATEGORICAL FEATURE — billShockResponse
+   - Prompt 2 Part C item 9 specified two distinct outputs: (a) billShockResponse, categorical with values paid_full_ontime / paid_partial / paid_late / unpaid_30d, and (b) shockPaidFullRate, a rate. The build report lists computeShockPaidFullRate and computeBillShockWalletResponseRate but no function matching a categorical billShockResponse output.
+   - State plainly: was the categorical billShockResponse feature built under a different name, was it merged into computeBillShockWalletResponseRate, or was it not built at all? Paste the actual function signature and return type of whatever most closely corresponds to it.
+   - If it was not built, say so and do not describe computeBillShockWalletResponseRate as satisfying that requirement unless it genuinely returns the four-category classification specified.
+
+3. Part A/B — cash-flow and forward-obligation features, verbatim test evidence
+   - Paste the actual test names (not aggregate counts) for each of the 7 Part A/B functions, in the same verbatim style as the Stage 1.5 report (test name + pass/fail).
+   - Specifically confirm: is there a test for daysAtZeroPerMonth's calendar-bucketing step (forward-fill to daily granularity), and paste it. This was called out in Prompt 2 as needing explicit implementation and testing, not just aggregation.
+   - Paste the code comment documenting drawdownVelocity's attribution convention (that it's a convention given commingled balance, not a traced-dollar claim) — confirm it exists, quote it.
+
+4. Part B — the zero-user_billers null case, verified against a REAL query
+   - Run an actual query (or the equivalent test that exercises real production-shaped conditions) confirming preDueStagingIndex and loadToObligationRatio return null — not zero, not undefined-then-defaulted, actual null — for a user with zero user_billers rows. Paste the query and its literal output, or the test name and its pass/fail output. "Confirmed 0 user_billers in production" is not sufficient evidence on its own; show the function actually being called against that condition and returning null.
+
+5. Part C — bill-shock, service_id grouping, and the fallido/solicitud_manual exclusion test
+   - Paste the specific test (name + code + pass/fail) that verifies bill-shock detection excludes status IN ('fallido', 'solicitud_manual') rows from the trailing-6-payment median calculation. This was explicitly requested and not present in the prior report — if it does not exist, say so and build it now before closing this task.
+   - Confirm bill-shock grouping uses service_id (not service_name/empresa) — paste the relevant line.
+   - Paste the in-code comment documenting that bill-shock measures transacted-amount deviation, not deviation from a true bill face value (per the amount_due_mxn-is-never-populated finding from earlier in this plan).
+
+6. Schema-completeness test — did it actually extend, or does it silently pass on unpopulated fields?
+   - Paste the current schema-completeness test's assertion logic as it applies to the 10 new fields. Confirm it still performs exact key-set equality (not just "no error was thrown"), and confirm REQUIRED_SNAPSHOT_DEFAULTS still has its own individually-named assertion, now covering all 10 new fields in addition to the original 4.
+   - This test proves the fields EXIST at every fixture site. It does NOT prove they're computed correctly from real data. Do not present passage of this test as evidence that Part A/B/C's compute functions are correctly wired — that's item 1's job, not this one's.
+
+7. Full regression check
+   - Re-run the v4.2 byte-identical regression test (with all 14 new fields — 4 from Stage 1, 10 from Stage 2 — entirely absent from a synthetic input) and paste the actual output.
+   - Re-run isolation tests and paste output.
+   - Confirm via git diff that services/fairLendingAdjustment.ts (non-test) remains untouched.
+
+FORMAT: one-word verdict (CONFIRMED / DEVIATION / NOT DONE / UNCLEAR) per item, followed by pasted evidence — code, test names, query output. Do not summarize at the top. If something was described in the prior report in vague terms ("mirrors existing pattern," "proven to flow through"), treat that as unverified until this report shows the actual code or test proving it, not as something to take on faith from the earlier summary.
+```
