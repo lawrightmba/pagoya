@@ -55,52 +55,16 @@ const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "readiness_hard_step2":   {},
 };
 
-// ── Twilio Content template bodies (es-MX) ────────────────────────────────────
-// These are the EXACT bodies to register in Twilio Messaging / Content API.
-// Rules applied: fixed copy, no body starting/ending with a variable, no two
-// variables adjacent, variable count kept minimal relative to text.
-// Submit to Twilio → wait for Meta approval → update paula_messages.content_sid.
+// ── Template bodies ────────────────────────────────────────────────────────────
+// ROWS[] below is the single canonical source for all template bodies.
+// Do NOT maintain a parallel copy here — ROWS[] is what gets seeded to
+// paula_messages and sent to users.
 //
-// UTILITY (≤1024 chars) — B2-REVISED approved bodies (all copy fixes applied):
-//   first_payment:
-//     "{{1}}, hiciste tu primer pago puntual. 🎯 Así empieza un historial de confianza — un ladrillo a la vez. Tu PTI subió a {{2}} puntos. Seguimos."
-//   streak_5:
-//     "{{1}}, llevas 5 pagos consecutivos a tiempo. Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu PTI actual: {{2}}."
-//   pti_cross_40 (C3-adjacent — Bronce pattern):
-//     "{{1}}, cruzaste los 40 puntos PTI. 🔵 Nivel Bronce alcanzado. Ya tienes un historial de confianza real — algo que no tenías hace {{3}} días."
-//   pti_cross_60 (C3 — added 🥈 Nivel Plata alcanzado):
-//     "{{1}}, 60 puntos PTI. 🥈 Nivel Plata alcanzado. Tu dimensión más fuerte ahora mismo: {{2}}. Sigue así."
-//   pti_cross_80 (C1 — removed forward-reference to next message):
-//     "{{1}}, nivel Oro. 🥇 PTI {{2}}. Llevas {{3}} días construyendo esto. Eso es un historial real."
-//   milestone_90d:
-//     "Tres meses, {{1}}. 90 días de historial activo. Eso ya es más consistencia de la que tiene la mayoría de personas que piden crédito formal por primera vez. PTI: {{2}}."
-//   late_payment_1:
-//     "Hola {{1}}. Tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. ¿Quieres que te avise antes de tu próxima fecha de pago?"
-//   pti_drop_7d (C6 confirmed — {{2}} renders as es-MX label via labelDimension()):
-//     "{{1}}, tu PTI bajó {{3}} puntos esta semana. Tu área de mayor oportunidad ahora: {{2}}. Cuéntame qué pasó — a veces un ajuste pequeño cambia la trayectoria."
-//   stalled_14d:
-//     "{{1}}, llevas 14 días sin movimiento en tu historial. Lo que construiste sigue ahí — pero el reloj está pausado. ¿Todo bien?"
-//   pattern_late_2x (C4 — removed unfulfillable reminder-adjustment offer; pivot to action):
-//     "{{1}}, dos pagos tardíos en 30 días: tu historial ya lo está resintiendo. Un tercero lo afecta más. Escribe *pagar* y retomamos desde aquí."
-//   module_unlock_1–5 (teaser — full content delivered in-session after digit reply):
-//     "{{1}}, acabas de hacer algo más importante de lo que parece. [full text]" (reply 1–5)
-//   readiness_approaching (C2 — value framing changed to avoid product-access implication):
-//     "{{1}}, estás a punto de alcanzar algo que muy poca gente sin cuenta bancaria logra: un perfil crediticio real. [...] Sigue así — estás construyendo el tipo de historial que los prestamistas formales valoran."
-//   not_yet_gap_report:
-//     "{{1}}, llevas {{2}} días construyendo tu historial financiero desde cero. [...] Para llegar al siguiente nivel, lo que más te acercaría ahora mismo es: {{3}}."
-//   remittance_profile (K3a — SÍ/NO replies only; digits reserved for module teasers):
-//     "💸 *Una pregunta para tu perfil financiero:* ¿Recibes dinero del extranjero de forma regular? Responde *SÍ* o *NO*. _Esta información es voluntaria._"
-//   employment_profile (keeps 1–5 numeric; collision-free because last_trigger guard is send_queue SENT):
-//     "📋 *Una pregunta para tu perfil financiero:* ¿Cuál es tu situación laboral actual? [opciones 1–5]"
-//   address_tenure (K3b — A/B/C replies; digits reserved for module teasers):
-//     "🏠 *Última pregunta de tu perfil:* ¿Cuánto tiempo llevas en tu domicilio? Responde *A* (<6m) / *B* (6m–2a) / *C* (>2a)."
-//   winback_30d (dispatched from winbackCron, not evaluateTriggersForUser):
-//     "Hola {{1}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo."
-//
-// MARKETING (≤768 chars):
-//   free_credit_nudge (C5 — no expiry claim; signup_bonus_config has no expiry column):
-//     "💳 {{1}}, tienes {{2}} pago(s) gratis esperándote. La próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. Es tuyo. Úsalo."
-export const CONTENT_TEMPLATE_BODIES = "See JSDoc comment above for all 22 approved template bodies.";
+// For Twilio Content API submission: convert named vars ({{nombre}}, {{pti_score}},
+// etc.) to positional ({{1}}, {{2}}, …) per each trigger's variables_schema.
+// Limits: UTILITY ≤1024 chars; MARKETING ≤768 chars.
+// NOTE: module_unlock_2–5 currently exceed 1024 chars (see ROWS[] bodies for exact
+// counts). These must be trimmed before Twilio UTILITY template submission.
 
 interface SeedRow {
   trigger_type: string;
@@ -423,11 +387,30 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
 
   // ── Partner-dependent — active=false until lending partner contract is signed ─
   {
-    // active=false: microcrédito partner handoff step 2.
-    // Depends on a live entry in partner_programs — keep false until partner is contracted.
+    // active=false: follow-up to readiness_hard (step 2 of the partner handoff sequence).
+    // Sent after user replies SÍ to readiness_hard — reveals the partner offer details.
+    // Depends on a live entry in partner_programs. Keep false until partner is contracted.
+    // Listed in TRIGGER_PRIORITY at position 1 so future activation clears the startup assertion.
+    //
+    // History: this row was added as a placeholder stub (template_es: "") during
+    // development. The actual body was inserted into the DB directly (outside the seed)
+    // before the stub was committed, so the DB preserved the real body while the seed
+    // kept the empty string. The seed has never been re-run with the stub, which is why
+    // the DB body survived. Corrected here with the canonical body.
     trigger_type: "readiness_hard_step2", active: false, cooldown_days: 0,
     template_en: null,
-    template_es: "",
+    template_es: `{{nombre}}, esto es grande. 🚀
+
+La mayoría de personas que empiezan a usar PagoYa nunca llegan aquí. Tú sí.
+
+Lo que se abre con un perfil como el tuyo:
+💳 Primer microcrédito formal — sin historial bancario previo
+🛡️ Cobertura básica de seguro — opciones que antes no estaban disponibles
+📈 Condiciones mejores de las que encontrarías por tu cuenta
+
+Todo desde PagoYa. Sin salir de aquí, sin empezar de cero en otro lado.
+
+En los próximos días Paula te trae los detalles. Sigue usando tus pagos gratis — te los ganaste.`,
   },
 ];
 

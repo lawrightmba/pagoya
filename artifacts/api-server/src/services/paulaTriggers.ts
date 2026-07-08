@@ -101,6 +101,8 @@ export const TRIGGER = {
   FREE_CREDIT_NUDGE:     "free_credit_nudge",
   // Re-engagement — dispatched from winbackCron, NOT from evaluateTriggersForUser
   WINBACK_30D:           "winback_30d",
+  // Partner readiness step 2 — active=false until lending partner is contracted
+  READINESS_HARD_STEP2:  "readiness_hard_step2",
   // Remittance profile — queued after Module 1, intercepts SÍ/NO reply
   REMITTANCE_PROFILE:    "remittance_profile",
   // Employment + address tenure — queued after Module 1 (+24h / +15d respectively)
@@ -137,28 +139,29 @@ type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
 // it is never seeded into paula_messages as a standalone active trigger.
 const TRIGGER_PRIORITY: Readonly<Record<string, number>> = {
   [TRIGGER.READINESS_HARD]:        0,
-  [TRIGGER.READINESS_APPROACHING]: 1,
-  [TRIGGER.NOT_YET_GAP_REPORT]:    2,
-  [TRIGGER.LATE_PAYMENT_1]:        3,
-  [TRIGGER.PATTERN_LATE_2X]:       4,
-  [TRIGGER.PTI_DROP_7D]:           5,
-  [TRIGGER.STALLED_14D]:           6,
-  [TRIGGER.WINBACK_30D]:           7,
-  [TRIGGER.FIRST_PAYMENT]:         8,
-  [TRIGGER.PTI_CROSS_80]:          9,
-  [TRIGGER.PTI_CROSS_60]:          10,
-  [TRIGGER.PTI_CROSS_40]:          11,
-  [TRIGGER.MILESTONE_90D]:         12,
-  [TRIGGER.STREAK_5]:              13,
-  [TRIGGER.MODULE_UNLOCK_1]:       14,
-  [TRIGGER.MODULE_UNLOCK_2]:       15,
-  [TRIGGER.MODULE_UNLOCK_3]:       16,
-  [TRIGGER.MODULE_UNLOCK_4]:       17,
-  [TRIGGER.MODULE_UNLOCK_5]:       18,
-  [TRIGGER.REMITTANCE_PROFILE]:    19,
-  [TRIGGER.EMPLOYMENT_PROFILE]:    20,
-  [TRIGGER.ADDRESS_TENURE]:        21,
-  [TRIGGER.FREE_CREDIT_NUDGE]:     22,
+  [TRIGGER.READINESS_HARD_STEP2]:  1,  // active=false; listed so future activation clears assertion
+  [TRIGGER.READINESS_APPROACHING]: 2,
+  [TRIGGER.NOT_YET_GAP_REPORT]:    3,
+  [TRIGGER.LATE_PAYMENT_1]:        4,
+  [TRIGGER.PATTERN_LATE_2X]:       5,
+  [TRIGGER.PTI_DROP_7D]:           6,
+  [TRIGGER.STALLED_14D]:           7,
+  [TRIGGER.WINBACK_30D]:           8,
+  [TRIGGER.FIRST_PAYMENT]:         9,
+  [TRIGGER.PTI_CROSS_80]:          10,
+  [TRIGGER.PTI_CROSS_60]:          11,
+  [TRIGGER.PTI_CROSS_40]:          12,
+  [TRIGGER.MILESTONE_90D]:         13,
+  [TRIGGER.STREAK_5]:              14,
+  [TRIGGER.MODULE_UNLOCK_1]:       15,
+  [TRIGGER.MODULE_UNLOCK_2]:       16,
+  [TRIGGER.MODULE_UNLOCK_3]:       17,
+  [TRIGGER.MODULE_UNLOCK_4]:       18,
+  [TRIGGER.MODULE_UNLOCK_5]:       19,
+  [TRIGGER.REMITTANCE_PROFILE]:    20,
+  [TRIGGER.EMPLOYMENT_PROFILE]:    21,
+  [TRIGGER.ADDRESS_TENURE]:        22,
+  [TRIGGER.FREE_CREDIT_NUDGE]:     23,
 } as const;
 function triggerPriority(type: string): number {
   return TRIGGER_PRIORITY[type] ?? 99;
