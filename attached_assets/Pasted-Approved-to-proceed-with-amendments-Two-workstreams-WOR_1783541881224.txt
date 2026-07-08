@@ -1,0 +1,62 @@
+Approved to proceed with amendments. Two workstreams:
+
+## WORKSTREAM A — Mechanical fixes (do now, one pass)
+
+A1. First, output a classification table of all 24 triggers: reply-triggered
+(fires only in response to a user inbound, within their 24h session) vs.
+business-initiated (Paula initiates outside any session). Use
+paula_inbound_log / trigger evaluation logic to determine this, not guesses.
+
+A2. Print the full message content of the 6 inactive prod rows. Then flip to
+active=true ONLY the ones whose copy does NOT reference a partner, lender,
+microcrédito, or handoff. Any row that promises a partner handoff stays
+active=false — partner_programs has no live partner yet. List which rows you
+held back and why.
+
+A3. Fix seedPaulaMessagesStep3.ts: convert to an idempotent upsert keyed on
+trigger_key with an explicit per-row active value matching the intended prod
+state (not a hard-coded false). Add readiness_hard_step2 to the seed as
+active=false with a code comment explaining the partner dependency. Wire the
+seed into the deploy path.
+
+A4. Fix the silent skip in paulaTriggers.ts (~line 131): logger.error (not
+warn) with trigger_key and user context, AND write a FAILED sentinel row to
+paula_send_queue so missing-template events are visible in the admin
+dashboard, not just in logs.
+
+A5. Startup health check: compare active trigger count in paula_messages
+against an expected-count constant; log ERROR and surface delta on the admin
+dashboard if mismatched. Add read-only admin endpoint: trigger list with
+active status, content_sid presence, last seed run.
+
+A6. Keep PAULA_SENDING_ENABLED=false in prod until Workstream B clears.
+Confirm current prod value.
+
+## WORKSTREAM B — WhatsApp Content Template compliance (blocking real sends)
+
+B1. Add a nullable content_sid column (and template_category:
+UTILITY|MARKETING) to paula_messages.
+
+B2. For every business-initiated trigger from A1, draft the Twilio Content
+Template version (es-MX, Mustache vars mapped to template variables
+{{1}}, {{2}}...). Categorize: payment/account/readiness nudges → UTILITY;
+promotional/bonus content → MARKETING. Output the full draft set for my
+review BEFORE submitting anything to Twilio/Meta for approval.
+
+B3. Modify the send path: if recipient's last inbound (paula_inbound_log) is
+within 24h → freeform send permitted; otherwise require content_sid and send
+via Twilio Content API with variables. If content_sid is null for a
+business-initiated send → mark FAILED loudly, do not attempt freeform.
+
+B4. After approval + deploy: canary one UTILITY template send to the test
+number outside a session window, confirm actual WhatsApp delivery status
+(delivered, not just accepted by Twilio).
+
+## Acceptance criteria (updated)
+- [ ] Classification table delivered (A1) and template drafts delivered (B2) for my review
+- [ ] Correct subset of rows active; partner-dependent rows documented and held
+- [ ] Seed idempotent, explicit active values, in deploy path
+- [ ] Missing-template path: ERROR log + FAILED sentinel, verified by forced test
+- [ ] Health check + admin visibility live
+- [ ] Session-window logic enforced in send path; no freeform business-initiated sends possible
+- [ ] Post-approval canary delivered end-to-end outside a session window
