@@ -347,6 +347,8 @@ Sigue así — cada pago es un paso más hacia tu primer crédito formal.`,
   {
     trigger_type: "free_credit_nudge", active: true, cooldown_days: 7,
     template_en: null,
+    // NOTE: $150 MXN hardcoded. Amount is fixed in DB (signup_bonus_config.bonus_amount).
+    // Any change to the bonus amount requires a new Twilio Content template approval cycle.
     template_es: `💳 {{nombre}}, tienes {{free_bill_credits}} pago(s) gratis esperándote.
 
   La próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. No tienes que hacer nada extra.

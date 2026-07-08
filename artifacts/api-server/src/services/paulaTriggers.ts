@@ -108,6 +108,50 @@ export const TRIGGER = {
 
 type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
 
+// ── Trigger priority order ────────────────────────────────────────────────────
+// Lower index = higher priority. Used by evaluateTriggersForUser to select the
+// single most valuable trigger when multiple conditions qualify simultaneously.
+// Prevents multi-trigger spam on first cron pass for existing users.
+//
+// Tier 1 — Credit readiness (highest value; fires once per user lifetime):
+//   readiness_hard, readiness_approaching, not_yet_gap_report
+// Tier 2 — Payment urgency (time-sensitive recovery):
+//   late_payment_1, pattern_late_2x, pti_drop_7d, stalled_14d
+// Tier 3 — Achievement milestones (positive engagement):
+//   first_payment, pti_cross_80, pti_cross_60, pti_cross_40, milestone_90d, streak_5
+// Tier 4 — Educational modules:
+//   module_unlock_1 … module_unlock_5
+// Tier 5 — Marketing / data collection (lowest priority):
+//   free_credit_nudge
+//
+// NOTE: winback_30d / remittance_profile / employment_profile / address_tenure /
+// income_collection have their own dispatch paths outside evaluateTriggersForUser
+// and are intentionally absent from this table.
+const TRIGGER_PRIORITY: Readonly<Record<string, number>> = {
+  [TRIGGER.READINESS_HARD]:        0,
+  [TRIGGER.READINESS_APPROACHING]: 1,
+  [TRIGGER.NOT_YET_GAP_REPORT]:    2,
+  [TRIGGER.LATE_PAYMENT_1]:        3,
+  [TRIGGER.PATTERN_LATE_2X]:       4,
+  [TRIGGER.PTI_DROP_7D]:           5,
+  [TRIGGER.STALLED_14D]:           6,
+  [TRIGGER.FIRST_PAYMENT]:         7,
+  [TRIGGER.PTI_CROSS_80]:          8,
+  [TRIGGER.PTI_CROSS_60]:          9,
+  [TRIGGER.PTI_CROSS_40]:          10,
+  [TRIGGER.MILESTONE_90D]:         11,
+  [TRIGGER.STREAK_5]:              12,
+  [TRIGGER.MODULE_UNLOCK_1]:       13,
+  [TRIGGER.MODULE_UNLOCK_2]:       14,
+  [TRIGGER.MODULE_UNLOCK_3]:       15,
+  [TRIGGER.MODULE_UNLOCK_4]:       16,
+  [TRIGGER.MODULE_UNLOCK_5]:       17,
+  [TRIGGER.FREE_CREDIT_NUDGE]:     18,
+} as const;
+function triggerPriority(type: string): number {
+  return TRIGGER_PRIORITY[type] ?? 99;
+}
+
 // ── Cooldown check (uses per-trigger cooldown_days from DB row) ───────────────
 async function onCooldown(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
@@ -226,14 +270,39 @@ export async function evaluateTriggersForUser(
   ctx: UserContext,
   templates: TemplateCache,
 ): Promise<number> {
-  // Suppression gate: never fire proactive triggers for opted-out users
+  // Suppression gate: never fire proactive triggers for opted-out users.
   // Paula still responds to direct inbound messages — this only suppresses
-  // outbound trigger-initiated messages
+  // outbound trigger-initiated messages.
   if (ctx.coaching_responsiveness === 'OPTED_OUT') {
-    return 0; // fired count = 0, log nothing
+    return 0;
+  }
+
+  // ── Per-user 24h send throttle ────────────────────────────────────────────
+  // At most one business-initiated nudge per user per 24h window.
+  // Data-collection follow-ups (remittance_profile / employment_profile /
+  // address_tenure / income_collection) are excluded — they are queued with
+  // multi-hour delays from Module 1 and must not suppress the next day's nudge.
+  const recentNudge = await db.execute(sql`
+    SELECT 1 FROM paula_trigger_log
+    WHERE telefono = ${telefono}
+      AND fired_at >= NOW() - INTERVAL '24 hours'
+      AND trigger_type NOT IN (
+        'remittance_profile', 'employment_profile', 'address_tenure', 'income_collection'
+      )
+    LIMIT 1
+  `);
+  if (recentNudge.rows.length > 0) {
+    logger.debug({ telefono }, "[PaulaTriggers] 24h throttle: user already nudged, skipping");
+    return 0;
   }
 
   let fired = 0;
+
+  // Candidates collected during condition evaluation. All qualifying triggers are
+  // gathered first, then sorted by TRIGGER_PRIORITY, and only the single
+  // highest-priority candidate fires. This prevents multi-trigger spam on the
+  // first cron pass when many conditions qualify simultaneously for existing users.
+  const candidates: Array<{ type: string; fire: () => Promise<void> }> = [];
 
   // ── Payment condition data (trigger logic only — not used in messages) ────
   const userRow = await db.execute(sql`
@@ -285,44 +354,180 @@ export async function evaluateTriggersForUser(
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // READINESS GATE — evaluated first because it is the highest-priority tier.
+  // evaluateReadiness() writes an assessment row every evaluation so the admin
+  // dashboard has a full history regardless of whether a trigger fires.
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (totalPaid >= 1) {
+    const readiness = await evaluateReadiness(db, telefono, ctx);
+
+    if (readiness.status === "READY") {
+      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_HARD, templates))) {
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days:          readiness.streakDays,
+          bill_diversity:       readiness.billDiversity,
+          literacy_score:       ctx.financial_literacy_score,
+          partner_display_name: readiness.partnerDisplayName,
+        };
+        candidates.push({
+          type: TRIGGER.READINESS_HARD,
+          fire: async () => {
+            await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
+            fired++;
+            // Credit READY rewards: 5 free bill payments + $300 MXN wallet credit
+            db.execute(sql`
+              UPDATE users SET free_bill_credits = free_bill_credits + 5
+              WHERE telefono = ${telefono}
+            `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY free_bill_credits credit failed"));
+            db.execute(sql`
+              INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
+              VALUES (${telefono}, 'PTI_REWARD', 300, 'confirmed', 'Premio PTI: Perfil Listo', NOW())
+            `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet_transactions insert failed"));
+            db.execute(sql`
+              UPDATE wallets SET balance_mxn = balance_mxn + 300, updated_at = NOW()
+              WHERE user_id = ${telefono}
+            `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallets balance update failed"));
+            db.execute(sql`
+              UPDATE users SET pti_uncelebrated_milestone = 'ready' WHERE telefono = ${telefono}
+            `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY uncelebrated_milestone set failed"));
+            db.execute(sql`
+              UPDATE paula_pending_handoffs SET handoff_data = ${JSON.stringify({
+                pti_score:                enrichedCtx.pti_score,
+                tier:                     enrichedCtx.tier,
+                consecutive_payment_months: streakMonths,
+                streak_days:              readiness.streakDays,
+                bill_diversity:           readiness.billDiversity,
+                financial_literacy_score: enrichedCtx.financial_literacy_score,
+                coaching_responsiveness:  enrichedCtx.coaching_responsiveness,
+                device_os:                enrichedCtx.device_os ?? null,
+                device_type:              enrichedCtx.device_type ?? null,
+                device_access_mode:       enrichedCtx.device_access_mode ?? null,
+                first_load_method:        enrichedCtx.first_load_method ?? null,
+                last_load_method:         enrichedCtx.last_load_method ?? null,
+                oxxo_load_count:          enrichedCtx.oxxo_load_count ?? 0,
+                spei_load_count:          enrichedCtx.spei_load_count ?? 0,
+                card_load_count:          enrichedCtx.card_load_count ?? 0,
+                has_bancarized:           enrichedCtx.has_bancarized ?? false,
+                bancarization_days:       enrichedCtx.bancarization_days ?? null,
+                colonia:                  enrichedCtx.colonia ?? null,
+                declared_income_bucket:   enrichedCtx.declared_income_bucket ?? null,
+                partner_display_name:     readiness.partnerDisplayName,
+                handoff_generated_at:     new Date().toISOString(),
+              })}::jsonb
+              WHERE telefono = ${telefono} AND status = 'pending'
+            `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] handoff_data populate failed"));
+          },
+        });
+      }
+
+      // READINESS_HARD re-ask: user previously declined 30+ days ago.
+      // Reset status inside the fire closure so the SÍ/NO gate works again.
+      const declinedRow = await db.execute(sql`
+        SELECT declined_at FROM paula_pending_handoffs
+        WHERE telefono = ${telefono} AND status = 'declined'
+          AND declined_at <= NOW() - INTERVAL '30 days'
+        LIMIT 1
+      `);
+      if (declinedRow.rows.length > 0) {
+        const enrichedCtx2: UserContext = {
+          ...ctx,
+          streak_days:          readiness.streakDays,
+          bill_diversity:       readiness.billDiversity,
+          literacy_score:       ctx.financial_literacy_score,
+          partner_display_name: readiness.partnerDisplayName,
+        };
+        candidates.push({
+          type: TRIGGER.READINESS_HARD,
+          fire: async () => {
+            await db.execute(sql`
+              UPDATE paula_pending_handoffs
+              SET status = 'pending', declined_at = NULL
+              WHERE telefono = ${telefono} AND status = 'declined'
+            `);
+            await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx2, templates);
+            fired++;
+          },
+        });
+      }
+
+    } else if (readiness.status === "APPROACHING") {
+      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_APPROACHING, templates))) {
+        const enrichedCtx: UserContext = {
+          ...ctx,
+          streak_days: readiness.streakDays,
+          top_gap:     readiness.topGapLabel,
+        };
+        candidates.push({
+          type: TRIGGER.READINESS_APPROACHING,
+          fire: async () => {
+            await fireTrigger(db, telefono, TRIGGER.READINESS_APPROACHING, enrichedCtx, templates);
+            fired++;
+          },
+        });
+      }
+
+    } else {
+      // NOT_YET — PTI < 70, largest cohort. 30-day cadence gap report.
+      if (!(await onCooldown(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, templates))) {
+        const enrichedCtx: UserContext = { ...ctx, streak_days: readiness.streakDays, top_gap: readiness.topGapLabel };
+        candidates.push({
+          type: TRIGGER.NOT_YET_GAP_REPORT,
+          fire: async () => {
+            await fireTrigger(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, enrichedCtx, templates);
+            fired++;
+          },
+        });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RECOVERY TRIGGERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // T6a — First ever late payment
+  if (totalLate === 1 && !(await onCooldown(db, telefono, TRIGGER.LATE_PAYMENT_1, templates))) {
+    candidates.push({
+      type: TRIGGER.LATE_PAYMENT_1,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.LATE_PAYMENT_1, ctx, templates); fired++; },
+    });
+  }
+
+  // T8 — 2 late payments in 30 days (pattern)
+  if (late30d >= 2 && !(await onCooldown(db, telefono, TRIGGER.PATTERN_LATE_2X, templates))) {
+    candidates.push({
+      type: TRIGGER.PATTERN_LATE_2X,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.PATTERN_LATE_2X, ctx, templates); fired++; },
+    });
+  }
+
+  // T6 — PTI dropped ≥5 pts (uses 30d delta from pti_trend_30d via ctx)
+  if (ptiDelta <= -5 && !(await onCooldown(db, telefono, TRIGGER.PTI_DROP_7D, templates))) {
+    candidates.push({
+      type: TRIGGER.PTI_DROP_7D,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.PTI_DROP_7D, ctx, templates); fired++; },
+    });
+  }
+
+  // T7 — No payment activity in 14+ days
+  if (daysSincePay >= 14 && !(await onCooldown(db, telefono, TRIGGER.STALLED_14D, templates))) {
+    candidates.push({
+      type: TRIGGER.STALLED_14D,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.STALLED_14D, ctx, templates); fired++; },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // ACHIEVEMENT TRIGGERS
   // ═══════════════════════════════════════════════════════════════════════════
 
   // T1 — First on-time payment
   if (totalPaid === 1 && !(await onCooldown(db, telefono, TRIGGER.FIRST_PAYMENT, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.FIRST_PAYMENT, ctx, templates);
-    fired++;
-  }
-
-  // T1b — 5-payment streak (fires week 2-3, before any PTI threshold is crossed)
-  if (
-    totalPaid >= 5 && totalPaid <= 9 && totalLate === 0 &&
-    !(await onCooldown(db, telefono, TRIGGER.STREAK_5, templates))
-  ) {
-    await fireTrigger(db, telefono, TRIGGER.STREAK_5, ctx, templates);
-    fired++;
-  }
-
-  // T2 — PTI crosses 40 (Bronce floor)
-  if (
-    ptiScore >= 40 && ptiScore < 60 &&
-    !(await onCooldown(db, telefono, TRIGGER.PTI_CROSS_40, templates)) &&
-    await hadScoreBelow(40) &&
-    await crossedThresholdRecently(40)
-  ) {
-    await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_40, ctx, templates);
-    fired++;
-  }
-
-  // T3 — PTI crosses 60 (coaching moment between Plata entry and approach)
-  if (
-    ptiScore >= 60 && ptiScore < 80 &&
-    !(await onCooldown(db, telefono, TRIGGER.PTI_CROSS_60, templates)) &&
-    await hadScoreBelow(60) &&
-    await crossedThresholdRecently(60)
-  ) {
-    await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_60, ctx, templates);
-    fired++;
+    candidates.push({
+      type: TRIGGER.FIRST_PAYMENT,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.FIRST_PAYMENT, ctx, templates); fired++; },
+    });
   }
 
   // T4 — PTI crosses 80 (Oro / Excelente)
@@ -332,42 +537,55 @@ export async function evaluateTriggersForUser(
     await hadScoreBelow(80) &&
     await crossedThresholdRecently(80)
   ) {
-    await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_80, ctx, templates);
-    fired++;
+    candidates.push({
+      type: TRIGGER.PTI_CROSS_80,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_80, ctx, templates); fired++; },
+    });
+  }
+
+  // T3 — PTI crosses 60 (Plata)
+  if (
+    ptiScore >= 60 && ptiScore < 80 &&
+    !(await onCooldown(db, telefono, TRIGGER.PTI_CROSS_60, templates)) &&
+    await hadScoreBelow(60) &&
+    await crossedThresholdRecently(60)
+  ) {
+    candidates.push({
+      type: TRIGGER.PTI_CROSS_60,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_60, ctx, templates); fired++; },
+    });
+  }
+
+  // T2 — PTI crosses 40 (Bronce floor)
+  if (
+    ptiScore >= 40 && ptiScore < 60 &&
+    !(await onCooldown(db, telefono, TRIGGER.PTI_CROSS_40, templates)) &&
+    await hadScoreBelow(40) &&
+    await crossedThresholdRecently(40)
+  ) {
+    candidates.push({
+      type: TRIGGER.PTI_CROSS_40,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.PTI_CROSS_40, ctx, templates); fired++; },
+    });
   }
 
   // T5 — 90-day consistency milestone
   if (streakMonths >= 3 && !(await onCooldown(db, telefono, TRIGGER.MILESTONE_90D, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.MILESTONE_90D, ctx, templates);
-    fired++;
+    candidates.push({
+      type: TRIGGER.MILESTONE_90D,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.MILESTONE_90D, ctx, templates); fired++; },
+    });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RECOVERY TRIGGERS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // T6a — First ever late payment (most critical recovery moment)
-  if (totalLate === 1 && !(await onCooldown(db, telefono, TRIGGER.LATE_PAYMENT_1, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.LATE_PAYMENT_1, ctx, templates);
-    fired++;
-  }
-
-  // T6 — PTI dropped ≥5 pts (uses 30d delta from pti_trend_30d via ctx)
-  if (ptiDelta <= -5 && !(await onCooldown(db, telefono, TRIGGER.PTI_DROP_7D, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.PTI_DROP_7D, ctx, templates);
-    fired++;
-  }
-
-  // T7 — No payment activity in 14+ days
-  if (daysSincePay >= 14 && !(await onCooldown(db, telefono, TRIGGER.STALLED_14D, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.STALLED_14D, ctx, templates);
-    fired++;
-  }
-
-  // T8 — 2 late payments in 30 days (pattern)
-  if (late30d >= 2 && !(await onCooldown(db, telefono, TRIGGER.PATTERN_LATE_2X, templates))) {
-    await fireTrigger(db, telefono, TRIGGER.PATTERN_LATE_2X, ctx, templates);
-    fired++;
+  // T1b — 5-payment streak (fires week 2-3, before any PTI threshold is crossed)
+  if (
+    totalPaid >= 5 && totalPaid <= 9 && totalLate === 0 &&
+    !(await onCooldown(db, telefono, TRIGGER.STREAK_5, templates))
+  ) {
+    candidates.push({
+      type: TRIGGER.STREAK_5,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.STREAK_5, ctx, templates); fired++; },
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -375,23 +593,16 @@ export async function evaluateTriggersForUser(
   // ═══════════════════════════════════════════════════════════════════════════
 
   // ── Module 1 fire helper (incl. deferred follow-ups) ──────────────────────
-  // Extracted so the catch-up path below (fired when a user's PTI has already
-  // passed module 1's zone without it ever going out) triggers the exact same
-  // enrichment follow-ups as the normal path.
   async function fireModule1(): Promise<void> {
     await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_1, ctx, templates);
     fired++;
     logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_1}`);
-    // ── Three deferred follow-ups queued from Module 1 ─────────────────────
-    // All fire once per lifetime (NULL guard at parse time in whatsapp-agent.ts).
-    // Staggered delays avoid message fatigue and prevent last_trigger conflicts.
     const m1FollowUpRow = await db.execute(sql`
       SELECT receives_remittances, employment_type, address_tenure_bucket
       FROM users WHERE telefono = ${telefono} LIMIT 1
     `).catch(() => ({ rows: [] }));
     const m1User = (m1FollowUpRow.rows[0] as Record<string, unknown> | undefined) ?? {};
 
-    // +24h — Remittance self-report (Option B; combined with STP keyword Option A)
     if (m1User.receives_remittances == null) {
       const remitLog = await db.execute(sql`
         INSERT INTO paula_trigger_log
@@ -403,7 +614,6 @@ export async function evaluateTriggersForUser(
       await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
-    // +48h — Employment type (field 88 / employment_stability_score input)
     if (m1User.employment_type == null) {
       const empLog = await db.execute(sql`
         INSERT INTO paula_trigger_log
@@ -415,7 +625,6 @@ export async function evaluateTriggersForUser(
       await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", empLogId, 48 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
-    // +72h — Address tenure (field 87 — actual residence stability, not signup date)
     if (m1User.address_tenure_bucket == null) {
       const addrLog = await db.execute(sql`
         INSERT INTO paula_trigger_log
@@ -433,8 +642,6 @@ export async function evaluateTriggersForUser(
     await fireTrigger(db, telefono, trigger, ctx, templates);
     fired++;
     logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${trigger}`);
-    // Income collection follow-up — standalone approach, fires once (NULL guard at send + parse)
-    // whatsapp-agent.ts intercepts the numeric reply and writes users.declared_income_bucket
     if (ctx.declared_income_bucket == null) {
       const logRow = await db.execute(sql`
         INSERT INTO paula_trigger_log
@@ -448,220 +655,87 @@ export async function evaluateTriggersForUser(
     }
   }
 
-  // Pacing guard: at most ONE educational module (whether a "natural" fire or
-  // a sequencing catch-up) may go out per batch cycle for a given user. Blocks
-  // below are walked in strict 1→5 order and each checks `!moduleFiredThisCycle`
-  // before doing anything, so if an earlier block fires, every later block is a
-  // no-op this cycle. This spreads a multi-module catch-up across the normal
-  // cadence (oldest-missing-first) instead of bursting 2-4 messages at once.
+  // moduleFiredThisCycle prevents pushing two module candidates in the same
+  // evaluation pass — the sequential catch-up pattern still walks in order,
+  // but only one module can be a candidate per cycle.
   let moduleFiredThisCycle = false;
 
   // Module 1 unlock: PTI < 30, fires after first payment
-  // "Welcome to your credit journey" — frames everything that follows
-  // cooldown_days = 9999, fires exactly once per user lifetime
-  // No prerequisite — this is the start of the sequence.
   const module1Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_1, templates);
   if (!moduleFiredThisCycle && totalPaid >= 1 && ptiScore < 30 && !module1Fired) {
-    await fireModule1();
+    candidates.push({ type: TRIGGER.MODULE_UNLOCK_1, fire: async () => { await fireModule1(); } });
     moduleFiredThisCycle = true;
   }
 
-  // Module 2 unlock: PTI >= 30. Requires module_unlock_1 to have already fired —
-  // sequential gate so users can't receive module 2's content (which assumes
-  // module 1 was read) before module 1 itself. If module 1 hasn't fired yet
-  // (e.g. the user's very first scored PTI was already >= 30, so module 1's own
-  // "< 30" condition can never be true again), we queue module 1 as a catch-up
-  // instead of firing module 2 this cycle. Module 2 will fire on a later cycle
-  // once module 1 has gone out and the prerequisite check below passes.
+  // Module 2 unlock: PTI >= 30. Requires module_unlock_1 to have already fired.
   if (!moduleFiredThisCycle && ptiScore >= 30 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates))) {
     if (!module1Fired) {
-      await fireModule1();
+      candidates.push({ type: TRIGGER.MODULE_UNLOCK_1, fire: async () => { await fireModule1(); } });
       moduleFiredThisCycle = true;
     } else if (ptiScore < 50) {
-      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
+      candidates.push({ type: TRIGGER.MODULE_UNLOCK_2, fire: async () => { await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2); } });
       moduleFiredThisCycle = true;
     }
-    // else: ptiScore >= 50 already past module 2's own zone — module 3's
-    // block below will catch module 2 up (its prerequisite) if still unfired,
-    // on this cycle if module 2 is the first gap found, or a later cycle otherwise.
   }
 
-  // Module 3 unlock: PTI >= 50. Requires module_unlock_2 to have already fired —
-  // same sequential gate/catch-up pattern as module 2 above.
+  // Module 3 unlock: PTI >= 50. Requires module_unlock_2 to have already fired.
   if (!moduleFiredThisCycle && ptiScore >= 50 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates))) {
     const module2Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_2, templates);
     if (!module2Fired) {
-      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2);
+      candidates.push({ type: TRIGGER.MODULE_UNLOCK_2, fire: async () => { await fireModule2Or3(TRIGGER.MODULE_UNLOCK_2); } });
       moduleFiredThisCycle = true;
     } else if (ptiScore < 65) {
-      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+      candidates.push({ type: TRIGGER.MODULE_UNLOCK_3, fire: async () => { await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3); } });
       moduleFiredThisCycle = true;
     }
-    // else: ptiScore >= 65 already past module 3's own zone — module 4's
-    // block below will catch module 3 up (its prerequisite) if still unfired.
   }
 
   // Module 4 unlock: PTI >= 65. Requires module_unlock_3 to have already fired.
   if (!moduleFiredThisCycle && ptiScore >= 65 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates))) {
     const module3Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_3, templates);
     if (!module3Fired) {
-      await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3);
+      candidates.push({ type: TRIGGER.MODULE_UNLOCK_3, fire: async () => { await fireModule2Or3(TRIGGER.MODULE_UNLOCK_3); } });
       moduleFiredThisCycle = true;
     } else if (ptiScore < 80) {
-      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
-      fired++;
-      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
+      candidates.push({
+        type: TRIGGER.MODULE_UNLOCK_4,
+        fire: async () => {
+          await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
+          fired++;
+          logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
+        },
+      });
       moduleFiredThisCycle = true;
     }
-    // else: ptiScore >= 80 already past module 4's own zone — module 5's
-    // block below will catch module 4 up (its prerequisite) if still unfired.
   }
 
   // Module 5 unlock: PTI >= 80. Requires module_unlock_4 to have already fired.
   if (!moduleFiredThisCycle && ptiScore >= 80 && !(await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_5, templates))) {
     const module4Fired = await onCooldown(db, telefono, TRIGGER.MODULE_UNLOCK_4, templates);
     if (!module4Fired) {
-      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
-      fired++;
-      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
+      candidates.push({
+        type: TRIGGER.MODULE_UNLOCK_4,
+        fire: async () => {
+          await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_4, ctx, templates);
+          fired++;
+          logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_4}`);
+        },
+      });
       moduleFiredThisCycle = true;
     } else {
-      await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
-      fired++;
-      logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_5}`);
+      candidates.push({
+        type: TRIGGER.MODULE_UNLOCK_5,
+        fire: async () => {
+          await fireTrigger(db, telefono, TRIGGER.MODULE_UNLOCK_5, ctx, templates);
+          fired++;
+          logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${TRIGGER.MODULE_UNLOCK_5}`);
+        },
+      });
       moduleFiredThisCycle = true;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // READINESS GATE TRIGGERS
-  // Evaluated last — most consequential.
-  // evaluateReadiness writes an assessment row every evaluation so the admin
-  // dashboard has a full history regardless of whether a trigger fires.
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (totalPaid >= 1) {
-    const readiness = await evaluateReadiness(db, telefono, ctx);
-
-    if (readiness.status === "READY") {
-      // Hard gate — fires exactly once per user lifetime (cooldown_days = 9999)
-      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_HARD, templates))) {
-        const enrichedCtx: UserContext = {
-          ...ctx,
-          streak_days:          readiness.streakDays,
-          bill_diversity:       readiness.billDiversity,
-          literacy_score:       ctx.financial_literacy_score,
-          partner_display_name: readiness.partnerDisplayName,
-        };
-        await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
-        fired++;
-
-        // Credit READY rewards: 5 free bill payments + $100 MXN wallet credit
-        // These are the largest rewards in the system — reserved for file-ready users only.
-        // The lender handoff happens on the back end; user only sees "your profile is ready".
-        db.execute(sql`
-          UPDATE users
-          SET free_bill_credits = free_bill_credits + 5
-          WHERE telefono = ${telefono}
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY free_bill_credits credit failed"));
-
-        db.execute(sql`
-          INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
-          VALUES (${telefono}, 'PTI_REWARD', 300, 'confirmed', 'Premio PTI: Perfil Listo', NOW())
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet_transactions insert failed"));
-
-        // Update live balance — wallet_transactions alone does not move balance_mxn
-        db.execute(sql`
-          UPDATE wallets SET balance_mxn = balance_mxn + 300, updated_at = NOW()
-          WHERE user_id = ${telefono}
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallets balance update failed"));
-
-        db.execute(sql`
-          UPDATE users SET pti_uncelebrated_milestone = 'ready' WHERE telefono = ${telefono}
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY uncelebrated_milestone set failed"));
-
-        // Populate handoff_data JSONB on paula_pending_handoffs for lending partner packet
-        // bancarization_days = days from account creation to first SPEI load — most compelling B2B signal
-        db.execute(sql`
-          UPDATE paula_pending_handoffs SET handoff_data = ${JSON.stringify({
-            pti_score:                enrichedCtx.pti_score,
-            tier:                     enrichedCtx.tier,
-            consecutive_payment_months: streakMonths,
-            streak_days:              readiness.streakDays,
-            bill_diversity:           readiness.billDiversity,
-            financial_literacy_score: enrichedCtx.financial_literacy_score,
-            coaching_responsiveness:  enrichedCtx.coaching_responsiveness,
-            device_os:                enrichedCtx.device_os ?? null,
-            device_type:              enrichedCtx.device_type ?? null,
-            device_access_mode:       enrichedCtx.device_access_mode ?? null,
-            first_load_method:        enrichedCtx.first_load_method ?? null,
-            last_load_method:         enrichedCtx.last_load_method ?? null,
-            oxxo_load_count:          enrichedCtx.oxxo_load_count ?? 0,
-            spei_load_count:          enrichedCtx.spei_load_count ?? 0,
-            card_load_count:          enrichedCtx.card_load_count ?? 0,
-            has_bancarized:           enrichedCtx.has_bancarized ?? false,
-            bancarization_days:       enrichedCtx.bancarization_days ?? null,
-            colonia:                  enrichedCtx.colonia ?? null,
-            declared_income_bucket:   enrichedCtx.declared_income_bucket ?? null,
-            partner_display_name:     readiness.partnerDisplayName,
-            handoff_generated_at:     new Date().toISOString(),
-          })}::jsonb
-          WHERE telefono = ${telefono}
-            AND status = 'pending'
-        `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] handoff_data populate failed"));
-      }
-
-    } else if (readiness.status === "APPROACHING") {
-      // Soft gate — cooldown 14 days (set in paula_messages seed)
-      if (!(await onCooldown(db, telefono, TRIGGER.READINESS_APPROACHING, templates))) {
-        const enrichedCtx: UserContext = {
-          ...ctx,
-          streak_days: readiness.streakDays,
-          top_gap:     readiness.topGapLabel,
-        };
-        await fireTrigger(db, telefono, TRIGGER.READINESS_APPROACHING, enrichedCtx, templates);
-        fired++;
-      }
-
-    } else {
-      // NOT_YET — PTI < 70, largest cohort. 30-day cadence gap report.
-      if (!(await onCooldown(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, templates))) {
-        const enrichedCtx: UserContext = { ...ctx, streak_days: readiness.streakDays, top_gap: readiness.topGapLabel };
-        await fireTrigger(db, telefono, TRIGGER.NOT_YET_GAP_REPORT, enrichedCtx, templates);
-        fired++;
-      }
-    }
-
-    // READINESS_HARD re-ask: user previously declined, 30+ days ago — give them a second chance.
-    // Bypasses the 9999-day standard cooldown by checking declined_at directly.
-    if (readiness.status === "READY") {
-      const declinedRow = await db.execute(sql`
-        SELECT declined_at FROM paula_pending_handoffs
-        WHERE telefono = ${telefono} AND status = 'declined'
-          AND declined_at <= NOW() - INTERVAL '30 days'
-        LIMIT 1
-      `);
-      if (declinedRow.rows.length > 0) {
-        // Reset to pending so the re-ask can fire and the SÍ/NO gate works again
-        await db.execute(sql`
-          UPDATE paula_pending_handoffs
-          SET status = 'pending', declined_at = NULL
-          WHERE telefono = ${telefono} AND status = 'declined'
-        `);
-        const enrichedCtx: UserContext = {
-          ...ctx,
-          streak_days:          readiness.streakDays,
-          bill_diversity:       readiness.billDiversity,
-          literacy_score:       ctx.financial_literacy_score,
-          partner_display_name: readiness.partnerDisplayName,
-        };
-        await fireTrigger(db, telefono, TRIGGER.READINESS_HARD, enrichedCtx, templates);
-        fired++;
-      }
     }
   }
 
   // ── FREE_CREDIT_NUDGE — reminds users of unused credits sitting idle 3+ days ──
-  // Condition: credits > 0 AND not used today or in last 3 days AND 7-day message cooldown
   const creditNudgeRow = await db.execute(sql`
     SELECT free_bill_credits, last_free_credit_used_date, pti_uncelebrated_milestone
     FROM users WHERE telefono = ${telefono} LIMIT 1
@@ -673,15 +747,30 @@ export async function evaluateTriggersForUser(
     const lastUsed = cnr?.last_free_credit_used_date
       ? new Date(cnr.last_free_credit_used_date as string)
       : null;
-    // Returns Infinity when null (new user who has never used a credit) — correctly satisfies >= 3
     const daysSinceUsed = lastUsed
       ? (Date.now() - lastUsed.getTime()) / 86_400_000
       : Infinity;
     if (daysSinceUsed >= 3 && !(await onCooldown(db, telefono, TRIGGER.FREE_CREDIT_NUDGE, templates))) {
       const enrichedCtx: UserContext = { ...ctx, free_bill_credits: freeCredits };
-      await fireTrigger(db, telefono, TRIGGER.FREE_CREDIT_NUDGE, enrichedCtx, templates);
-      fired++;
+      candidates.push({
+        type: TRIGGER.FREE_CREDIT_NUDGE,
+        fire: async () => {
+          await fireTrigger(db, telefono, TRIGGER.FREE_CREDIT_NUDGE, enrichedCtx, templates);
+          fired++;
+        },
+      });
     }
+  }
+
+  // ── Candidate selection: fire only the highest-priority qualifying trigger ──
+  // Sorts by TRIGGER_PRIORITY (ascending = highest priority wins) and fires once.
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => triggerPriority(a.type) - triggerPriority(b.type));
+    logger.debug(
+      { telefono, candidates: candidates.map(c => c.type), selected: candidates[0].type },
+      "[PaulaTriggers] Candidate selection",
+    );
+    await candidates[0].fire();
   }
 
   return fired;
@@ -720,7 +809,21 @@ export async function runPaulaTriggerBatch(): Promise<void> {
   let totalFired = 0;
   let errors     = 0;
 
+  // Global circuit breaker: max business-initiated nudges per cron run.
+  // Defaults to 50 for safety during the first week after enabling sends —
+  // prevents a mass-fire event if many users qualify simultaneously on the first pass.
+  // Set PAULA_MAX_NUDGES_PER_RUN=0 to disable the cap (unlimited).
+  const maxNudgesRaw = process.env.PAULA_MAX_NUDGES_PER_RUN;
+  const maxNudgesPerRun = maxNudgesRaw !== undefined ? parseInt(maxNudgesRaw, 10) : 50;
+
   for (const user of users) {
+    if (maxNudgesPerRun > 0 && totalFired >= maxNudgesPerRun) {
+      logger.warn(
+        { cap: maxNudgesPerRun, totalFired, usersRemaining: users.length - users.indexOf(user) },
+        "[PaulaTriggers] Circuit breaker: PAULA_MAX_NUDGES_PER_RUN reached — stopping batch early",
+      );
+      break;
+    }
     try {
       // Build context ONCE per user — reused across all trigger evaluations
       const ctx = await buildUserContext(db, user.telefono);

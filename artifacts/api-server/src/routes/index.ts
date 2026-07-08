@@ -330,22 +330,36 @@ router.post("/admin/seed-paula-messages", async (_req: Request, res: Response) =
 });
 
 // GET /api/admin/paula-template-health — read-only: active template count,
-// active/inactive breakdown, content_sid presence, last seed run info.
+// per-trigger content_sid coverage, send-enablement gate, queue summary.
+// Step 7.5 gate: sending_gate_passed must be true (coverage = 22/22) before
+// setting PAULA_SENDING_ENABLED=true.
 router.get("/admin/paula-template-health", async (_req: Request, res: Response) => {
   try {
+    // content_sid column is added by paula-migrate-content-sid; guard for pre-migration
+    const colCheck = await db.execute(drizzleSql`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'paula_messages' AND column_name = 'content_sid'
+      LIMIT 1
+    `);
+    const hasSidColumn = colCheck.rows.length > 0;
+
     const rows = await db.execute(drizzleSql`
-      SELECT
-        trigger_type,
-        active,
-        cooldown_days,
-        updated_at,
-        CASE WHEN EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_name = 'paula_messages' AND column_name = 'content_sid'
-        ) THEN NULL ELSE NULL END AS content_sid
+      SELECT trigger_type, active, cooldown_days, updated_at
       FROM paula_messages
       ORDER BY trigger_type
     `);
+
+    // Fetch content_sid values in a separate query to avoid a runtime error when
+    // the column does not yet exist (pre-migration environments).
+    const sidMap: Record<string, string | null> = {};
+    if (hasSidColumn) {
+      const sidRows = await db.execute(drizzleSql`
+        SELECT trigger_type, content_sid FROM paula_messages
+      `);
+      for (const r of sidRows.rows as Array<Record<string, unknown>>) {
+        sidMap[String(r.trigger_type)] = r.content_sid ? String(r.content_sid) : null;
+      }
+    }
 
     const queueSummary = await db.execute(drizzleSql`
       SELECT status, COUNT(*)::int AS cnt, MAX(created_at) AS newest
@@ -357,17 +371,31 @@ router.get("/admin/paula-template-health", async (_req: Request, res: Response) 
     const allRows = rows.rows as Array<Record<string, unknown>>;
     const activeRows = allRows.filter(r => r.active === true);
     const inactiveRows = allRows.filter(r => r.active !== true);
-    const rowsWithSid = allRows.filter(r => r.content_sid != null);
 
     const { PAULA_MESSAGES_EXPECTED_ACTIVE } = await import("../services/paulaTriggers.js");
+
+    // Per-trigger SID coverage — used to determine the step 7.5 sending gate
+    const perTrigger = activeRows.map(r => {
+      const ttype = String(r.trigger_type);
+      const hasSid = hasSidColumn && sidMap[ttype] != null;
+      return {
+        trigger_type: ttype,
+        has_sid: hasSid,
+        ...(hasSidColumn ? { content_sid: sidMap[ttype] ?? null } : {}),
+      };
+    });
+    const sidCoverage = perTrigger.filter(t => t.has_sid).length;
 
     res.json({
       ok: activeRows.length >= PAULA_MESSAGES_EXPECTED_ACTIVE,
       activeCount: activeRows.length,
       expectedActive: PAULA_MESSAGES_EXPECTED_ACTIVE,
       totalInDb: allRows.length,
-      withContentSid: rowsWithSid.length,
-      active: activeRows.map(r => ({ trigger_type: r.trigger_type, content_sid: r.content_sid ?? null })),
+      // Step 7.5 gate — must be "22/22" before flipping PAULA_SENDING_ENABLED=true
+      sid_coverage: `${sidCoverage}/${PAULA_MESSAGES_EXPECTED_ACTIVE}`,
+      sending_gate_passed: sidCoverage >= PAULA_MESSAGES_EXPECTED_ACTIVE,
+      sid_column_exists: hasSidColumn,
+      active: perTrigger,
       inactive: inactiveRows.map(r => ({ trigger_type: r.trigger_type, reason: "partner-gated or intentionally disabled" })),
       sendQueueSummary: queueSummary.rows,
     });
