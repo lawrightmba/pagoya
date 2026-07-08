@@ -1,0 +1,58 @@
+# TASK BRIEF: Restore Paula Outbound Nudges — message_templates Production Fix
+
+## Context
+The `message_templates` table has **0 rows in production vs. 24 in dev**. This silently disables ALL Paula outbound nudges (payment nudges, curriculum modules, NOT_YET gap reports, APPROACHING soft gate, READY handoff prompts). Users are stuck pre-funnel because Paula never initiates.
+
+This is a bounded fix. Do NOT touch PTI scoring logic, the pti_export_safe / HMAC migration work, b2b.ts endpoints, or PagoSeguro rent-context templates (separate workstream). PagoYa only. Work in a branch. **Complete Phase 0 and report findings before making any changes.**
+
+---
+
+## Phase 0 — Diagnose (READ-ONLY, report back before proceeding)
+
+1. Confirm counts: `SELECT COUNT(*) FROM message_templates` in prod and dev. List all 24 dev rows: `template_key`, name, channel, locale, active flag, and which funnel stage each serves.
+2. Determine root cause of the prod gap. Check in order:
+   - Is there a seed script or migration that inserts templates? Was it dev-only, or never run in prod?
+   - Were dev templates inserted manually (no code artifact exists)?
+   - Any environment-gated logic (`if NODE_ENV === 'development'`) around seeding?
+3. Inspect the paula_send_queue processor (2-min loop) failure mode: when a template lookup returns nothing, does it (a) throw and log, (b) silently skip, (c) mark the item DEAD, or (d) retry forever? Quote the exact code path.
+4. Report prod `paula_send_queue` state: row counts by status, age of oldest non-terminal item. We need to know how much stale backlog exists before templates go live.
+5. **Twilio/WhatsApp compliance check:** Are Paula's outbound nudges business-initiated messages outside a 24-hour user session? If yes, they require Meta-approved WhatsApp templates (Content SIDs), not freeform text. Report whether the 24 dev templates map to approved Twilio Content templates, or whether sends would fail at the Twilio layer even with DB rows present. This may be a second, hidden root cause.
+
+**STOP. Report Phase 0 findings. Then proceed.**
+
+---
+
+## Phase 1 — Templates become versioned code
+
+1. Export all 24 dev templates into a versioned seed file in the repo (e.g., `server/seeds/paulaMessageTemplates.ts` or a SQL seed). Templates must live in code review, never as hand-inserted DB rows.
+2. Write an idempotent upsert keyed on `template_key`: `INSERT ... ON CONFLICT (template_key) DO UPDATE`. Running the seed twice must be a no-op. Do not delete rows not in the seed without an explicit flag.
+3. Validation step in the seed script — fail loudly if any template:
+   - Has unresolved Mustache variables when rendered against a documented sample payload (add the sample payload fixture to the repo).
+   - Exceeds WhatsApp message length limits.
+   - Is missing es-MX content.
+4. Wire the seed into the deploy path (migration step or documented release command) so dev/prod can never silently diverge again.
+
+## Phase 2 — Guardrails (no more silent failure)
+
+1. Startup health check: on boot, if active template count < expected constant (24), log an ERROR (not warn) with the delta and surface it to the admin dashboard. Do not crash the app.
+2. Queue processor: on missing template, mark the queue item FAILED with the template_key in the error message, and log loudly. No `.catch()` swallowing — same standard as the audit-log fix.
+3. Add or extend an admin endpoint: template count, active/inactive breakdown, last seed run timestamp. Read-only.
+
+## Phase 3 — Backlog safety (CRITICAL: no message flood)
+
+1. Before templates go live in prod, expire the stale backlog: mark all paula_send_queue items older than 7 days (or in a pre-fix failure state) as EXPIRED/DEAD. Users must NOT receive a burst of weeks-old nudges the moment this deploys.
+2. Add/confirm send throttles: max 1 nudge per user per 24h, and a global per-processor-run cap (suggest 50) as a circuit breaker for the first week.
+
+## Phase 4 — Deploy and verify
+
+1. Staging: run seed → verify 24 rows → enqueue one canary nudge to the test WhatsApp number → confirm full pipeline (enqueue → processor → Twilio → delivered status written back).
+2. Production: run seed → verify 24 rows → run Phase 3 backlog expiry FIRST → enable processor → one canary send → monitor logs and Twilio delivery for 24h before considering closed.
+
+## Acceptance criteria
+- [ ] Prod message_templates = 24 active rows, matching dev byte-for-byte on content
+- [ ] Seed is idempotent, in-repo, validated, and part of the deploy path
+- [ ] Startup check + admin visibility for template count live
+- [ ] Missing-template path logs loudly and marks items FAILED (verified with a forced test)
+- [ ] Stale queue backlog expired; throttles confirmed; zero users received >1 nudge on go-live day
+- [ ] Canary message delivered end-to-end in prod with Twilio delivery confirmation
+- [ ] Phase 0 report documents root cause so this class of dev/prod drift is understood
