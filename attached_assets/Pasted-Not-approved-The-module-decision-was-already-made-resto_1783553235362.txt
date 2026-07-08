@@ -1,0 +1,39 @@
+Not approved. The module decision was already made — restore it. Plus one
+regression and unreported items.
+
+M1. Restore the approved teaser architecture for modules 1–5:
+    a. Add teaser_es to ROWS[] for the 5 module triggers. Use the teaser
+       copy from the earlier delivery (~100–130 chars, "Responde con N
+       para recibirlo") — full module bodies stay in template_es untouched.
+    b. generateTwilioSubmission.ts emits teaser_es as the submission body
+       for module triggers, template_es for everything else.
+    c. Confirm the reply interceptor path: teaser sent out-of-session via
+       approved template → user replies digit → full template_es sent
+       freeform in-session. Trace the code path and show it.
+    d. Seed validation char-limit check applies to teaser_es for modules,
+       and skips template_es length for module triggers (in-session
+       freeform has no template limit, but cap at 4096 WhatsApp max).
+
+M2. free_credit_nudge: remove {{free_bill_credits}} — this was explicitly
+    ruled out. Hardcode the real product mechanic and amount. Confirm which
+    is true before writing copy: (a) $150 MXN welcome balance credited on
+    OTP signup, or (b) per-payment fee waivers. Check signup_bonus_config
+    and the payment fee logic; report what the code actually implements,
+    then match the copy to it, amount hardcoded.
+
+M3. Recategorize winback_30d as MARKETING (re-engagement = marketing under
+    Meta guidelines). Update template_category in ROWS[] and the seed.
+
+M4. Status report with evidence for the three unreported items:
+    a. generateTwilioSubmission.ts — exists? Paste its actual output for
+       3 sample triggers (positional vars, ordered by first appearance).
+    b. Seed validation — paste the validation code and the error output
+       from the blank-body test run.
+    c. Drift-detection hash in paula-template-health — paste a sample
+       response showing per-trigger match/mismatch.
+
+M5. Final delivery = the full generated output of
+    generateTwilioSubmission.ts for all 22 triggers (teasers for modules),
+    positional variables, char counts, categories (2 MARKETING: winback_30d,
+    free_credit_nudge). That artifact is what I approve and what goes to
+    Twilio. Nothing hand-assembled.

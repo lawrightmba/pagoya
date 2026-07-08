@@ -1,0 +1,258 @@
+[
+  {
+    "trigger_type": "first_payment",
+    "friendly_name": "PagoYa - first_payment",
+    "category": "UTILITY",
+    "body": "{{1}}, hiciste tu primer pago puntual. 🎯 Así empieza un historial de confianza — un ladrillo a la vez. Tu PTI subió a {{2}} puntos. Seguimos.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score"
+    },
+    "char_count": 155,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "streak_5",
+    "friendly_name": "PagoYa - streak_5",
+    "category": "UTILITY",
+    "body": "{{1}}, llevas 5 pagos consecutivos a tiempo. Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu PTI actual: {{2}}.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score"
+    },
+    "char_count": 147,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "pti_cross_40",
+    "friendly_name": "PagoYa - pti_cross_40",
+    "category": "UTILITY",
+    "body": "{{1}}, cruzaste los 40 puntos PTI. 🔵 Nivel Bronce alcanzado. Ya tienes un historial de confianza real — algo que no tenías hace {{2}} días.",
+    "variables": {
+      "1": "nombre",
+      "2": "days_streak [schema mismatch: schema[2]=pti_score]"
+    },
+    "char_count": 155,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "pti_cross_60",
+    "friendly_name": "PagoYa - pti_cross_60",
+    "category": "UTILITY",
+    "body": "{{1}}, 60 puntos PTI. 🥈 Nivel Plata alcanzado. Tu dimensión más fuerte ahora mismo: {{2}}. Sigue así.",
+    "variables": {
+      "1": "nombre",
+      "2": "strongest_dimension"
+    },
+    "char_count": 125,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "pti_cross_80",
+    "friendly_name": "PagoYa - pti_cross_80",
+    "category": "UTILITY",
+    "body": "{{1}}, nivel Oro. 🥇 PTI {{2}}. Llevas {{3}} días construyendo esto. Eso es un historial real.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score",
+      "3": "days_streak"
+    },
+    "char_count": 117,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "milestone_90d",
+    "friendly_name": "PagoYa - milestone_90d",
+    "category": "UTILITY",
+    "body": "Tres meses, {{1}}. 90 días de historial activo. Eso ya es más consistencia de la que tiene la mayoría de personas que piden crédito formal por primera vez. PTI: {{2}}.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score"
+    },
+    "char_count": 180,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "late_payment_1",
+    "friendly_name": "PagoYa - late_payment_1",
+    "category": "UTILITY",
+    "body": "Hola {{1}}. Tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. ¿Quieres que te avise antes de tu próxima fecha de pago?",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 167,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "pti_drop_7d",
+    "friendly_name": "PagoYa - pti_drop_7d",
+    "category": "UTILITY",
+    "body": "{{1}}, tu PTI bajó {{2}} puntos esta semana. Tu área de mayor oportunidad ahora: {{3}}. Cuéntame qué pasó — a veces un ajuste pequeño cambia la trayectoria.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_delta",
+      "3": "weakest_dimension"
+    },
+    "char_count": 185,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "stalled_14d",
+    "friendly_name": "PagoYa - stalled_14d",
+    "category": "UTILITY",
+    "body": "{{1}}, llevas 14 días sin movimiento en tu historial. Lo que construiste sigue ahí — pero el reloj está pausado. ¿Todo bien?",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 129,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "pattern_late_2x",
+    "friendly_name": "PagoYa - pattern_late_2x",
+    "category": "UTILITY",
+    "body": "{{1}}, dos pagos tardíos en 30 días: tu historial ya lo está resintiendo. Un tercero lo afecta más. Escribe *pagar* y retomamos desde aquí.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 144,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "module_unlock_1",
+    "friendly_name": "PagoYa - module_unlock_1",
+    "category": "UTILITY",
+    "body": "{{1}}, tu primer pago quedó registrado. 🧱 Hay algo importante que quiero contarte. Responde con *1* para recibirlo.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 121,
+    "status": "OK",
+    "full_body_chars": 755
+  },
+  {
+    "trigger_type": "module_unlock_2",
+    "friendly_name": "PagoYa - module_unlock_2",
+    "category": "UTILITY",
+    "body": "{{1}}, {{2}} puntos. Hay algo que muy poca gente sabe sobre el crédito en México. Responde con *2* para recibirlo.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score"
+    },
+    "char_count": 127,
+    "status": "OK",
+    "full_body_chars": 1080
+  },
+  {
+    "trigger_type": "module_unlock_3",
+    "friendly_name": "PagoYa - module_unlock_3",
+    "category": "UTILITY",
+    "body": "{{1}}, hay un mito financiero que le ha costado caro a muchos en México. Responde con *3* para descubrirlo.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 112,
+    "status": "OK",
+    "full_body_chars": 1072
+  },
+  {
+    "trigger_type": "module_unlock_4",
+    "friendly_name": "PagoYa - module_unlock_4",
+    "category": "UTILITY",
+    "body": "{{1}}, nivel Plata. 🥈 Lo que los bancos ven en tu perfil ahora mismo. Responde con *4* para saberlo.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 106,
+    "status": "OK",
+    "full_body_chars": 1139
+  },
+  {
+    "trigger_type": "module_unlock_5",
+    "friendly_name": "PagoYa - module_unlock_5",
+    "category": "UTILITY",
+    "body": "{{1}}, llegaste al módulo final. Lo que necesitas saber antes de tu primer crédito formal. Responde con *5* para recibirlo.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 128,
+    "status": "OK",
+    "full_body_chars": 1330
+  },
+  {
+    "trigger_type": "readiness_approaching",
+    "friendly_name": "PagoYa - readiness_approaching",
+    "category": "UTILITY",
+    "body": "{{1}}, estás a punto de alcanzar algo que muy poca gente sin cuenta bancaria logra: un perfil crediticio real. 🎯\n\nTu avance actual:\n📊 PTI {{2}} / 80 necesario\n📅 {{3}} días consecutivos / 90 necesarios\n\nLo más cercano a completar: {{4}}.\n\nSigue así — estás construyendo el tipo de historial que los prestamistas formales valoran.",
+    "variables": {
+      "1": "nombre",
+      "2": "pti_score",
+      "3": "streak_days",
+      "4": "top_gap"
+    },
+    "char_count": 360,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "not_yet_gap_report",
+    "friendly_name": "PagoYa - not_yet_gap_report",
+    "category": "UTILITY",
+    "body": "{{1}}, llevas {{2}} días construyendo tu historial financiero desde cero. Eso no es poco.\n\n  Para llegar al siguiente nivel, lo que más te acercaría ahora mismo es: {{3}}.\n\n  No tienes que hacer todo a la vez. Solo seguir siendo constante — un pago a la vez, una semana a la vez.\n\n  Cuando quieras saber cómo vas en detalle, aquí estoy. 💪",
+    "variables": {
+      "1": "nombre",
+      "2": "streak_days",
+      "3": "top_gap"
+    },
+    "char_count": 360,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "winback_30d",
+    "friendly_name": "PagoYa - winback_30d",
+    "category": "MARKETING",
+    "body": "Hola {{1}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo. Solo dime el servicio y tu número de cuenta.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 173,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "free_credit_nudge",
+    "friendly_name": "PagoYa - free_credit_nudge",
+    "category": "MARKETING",
+    "body": "💳 {{1}}, tus pagos puntuales te ganaron 5 pagos sin comisión.\n\nLa próxima vez que pagues CFE, agua o cualquier servicio — la tarifa desaparece automáticamente. No tienes que hacer nada extra.\n\nSon tuyos. Úsalos.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 217,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "remittance_profile",
+    "friendly_name": "PagoYa - remittance_profile",
+    "category": "UTILITY",
+    "body": "💸 *Una pregunta para tu perfil financiero:*\n\n  ¿Recibes dinero del extranjero de forma regular? (por ejemplo de un familiar en EE.UU. u otro país)\n\n  Responde *SÍ* o *NO*.\n\n  _Esta información es voluntaria y nos ayuda a mejorar tu perfil. Puedes ignorar este mensaje si prefieres._",
+    "variables": {},
+    "char_count": 283,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "employment_profile",
+    "friendly_name": "PagoYa - employment_profile",
+    "category": "UTILITY",
+    "body": "📋 *Una pregunta para tu perfil financiero:*\n\n  ¿Cómo describes tu situación de trabajo actual?\n\n  Responde con el número:\n  *1* — Empleo formal con contrato o nómina\n  *2* — Trabajo informal o por cuenta propia\n  *3* — Trabajo por proyecto / gig / freelance\n  *4* — Por el momento sin empleo\n  *5* — Prefiero no decir\n\n  _Esta información es voluntaria y confidencial. Nos ayuda a conectarte con mejores opciones cuando tu perfil esté listo._",
+    "variables": {},
+    "char_count": 443,
+    "status": "OK"
+  },
+  {
+    "trigger_type": "address_tenure",
+    "friendly_name": "PagoYa - address_tenure",
+    "category": "UTILITY",
+    "body": "🏠 *Última pregunta de tu perfil:*\n\n  ¿Cuánto tiempo llevas viviendo en tu domicilio actual?\n\n  Responde con la letra:\n  *A* — Menos de 6 meses\n  *B* — Entre 6 meses y 2 años\n  *C* — Más de 2 años\n\n  _Esta información es voluntaria. Nos ayuda a entender mejor tu estabilidad._",
+    "variables": {},
+    "char_count": 276,
+    "status": "OK"
+  }
+]

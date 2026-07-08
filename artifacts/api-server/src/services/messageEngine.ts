@@ -52,6 +52,10 @@ export interface UserContext {
 
 export interface TemplateRow {
   template_es: string;
+  // Short Twilio Content API submission body for module triggers (~100–130 chars).
+  // Sent out-of-session as the approved template. Full content (template_es) is
+  // delivered freeform in-session after the user replies with the matching digit.
+  teaser_es?: string;
   cooldown_days: number;
   // Maps Twilio positional variable indices to UserContext field names.
   // e.g. {"1": "nombre", "2": "pti_score"} → sendWhatsAppTemplate variables {"1": "María", "2": "45"}
@@ -67,7 +71,7 @@ export async function loadMessageTemplates(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
 ): Promise<TemplateCache> {
   const rows = await db.execute(sql`
-    SELECT trigger_type, template_es, cooldown_days, variables_schema
+    SELECT trigger_type, template_es, teaser_es, cooldown_days, variables_schema
     FROM paula_messages
     WHERE active = TRUE
   `);
@@ -76,6 +80,7 @@ export async function loadMessageTemplates(
   for (const row of rows.rows as Array<Record<string, unknown>>) {
     cache.set(row.trigger_type as string, {
       template_es:      row.template_es   as string,
+      teaser_es:        (row.teaser_es    as string | null) ?? undefined,
       cooldown_days:    Number(row.cooldown_days),
       variables_schema: (row.variables_schema as Record<string, string> | null) ?? {},
     });

@@ -263,7 +263,17 @@ async function fireTrigger(
     return;
   }
 
-  const message = injectVariables(tmpl.template_es, ctx);
+  // Module triggers send teaser_es out-of-session (short approved Content template).
+  // Full educational content (template_es) is delivered freeform in-session after
+  // the user replies with the matching digit — see whatsapp-agent.ts module intercept.
+  const MODULE_TRIGGERS: ReadonlySet<string> = new Set([
+    "module_unlock_1", "module_unlock_2", "module_unlock_3",
+    "module_unlock_4", "module_unlock_5",
+  ]);
+  const sendBody = (MODULE_TRIGGERS.has(triggerType) && tmpl.teaser_es)
+    ? tmpl.teaser_es
+    : tmpl.template_es;
+  const message = injectVariables(sendBody, ctx);
 
   // Extract positional variables for Twilio Content template sends (out-of-session path).
   // Values are frozen at enqueue time from the live UserContext so the queue processor

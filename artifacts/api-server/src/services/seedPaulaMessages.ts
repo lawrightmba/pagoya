@@ -25,7 +25,7 @@ export const PAULA_MESSAGES_TOTAL_IN_SEED = 24;
 // paula_send_queue.variables_json for use by sendWhatsAppTemplate().
 // Keep in sync with the approved Twilio Content template bodies listed in
 // CONTENT_TEMPLATE_BODIES below.
-const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
+export const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "first_payment":          { "1": "nombre", "2": "pti_score" },
   "streak_5":               { "1": "nombre", "2": "pti_score" },
   "pti_cross_40":           { "1": "nombre", "2": "pti_score", "3": "days_streak" },
@@ -36,11 +36,12 @@ const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "pti_drop_7d":            { "1": "nombre", "2": "weakest_dimension" },
   "stalled_14d":            { "1": "nombre" },
   "pattern_late_2x":        { "1": "nombre" },
-  // Module teasers: Content template is a short ~120-char invite; {{1}} = nombre.
+  // Module teasers: Content template is a short ~100–130-char invite.
   // Full educational content lives in template_es and is sent freeform in-session
-  // (either directly if within 24h session, or after the user replies to the teaser).
+  // after the user replies with the matching digit (1–5).
+  // Variable schema applies to teaser_es (the Twilio submission body), not template_es.
   "module_unlock_1":        { "1": "nombre" },
-  "module_unlock_2":        { "1": "nombre" },
+  "module_unlock_2":        { "1": "nombre", "2": "pti_score" },
   "module_unlock_3":        { "1": "nombre" },
   "module_unlock_4":        { "1": "nombre" },
   "module_unlock_5":        { "1": "nombre" },
@@ -69,12 +70,18 @@ const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
 interface SeedRow {
   trigger_type: string;
   template_es: string;
+  // Twilio Content API submission body for module triggers (~100–130 chars, ≤1024).
+  // template_es holds the full in-session content (≤4096 WhatsApp max).
+  teaser_es?: string | null;
   template_en: string | null;
   cooldown_days: number;
   active: boolean;
+  // Twilio category: 'UTILITY' (default) or 'MARKETING'.
+  // UTILITY limit: 1024 chars. MARKETING limit: 768 chars.
+  template_category?: string;
 }
 
-const ROWS: SeedRow[] = [
+export const ROWS: SeedRow[] = [
   // ── Achievement ──────────────────────────────────────────────────────────────
   {
     trigger_type: "first_payment", active: true, cooldown_days: 9999,
@@ -132,6 +139,7 @@ const ROWS: SeedRow[] = [
   // ── Educational — Literacy modules ───────────────────────────────────────────
   {
     trigger_type: "module_unlock_1", active: true, cooldown_days: 9999,
+    teaser_es: "{{nombre}}, tu primer pago quedó registrado. 🧱 Hay algo importante que quiero contarte. Responde con *1* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, acabas de hacer algo más importante de lo que parece.
 
@@ -151,6 +159,7 @@ En los próximos meses, cada pago que hagas a tiempo es un ladrillo. Yo te voy a
   },
   {
     trigger_type: "module_unlock_2", active: true, cooldown_days: 9999,
+    teaser_es: "{{nombre}}, {{pti_score}} puntos. Hay algo que muy poca gente sabe sobre el crédito en México. Responde con *2* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, {{pti_score}} puntos. Momento de contarte algo que muy poca gente sabe con claridad.
 
@@ -170,6 +179,7 @@ La próxima vez que hablemos, te cuento exactamente cómo funciona el Buró por 
   },
   {
     trigger_type: "module_unlock_3", active: true, cooldown_days: 9999,
+    teaser_es: "{{nombre}}, hay un mito financiero que le ha costado caro a muchos en México. Responde con *3* para descubrirlo.",
     template_en: null,
     template_es: `{{nombre}}, hay un mito que le ha costado mucho dinero a mucha gente en México, y quiero que tú no seas una de esas personas:
 
@@ -193,6 +203,7 @@ La próxima vez te cuento qué buscan exactamente los bancos cuando lo revisan.`
   },
   {
     trigger_type: "module_unlock_4", active: true, cooldown_days: 9999,
+    teaser_es: "{{nombre}}, nivel Plata. 🥈 Lo que los bancos ven en tu perfil ahora mismo. Responde con *4* para saberlo.",
     template_en: null,
     template_es: `{{nombre}}, PTI {{pti_score}}. Nivel Plata. Esto es lo que necesitas saber ahora.
 
@@ -217,6 +228,7 @@ La próxima vez — el último módulo — te explico exactamente qué pasa cuan
   },
   {
     trigger_type: "module_unlock_5", active: true, cooldown_days: 9999,
+    teaser_es: "{{nombre}}, llegaste al módulo final. Lo que necesitas saber antes de tu primer crédito formal. Responde con *5* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, llegaste al último módulo. Esto es lo que necesitas saber antes de solicitar tu primer crédito formal — para que nadie te sorprenda con letra chica.
 
@@ -295,6 +307,7 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
   // ── Re-engagement ─────────────────────────────────────────────────────────────
   {
     trigger_type: "winback_30d", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo. Solo dime el servicio y tu número de cuenta.",
   },
@@ -302,14 +315,18 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
   // ── Reward nudge ──────────────────────────────────────────────────────────────
   {
     trigger_type: "free_credit_nudge", active: true, cooldown_days: 7,
+    template_category: "MARKETING",
     template_en: null,
-    // NOTE: $150 MXN hardcoded. Amount is fixed in DB (signup_bonus_config.bonus_amount).
-    // Any change to the bonus amount requires a new Twilio Content template approval cycle.
-    template_es: `💳 {{nombre}}, tienes {{free_bill_credits}} pago(s) gratis esperándote.
+    // Mechanism: per-payment platform-fee waivers earned via PTI milestone rewards.
+    // PTI READY trigger awards +5 credits (paulaTriggers.ts). Amount hardcoded — do NOT
+    // use {{free_bill_credits}} (ruled out: variable count is non-deterministic at point
+    // of nudge and the template would need re-approval on any change).
+    // Any change to this copy requires a new Twilio MARKETING template approval cycle.
+    template_es: `💳 {{nombre}}, tus pagos puntuales te ganaron 5 pagos sin comisión.
 
-  La próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. No tienes que hacer nada extra.
+La próxima vez que pagues CFE, agua o cualquier servicio — la tarifa desaparece automáticamente. No tienes que hacer nada extra.
 
-  Es tuyo. Úsalo.`,
+Son tuyos. Úsalos.`,
   },
 
   // ── Enrichment profile questions (deferred from Module 1) ────────────────────
@@ -427,15 +444,21 @@ export async function seedPaulaMessages(dbClient: typeof DbType): Promise<{
     const schema = VARIABLES_SCHEMA[row.trigger_type] ?? {};
     const schemaStr = JSON.stringify(schema);
     const result = await dbClient.execute(drizzleSql`
-      INSERT INTO paula_messages (trigger_type, template_es, template_en, active, cooldown_days, variables_schema)
-      VALUES (${row.trigger_type}, ${row.template_es}, ${row.template_en ?? null}, ${row.active}, ${row.cooldown_days},
-              ${schemaStr}::jsonb)
+      INSERT INTO paula_messages
+        (trigger_type, template_es, teaser_es, template_en, active, cooldown_days,
+         variables_schema, template_category)
+      VALUES
+        (${row.trigger_type}, ${row.template_es}, ${row.teaser_es ?? null},
+         ${row.template_en ?? null}, ${row.active}, ${row.cooldown_days},
+         ${schemaStr}::jsonb, ${row.template_category ?? "UTILITY"})
       ON CONFLICT (trigger_type) DO UPDATE
-        SET template_es      = EXCLUDED.template_es,
-            template_en      = EXCLUDED.template_en,
-            active           = EXCLUDED.active,
-            cooldown_days    = EXCLUDED.cooldown_days,
-            variables_schema = EXCLUDED.variables_schema
+        SET template_es       = EXCLUDED.template_es,
+            teaser_es         = EXCLUDED.teaser_es,
+            template_en       = EXCLUDED.template_en,
+            active            = EXCLUDED.active,
+            cooldown_days     = EXCLUDED.cooldown_days,
+            variables_schema  = EXCLUDED.variables_schema,
+            template_category = EXCLUDED.template_category
       RETURNING (xmax = 0) AS was_inserted
     `);
     const row0 = result.rows[0] as Record<string, unknown> | undefined;
