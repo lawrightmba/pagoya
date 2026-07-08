@@ -88,11 +88,11 @@ function toPositional(
     const schemaField = Object.entries(schema).find(([, v]) => v === namedVar)?.[0];
     varMap[pos] = namedVar; // fallback: use the named var itself
     if (schemaField) {
-      // schema already maps positional → field; cross-validate
+      // cross-validate: schema[pos] must agree with the var at that position in the body
       const schemaFieldName = schema[pos];
       if (schemaFieldName && schemaFieldName !== namedVar) {
-        // Schema position mismatch — body order wins; flag it
-        varMap[pos] = `${namedVar} [schema mismatch: schema[${pos}]=${schemaFieldName}]`;
+        // Schema position mismatch — record for hard FAIL; body order wins for positional body
+        varMap[pos] = `MISMATCH:body=${namedVar},schema[${pos}]=${schemaFieldName}`;
       } else {
         varMap[pos] = namedVar;
       }
@@ -201,6 +201,12 @@ export function generate(): TwilioSubmissionEntry[] {
     if (charCount > limit) {
       entryErrors.push(`TOO_LONG: ${charCount} chars > ${limit} ${category} limit`);
     }
+    // Hard FAIL on schema/body position mismatch — Twilio would map vars to wrong values
+    for (const [pos, val] of Object.entries(varMap)) {
+      if (val.startsWith("MISMATCH:")) {
+        entryErrors.push(`SCHEMA_MISMATCH at pos ${pos}: ${val}`);
+      }
+    }
 
     const entry: TwilioSubmissionEntry = {
       trigger_type:  row.trigger_type,
@@ -289,17 +295,22 @@ if (isMain) {
     console.log(`   vars: ${JSON.stringify(e.variables)}`);
     console.log(`   body: ${e.body.slice(0, 120)}${e.body.length > 120 ? "…" : ""}`);
     if (e.errors.length > 0) {
-      for (const err of e.errors) console.error(`   ⚠ ${err}`);
+      for (const err of e.errors) console.error(`   ❌ ${err}`);
     }
     console.log("");
   }
+
+  const utilityCount   = entries.filter(e => e.category === "UTILITY").length;
+  const marketingCount = entries.filter(e => e.category === "MARKETING").length;
+  const errorCount     = entries.filter(e => e.status === "ERROR").length;
 
   console.log("═══════════════════════════════════════════════════════════════");
   console.log(
     allOk && validationErrors.length === 0
       ? `✅ All ${entries.length} templates valid — ready for Twilio submission`
-      : `❌ ${entries.filter(e => e.status === "ERROR").length} template(s) have errors — fix before submitting`,
+      : `❌ ${errorCount} template(s) have errors — fix before submitting`,
   );
+  console.log(`   ${utilityCount} UTILITY / ${marketingCount} MARKETING  |  ${errorCount} errors`);
   console.log("═══════════════════════════════════════════════════════════════\n");
 
   // Emit machine-readable JSON to a separate file for import into Twilio bulk-create

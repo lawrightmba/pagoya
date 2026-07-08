@@ -30,7 +30,7 @@
     "body": "{{1}}, cruzaste los 40 puntos PTI. 🔵 Nivel Bronce alcanzado. Ya tienes un historial de confianza real — algo que no tenías hace {{2}} días.",
     "variables": {
       "1": "nombre",
-      "2": "days_streak [schema mismatch: schema[2]=pti_score]"
+      "2": "days_streak"
     },
     "char_count": 155,
     "status": "OK"
@@ -221,11 +221,11 @@
     "trigger_type": "free_credit_nudge",
     "friendly_name": "PagoYa - free_credit_nudge",
     "category": "MARKETING",
-    "body": "💳 {{1}}, tus pagos puntuales te ganaron 5 pagos sin comisión.\n\nLa próxima vez que pagues CFE, agua o cualquier servicio — la tarifa desaparece automáticamente. No tienes que hacer nada extra.\n\nSon tuyos. Úsalos.",
+    "body": "💳 {{1}}, tienes pagos sin comisión disponibles — te los ganaste con tus pagos puntuales.\n\nLa próxima vez que pagues CFE, agua o cualquier servicio — la tarifa desaparece automáticamente. No tienes que hacer nada extra.\n\nSon tuyos. Úsalos.",
     "variables": {
       "1": "nombre"
     },
-    "char_count": 217,
+    "char_count": 244,
     "status": "OK"
   },
   {

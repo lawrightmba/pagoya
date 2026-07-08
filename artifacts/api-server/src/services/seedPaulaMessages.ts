@@ -28,7 +28,7 @@ export const PAULA_MESSAGES_TOTAL_IN_SEED = 24;
 export const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "first_payment":          { "1": "nombre", "2": "pti_score" },
   "streak_5":               { "1": "nombre", "2": "pti_score" },
-  "pti_cross_40":           { "1": "nombre", "2": "pti_score", "3": "days_streak" },
+  "pti_cross_40":           { "1": "nombre", "2": "days_streak" },
   "pti_cross_60":           { "1": "nombre", "2": "pti_score" },
   "pti_cross_80":           { "1": "nombre", "2": "pti_score", "3": "days_streak" },
   "milestone_90d":          { "1": "nombre", "2": "pti_score" },
@@ -318,11 +318,10 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
     template_category: "MARKETING",
     template_en: null,
     // Mechanism: per-payment platform-fee waivers earned via PTI milestone rewards.
-    // PTI READY trigger awards +5 credits (paulaTriggers.ts). Amount hardcoded — do NOT
-    // use {{free_bill_credits}} (ruled out: variable count is non-deterministic at point
-    // of nudge and the template would need re-approval on any change).
-    // Any change to this copy requires a new Twilio MARKETING template approval cycle.
-    template_es: `💳 {{nombre}}, tus pagos puntuales te ganaron 5 pagos sin comisión.
+    // Copy is count-agnostic — accurate at any freeCredits balance (5, 10, 15…).
+    // Avoids hardcoded amount so template stays valid across all milestone tiers
+    // without a new Twilio MARKETING approval cycle on each award change.
+    template_es: `💳 {{nombre}}, tienes pagos sin comisión disponibles — te los ganaste con tus pagos puntuales.
 
 La próxima vez que pagues CFE, agua o cualquier servicio — la tarifa desaparece automáticamente. No tienes que hacer nada extra.
 

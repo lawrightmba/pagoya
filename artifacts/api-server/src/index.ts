@@ -61,7 +61,33 @@ app.listen(port, (err) => {
 
   // Non-blocking startup health check: logs ERROR if expected active templates
   // are missing from paula_messages, surfaces delta for admin dashboard.
-  import("@workspace/db").then(({ db }) => {
+  import("@workspace/db").then(async ({ db }) => {
+    // Startup migration: ensure variables_schema column exists, then seed values
+    // from VARIABLES_SCHEMA canonical source. Safe to re-run on every boot
+    // (ADD COLUMN IF NOT EXISTS + upsert are idempotent).
+    const { sql } = await import("drizzle-orm");
+    const { VARIABLES_SCHEMA } = await import("./services/seedPaulaMessages.js");
+    try {
+      await db.execute(sql`
+        ALTER TABLE paula_messages ADD COLUMN IF NOT EXISTS variables_schema JSONB
+      `);
+      // Upsert all known schemas from canonical VARIABLES_SCHEMA source
+      for (const [triggerType, schema] of Object.entries(VARIABLES_SCHEMA)) {
+        const schemaStr = JSON.stringify(schema);
+        await db.execute(sql`
+          UPDATE paula_messages
+          SET variables_schema = ${schemaStr}::jsonb
+          WHERE trigger_type = ${triggerType}
+        `);
+      }
+      logger.info(
+        { count: Object.keys(VARIABLES_SCHEMA).length },
+        "[startup-migration] variables_schema column ensured + all schemas synced",
+      );
+    } catch (e: unknown) {
+      logger.error({ e }, "[startup-migration] variables_schema migration failed");
+    }
+
     checkPaulaTemplateHealth(db).catch((healthErr) =>
       logger.error({ healthErr }, "[Paula] Template health check threw unexpectedly"),
     );
