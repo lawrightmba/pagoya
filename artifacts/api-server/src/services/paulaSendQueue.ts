@@ -48,10 +48,11 @@ async function isWithin24hSession(
 // ── Template SID lookup ───────────────────────────────────────────────────────
 // Returns { contentSid, variables } for a business-initiated send, or null if
 // the template has no content_sid assigned yet (Workstream B pending approval).
+// variablesJson is the positional map frozen at enqueue time from the queue row.
 async function getTemplateSid(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
   triggerType: string,
-  message: string,
+  variablesJson: Record<string, string>,
 ): Promise<{ contentSid: string; variables: Record<string, string> } | null> {
   // Check if content_sid column exists (may not yet be in prod during migration window)
   const colCheck = await db.execute(sql`
@@ -70,14 +71,15 @@ async function getTemplateSid(
 
   const contentSid = String((r.rows[0] as Record<string, unknown>).content_sid);
 
-  // Extract Mustache variable values from the pre-rendered message.
-  // The message was already rendered by injectVariables — we pass the rendered
-  // text as variable "1" (body) since Paula templates are single-body templates.
-  // When multi-variable templates are added, this mapping should be extended.
-  return { contentSid, variables: { "1": message } };
+  // Variables are passed directly from the queue row (frozen at enqueue time
+  // from UserContext via extractVariables). No re-derivation at send time.
+  return { contentSid, variables: variablesJson };
 }
 
 // ── Enqueue a WhatsApp send ───────────────────────────────────────────────────
+// variablesJson: positional Content template variables frozen from UserContext at
+// enqueue time (e.g. {"1":"María","2":"45"}). Stored alongside the pre-rendered
+// freeform message so the processor can use whichever path applies at send time.
 export async function enqueueWhatsApp(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
   telefono: string,
@@ -85,15 +87,18 @@ export async function enqueueWhatsApp(
   triggerType: string,
   triggerLogId: number | null,
   delayMinutes = 0,
+  variablesJson: Record<string, string> = {},
 ): Promise<number> {
+  const variablesJsonStr = JSON.stringify(variablesJson);
   const r = await db.execute(sql`
     INSERT INTO paula_send_queue
-      (telefono, message, trigger_type, trigger_log_id, status, created_at, scheduled_at)
+      (telefono, message, trigger_type, trigger_log_id, status, created_at, scheduled_at, variables_json)
     VALUES
       (${telefono}, ${message}, ${triggerType}, ${triggerLogId}, 'PENDING', NOW(),
        CASE WHEN ${delayMinutes} > 0
             THEN NOW() + (${delayMinutes} || ' minutes')::INTERVAL
-            ELSE NULL END)
+            ELSE NULL END,
+       ${variablesJsonStr}::jsonb)
     RETURNING id
   `);
   return Number((r.rows[0] as Record<string, unknown>).id);
@@ -104,7 +109,7 @@ export async function processSendQueue(): Promise<void> {
   const { db } = await import("@workspace/db");
 
   const rows = await db.execute(sql`
-    SELECT id, telefono, message, trigger_type, trigger_log_id, attempts
+    SELECT id, telefono, message, trigger_type, trigger_log_id, attempts, variables_json
     FROM paula_send_queue
     WHERE status IN ('PENDING', 'FAILED')
       AND attempts < ${MAX_ATTEMPTS}
@@ -125,6 +130,9 @@ export async function processSendQueue(): Promise<void> {
     const triggerType  = String(row.trigger_type ?? "");
     const triggerLogId = row.trigger_log_id != null ? Number(row.trigger_log_id) : null;
     const attempts     = Number(row.attempts) + 1;
+    // variables_json frozen at enqueue time; null-safe fallback for pre-migration rows
+    const variablesJson: Record<string, string> =
+      row.variables_json ? (row.variables_json as Record<string, string>) : {};
 
     await db.execute(sql`
       UPDATE paula_send_queue
@@ -147,7 +155,7 @@ export async function processSendQueue(): Promise<void> {
           logger.info({ id, telefono, triggerType, withinSession: true }, "[SendQueue] Freeform send (within session)");
         } else {
           // Outside session — require approved Content SID
-          const tmplSid = await getTemplateSid(db, triggerType, message);
+          const tmplSid = await getTemplateSid(db, triggerType, variablesJson);
           if (!tmplSid) {
             // No content_sid configured yet — mark FAILED loudly, do not attempt freeform
             const errMsg = `Business-initiated send blocked: trigger="${triggerType}" has no content_sid and recipient is outside 24h session window. Assign an approved Twilio Content SID to proceed.`;

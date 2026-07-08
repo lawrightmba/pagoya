@@ -20,6 +20,7 @@ import { logger } from "../lib/logger.js";
 import {
   loadMessageTemplates,
   injectVariables,
+  extractVariables,
   isOnCooldownDB,
   type TemplateCache,
   type UserContext,
@@ -193,6 +194,11 @@ async function fireTrigger(
 
   const message = injectVariables(tmpl.template_es, ctx);
 
+  // Extract positional variables for Twilio Content template sends (out-of-session path).
+  // Values are frozen at enqueue time from the live UserContext so the queue processor
+  // does not need to re-build context.
+  const variablesJson = extractVariables(tmpl.variables_schema, ctx);
+
   // Persist trigger log first (audit trail independent of delivery)
   const insertResult = await db.execute(sql`
     INSERT INTO paula_trigger_log
@@ -204,7 +210,7 @@ async function fireTrigger(
   const logId = Number((insertResult.rows[0] as Record<string, unknown>).id);
 
   // Enqueue for delivery — processor handles retries and status updates
-  const queueId = await enqueueWhatsApp(db, telefono, message, triggerType, logId);
+  const queueId = await enqueueWhatsApp(db, telefono, message, triggerType, logId, 0, variablesJson);
 
   // Link send_queue_id back for cross-table traceability
   await db.execute(sql`
@@ -394,7 +400,7 @@ export async function evaluateTriggersForUser(
         RETURNING id
       `).catch(() => ({ rows: [{ id: 0 }] }));
       const remitLogId = Number((remitLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60).catch(() => {});
+      await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
     // +48h — Employment type (field 88 / employment_stability_score input)
@@ -406,7 +412,7 @@ export async function evaluateTriggersForUser(
         RETURNING id
       `).catch(() => ({ rows: [{ id: 0 }] }));
       const empLogId = Number((empLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", empLogId, 48 * 60).catch(() => {});
+      await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", empLogId, 48 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
     // +72h — Address tenure (field 87 — actual residence stability, not signup date)
@@ -418,7 +424,7 @@ export async function evaluateTriggersForUser(
         RETURNING id
       `).catch(() => ({ rows: [{ id: 0 }] }));
       const addrLogId = Number((addrLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, ADDRESS_TENURE_MSG, "address_tenure", addrLogId, 72 * 60).catch(() => {});
+      await enqueueWhatsApp(db, telefono, ADDRESS_TENURE_MSG, "address_tenure", addrLogId, 72 * 60, { "1": ctx.nombre }).catch(() => {});
     }
   }
 
@@ -438,7 +444,7 @@ export async function evaluateTriggersForUser(
         RETURNING id
       `).catch(() => ({ rows: [{ id: 0 }] }));
       const incLogId = Number((logRow.rows[0] as Record<string,unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId).catch(() => {});
+      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId, 0, { "1": ctx.nombre }).catch(() => {});
     }
   }
 

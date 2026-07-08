@@ -382,18 +382,34 @@ router.get("/admin/paula-template-health", async (_req: Request, res: Response) 
 // Safe to call multiple times. Run once after deploy before seed.
 router.post("/admin/paula-migrate-content-sid", async (_req: Request, res: Response) => {
   try {
+    // paula_messages: content_sid + template_category (original) + variables_schema (B2-REVISED)
     await db.execute(drizzleSql`
       ALTER TABLE paula_messages
         ADD COLUMN IF NOT EXISTS content_sid text,
         ADD COLUMN IF NOT EXISTS template_category text
-          CHECK (template_category IN ('UTILITY','MARKETING'))
+          CHECK (template_category IN ('UTILITY','MARKETING')),
+        ADD COLUMN IF NOT EXISTS variables_schema jsonb
     `);
-    const cols = await db.execute(drizzleSql`
+    // paula_send_queue: variables_json — positional vars frozen from UserContext at enqueue
+    await db.execute(drizzleSql`
+      ALTER TABLE paula_send_queue
+        ADD COLUMN IF NOT EXISTS variables_json jsonb
+    `);
+    const pmCols = await db.execute(drizzleSql`
       SELECT column_name FROM information_schema.columns
       WHERE table_name = 'paula_messages'
       ORDER BY ordinal_position
     `);
-    res.json({ ok: true, columns: (cols.rows as Array<Record<string, unknown>>).map(r => r.column_name) });
+    const pqCols = await db.execute(drizzleSql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'paula_send_queue'
+      ORDER BY ordinal_position
+    `);
+    res.json({
+      ok: true,
+      paula_messages_columns:   (pmCols.rows as Array<Record<string, unknown>>).map(r => r.column_name),
+      paula_send_queue_columns: (pqCols.rows as Array<Record<string, unknown>>).map(r => r.column_name),
+    });
   } catch (err) {
     logger.error({ err }, "admin/paula-migrate-content-sid: failed");
     res.status(500).json({ error: "Migration failed — check server logs." });

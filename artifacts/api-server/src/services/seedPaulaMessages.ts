@@ -19,6 +19,97 @@ import type { db as DbType } from "@workspace/db";
 export const PAULA_MESSAGES_EXPECTED_ACTIVE = 22;
 export const PAULA_MESSAGES_TOTAL_IN_SEED = 24;
 
+// ── Twilio Content template variable schemas ───────────────────────────────────
+// Maps trigger_type → positional variable index → UserContext field name.
+// These values are extracted from UserContext at enqueue time and stored in
+// paula_send_queue.variables_json for use by sendWhatsAppTemplate().
+// Keep in sync with the approved Twilio Content template bodies listed in
+// CONTENT_TEMPLATE_BODIES below.
+const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
+  "first_payment":          { "1": "nombre", "2": "pti_score" },
+  "streak_5":               { "1": "nombre", "2": "pti_score" },
+  "pti_cross_40":           { "1": "nombre", "2": "pti_score", "3": "days_streak" },
+  "pti_cross_60":           { "1": "nombre", "2": "pti_score" },
+  "pti_cross_80":           { "1": "nombre", "2": "pti_score", "3": "days_streak" },
+  "milestone_90d":          { "1": "nombre", "2": "pti_score" },
+  "late_payment_1":         { "1": "nombre" },
+  "pti_drop_7d":            { "1": "nombre", "2": "weakest_dimension" },
+  "stalled_14d":            { "1": "nombre" },
+  "pattern_late_2x":        { "1": "nombre" },
+  // Module teasers: Content template is a short ~120-char invite; {{1}} = nombre.
+  // Full educational content lives in template_es and is sent freeform in-session
+  // (either directly if within 24h session, or after the user replies to the teaser).
+  "module_unlock_1":        { "1": "nombre" },
+  "module_unlock_2":        { "1": "nombre" },
+  "module_unlock_3":        { "1": "nombre" },
+  "module_unlock_4":        { "1": "nombre" },
+  "module_unlock_5":        { "1": "nombre" },
+  "readiness_approaching":  { "1": "nombre", "2": "pti_score" },
+  "readiness_hard":         { "1": "nombre", "2": "pti_score" },
+  "not_yet_gap_report":     { "1": "nombre", "2": "pti_score" },
+  "winback_30d":            { "1": "nombre" },
+  "free_credit_nudge":      { "1": "nombre" },
+  "remittance_profile":     { "1": "nombre" },
+  "employment_profile":     { "1": "nombre" },
+  "address_tenure":         { "1": "nombre" },
+  "readiness_hard_step2":   {},
+};
+
+// ── Twilio Content template bodies (es-MX) ────────────────────────────────────
+// These are the EXACT bodies to register in Twilio Messaging / Content API.
+// Rules applied: fixed copy, no body starting/ending with a variable, no two
+// variables adjacent, variable count kept minimal relative to text.
+// Submit to Twilio → wait for Meta approval → update paula_messages.content_sid.
+//
+// UTILITY (≤1024 chars):
+//   first_payment:
+//     "¡Hiciste tu primer pago puntual, {{1}}! 🎯 Así empieza un historial de confianza financiera. Tu Índice de Confianza PagoYa subió a {{2}} puntos. ¡Seguimos construyendo!"
+//   streak_5:
+//     "¡Cinco pagos a tiempo, {{1}}! Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu Índice de Confianza PagoYa está en {{2}} puntos."
+//   pti_cross_40:
+//     "¡Nivel Bronce alcanzado, {{1}}! 🔵 Cruzaste los 40 puntos en tu Índice de Confianza PagoYa. Llevas {{3}} días construyendo tu historial — ahora tienes {{2}} puntos."
+//   pti_cross_60:
+//     "Tu Índice de Confianza PagoYa llegó a {{2}} puntos, {{1}}. 📈 Estás a un paso del nivel Plata — muy pocos usuarios llegan aquí. Sigue pagando puntualmente."
+//   pti_cross_80:
+//     "¡Nivel Oro alcanzado, {{1}}! 🥇 Tu Índice de Confianza PagoYa llegó a {{2}} puntos. Llevas {{3}} días construyendo esto — en el siguiente mensaje te contamos qué se abre."
+//   milestone_90d:
+//     "Tres meses con PagoYa, {{1}}. Tu Índice de Confianza está en {{2}} puntos — más consistencia de la que tiene la mayoría al pedir crédito formal por primera vez. ¡Buen trabajo!"
+//   late_payment_1:
+//     "Hola {{1}}, tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. Escribe "pagar" y te ayudamos antes de que afecte tu Índice de Confianza PagoYa."
+//   pti_drop_7d:
+//     "Hola {{1}}, tu Índice de Confianza PagoYa bajó esta semana. Tu área de mayor oportunidad ahora es {{2}}. Escríbenos y revisamos juntos qué pequeño ajuste puede cambiar la tendencia."
+//   stalled_14d:
+//     "Hola {{1}}, llevas más de dos semanas sin movimiento en tu historial PagoYa. Lo que construiste sigue ahí — pero el reloj está pausado. Escribe "pagar" para retomar tu progreso."
+//   pattern_late_2x:
+//     "Hola {{1}}, notamos dos pagos tardíos recientes en tu historial PagoYa. Tu historial lo resiste — pero un tercer retraso sí lo afecta. Escríbenos y configuramos un recordatorio de pago."
+//   module_unlock_1 (teaser — full text sent in-session after user replies "1"):
+//     "Tu primer módulo de educación financiera está listo, {{1}}. Tarda menos de 3 minutos. Responde con *1* para recibirlo ahora."
+//   module_unlock_2 (teaser):
+//     "Tu Módulo 2 de Paula está disponible, {{1}}: Ahorro e Ingresos. Responde con *2* para recibirlo — tarda menos de 3 minutos."
+//   module_unlock_3 (teaser):
+//     "Tu Módulo 3 de Paula está listo, {{1}}: Crédito y Deuda. Responde con *3* para comenzar tu siguiente lección."
+//   module_unlock_4 (teaser):
+//     "Tu Módulo 4 de Paula está disponible, {{1}}: Presupuesto Familiar. Responde con *4* para recibirlo."
+//   module_unlock_5 (teaser):
+//     "Tu Módulo 5 de Paula está aquí, {{1}}: Planificación a Futuro. Responde con *5* para completar tu educación financiera."
+//   readiness_approaching:
+//     "Muy buen trabajo, {{1}}. Tu Índice de Confianza PagoYa llegó a {{2}} puntos — estás cerca del umbral para acceder a productos financieros formales. Sigue pagando puntualmente."
+//   not_yet_gap_report:
+//     "Hola {{1}}, tu Índice de Confianza PagoYa está en {{2}} puntos. Para llegar al siguiente nivel, los pagos puntuales y constantes son lo que más suma. ¡Tú puedes llegar!"
+//   remittance_profile:
+//     "Hola {{1}}, una pregunta para tu perfil financiero (opcional): ¿recibes dinero del extranjero de forma regular? Responde *1* si es Sí, o *2* si es No. Tu respuesta es confidencial."
+//   employment_profile:
+//     "Hola {{1}}, una pregunta rápida para tu perfil (opcional): ¿cuál es tu situación laboral? Escribe *opciones* para ver la lista y responde con el número. Información confidencial."
+//   address_tenure:
+//     "Hola {{1}}, última pregunta de tu perfil (opcional): ¿cuántos años llevas en tu domicilio actual? Responde *1* (menos de 6 meses), *2* (6m–2 años), o *3* (más de 2 años)."
+//   winback_30d:
+//     "¡Hola de nuevo, {{1}}! Hace más de 30 días que no registras un pago en PagoYa. Tu cuenta sigue activa — vuelve hoy y tu historial retoma desde donde lo dejaste."
+//
+// MARKETING (≤768 chars):
+//   free_credit_nudge:
+//     "¡Hola {{1}}! 🎁 Tienes $150 MXN de saldo de bienvenida en PagoYa para pagar servicios del hogar: CFE, agua, gas, Telmex y más. ¡Úsalo antes de que expire! Escribe "pagar" para comenzar."
+export const CONTENT_TEMPLATE_BODIES = "See JSDoc comment above for all 22 approved template bodies.";
+
 interface SeedRow {
   trigger_type: string;
   template_es: string;
@@ -356,14 +447,18 @@ export async function seedPaulaMessages(dbClient: typeof DbType): Promise<{
   const now = new Date().toISOString();
 
   for (const row of ROWS) {
+    const schema = VARIABLES_SCHEMA[row.trigger_type] ?? {};
+    const schemaStr = JSON.stringify(schema);
     const result = await dbClient.execute(drizzleSql`
-      INSERT INTO paula_messages (trigger_type, template_es, template_en, active, cooldown_days)
-      VALUES (${row.trigger_type}, ${row.template_es}, ${row.template_en ?? null}, ${row.active}, ${row.cooldown_days})
+      INSERT INTO paula_messages (trigger_type, template_es, template_en, active, cooldown_days, variables_schema)
+      VALUES (${row.trigger_type}, ${row.template_es}, ${row.template_en ?? null}, ${row.active}, ${row.cooldown_days},
+              ${schemaStr}::jsonb)
       ON CONFLICT (trigger_type) DO UPDATE
-        SET template_es   = EXCLUDED.template_es,
-            template_en   = EXCLUDED.template_en,
-            active        = EXCLUDED.active,
-            cooldown_days = EXCLUDED.cooldown_days
+        SET template_es      = EXCLUDED.template_es,
+            template_en      = EXCLUDED.template_en,
+            active           = EXCLUDED.active,
+            cooldown_days    = EXCLUDED.cooldown_days,
+            variables_schema = EXCLUDED.variables_schema
       RETURNING (xmax = 0) AS was_inserted
     `);
     const row0 = result.rows[0] as Record<string, unknown> | undefined;

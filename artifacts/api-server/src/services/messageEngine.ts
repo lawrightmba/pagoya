@@ -53,6 +53,10 @@ export interface UserContext {
 export interface TemplateRow {
   template_es: string;
   cooldown_days: number;
+  // Maps Twilio positional variable indices to UserContext field names.
+  // e.g. {"1": "nombre", "2": "pti_score"} → sendWhatsAppTemplate variables {"1": "María", "2": "45"}
+  // Used by extractVariables() at enqueue time so the queue stores resolved values.
+  variables_schema: Record<string, string>;
 }
 
 export type TemplateCache = Map<string, TemplateRow>;
@@ -63,7 +67,7 @@ export async function loadMessageTemplates(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
 ): Promise<TemplateCache> {
   const rows = await db.execute(sql`
-    SELECT trigger_type, template_es, cooldown_days
+    SELECT trigger_type, template_es, cooldown_days, variables_schema
     FROM paula_messages
     WHERE active = TRUE
   `);
@@ -71,8 +75,9 @@ export async function loadMessageTemplates(
   const cache: TemplateCache = new Map();
   for (const row of rows.rows as Array<Record<string, unknown>>) {
     cache.set(row.trigger_type as string, {
-      template_es:   row.template_es   as string,
-      cooldown_days: Number(row.cooldown_days),
+      template_es:      row.template_es   as string,
+      cooldown_days:    Number(row.cooldown_days),
+      variables_schema: (row.variables_schema as Record<string, string> | null) ?? {},
     });
   }
   logger.info(`[MessageEngine] Loaded ${cache.size} active templates`);
@@ -90,6 +95,28 @@ export function injectVariables(template: string, ctx: UserContext): string {
     }
     return String(value);
   });
+}
+
+// ── Variable extraction for Twilio Content templates ────────────────────────
+// Takes the variables_schema from the template row (e.g. {"1":"nombre","2":"pti_score"})
+// and the resolved UserContext, and returns the positional variables map
+// (e.g. {"1":"María","2":"45"}) to pass to sendWhatsAppTemplate().
+// Called at enqueue time so values are frozen in the queue row (not re-derived at send time).
+export function extractVariables(
+  schema: Record<string, string>,
+  ctx: UserContext,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [pos, field] of Object.entries(schema)) {
+    const value = (ctx as unknown as Record<string, unknown>)[field];
+    if (value === undefined) {
+      logger.warn(`[Paula] extractVariables: missing context field "${field}" for position {{${pos}}}`);
+      result[pos] = "";
+    } else {
+      result[pos] = String(value);
+    }
+  }
+  return result;
 }
 
 // ── Dead-letter check using per-trigger cooldown_days ────────────────────────

@@ -1092,6 +1092,74 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
+    // ── Module teaser reply intercept ─────────────────────────────────────────
+    // Flow: out-of-session user receives a module_unlock_N Content template (teaser).
+    // They reply with the matching digit (1–5). This opens a 24h session window,
+    // letting us send the full freeform educational content immediately.
+    // Guard: (a) message is exactly "1"–"5", (b) last Paula trigger was the
+    // corresponding module_unlock_N.
+    {
+      const moduleDigit = userMessage.trim();
+      if (/^[1-5]$/.test(moduleDigit)) {
+        const triggerForDigit = `module_unlock_${moduleDigit}`;
+        const modCheckR = await db.execute(sql`
+          SELECT
+            (SELECT trigger_type
+             FROM paula_trigger_log
+             WHERE telefono = ${phoneKey}
+             ORDER BY fired_at DESC
+             LIMIT 1
+            ) AS last_trigger,
+            SPLIT_PART(NULLIF(TRIM(u.kyc_full_name), ''), ' ', 1) AS nombre,
+            COALESCE(u.pti_score, 0)    AS pti_score,
+            COALESCE(
+              EXTRACT(DAY FROM NOW() - MIN(bp.created_at)
+                FILTER (WHERE bp.status IN ('completed','success','completed_ok','confirmed')))::INT,
+              0
+            ) AS days_streak,
+            COUNT(DISTINCT bp.service_name)
+              FILTER (WHERE bp.status IN ('completed','success','completed_ok','confirmed'))
+              AS bill_category_count
+          FROM users u
+          LEFT JOIN bill_payments bp ON bp.telefono = u.telefono
+          WHERE u.telefono = ${phoneKey}
+          GROUP BY u.kyc_full_name, u.pti_score
+          LIMIT 1
+        `);
+        const modRow = modCheckR.rows[0] as {
+          last_trigger: string | null;
+          nombre: string | null;
+          pti_score: number;
+          days_streak: number;
+          bill_category_count: number;
+        } | undefined;
+
+        if (modRow && modRow.last_trigger === triggerForDigit) {
+          // Fetch the full educational content from paula_messages
+          const tmplR = await db.execute(sql`
+            SELECT template_es FROM paula_messages
+            WHERE trigger_type = ${triggerForDigit} AND active = TRUE
+            LIMIT 1
+          `);
+          if (tmplR.rows.length > 0) {
+            const rawTemplate = String((tmplR.rows[0] as Record<string, unknown>).template_es ?? "");
+            const nombre        = modRow.nombre ?? "amig@";
+            const ptiScore      = Number(modRow.pti_score ?? 0);
+            const daysStreak    = Number(modRow.days_streak ?? 0);
+            const billCatCount  = Number(modRow.bill_category_count ?? 0);
+            // Simple named-variable substitution for the fields used in module templates
+            const rendered = rawTemplate
+              .replace(/\{\{nombre\}\}/g,             nombre)
+              .replace(/\{\{pti_score\}\}/g,          String(ptiScore))
+              .replace(/\{\{days_streak\}\}/g,        String(daysStreak))
+              .replace(/\{\{bill_category_count\}\}/g, String(billCatCount));
+            await sendWhatsApp(phoneKey, rendered);
+            return;
+          }
+        }
+      }
+    }
+
     // ── Colonia backfill reply intercept ──────────────────────────────────────
     // Catches replies to the "¿en qué colonia vives?" cron message.
     // Active for 48 h after colonia_asked_at was set, while colonia is still NULL.

@@ -1,0 +1,33 @@
+STOP — do not submit any templates to Twilio/Meta. Two corrections first.
+
+## URGENT-0 (before anything else)
+Set PAULA_SENDING_ENABLED=false in prod immediately via env var — not via
+deploy. Prod is running pre-B3 code with sending enabled; any cron-fired
+trigger sends freeform business-initiated messages. Confirm the flag is
+false and report the last 48h of paula_send_queue activity in prod
+(anything SENT besides the Jul 5 item?).
+
+## B2-REVISED — Real templates, not {{1}} wrappers
+The single-variable design is rejected. Meta rejects all-variable bodies,
+bodies starting/ending with variables, and high variable-to-text ratios —
+and an approved open-ended template would risk sender quality-rating
+penalties affecting ALL PagoYa WhatsApp traffic.
+
+Rework all 22 drafts as follows:
+1. Fixed es-MX copy lives in the Content template body. Only dynamic values
+   are variables: {{1}}=nombre, {{2}}=PTI score, {{3}}=streak/days/amount,
+   etc. No variable adjacent to another variable; no body starting or
+   ending with a variable; keep variable count low relative to text.
+2. This means refactoring the render path: injectVariables() currently
+   pre-renders the full string before enqueue. For outside-session sends,
+   enqueue must instead store trigger_type + a variables JSON payload; the
+   send path passes the variables to sendWhatsAppTemplate() against the
+   approved SID. Within-session freeform can keep the pre-rendered string.
+   Store both on the queue row: rendered_message (for in-session) and
+   variables_json (for template sends).
+3. Modules 1–5: yes, draft the ~200-char teaser versions as the approved
+   templates (Option 1), same fixed-copy rules. Teaser should invite a
+   reply — a user reply opens a 24h session, which then permits the full
+   freeform module text. Make the send path do exactly that: teaser
+   template → user replies → full module delivered in-session.
+4. free_credit_nudge stays MARKETING; note the 768-char limit and stricter
