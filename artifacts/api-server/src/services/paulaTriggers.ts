@@ -99,9 +99,11 @@ export const TRIGGER = {
   NOT_YET_GAP_REPORT:    "not_yet_gap_report",
   // Reward nudge — reminds users of unused free bill credits (7-day cooldown)
   FREE_CREDIT_NUDGE:     "free_credit_nudge",
-  // Remittance profile — queued after Module 1, intercepts sí/no reply
+  // Re-engagement — dispatched from winbackCron, NOT from evaluateTriggersForUser
+  WINBACK_30D:           "winback_30d",
+  // Remittance profile — queued after Module 1, intercepts SÍ/NO reply
   REMITTANCE_PROFILE:    "remittance_profile",
-  // Employment + address tenure — queued after Module 1 (+24h / +72h respectively)
+  // Employment + address tenure — queued after Module 1 (+24h / +15d respectively)
   EMPLOYMENT_PROFILE:    "employment_profile",
   ADDRESS_TENURE:        "address_tenure",
 } as const;
@@ -114,19 +116,25 @@ type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
 // Prevents multi-trigger spam on first cron pass for existing users.
 //
 // Tier 1 — Credit readiness (highest value; fires once per user lifetime):
-//   readiness_hard, readiness_approaching, not_yet_gap_report
+//   readiness_hard(0), readiness_approaching(1), not_yet_gap_report(2)
 // Tier 2 — Payment urgency (time-sensitive recovery):
-//   late_payment_1, pattern_late_2x, pti_drop_7d, stalled_14d
-// Tier 3 — Achievement milestones (positive engagement):
-//   first_payment, pti_cross_80, pti_cross_60, pti_cross_40, milestone_90d, streak_5
-// Tier 4 — Educational modules:
-//   module_unlock_1 … module_unlock_5
-// Tier 5 — Marketing / data collection (lowest priority):
-//   free_credit_nudge
+//   late_payment_1(3), pattern_late_2x(4), pti_drop_7d(5), stalled_14d(6)
+// Tier 3 — Re-engagement:
+//   winback_30d(7) — dispatched from winbackCron, NOT evaluateTriggersForUser
+// Tier 4 — Achievement milestones (positive engagement):
+//   first_payment(8), pti_cross_80(9), pti_cross_60(10), pti_cross_40(11),
+//   milestone_90d(12), streak_5(13)
+// Tier 5 — Educational modules:
+//   module_unlock_1–5 (14–18)
+// Tier 6 — Data collection follow-ups (deferred from Module 1/2):
+//   remittance_profile(19), employment_profile(20), address_tenure(21)
+// Tier 7 — Marketing (lowest priority):
+//   free_credit_nudge(22)
 //
-// NOTE: winback_30d / remittance_profile / employment_profile / address_tenure /
-// income_collection have their own dispatch paths outside evaluateTriggersForUser
-// and are intentionally absent from this table.
+// ASSERTION: every active trigger_type in paula_messages must appear here.
+// Triggers absent from this map fall back to priority 99 (candidate-sort tail)
+// and log an ERROR at startup. income_collection is intentionally excluded —
+// it is never seeded into paula_messages as a standalone active trigger.
 const TRIGGER_PRIORITY: Readonly<Record<string, number>> = {
   [TRIGGER.READINESS_HARD]:        0,
   [TRIGGER.READINESS_APPROACHING]: 1,
@@ -135,18 +143,22 @@ const TRIGGER_PRIORITY: Readonly<Record<string, number>> = {
   [TRIGGER.PATTERN_LATE_2X]:       4,
   [TRIGGER.PTI_DROP_7D]:           5,
   [TRIGGER.STALLED_14D]:           6,
-  [TRIGGER.FIRST_PAYMENT]:         7,
-  [TRIGGER.PTI_CROSS_80]:          8,
-  [TRIGGER.PTI_CROSS_60]:          9,
-  [TRIGGER.PTI_CROSS_40]:          10,
-  [TRIGGER.MILESTONE_90D]:         11,
-  [TRIGGER.STREAK_5]:              12,
-  [TRIGGER.MODULE_UNLOCK_1]:       13,
-  [TRIGGER.MODULE_UNLOCK_2]:       14,
-  [TRIGGER.MODULE_UNLOCK_3]:       15,
-  [TRIGGER.MODULE_UNLOCK_4]:       16,
-  [TRIGGER.MODULE_UNLOCK_5]:       17,
-  [TRIGGER.FREE_CREDIT_NUDGE]:     18,
+  [TRIGGER.WINBACK_30D]:           7,
+  [TRIGGER.FIRST_PAYMENT]:         8,
+  [TRIGGER.PTI_CROSS_80]:          9,
+  [TRIGGER.PTI_CROSS_60]:          10,
+  [TRIGGER.PTI_CROSS_40]:          11,
+  [TRIGGER.MILESTONE_90D]:         12,
+  [TRIGGER.STREAK_5]:              13,
+  [TRIGGER.MODULE_UNLOCK_1]:       14,
+  [TRIGGER.MODULE_UNLOCK_2]:       15,
+  [TRIGGER.MODULE_UNLOCK_3]:       16,
+  [TRIGGER.MODULE_UNLOCK_4]:       17,
+  [TRIGGER.MODULE_UNLOCK_5]:       18,
+  [TRIGGER.REMITTANCE_PROFILE]:    19,
+  [TRIGGER.EMPLOYMENT_PROFILE]:    20,
+  [TRIGGER.ADDRESS_TENURE]:        21,
+  [TRIGGER.FREE_CREDIT_NUDGE]:     22,
 } as const;
 function triggerPriority(type: string): number {
   return TRIGGER_PRIORITY[type] ?? 99;
@@ -199,6 +211,18 @@ export async function checkPaulaTemplateHealth(
       `[Paula] TEMPLATE HEALTH CHECK FAILED: only ${activeCount}/${PAULA_MESSAGES_EXPECTED_ACTIVE} expected active templates found — missing: ${missing.join(", ") || "none listed"}`,
     );
     return { ok: false, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing };
+  }
+
+  // Startup assertion: every active trigger_type must exist in TRIGGER_PRIORITY.
+  // A missing entry means the new trigger will silently land at priority 99 in
+  // candidate-sort and never beat any existing trigger. Log ERROR so the admin
+  // notices without crashing the app.
+  const unprioritized = activeKeys.filter(k => !(k in TRIGGER_PRIORITY));
+  if (unprioritized.length > 0) {
+    logger.error(
+      { unprioritized },
+      "[Paula] STARTUP ASSERTION: active trigger_type(s) missing from TRIGGER_PRIORITY — add them to the constant in paulaTriggers.ts",
+    );
   }
 
   logger.info(`[Paula] Template health OK: ${activeCount} active templates`);
@@ -278,17 +302,13 @@ export async function evaluateTriggersForUser(
   }
 
   // ── Per-user 24h send throttle ────────────────────────────────────────────
-  // At most one business-initiated nudge per user per 24h window.
-  // Data-collection follow-ups (remittance_profile / employment_profile /
-  // address_tenure / income_collection) are excluded — they are queued with
-  // multi-hour delays from Module 1 and must not suppress the next day's nudge.
+  // At most one business-initiated nudge per user per 24h window. No exemptions —
+  // all trigger types count (including data-collection follow-ups). This ensures
+  // profile questions cannot stack with other nudges in the same 24h window.
   const recentNudge = await db.execute(sql`
     SELECT 1 FROM paula_trigger_log
     WHERE telefono = ${telefono}
       AND fired_at >= NOW() - INTERVAL '24 hours'
-      AND trigger_type NOT IN (
-        'remittance_profile', 'employment_profile', 'address_tenure', 'income_collection'
-      )
     LIMIT 1
   `);
   if (recentNudge.rows.length > 0) {
@@ -603,37 +623,26 @@ export async function evaluateTriggersForUser(
     `).catch(() => ({ rows: [] }));
     const m1User = (m1FollowUpRow.rows[0] as Record<string, unknown> | undefined) ?? {};
 
+    // ── Deferred profile follow-ups (enqueue-only, NO trigger_log INSERT) ─────
+    // Critical: inserting these into paula_trigger_log at enqueue-time with
+    // fired_at=NOW() would immediately overwrite last_trigger and break the
+    // module teaser 48h reply window (user can no longer reply "1" to the
+    // module teaser because last_trigger becomes 'address_tenure').
+    // whatsapp-agent.ts intercepts use paula_send_queue SENT status instead.
+    //
+    // Gap enforcement: 7-day minimum between profile questions ensures
+    // "última pregunta" in address_tenure is always accurate, and prevents
+    // any profile question from landing inside the 48h module teaser window.
     if (m1User.receives_remittances == null) {
-      const remitLog = await db.execute(sql`
-        INSERT INTO paula_trigger_log
-          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES (${telefono}, 'remittance_profile', '{}'::jsonb, ${REMITTANCE_PROFILE_MSG}, FALSE, NOW())
-        RETURNING id
-      `).catch(() => ({ rows: [{ id: 0 }] }));
-      const remitLogId = Number((remitLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", remitLogId, 24 * 60, { "1": ctx.nombre }).catch(() => {});
+      await enqueueWhatsApp(db, telefono, REMITTANCE_PROFILE_MSG, "remittance_profile", 0, 1 * 24 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
     if (m1User.employment_type == null) {
-      const empLog = await db.execute(sql`
-        INSERT INTO paula_trigger_log
-          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES (${telefono}, 'employment_profile', '{}'::jsonb, ${EMPLOYMENT_PROFILE_MSG}, FALSE, NOW())
-        RETURNING id
-      `).catch(() => ({ rows: [{ id: 0 }] }));
-      const empLogId = Number((empLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", empLogId, 48 * 60, { "1": ctx.nombre }).catch(() => {});
+      await enqueueWhatsApp(db, telefono, EMPLOYMENT_PROFILE_MSG, "employment_profile", 0, 8 * 24 * 60, { "1": ctx.nombre }).catch(() => {});
     }
 
     if (m1User.address_tenure_bucket == null) {
-      const addrLog = await db.execute(sql`
-        INSERT INTO paula_trigger_log
-          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES (${telefono}, 'address_tenure', '{}'::jsonb, ${ADDRESS_TENURE_MSG}, FALSE, NOW())
-        RETURNING id
-      `).catch(() => ({ rows: [{ id: 0 }] }));
-      const addrLogId = Number((addrLog.rows[0] as Record<string, unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, ADDRESS_TENURE_MSG, "address_tenure", addrLogId, 72 * 60, { "1": ctx.nombre }).catch(() => {});
+      await enqueueWhatsApp(db, telefono, ADDRESS_TENURE_MSG, "address_tenure", 0, 15 * 24 * 60, { "1": ctx.nombre }).catch(() => {});
     }
   }
 
@@ -643,15 +652,10 @@ export async function evaluateTriggersForUser(
     fired++;
     logger.warn(`[MODULE_UNLOCK] First-ever fire: telefono=${telefono}, trigger=${trigger}`);
     if (ctx.declared_income_bucket == null) {
-      const logRow = await db.execute(sql`
-        INSERT INTO paula_trigger_log
-          (telefono, trigger_type, trigger_data, message_sent, whatsapp_sent, fired_at)
-        VALUES
-          (${telefono}, 'income_collection', '{}'::jsonb, ${INCOME_BUCKET_MSG}, FALSE, NOW())
-        RETURNING id
-      `).catch(() => ({ rows: [{ id: 0 }] }));
-      const incLogId = Number((logRow.rows[0] as Record<string,unknown>).id ?? 0);
-      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", incLogId, 0, { "1": ctx.nombre }).catch(() => {});
+      // Enqueue-only (no trigger_log INSERT) — same reasoning as Module 1 follow-ups.
+      // income_collection fires immediately (delay=0) after the module teaser;
+      // a trigger_log row at NOW() would corrupt last_trigger for the module reply window.
+      await enqueueWhatsApp(db, telefono, INCOME_BUCKET_MSG, "income_collection", 0, 0, { "1": ctx.nombre }).catch(() => {});
     }
   }
 

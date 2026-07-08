@@ -61,53 +61,45 @@ const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
 // variables adjacent, variable count kept minimal relative to text.
 // Submit to Twilio → wait for Meta approval → update paula_messages.content_sid.
 //
-// UTILITY (≤1024 chars):
+// UTILITY (≤1024 chars) — B2-REVISED approved bodies (all copy fixes applied):
 //   first_payment:
-//     "¡Hiciste tu primer pago puntual, {{1}}! 🎯 Así empieza un historial de confianza financiera. Tu Índice de Confianza PagoYa subió a {{2}} puntos. ¡Seguimos construyendo!"
+//     "{{1}}, hiciste tu primer pago puntual. 🎯 Así empieza un historial de confianza — un ladrillo a la vez. Tu PTI subió a {{2}} puntos. Seguimos."
 //   streak_5:
-//     "¡Cinco pagos a tiempo, {{1}}! Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu Índice de Confianza PagoYa está en {{2}} puntos."
-//   pti_cross_40:
-//     "¡Nivel Bronce alcanzado, {{1}}! 🔵 Cruzaste los 40 puntos en tu Índice de Confianza PagoYa. Llevas {{3}} días construyendo tu historial — ahora tienes {{2}} puntos."
-//   pti_cross_60:
-//     "Tu Índice de Confianza PagoYa llegó a {{2}} puntos, {{1}}. 📈 Estás a un paso del nivel Plata — muy pocos usuarios llegan aquí. Sigue pagando puntualmente."
-//   pti_cross_80:
-//     "¡Nivel Oro alcanzado, {{1}}! 🥇 Tu Índice de Confianza PagoYa llegó a {{2}} puntos. Llevas {{3}} días construyendo esto — en el siguiente mensaje te contamos qué se abre."
+//     "{{1}}, llevas 5 pagos consecutivos a tiempo. Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu PTI actual: {{2}}."
+//   pti_cross_40 (C3-adjacent — Bronce pattern):
+//     "{{1}}, cruzaste los 40 puntos PTI. 🔵 Nivel Bronce alcanzado. Ya tienes un historial de confianza real — algo que no tenías hace {{3}} días."
+//   pti_cross_60 (C3 — added 🥈 Nivel Plata alcanzado):
+//     "{{1}}, 60 puntos PTI. 🥈 Nivel Plata alcanzado. Tu dimensión más fuerte ahora mismo: {{2}}. Sigue así."
+//   pti_cross_80 (C1 — removed forward-reference to next message):
+//     "{{1}}, nivel Oro. 🥇 PTI {{2}}. Llevas {{3}} días construyendo esto. Eso es un historial real."
 //   milestone_90d:
-//     "Tres meses con PagoYa, {{1}}. Tu Índice de Confianza está en {{2}} puntos — más consistencia de la que tiene la mayoría al pedir crédito formal por primera vez. ¡Buen trabajo!"
+//     "Tres meses, {{1}}. 90 días de historial activo. Eso ya es más consistencia de la que tiene la mayoría de personas que piden crédito formal por primera vez. PTI: {{2}}."
 //   late_payment_1:
-//     "Hola {{1}}, tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. Escribe "pagar" y te ayudamos antes de que afecte tu Índice de Confianza PagoYa."
-//   pti_drop_7d:
-//     "Hola {{1}}, tu Índice de Confianza PagoYa bajó esta semana. Tu área de mayor oportunidad ahora es {{2}}. Escríbenos y revisamos juntos qué pequeño ajuste puede cambiar la tendencia."
+//     "Hola {{1}}. Tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. ¿Quieres que te avise antes de tu próxima fecha de pago?"
+//   pti_drop_7d (C6 confirmed — {{2}} renders as es-MX label via labelDimension()):
+//     "{{1}}, tu PTI bajó {{3}} puntos esta semana. Tu área de mayor oportunidad ahora: {{2}}. Cuéntame qué pasó — a veces un ajuste pequeño cambia la trayectoria."
 //   stalled_14d:
-//     "Hola {{1}}, llevas más de dos semanas sin movimiento en tu historial PagoYa. Lo que construiste sigue ahí — pero el reloj está pausado. Escribe "pagar" para retomar tu progreso."
-//   pattern_late_2x:
-//     "Hola {{1}}, notamos dos pagos tardíos recientes en tu historial PagoYa. Tu historial lo resiste — pero un tercer retraso sí lo afecta. Escríbenos y configuramos un recordatorio de pago."
-//   module_unlock_1 (teaser — full text sent in-session after user replies "1"):
-//     "Tu primer módulo de educación financiera está listo, {{1}}. Tarda menos de 3 minutos. Responde con *1* para recibirlo ahora."
-//   module_unlock_2 (teaser):
-//     "Tu Módulo 2 de Paula está disponible, {{1}}: Ahorro e Ingresos. Responde con *2* para recibirlo — tarda menos de 3 minutos."
-//   module_unlock_3 (teaser):
-//     "Tu Módulo 3 de Paula está listo, {{1}}: Crédito y Deuda. Responde con *3* para comenzar tu siguiente lección."
-//   module_unlock_4 (teaser):
-//     "Tu Módulo 4 de Paula está disponible, {{1}}: Presupuesto Familiar. Responde con *4* para recibirlo."
-//   module_unlock_5 (teaser):
-//     "Tu Módulo 5 de Paula está aquí, {{1}}: Planificación a Futuro. Responde con *5* para completar tu educación financiera."
-//   readiness_approaching:
-//     "Muy buen trabajo, {{1}}. Tu Índice de Confianza PagoYa llegó a {{2}} puntos — estás cerca del umbral para acceder a productos financieros formales. Sigue pagando puntualmente."
+//     "{{1}}, llevas 14 días sin movimiento en tu historial. Lo que construiste sigue ahí — pero el reloj está pausado. ¿Todo bien?"
+//   pattern_late_2x (C4 — removed unfulfillable reminder-adjustment offer; pivot to action):
+//     "{{1}}, dos pagos tardíos en 30 días: tu historial ya lo está resintiendo. Un tercero lo afecta más. Escribe *pagar* y retomamos desde aquí."
+//   module_unlock_1–5 (teaser — full content delivered in-session after digit reply):
+//     "{{1}}, acabas de hacer algo más importante de lo que parece. [full text]" (reply 1–5)
+//   readiness_approaching (C2 — value framing changed to avoid product-access implication):
+//     "{{1}}, estás a punto de alcanzar algo que muy poca gente sin cuenta bancaria logra: un perfil crediticio real. [...] Sigue así — estás construyendo el tipo de historial que los prestamistas formales valoran."
 //   not_yet_gap_report:
-//     "Hola {{1}}, tu Índice de Confianza PagoYa está en {{2}} puntos. Para llegar al siguiente nivel, los pagos puntuales y constantes son lo que más suma. ¡Tú puedes llegar!"
-//   remittance_profile:
-//     "Hola {{1}}, una pregunta para tu perfil financiero (opcional): ¿recibes dinero del extranjero de forma regular? Responde *1* si es Sí, o *2* si es No. Tu respuesta es confidencial."
-//   employment_profile:
-//     "Hola {{1}}, una pregunta rápida para tu perfil (opcional): ¿cuál es tu situación laboral? Escribe *opciones* para ver la lista y responde con el número. Información confidencial."
-//   address_tenure:
-//     "Hola {{1}}, última pregunta de tu perfil (opcional): ¿cuántos años llevas en tu domicilio actual? Responde *1* (menos de 6 meses), *2* (6m–2 años), o *3* (más de 2 años)."
-//   winback_30d:
-//     "¡Hola de nuevo, {{1}}! Hace más de 30 días que no registras un pago en PagoYa. Tu cuenta sigue activa — vuelve hoy y tu historial retoma desde donde lo dejaste."
+//     "{{1}}, llevas {{2}} días construyendo tu historial financiero desde cero. [...] Para llegar al siguiente nivel, lo que más te acercaría ahora mismo es: {{3}}."
+//   remittance_profile (K3a — SÍ/NO replies only; digits reserved for module teasers):
+//     "💸 *Una pregunta para tu perfil financiero:* ¿Recibes dinero del extranjero de forma regular? Responde *SÍ* o *NO*. _Esta información es voluntaria._"
+//   employment_profile (keeps 1–5 numeric; collision-free because last_trigger guard is send_queue SENT):
+//     "📋 *Una pregunta para tu perfil financiero:* ¿Cuál es tu situación laboral actual? [opciones 1–5]"
+//   address_tenure (K3b — A/B/C replies; digits reserved for module teasers):
+//     "🏠 *Última pregunta de tu perfil:* ¿Cuánto tiempo llevas en tu domicilio? Responde *A* (<6m) / *B* (6m–2a) / *C* (>2a)."
+//   winback_30d (dispatched from winbackCron, not evaluateTriggersForUser):
+//     "Hola {{1}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo."
 //
 // MARKETING (≤768 chars):
-//   free_credit_nudge:
-//     "¡Hola {{1}}! 🎁 Tienes $150 MXN de saldo de bienvenida en PagoYa para pagar servicios del hogar: CFE, agua, gas, Telmex y más. ¡Úsalo antes de que expire! Escribe "pagar" para comenzar."
+//   free_credit_nudge (C5 — no expiry claim; signup_bonus_config has no expiry column):
+//     "💳 {{1}}, tienes {{2}} pago(s) gratis esperándote. La próxima vez que pagues CFE, agua o cualquier servicio — la comisión desaparece automáticamente. Es tuyo. Úsalo."
 export const CONTENT_TEMPLATE_BODIES = "See JSDoc comment above for all 22 approved template bodies.";
 
 interface SeedRow {
@@ -138,12 +130,12 @@ const ROWS: SeedRow[] = [
   {
     trigger_type: "pti_cross_60", active: true, cooldown_days: 9999,
     template_en: null,
-    template_es: "{{nombre}}, 60 puntos PTI. Estás a un tramo de Plata. Tu dimensión más fuerte ahora mismo: {{strongest_dimension}}. Sigue así.",
+    template_es: "{{nombre}}, 60 puntos PTI. 🥈 Nivel Plata alcanzado. Tu dimensión más fuerte ahora mismo: {{strongest_dimension}}. Sigue así.",
   },
   {
     trigger_type: "pti_cross_80", active: true, cooldown_days: 9999,
     template_en: null,
-    template_es: "{{nombre}}, nivel Oro. 🥇 PTI {{pti_score}}. Llevas {{days_streak}} días construyendo esto. En el siguiente mensaje te cuento qué se abre desde aquí.",
+    template_es: "{{nombre}}, nivel Oro. 🥇 PTI {{pti_score}}. Llevas {{days_streak}} días construyendo esto. Eso es un historial real.",
   },
   {
     trigger_type: "milestone_90d", active: true, cooldown_days: 9999,
@@ -170,7 +162,7 @@ const ROWS: SeedRow[] = [
   {
     trigger_type: "pattern_late_2x", active: true, cooldown_days: 14,
     template_en: null,
-    template_es: "{{nombre}}, noto un patrón: dos pagos tardíos en 30 días. No es un juicio — es una señal. ¿Hay una fecha del mes que funcione mejor para tus pagos? Puedo ayudarte a ajustar los recordatorios.",
+    template_es: "{{nombre}}, dos pagos tardíos en 30 días: tu historial ya lo está resintiendo. Un tercero lo afecta más. Escribe *pagar* y retomamos desde aquí.",
   },
 
   // ── Educational — Literacy modules ───────────────────────────────────────────
@@ -299,7 +291,7 @@ Tu avance actual:
 
 Lo más cercano a completar: {{top_gap}}.
 
-Sigue así — cada pago es un paso más hacia tu primer crédito formal.`,
+Sigue así — estás construyendo el tipo de historial que los prestamistas formales valoran.`,
   },
   {
     // active=false: references partner handoff ("Paula encontró algo que podría
@@ -359,22 +351,19 @@ Sigue así — cada pago es un paso más hacia tu primer crédito formal.`,
   // ── Enrichment profile questions (deferred from Module 1) ────────────────────
   {
     trigger_type: "remittance_profile", active: true, cooldown_days: 9999,
+    // Replies: SÍ / NO only — digits reserved for module teasers and employment options.
     template_es: `💸 *Una pregunta para tu perfil financiero:*
 
   ¿Recibes dinero del extranjero de forma regular? (por ejemplo de un familiar en EE.UU. u otro país)
 
-  Responde:
-  *1* — Sí, recibo remesas o envíos del extranjero
-  *2* — No
+  Responde *SÍ* o *NO*.
 
   _Esta información es voluntaria y nos ayuda a mejorar tu perfil. Puedes ignorar este mensaje si prefieres._`,
     template_en: `💸 *Quick profile question:*
 
   Do you regularly receive money from abroad? (e.g. from a family member in the US or another country)
 
-  Reply:
-  *1* — Yes, I receive remittances or international transfers
-  *2* — No
+  Reply *YES* or *NO*.
 
   _This is optional. It helps us build your financial profile. Feel free to ignore this message._`,
   },
@@ -407,26 +396,29 @@ Sigue así — cada pago es un paso más hacia tu primer crédito formal.`,
   },
   {
     trigger_type: "address_tenure", active: true, cooldown_days: 9999,
+    // Replies: A/B/C — digits reserved for module teasers and employment options.
+    // "Última pregunta" is accurate: remittance is sent at +1d, employment at +8d,
+    // this at +15d from module_unlock_1 — always the last profile question in the sequence.
     template_es: `🏠 *Última pregunta de tu perfil:*
 
   ¿Cuánto tiempo llevas viviendo en tu domicilio actual?
 
-  Responde con el número:
-  *1* — Menos de 6 meses
-  *2* — Entre 6 meses y 2 años
-  *3* — Más de 2 años
+  Responde con la letra:
+  *A* — Menos de 6 meses
+  *B* — Entre 6 meses y 2 años
+  *C* — Más de 2 años
 
-  _Esta información es voluntaria. Nos ayuda a entender mejor tu estabilidad y conectarte con opciones financieras adecuadas._`,
+  _Esta información es voluntaria. Nos ayuda a entender mejor tu estabilidad._`,
     template_en: `🏠 *Last profile question:*
 
   How long have you been living at your current address?
 
-  Reply with the number:
-  *1* — Less than 6 months
-  *2* — Between 6 months and 2 years
-  *3* — More than 2 years
+  Reply with the letter:
+  *A* — Less than 6 months
+  *B* — Between 6 months and 2 years
+  *C* — More than 2 years
 
-  _This is optional. It helps us understand your stability and connect you with the right financial options._`,
+  _This is optional. It helps us understand your stability._`,
   },
 
   // ── Partner-dependent — active=false until lending partner contract is signed ─

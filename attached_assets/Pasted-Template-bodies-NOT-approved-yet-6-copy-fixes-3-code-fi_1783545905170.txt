@@ -1,0 +1,47 @@
+Template bodies: NOT approved yet — 6 copy fixes + 3 code fixes required.
+Do not submit to Twilio until revised bodies are re-delivered with char counts.
+
+COPY FIXES
+C1. pti_cross_80: delete "— en el siguiente mensaje te contamos qué se abre."
+    That follow-up (readiness_hard) is held inactive. No unfulfillable promises.
+C2. readiness_approaching: replace "estás cerca del umbral para acceder a
+    productos financieros formales" with value-framing that promises nothing,
+    e.g. "estás construyendo el tipo de historial que los prestamistas
+    formales valoran." No implied product access until a partner is live.
+C3. pti_cross_60: verify tier thresholds. If Plata = 60, copy must read
+    "¡Nivel Plata alcanzado!" consistent with Bronce(40)/Oro(80) templates.
+C4. pattern_late_2x: remove "Tu historial lo resiste" — it contradicts
+    late_payment_1 ("dos seguidos sí lo afectan"). Acknowledge impact has
+    begun and pivot to the recovery action.
+C5. free_credit_nudge: check signup_bonus_config — does the $150 bonus have
+    an actual expiry? If yes, state the real window. If no, delete "antes de
+    que expire" (false urgency = Profeco + Meta rejection risk).
+C6. pti_drop_7d: confirm extractVariables maps weakest_dimension to the
+    es-MX display label (e.g. "Consistencia de Comportamiento"), never the
+    internal enum key. Show me the mapping.
+
+CODE FIXES
+K1. TRIGGER_PRIORITY is missing winback_30d, remittance_profile,
+    employment_profile, address_tenure. Complete list (0 = highest):
+    0 readiness_hard (held), 1 readiness_approaching, 2 not_yet_gap_report,
+    3 late_payment_1, 4 pattern_late_2x, 5 pti_drop_7d, 6 stalled_14d,
+    7 winback_30d, 8 first_payment, 9 pti_cross_80, 10 pti_cross_60,
+    11 pti_cross_40, 12 milestone_90d, 13 streak_5,
+    14–18 module_unlock_1–5, 19 remittance_profile, 20 employment_profile,
+    21 address_tenure, 22 free_credit_nudge.
+    Add a startup assertion: every active trigger_type must exist in
+    TRIGGER_PRIORITY, else ERROR log.
+K2. Remove the data-collection exemption from the 24h per-user throttle.
+    ALL business-initiated sends count. One nudge per user per 24h, period.
+K3. Reply-token collision: profile questions must not share digit replies
+    with module teasers. remittance_profile → responde SÍ o NO;
+    employment_profile keeps "opciones" flow; address_tenure → letters
+    (A/B/C) or enforce that no profile question is ever sent while a module
+    teaser reply is pending (last_trigger check must expire after 48h).
+    Also enforce fixed sequence remittance → employment → address with a
+    minimum 7-day gap between profile questions, so "última pregunta" in
+    address_tenure is always true.
+    Update the affected template bodies accordingly and re-deliver.
+
+Then: re-deliver all revised bodies (full text + variable map + char count)
+for final approval. Twilio submission remains gated on that approval.

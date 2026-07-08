@@ -927,8 +927,10 @@ router.post("/", async (req: Request, res: Response) => {
     // ── Income bucket collection intercept ────────────────────────────────────
     // Fires after handoff block. Intercepts a numeric 1–5 reply when:
     //   (a) users.declared_income_bucket IS NULL  (NULL guard at parse time)
-    //   (b) the last Paula outbound to this user was trigger_type='income_collection'
-    // User is never re-asked once bucket is set.
+    //   (b) paula_send_queue has a SENT income_collection row within the last 7 days
+    // Guard uses paula_send_queue SENT status (not paula_trigger_log last_trigger) because
+    // income_collection is enqueued without a trigger_log INSERT to preserve the module
+    // teaser reply window.
     {
       const INCOME_MAP: Record<string, string> = {
         "1": "lt_3k", "2": "3k_5k", "3": "5k_10k", "4": "10k_20k", "5": "gt_20k",
@@ -937,18 +939,20 @@ router.post("/", async (req: Request, res: Response) => {
       const mappedBucket = INCOME_MAP[msgTrimmed];
 
       if (mappedBucket) {
-        // Check if last Paula outbound was income_collection AND bucket not yet set
         const incCheck = await db.execute(sql`
           SELECT u.declared_income_bucket,
-                 (SELECT trigger_type FROM paula_trigger_log
+                 (SELECT 1 FROM paula_send_queue
                   WHERE telefono = ${phoneKey}
-                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+                    AND trigger_type = 'income_collection'
+                    AND status = 'SENT'
+                    AND sent_at >= NOW() - INTERVAL '7 days'
+                  LIMIT 1) AS was_sent
           FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
         `);
         const incRow = incCheck.rows[0] as
-          { declared_income_bucket: string | null; last_trigger: string | null } | undefined;
+          { declared_income_bucket: string | null; was_sent: number | null } | undefined;
 
-        if (incRow && incRow.declared_income_bucket == null && incRow.last_trigger === "income_collection") {
+        if (incRow && incRow.declared_income_bucket == null && incRow.was_sent != null) {
           await db.execute(sql`
             UPDATE users SET declared_income_bucket = ${mappedBucket}
             WHERE telefono = ${phoneKey}
@@ -964,29 +968,33 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // ── Remittance profile reply intercept ───────────────────────────────────
-    // Fires after income-bucket block. Intercepts a 1/2 reply (or sí/no) when:
+    // Intercepts SÍ/NO replies when:
     //   (a) users.receives_remittances IS NULL (NULL guard)
-    //   (b) last Paula outbound was trigger_type='remittance_profile'
-    // Sets receives_remittances = true/false on users. FORWARD-ONLY:
-    // future SPEI-in loads for this user are tagged at webhook time;
-    // historical transactions are NOT modified.
+    //   (b) paula_send_queue has a SENT remittance_profile row within the last 7 days
+    // Digit replies ("1"/"2") intentionally NOT accepted — they are reserved for
+    // module teasers and employment options (K3 reply-token collision fix).
+    // Guard uses send_queue SENT status (not paula_trigger_log last_trigger) because
+    // remittance_profile is enqueued without a trigger_log INSERT.
     {
       const remitMsgTrimmed = userMessage.trim().toLowerCase();
-      const isRemitYes = remitMsgTrimmed === "1" || /^s[ií]$/i.test(remitMsgTrimmed);
-      const isRemitNo  = remitMsgTrimmed === "2" || remitMsgTrimmed === "no";
+      const isRemitYes = /^s[ií]$/i.test(remitMsgTrimmed);
+      const isRemitNo  = remitMsgTrimmed === "no";
 
       if (isRemitYes || isRemitNo) {
         const remitCheck = await db.execute(sql`
           SELECT u.receives_remittances,
-                 (SELECT trigger_type FROM paula_trigger_log
+                 (SELECT 1 FROM paula_send_queue
                   WHERE telefono = ${phoneKey}
-                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+                    AND trigger_type = 'remittance_profile'
+                    AND status = 'SENT'
+                    AND sent_at >= NOW() - INTERVAL '7 days'
+                  LIMIT 1) AS was_sent
           FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
         `);
         const remitRow = remitCheck.rows[0] as
-          { receives_remittances: boolean | null; last_trigger: string | null } | undefined;
+          { receives_remittances: boolean | null; was_sent: number | null } | undefined;
 
-        if (remitRow && remitRow.receives_remittances == null && remitRow.last_trigger === "remittance_profile") {
+        if (remitRow && remitRow.receives_remittances == null && remitRow.was_sent != null) {
           const flagValue = isRemitYes;
           await db.execute(sql`
             UPDATE users SET receives_remittances = ${flagValue}
@@ -1018,9 +1026,11 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // ── Employment type reply intercept ──────────────────────────────────────
-    // Fires after remittance block. Intercepts a numeric 1–5 reply when:
+    // Intercepts a numeric 1–5 reply when:
     //   (a) users.employment_type IS NULL
-    //   (b) last Paula outbound to this user was trigger_type='employment_profile'
+    //   (b) paula_send_queue has a SENT employment_profile row within the last 7 days
+    // Guard uses send_queue SENT status (not paula_trigger_log last_trigger) because
+    // employment_profile is enqueued without a trigger_log INSERT.
     {
       const EMPLOYMENT_MAP: Record<string, string> = {
         "1": "formal", "2": "informal", "3": "gig", "4": "unemployed", "5": "prefer_not_say",
@@ -1031,15 +1041,18 @@ router.post("/", async (req: Request, res: Response) => {
       if (mappedEmployment) {
         const empCheck = await db.execute(sql`
           SELECT u.employment_type,
-                 (SELECT trigger_type FROM paula_trigger_log
+                 (SELECT 1 FROM paula_send_queue
                   WHERE telefono = ${phoneKey}
-                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+                    AND trigger_type = 'employment_profile'
+                    AND status = 'SENT'
+                    AND sent_at >= NOW() - INTERVAL '7 days'
+                  LIMIT 1) AS was_sent
           FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
         `);
         const empRow = empCheck.rows[0] as
-          { employment_type: string | null; last_trigger: string | null } | undefined;
+          { employment_type: string | null; was_sent: number | null } | undefined;
 
-        if (empRow && empRow.employment_type == null && empRow.last_trigger === "employment_profile") {
+        if (empRow && empRow.employment_type == null && empRow.was_sent != null) {
           await db.execute(sql`
             UPDATE users SET employment_type = ${mappedEmployment}
             WHERE telefono = ${phoneKey}
@@ -1055,29 +1068,34 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // ── Address tenure reply intercept ────────────────────────────────────────
-    // Intercepts a numeric 1–3 reply when:
+    // Intercepts A/B/C replies when:
     //   (a) users.address_tenure_bucket IS NULL
-    //   (b) last Paula outbound was trigger_type='address_tenure'
-    // Stores actual self-reported residence duration — NOT a proxy for signup date.
+    //   (b) paula_send_queue has a SENT address_tenure row within the last 7 days
+    // Replies are letters (not digits) to avoid collision with module teasers (1–5).
+    // Guard uses send_queue SENT status (not paula_trigger_log last_trigger) because
+    // address_tenure is enqueued without a trigger_log INSERT.
     {
       const TENURE_MAP: Record<string, string> = {
-        "1": "lt_6m", "2": "6m_2y", "3": "gt_2y",
+        "A": "lt_6m", "B": "6m_2y", "C": "gt_2y",
       };
-      const addrMsgTrimmed = userMessage.trim();
+      const addrMsgTrimmed = userMessage.trim().toUpperCase();
       const mappedTenure = TENURE_MAP[addrMsgTrimmed];
 
       if (mappedTenure) {
         const addrCheck = await db.execute(sql`
           SELECT u.address_tenure_bucket,
-                 (SELECT trigger_type FROM paula_trigger_log
+                 (SELECT 1 FROM paula_send_queue
                   WHERE telefono = ${phoneKey}
-                  ORDER BY fired_at DESC LIMIT 1) AS last_trigger
+                    AND trigger_type = 'address_tenure'
+                    AND status = 'SENT'
+                    AND sent_at >= NOW() - INTERVAL '7 days'
+                  LIMIT 1) AS was_sent
           FROM users u WHERE u.telefono = ${phoneKey} LIMIT 1
         `);
         const addrRow = addrCheck.rows[0] as
-          { address_tenure_bucket: string | null; last_trigger: string | null } | undefined;
+          { address_tenure_bucket: string | null; was_sent: number | null } | undefined;
 
-        if (addrRow && addrRow.address_tenure_bucket == null && addrRow.last_trigger === "address_tenure") {
+        if (addrRow && addrRow.address_tenure_bucket == null && addrRow.was_sent != null) {
           await db.execute(sql`
             UPDATE users SET address_tenure_bucket = ${mappedTenure}
             WHERE telefono = ${phoneKey}
@@ -1107,9 +1125,11 @@ router.post("/", async (req: Request, res: Response) => {
             (SELECT trigger_type
              FROM paula_trigger_log
              WHERE telefono = ${phoneKey}
+               AND trigger_type LIKE 'module_unlock_%'
+               AND fired_at >= NOW() - INTERVAL '48 hours'
              ORDER BY fired_at DESC
              LIMIT 1
-            ) AS last_trigger,
+            ) AS last_trigger,  -- null if no module_unlock_% row within 48h
             SPLIT_PART(NULLIF(TRIM(u.kyc_full_name), ''), ' ', 1) AS nombre,
             COALESCE(u.pti_score, 0)    AS pti_score,
             COALESCE(
