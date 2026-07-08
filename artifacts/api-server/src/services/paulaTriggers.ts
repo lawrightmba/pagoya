@@ -119,6 +119,47 @@ async function onCooldown(
   return isOnCooldownDB(db, telefono, triggerType, cooldownDays);
 }
 
+// ── Startup health check ──────────────────────────────────────────────────────
+// Called from index.ts after boot. Logs ERROR (not warn) if active template
+// count falls below the expected constant and surfaces the delta for the admin
+// dashboard. Does NOT crash the app — sending still works for active rows.
+export const PAULA_MESSAGES_EXPECTED_ACTIVE = 22; // 24 total - 2 partner-gated (readiness_hard, readiness_hard_step2)
+
+// Triggers that are intentionally kept inactive until a live lending partner exists.
+const KNOWN_INACTIVE_TRIGGERS = new Set(["readiness_hard", "readiness_hard_step2"]);
+
+// Expected active triggers = all registered triggers minus the known-inactive set.
+// Derived at module load so it stays in sync with the TRIGGER constant automatically.
+function deriveExpectedActive(): string[] {
+  // TRIGGER is defined later in this file; we reference it after module init via closure.
+  // We use a lazy getter pattern — this function is only called at runtime, not at import.
+  return Object.values(TRIGGER).filter(k => !KNOWN_INACTIVE_TRIGGERS.has(k));
+}
+
+export async function checkPaulaTemplateHealth(
+  db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
+): Promise<{ ok: boolean; activeCount: number; expected: number; missing: string[] }> {
+  const countRow = await db.execute(sql`
+    SELECT trigger_type FROM paula_messages WHERE active = TRUE ORDER BY trigger_type
+  `);
+  const activeKeys = (countRow.rows as Array<Record<string, unknown>>).map(r => String(r.trigger_type));
+  const activeCount = activeKeys.length;
+
+  const expectedKeys = deriveExpectedActive();
+  const missing = expectedKeys.filter(k => !activeKeys.includes(k));
+
+  if (activeCount < PAULA_MESSAGES_EXPECTED_ACTIVE || missing.length > 0) {
+    logger.error(
+      { activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing },
+      `[Paula] TEMPLATE HEALTH CHECK FAILED: only ${activeCount}/${PAULA_MESSAGES_EXPECTED_ACTIVE} expected active templates found — missing: ${missing.join(", ") || "none listed"}`,
+    );
+    return { ok: false, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing };
+  }
+
+  logger.info(`[Paula] Template health OK: ${activeCount} active templates`);
+  return { ok: true, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing: [] };
+}
+
 // ── Fire a trigger: log + enqueue (never sends inline) ───────────────────────
 async function fireTrigger(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
@@ -129,7 +170,24 @@ async function fireTrigger(
 ): Promise<void> {
   const tmpl = templates.get(triggerType);
   if (!tmpl) {
-    logger.warn(`[PaulaTriggers] No template found for trigger: ${triggerType} — skipping`);
+    logger.error(
+      { triggerType, telefono, pti_score: ctx.pti_score },
+      `[PaulaTriggers] MISSING TEMPLATE: trigger_type="${triggerType}" has no active row in paula_messages — skipping fire and writing FAILED sentinel to queue`,
+    );
+    // Write a FAILED sentinel to paula_send_queue so the gap is visible in the
+    // admin dashboard and not only in server logs.
+    const sentinelMsg = `[MISSING TEMPLATE: ${triggerType}]`;
+    try {
+      await db.execute(sql`
+        INSERT INTO paula_send_queue
+          (telefono, message, trigger_type, trigger_log_id, status, created_at, scheduled_at)
+        VALUES
+          (${telefono}, ${sentinelMsg}, ${triggerType}, NULL,
+           'FAILED', NOW(), NULL)
+      `);
+    } catch (sentinelErr) {
+      logger.error({ sentinelErr, triggerType, telefono }, "[PaulaTriggers] Failed to write missing-template sentinel to queue");
+    }
     return;
   }
 

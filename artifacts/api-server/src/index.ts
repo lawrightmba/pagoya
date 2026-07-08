@@ -5,6 +5,7 @@ import { startNudgePollCron } from "./services/nudgeService.js";
 import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 import { assertProductionSafety } from "./services/fairLendingAdjustment.js";
 import { startFairLendingRetestCron } from "./services/fairLendingRetestCron.js";
+import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 
 const rawPort = process.env["PORT"];
 
@@ -57,4 +58,14 @@ app.listen(port, (err) => {
   startNudgePollCron();
   startEnrichmentCrons();
   startFairLendingRetestCron();
+
+  // Non-blocking startup health check: logs ERROR if expected active templates
+  // are missing from paula_messages, surfaces delta for admin dashboard.
+  import("@workspace/db").then(({ db }) => {
+    checkPaulaTemplateHealth(db).catch((healthErr) =>
+      logger.error({ healthErr }, "[Paula] Template health check threw unexpectedly"),
+    );
+  }).catch((importErr) =>
+    logger.error({ importErr }, "[Paula] Failed to import db for template health check"),
+  );
 });

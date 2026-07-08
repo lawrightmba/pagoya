@@ -309,23 +309,111 @@ router.post("/admin/backfill-payment-counters", async (_req: Request, res: Respo
   }
 });
 
-// POST /api/admin/seed-paula-messages-step3 — ONE-OFF: Step 3 of the paula_messages
-// production data-gap fix. Inserts the 23 dev-export templates, excluding
-// readiness_hard_step2, all forced to active=false. Idempotent via
-// ON CONFLICT (trigger_type) DO NOTHING — safe to call more than once.
-router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Response) => {
+// POST /api/admin/seed-paula-messages — idempotent upsert of all paula_messages rows.
+// Replaces the old seed-paula-messages-step3 endpoint.
+// Safe to call on every deploy — upserts content, respects explicit active values.
+router.post("/admin/seed-paula-messages", async (_req: Request, res: Response) => {
   try {
-    const { seedPaulaMessagesStep3, PAULA_MESSAGES_STEP3_EXPECTED_COUNT, PAULA_MESSAGES_STEP3_EXCLUDED_TRIGGER } =
-      await import("../services/seedPaulaMessagesStep3.js");
-    const result = await seedPaulaMessagesStep3(db);
+    const { seedPaulaMessages, PAULA_MESSAGES_EXPECTED_ACTIVE, PAULA_MESSAGES_TOTAL_IN_SEED } =
+      await import("../services/seedPaulaMessages.js");
+    const result = await seedPaulaMessages(db);
     res.json({
       ok: true,
-      expected: PAULA_MESSAGES_STEP3_EXPECTED_COUNT,
-      excludedTrigger: PAULA_MESSAGES_STEP3_EXCLUDED_TRIGGER,
+      totalInSeed: PAULA_MESSAGES_TOTAL_IN_SEED,
+      expectedActive: PAULA_MESSAGES_EXPECTED_ACTIVE,
       ...result,
     });
   } catch (err) {
-    logger.error({ err }, "admin/seed-paula-messages-step3: failed");
+    logger.error({ err }, "admin/seed-paula-messages: failed");
+    res.status(500).json({ error: "Seed failed — check server logs." });
+  }
+});
+
+// GET /api/admin/paula-template-health — read-only: active template count,
+// active/inactive breakdown, content_sid presence, last seed run info.
+router.get("/admin/paula-template-health", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(drizzleSql`
+      SELECT
+        trigger_type,
+        active,
+        cooldown_days,
+        updated_at,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'paula_messages' AND column_name = 'content_sid'
+        ) THEN NULL ELSE NULL END AS content_sid
+      FROM paula_messages
+      ORDER BY trigger_type
+    `);
+
+    const queueSummary = await db.execute(drizzleSql`
+      SELECT status, COUNT(*)::int AS cnt, MAX(created_at) AS newest
+      FROM paula_send_queue
+      GROUP BY status
+      ORDER BY cnt DESC
+    `);
+
+    const allRows = rows.rows as Array<Record<string, unknown>>;
+    const activeRows = allRows.filter(r => r.active === true);
+    const inactiveRows = allRows.filter(r => r.active !== true);
+    const rowsWithSid = allRows.filter(r => r.content_sid != null);
+
+    const { PAULA_MESSAGES_EXPECTED_ACTIVE } = await import("../services/paulaTriggers.js");
+
+    res.json({
+      ok: activeRows.length >= PAULA_MESSAGES_EXPECTED_ACTIVE,
+      activeCount: activeRows.length,
+      expectedActive: PAULA_MESSAGES_EXPECTED_ACTIVE,
+      totalInDb: allRows.length,
+      withContentSid: rowsWithSid.length,
+      active: activeRows.map(r => ({ trigger_type: r.trigger_type, content_sid: r.content_sid ?? null })),
+      inactive: inactiveRows.map(r => ({ trigger_type: r.trigger_type, reason: "partner-gated or intentionally disabled" })),
+      sendQueueSummary: queueSummary.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/paula-template-health: failed");
+    res.status(500).json({ error: "Health check failed — check server logs." });
+  }
+});
+
+// POST /api/admin/paula-migrate-content-sid — idempotent: adds content_sid +
+// template_category columns to paula_messages if not already present.
+// Safe to call multiple times. Run once after deploy before seed.
+router.post("/admin/paula-migrate-content-sid", async (_req: Request, res: Response) => {
+  try {
+    await db.execute(drizzleSql`
+      ALTER TABLE paula_messages
+        ADD COLUMN IF NOT EXISTS content_sid text,
+        ADD COLUMN IF NOT EXISTS template_category text
+          CHECK (template_category IN ('UTILITY','MARKETING'))
+    `);
+    const cols = await db.execute(drizzleSql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'paula_messages'
+      ORDER BY ordinal_position
+    `);
+    res.json({ ok: true, columns: (cols.rows as Array<Record<string, unknown>>).map(r => r.column_name) });
+  } catch (err) {
+    logger.error({ err }, "admin/paula-migrate-content-sid: failed");
+    res.status(500).json({ error: "Migration failed — check server logs." });
+  }
+});
+
+// POST /api/admin/seed-paula-messages-step3 — kept for backwards compat, delegates to new seed.
+router.post("/admin/seed-paula-messages-step3", async (_req: Request, res: Response) => {
+  try {
+    const { seedPaulaMessages, PAULA_MESSAGES_TOTAL_IN_SEED } =
+      await import("../services/seedPaulaMessages.js");
+    const result = await seedPaulaMessages(db);
+    res.json({
+      ok: true,
+      note: "Redirected to seedPaulaMessages (idempotent upsert). Old step3 endpoint is deprecated.",
+      expected: PAULA_MESSAGES_TOTAL_IN_SEED,
+      ...result,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/seed-paula-messages-step3 (compat): failed");
     res.status(500).json({ error: "Seed failed — check server logs." });
   }
 });

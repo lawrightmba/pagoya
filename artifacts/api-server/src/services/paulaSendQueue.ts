@@ -14,7 +14,7 @@
 
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { sendWhatsApp } from "../lib/whatsapp.js";
+import { sendWhatsApp, sendWhatsAppTemplate } from "../lib/whatsapp.js";
 import { getPartnerDisplayName } from "./readinessGate.js";
 
 const MAX_ATTEMPTS = 3;
@@ -26,6 +26,56 @@ const BATCH_SIZE   = 10;
 // trigger evaluator, queue enqueueing, or any other part of the pipeline,
 // so we can still see what WOULD have been sent via logs.
 const PAULA_SENDING_ENABLED = process.env.PAULA_SENDING_ENABLED === "true";
+
+// ── Session-window check ──────────────────────────────────────────────────────
+// Returns true if the user sent an inbound message within the last 24 hours,
+// meaning we are inside their open WhatsApp session and freeform sends are permitted.
+// Outside a session window, business-initiated sends require a Twilio Content SID
+// (Meta-approved template) — freeform text is silently dropped by WhatsApp.
+async function isWithin24hSession(
+  db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
+  telefono: string,
+): Promise<boolean> {
+  const r = await db.execute(sql`
+    SELECT 1 FROM paula_inbound_log
+    WHERE telefono = ${telefono}
+      AND received_at >= NOW() - INTERVAL '24 hours'
+    LIMIT 1
+  `);
+  return r.rows.length > 0;
+}
+
+// ── Template SID lookup ───────────────────────────────────────────────────────
+// Returns { contentSid, variables } for a business-initiated send, or null if
+// the template has no content_sid assigned yet (Workstream B pending approval).
+async function getTemplateSid(
+  db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
+  triggerType: string,
+  message: string,
+): Promise<{ contentSid: string; variables: Record<string, string> } | null> {
+  // Check if content_sid column exists (may not yet be in prod during migration window)
+  const colCheck = await db.execute(sql`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'paula_messages' AND column_name = 'content_sid'
+    LIMIT 1
+  `);
+  if (!colCheck.rows.length) return null;
+
+  const r = await db.execute(sql`
+    SELECT content_sid FROM paula_messages
+    WHERE trigger_type = ${triggerType} AND content_sid IS NOT NULL
+    LIMIT 1
+  `);
+  if (!r.rows.length) return null;
+
+  const contentSid = String((r.rows[0] as Record<string, unknown>).content_sid);
+
+  // Extract Mustache variable values from the pre-rendered message.
+  // The message was already rendered by injectVariables — we pass the rendered
+  // text as variable "1" (body) since Paula templates are single-body templates.
+  // When multi-variable templates are added, this mapping should be extended.
+  return { contentSid, variables: { "1": message } };
+}
 
 // ── Enqueue a WhatsApp send ───────────────────────────────────────────────────
 export async function enqueueWhatsApp(
@@ -84,7 +134,34 @@ export async function processSendQueue(): Promise<void> {
 
     try {
       if (PAULA_SENDING_ENABLED) {
-        await sendWhatsApp(telefono, message);
+        // B3 — Session-window enforcement:
+        // All Paula triggers are business-initiated (cron-fired, not reply-triggered).
+        // If the user is within their 24h WhatsApp session we can use freeform.
+        // If not, we MUST use an approved Twilio Content template (content_sid).
+        // Sending freeform outside a session window = silent drop by WhatsApp.
+        const withinSession = await isWithin24hSession(db, telefono);
+
+        if (withinSession) {
+          // Within session — freeform permitted
+          await sendWhatsApp(telefono, message);
+          logger.info({ id, telefono, triggerType, withinSession: true }, "[SendQueue] Freeform send (within session)");
+        } else {
+          // Outside session — require approved Content SID
+          const tmplSid = await getTemplateSid(db, triggerType, message);
+          if (!tmplSid) {
+            // No content_sid configured yet — mark FAILED loudly, do not attempt freeform
+            const errMsg = `Business-initiated send blocked: trigger="${triggerType}" has no content_sid and recipient is outside 24h session window. Assign an approved Twilio Content SID to proceed.`;
+            logger.error({ id, telefono, triggerType }, `[SendQueue] ${errMsg}`);
+            await db.execute(sql`
+              UPDATE paula_send_queue
+              SET status = 'FAILED', error_detail = ${errMsg}
+              WHERE id = ${id}
+            `);
+            continue;
+          }
+          await sendWhatsAppTemplate(telefono, tmplSid.contentSid, tmplSid.variables);
+          logger.info({ id, telefono, triggerType, withinSession: false, contentSid: tmplSid.contentSid }, "[SendQueue] Template send (outside session)");
+        }
 
         await db.execute(sql`
           UPDATE paula_send_queue
