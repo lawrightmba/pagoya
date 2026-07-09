@@ -198,12 +198,26 @@ function deriveExpectedActive(): string[] {
 
 export async function checkPaulaTemplateHealth(
   db: Awaited<ReturnType<typeof import("@workspace/db").default>>,
-): Promise<{ ok: boolean; activeCount: number; expected: number; missing: string[] }> {
+): Promise<{ ok: boolean; activeCount: number; expected: number; missing: string[]; synced_sids: number }> {
   const countRow = await db.execute(sql`
     SELECT trigger_type FROM paula_messages WHERE active = TRUE ORDER BY trigger_type
   `);
   const activeKeys = (countRow.rows as Array<Record<string, unknown>>).map(r => String(r.trigger_type));
   const activeCount = activeKeys.length;
+
+  // Count how many active templates have a Twilio content_sid synced.
+  // Guard against pre-migration environments where the column may not exist yet.
+  let synced_sids = 0;
+  try {
+    const sidRow = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM paula_messages
+      WHERE active = TRUE AND content_sid IS NOT NULL
+    `);
+    synced_sids = Number((sidRow.rows[0] as Record<string, unknown>)?.cnt ?? 0);
+  } catch {
+    // column doesn't exist yet — treat as 0
+  }
 
   const expectedKeys = deriveExpectedActive();
   const missing = expectedKeys.filter(k => !activeKeys.includes(k));
@@ -213,7 +227,7 @@ export async function checkPaulaTemplateHealth(
       { activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing },
       `[Paula] TEMPLATE HEALTH CHECK FAILED: only ${activeCount}/${PAULA_MESSAGES_EXPECTED_ACTIVE} expected active templates found — missing: ${missing.join(", ") || "none listed"}`,
     );
-    return { ok: false, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing };
+    return { ok: false, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing, synced_sids };
   }
 
   // Startup assertion: every active trigger_type must exist in TRIGGER_PRIORITY.
@@ -228,8 +242,8 @@ export async function checkPaulaTemplateHealth(
     );
   }
 
-  logger.info(`[Paula] Template health OK: ${activeCount} active templates`);
-  return { ok: true, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing: [] };
+  logger.info(`[Paula] Template health OK: ${activeCount} active templates | synced_sids: ${synced_sids}/${PAULA_MESSAGES_EXPECTED_ACTIVE}`);
+  return { ok: true, activeCount, expected: PAULA_MESSAGES_EXPECTED_ACTIVE, missing: [], synced_sids };
 }
 
 // ── Fire a trigger: log + enqueue (never sends inline) ───────────────────────

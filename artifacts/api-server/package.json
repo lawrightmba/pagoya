@@ -15,7 +15,8 @@
     "test:sandbox": "tsx src/billpay/scripts/sandbox-test.ts",
     "twilio:dry-run": "tsx src/scripts/submitTwilioTemplates.ts --dry-run",
     "twilio:submit": "tsx src/scripts/submitTwilioTemplates.ts",
-    "twilio:status": "tsx src/scripts/checkTemplateApprovals.ts"
+    "twilio:status": "tsx src/scripts/checkTemplateApprovals.ts",
+    "twilio:sync": "tsx src/scripts/syncTwilioApprovals.ts"
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.0",

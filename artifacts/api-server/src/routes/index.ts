@@ -392,6 +392,7 @@ router.get("/admin/paula-template-health", async (_req: Request, res: Response) 
       expectedActive: PAULA_MESSAGES_EXPECTED_ACTIVE,
       totalInDb: allRows.length,
       // Step 7.5 gate — must be "22/22" before flipping PAULA_SENDING_ENABLED=true
+      synced_sids: sidCoverage,
       sid_coverage: `${sidCoverage}/${PAULA_MESSAGES_EXPECTED_ACTIVE}`,
       sending_gate_passed: sidCoverage >= PAULA_MESSAGES_EXPECTED_ACTIVE,
       sid_column_exists: hasSidColumn,
@@ -441,6 +442,73 @@ router.post("/admin/paula-migrate-content-sid", async (_req: Request, res: Respo
   } catch (err) {
     logger.error({ err }, "admin/paula-migrate-content-sid: failed");
     res.status(500).json({ error: "Migration failed — check server logs." });
+  }
+});
+
+// POST /api/admin/sync-template-sids — writes content_sid + approved_category
+// to paula_messages for approved Twilio templates. Idempotent: skips rows
+// whose content_sid + template_category already match the incoming values.
+// Body: { templates: [{ trigger_type, content_sid, approved_category }] }
+// Called by twilio:sync script; also usable manually for prod after approval.
+router.post("/admin/sync-template-sids", async (req: Request, res: Response) => {
+  try {
+    const raw = req.body as unknown;
+    if (
+      !raw ||
+      typeof raw !== "object" ||
+      !Array.isArray((raw as Record<string, unknown>).templates)
+    ) {
+      res.status(400).json({ error: "Body must be { templates: [...] }" });
+      return;
+    }
+
+    const templates = (raw as { templates: Array<Record<string, unknown>> }).templates;
+    const written: string[] = [];
+    const skipped: string[] = [];
+
+    for (const t of templates) {
+      const { trigger_type, content_sid, approved_category } = t as {
+        trigger_type?: string;
+        content_sid?: string;
+        approved_category?: string;
+      };
+
+      if (!trigger_type || !content_sid || !approved_category) {
+        res.status(400).json({
+          error: `Each entry needs trigger_type, content_sid, approved_category — got: ${JSON.stringify(t)}`,
+        });
+        return;
+      }
+
+      if (!["UTILITY", "MARKETING"].includes(approved_category.toUpperCase())) {
+        res.status(400).json({
+          error: `approved_category must be UTILITY or MARKETING — got: ${approved_category}`,
+        });
+        return;
+      }
+
+      const result = await db.execute(drizzleSql`
+        UPDATE paula_messages
+        SET content_sid       = ${content_sid},
+            template_category = ${approved_category.toUpperCase()}
+        WHERE trigger_type = ${trigger_type}
+          AND (content_sid IS DISTINCT FROM ${content_sid}
+               OR template_category IS DISTINCT FROM ${approved_category.toUpperCase()})
+        RETURNING trigger_type
+      `);
+
+      if ((result.rows as unknown[]).length > 0) {
+        written.push(trigger_type);
+      } else {
+        skipped.push(trigger_type);
+      }
+    }
+
+    logger.info({ written, skipped }, "admin/sync-template-sids: complete");
+    res.json({ ok: true, written, skipped });
+  } catch (err) {
+    logger.error({ err }, "admin/sync-template-sids: failed");
+    res.status(500).json({ error: "Sync failed — check server logs." });
   }
 });
 
