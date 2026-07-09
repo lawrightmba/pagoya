@@ -2,10 +2,12 @@ import { eq, sql, desc, and } from "drizzle-orm";
 import { db, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
 import type { Wallet, WalletTransaction } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
+import { normalizePhone } from "../../lib/phoneUtils.js";
 
 export type { Wallet, WalletTransaction };
 
-export async function getOrCreateWallet(telefono: string): Promise<Wallet> {
+export async function getOrCreateWallet(rawTelefono: string): Promise<Wallet> {
+  const telefono = normalizePhone(rawTelefono);
   const existing = await db
     .select()
     .from(walletsTable)

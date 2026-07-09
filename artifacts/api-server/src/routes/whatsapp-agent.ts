@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { eq, sql as drizzleSql } from "drizzle-orm";
 import { db, usersTable, walletsTable, signupBonusConfigTable } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { normalizePhone } from "../lib/phoneUtils.js";
 import { getSession, saveSession, type PendingWithdrawalSession, type PendingP2PSession } from "../services/whatsapp-sessions.js";
 import {
   createPendingPayment,
@@ -553,13 +554,8 @@ router.post("/", async (req: Request, res: Response) => {
   const rawWaId: string = body.WaId ?? from;
 
   // Normalise: strip "whatsapp:+" prefix, keep digits only → session key + reply target
-  const phoneKey = (() => {
-    const raw = rawWaId.replace(/^whatsapp:\+?/i, "").replace(/\D/g, "");
-    // Mexico: WhatsApp sometimes sends 521XXXXXXXXXX (13 digits, legacy mobile prefix).
-    // Correct E.164 is 52XXXXXXXXXX (12 digits). Strip the extra 1.
-    if (/^521\d{10}$/.test(raw)) return "52" + raw.slice(3);
-    return raw;
-  })();
+  // normalizePhone converts +52XXXXXXXXXX / 52XXXXXXXXXX / 521XXXXXXXXXX → 10-digit canonical
+  const phoneKey = normalizePhone(rawWaId.replace(/^whatsapp:\+?/i, ""));
 
   // Paula inbound log — fire-and-forget, same pattern as paula_interaction events
   // topic_category powers financial_curiosity_index in PTI v4.0 (proactive/total ratio)
