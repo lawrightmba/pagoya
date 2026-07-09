@@ -139,23 +139,24 @@ function buildSampleVars(
 }
 
 // ─── Fetch existing Content list (handles pagination) ───────────────────────
+// Returns a Map from friendly_name → sid so we can record the real SID on skip.
 
-async function fetchExistingFriendlyNames(auth: string): Promise<Set<string>> {
-  const names = new Set<string>();
+async function fetchExistingContent(auth: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
   let pageUrl: string | null = contentApiUrl("/Content");
 
   while (pageUrl) {
     const data = (await twilioGet(auth, pageUrl)) as {
-      contents?: Array<{ friendly_name: string }>;
+      contents?: Array<{ sid: string; friendly_name: string }>;
       meta?: { next_page_url?: string };
     };
     for (const c of data.contents ?? []) {
-      names.add(c.friendly_name);
+      map.set(c.friendly_name, c.sid);
     }
     pageUrl = data.meta?.next_page_url ?? null;
   }
 
-  return names;
+  return map;
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -223,8 +224,18 @@ async function main(): Promise<void> {
   const auth = twilioAuth();
 
   console.log(`\nFetching existing Twilio Content templates for idempotency check…`);
-  const existing = await fetchExistingFriendlyNames(auth);
+  const existing = await fetchExistingContent(auth);
   console.log(`  Found ${existing.size} existing template(s) on account.\n`);
+
+  // ── Load prior results and build a merge index (preserves non-null SIDs) ──
+  // Bug fix (b): never overwrite results destructively. Merge by trigger_type,
+  // keeping any non-null content_sid / approval_status from a prior run.
+  const priorResults: ResultEntry[] = fs.existsSync(RESULTS_JSON)
+    ? (JSON.parse(fs.readFileSync(RESULTS_JSON, "utf-8")) as ResultEntry[])
+    : [];
+  const priorByTrigger = new Map<string, ResultEntry>(
+    priorResults.map((r) => [r.trigger_type, r]),
+  );
 
   const results: ResultEntry[] = [];
   let submitted = 0;
@@ -236,13 +247,18 @@ async function main(): Promise<void> {
     const label = `[${String(i + 1).padStart(2, "0")}/${entries.length}] ${entry.trigger_type}`;
 
     if (existing.has(entry.friendly_name)) {
-      console.log(`⏭  ${label} — already exists (${entry.friendly_name}), skipping`);
+      // Bug fix (a): write the real SID from the live Content list, not null.
+      const realSid = existing.get(entry.friendly_name)!;
+      // Preserve prior approval_status if it held more information (e.g. "received").
+      const prior = priorByTrigger.get(entry.trigger_type);
+      const priorStatus = prior?.content_sid ? prior.approval_status : null;
+      console.log(`⏭  ${label} — already exists (${entry.friendly_name}), sid=${realSid}`);
       results.push({
         trigger_type: entry.trigger_type,
         friendly_name: entry.friendly_name,
-        content_sid: null,
+        content_sid: realSid,
         category_submitted: entry.category,
-        approval_status: "skipped:already_exists",
+        approval_status: priorStatus ?? "skipped:already_exists",
         skipped: true,
       });
       skipped++;
