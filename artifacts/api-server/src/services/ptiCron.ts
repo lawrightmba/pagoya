@@ -101,14 +101,20 @@ async function checkPtiMilestones(
         // Inserting only into wallet_transactions without updating balance_mxn leaves the spendable
         // balance unchanged — the user would see the credit in history but couldn't spend it.
         if (m.mxn > 0) {
+          // Look up wallet_id by telefono — wallet_transactions requires wallet_id (UUID FK), not telefono
           await db.execute(sql`
-            INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
-            VALUES (${telefono}, 'PTI_REWARD', ${m.mxn}, 'confirmed', ${`Premio PTI: ${m.label}`}, NOW())
-          `).catch(() => {});
+            INSERT INTO wallet_transactions (wallet_id, type, amount_mxn, status, description, created_at)
+            SELECT id, 'PTI_REWARD', ${m.mxn}, 'confirmed', ${`Premio PTI: ${m.label}`}, NOW()
+            FROM wallets WHERE user_id = ${telefono} LIMIT 1
+          `).catch((err: unknown) => {
+            logger.error({ err, telefono, milestone: m.label }, "pti-milestone: wallet_transactions insert failed");
+          });
           await db.execute(sql`
             UPDATE wallets SET balance_mxn = balance_mxn + ${m.mxn}, updated_at = NOW()
             WHERE user_id = ${telefono}
-          `).catch(() => {});
+          `).catch((err: unknown) => {
+            logger.error({ err, telefono, milestone: m.label }, "pti-milestone: wallets balance update failed");
+          });
         }
         // Mark uncelebrated so the app shows the celebration modal on next open
         await db.execute(sql`

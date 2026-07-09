@@ -1,3 +1,4 @@
+- [Twilio HX7b08a submission incident](twilio-hx7b08a-incident.md) — welcome_activation submitted July 8 without Lloyd approval; full SID HX7b08a0a13db8d010cec343f3bc6bb2e6; NOT submitted to Meta; standing gate: Lloyd must approve before any Twilio submit script runs
 - [WhatsApp agent architecture](whatsapp-agent.md) — inbound webhook live, session store in-memory, calls /api/agent/chat internally
 - [Growth sprint complete](tomorrow-growth-sprint.md) — all 3 wedges shipped + colonia backfill + bill discovery personalization + referral share card + win-back 30d
 - [Web signup bonus architecture](web-signup-bonus.md) — ref_code optional, defaults "WEB"; velocity check bypassed for WEB; signup_source field tracks web_organic vs rep_referral

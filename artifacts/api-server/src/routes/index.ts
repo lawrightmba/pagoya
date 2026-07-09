@@ -1127,34 +1127,77 @@ router.get("/admin/handoff-requests", async (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.get("/admin/weekly-baseline", adminAuth, async (_req: Request, res: Response) => {
   try {
-    const rows = await db.execute(drizzleSql`
-      SELECT
-        RIGHT(u.telefono, 4)                    AS last4,
-        u.signup_source,
-        u.signup_ref_code,
-        u.landing_page,
-        u.created_at::date                      AS signup_date,
-        (u.whatsapp_consent_at IS NOT NULL)     AS has_consent,
-        (w.balance_mxn)                         AS balance_mxn,
-        (SELECT COUNT(*)::int FROM bill_payments bp WHERE bp.telefono = u.telefono) AS payments,
-        u.pti_score
-      FROM users u
-      LEFT JOIN wallets w ON w.user_id = u.telefono
-      WHERE u.is_test_account IS NOT TRUE
-      ORDER BY u.created_at
-    `);
+    const [rows, ledgerRows] = await Promise.all([
+      db.execute(drizzleSql`
+        SELECT
+          RIGHT(u.telefono, 4)                    AS last4,
+          u.signup_source,
+          u.signup_ref_code,
+          u.landing_page,
+          u.created_at::date                      AS signup_date,
+          (u.whatsapp_consent_at IS NOT NULL)     AS has_consent,
+          (w.balance_mxn)                         AS balance_mxn,
+          (SELECT COUNT(*)::int FROM bill_payments bp WHERE bp.telefono = u.telefono) AS payments,
+          u.pti_score
+        FROM users u
+        LEFT JOIN wallets w ON w.user_id = u.telefono
+        WHERE u.is_test_account IS NOT TRUE
+        ORDER BY u.created_at
+      `),
+      // Ledger invariant: balance_mxn must equal confirmed-credits minus confirmed-debits.
+      // Debit types reduce balance; all other confirmed types are credits.
+      // Pending/failed txs are excluded — they must not affect balance.
+      db.execute(drizzleSql`
+        SELECT
+          RIGHT(w.user_id, 4)                                        AS last4,
+          w.balance_mxn::numeric                                     AS wallet_balance,
+          COALESCE(SUM(
+            CASE
+              WHEN wt.status = 'confirmed' AND wt.type IN ('bill_pay','spei_out','p2p_debit')
+                THEN -wt.amount_mxn::numeric
+              WHEN wt.status IN ('confirmed','completed')
+                AND wt.type NOT IN ('bill_pay','spei_out','p2p_debit')
+                THEN  wt.amount_mxn::numeric
+              ELSE 0
+            END
+          ), 0)                                                      AS ledger_sum,
+          ABS(w.balance_mxn::numeric - COALESCE(SUM(
+            CASE
+              WHEN wt.status = 'confirmed' AND wt.type IN ('bill_pay','spei_out','p2p_debit')
+                THEN -wt.amount_mxn::numeric
+              WHEN wt.status IN ('confirmed','completed')
+                AND wt.type NOT IN ('bill_pay','spei_out','p2p_debit')
+                THEN  wt.amount_mxn::numeric
+              ELSE 0
+            END
+          ), 0)) < 0.01                                              AS balanced
+        FROM wallets w
+        LEFT JOIN wallet_transactions wt ON wt.wallet_id = w.id
+        GROUP BY w.user_id, w.balance_mxn
+        ORDER BY w.user_id
+      `),
+    ]);
 
     const users = rows.rows as Record<string, unknown>[];
+    const ledger = ledgerRows.rows as { last4: string; wallet_balance: string; ledger_sum: string; balanced: boolean }[];
+    const ledgerMismatches = ledger.filter(r => !r.balanced);
+
     const totals = {
-      users_total:       users.length,
-      users_consented:   users.filter(r => r.has_consent).length,
+      users_total:        users.length,
+      users_consented:    users.filter(r => r.has_consent).length,
       users_with_payment: users.filter(r => (r.payments as number) > 0).length,
-      users_web_organic: users.filter(r => r.signup_source === "web_organic").length,
-      users_whatsapp:    users.filter(r => r.signup_source === "whatsapp_organic").length,
-      users_rep:         users.filter(r => r.signup_source === "rep_referral").length,
+      users_web_organic:  users.filter(r => r.signup_source === "web_organic").length,
+      users_whatsapp:     users.filter(r => r.signup_source === "whatsapp_organic").length,
+      users_rep:          users.filter(r => r.signup_source === "rep_referral").length,
     };
 
-    res.json({ as_of: new Date().toISOString(), totals, users });
+    const ledgerSummary = {
+      wallets_checked: ledger.length,
+      wallets_balanced: ledger.filter(r => r.balanced).length,
+      mismatches: ledgerMismatches,
+    };
+
+    res.json({ as_of: new Date().toISOString(), totals, users, ledger: ledgerSummary });
   } catch (err) {
     logger.error({ err }, "admin/weekly-baseline: failed");
     res.status(500).json({ error: "Failed" });

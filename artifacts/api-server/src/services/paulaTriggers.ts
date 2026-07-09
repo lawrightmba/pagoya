@@ -440,8 +440,9 @@ export async function evaluateTriggersForUser(
               WHERE telefono = ${telefono}
             `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY free_bill_credits credit failed"));
             db.execute(sql`
-              INSERT INTO wallet_transactions (telefono, type, amount_mxn, status, description, created_at)
-              VALUES (${telefono}, 'PTI_REWARD', 300, 'confirmed', 'Premio PTI: Perfil Listo', NOW())
+              INSERT INTO wallet_transactions (wallet_id, type, amount_mxn, status, description, created_at)
+              SELECT id, 'PTI_REWARD', 300, 'confirmed', 'Premio PTI: Perfil Listo', NOW()
+              FROM wallets WHERE user_id = ${telefono} LIMIT 1
             `).catch(err => logger.error({ err, telefono }, "[PaulaTriggers] READY wallet_transactions insert failed"));
             db.execute(sql`
               UPDATE wallets SET balance_mxn = balance_mxn + 300, updated_at = NOW()

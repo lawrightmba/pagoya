@@ -812,19 +812,31 @@ router.post("/withdraw", async (req: Request, res: Response) => {
       claveRastreo = stpResult.claveRastreo;
       stpId = stpResult.stpId;
     } catch (stpErr: unknown) {
-      // STP failed — refund the wallet atomically
+      // STP failed — refund the wallet atomically.
+      // Mark the spei_out tx as failed AND insert a matching credit tx so the
+      // ledger invariant (balance = SUM confirmed credits - SUM confirmed debits) holds.
       logger.error({ stpErr, cleanTel, amount }, "wallet: SPEI send failed — refunding wallet");
-      await db
-        .update(walletsTable)
-        .set({
-          balanceMxn: drizzleSql`balance_mxn + ${amount.toFixed(2)}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(walletsTable.id, wallet.id));
-      await db
-        .update(walletTransactionsTable)
-        .set({ status: "failed" })
-        .where(eq(walletTransactionsTable.id, txId));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(walletTransactionsTable)
+          .set({ status: "failed" })
+          .where(eq(walletTransactionsTable.id, txId));
+        await tx.insert(walletTransactionsTable).values({
+          walletId: wallet.id,
+          type: "spei_refund",
+          amountMxn: amount.toFixed(2),
+          status: "confirmed",
+          confirmedAt: new Date(),
+          description: `Reembolso SPEI — envío fallido`,
+        });
+        await tx
+          .update(walletsTable)
+          .set({
+            balanceMxn: drizzleSql`balance_mxn + ${amount.toFixed(2)}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(walletsTable.id, wallet.id));
+      });
       const msg = stpErr instanceof Error ? stpErr.message : "Error al enviar SPEI";
       res.status(502).json({ error: msg, code: "STP_FAILED", refunded: true });
       return;

@@ -164,14 +164,24 @@ export async function creditSignupBonus(
       return { success: false, reason: "wallet_not_found" };
     }
 
-    // Insert wallet transaction
+    // Insert wallet transaction + credit balance atomically
     const isWebSignup = repCode === "WEB";
-    await db.insert(walletTransactionsTable).values({
-      walletId: wallet.id,
-      type: "SIGNUP_BONUS",
-      amountMxn: String(amount),
-      status: "completed",
-      description: "Bono de bienvenida PagoYa — úsalo en tu primer pago",
+    await db.transaction(async (tx) => {
+      await tx.insert(walletTransactionsTable).values({
+        walletId: wallet.id,
+        type: "SIGNUP_BONUS",
+        amountMxn: String(amount),
+        status: "confirmed",
+        confirmedAt: new Date(),
+        description: "Bono de bienvenida PagoYa — úsalo en tu primer pago",
+      });
+      await tx
+        .update(walletsTable)
+        .set({
+          balanceMxn: sql`balance_mxn + ${String(amount)}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletsTable.id, wallet.id));
     });
 
     // Mark bonus as claimed on user record
