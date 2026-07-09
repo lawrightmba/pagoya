@@ -371,3 +371,9 @@ id = "-n-o5rzZxbDCd5EdvWLpt"
 uri = "file://docs/ws4-analytics-baseline.md"
 type = "text"
 title = "WS4 — Cloudflare/GA4 instructions + prod baseline snapshot"
+
+[[outputs]]
+id = "dxVlQglu5XzPNPVc3SbTf"
+uri = "file://artifacts/api-server/exports/pti-fairness-bundle.zip"
+type = "unspecified"
+title = "PTI Fairness-Analysis Bundle"
