@@ -6,6 +6,7 @@ import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 import { assertProductionSafety } from "./services/fairLendingAdjustment.js";
 import { startFairLendingRetestCron } from "./services/fairLendingRetestCron.js";
 import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
+import { logRailModes } from "./services/railModeCheck.js";
 
 const rawPort = process.env["PORT"];
 
@@ -54,6 +55,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
+  logRailModes().catch((err) => logger.error({ err }, "[rail-mode] probe failed"));
   siprelBalanceCheck.start();
   startNudgePollCron();
   startEnrichmentCrons();
