@@ -1,0 +1,35 @@
+AUTHORIZED — rejection-fix pass for the 16 UTILITY-rejected templates:
+
+X1. Pull the LIVE body of each of the 16 from Twilio (ground truth — not
+    ROWS[], not the artifact). For each, identify the exact start/end
+    variable violation. If any rejected body shows NO start/end violation
+    (milestone_90d and readiness_approaching may be in this class), flag
+    it separately for my review instead of guessing at a fix.
+
+X2. Propose corrected copy for each: minimal edits only — a fixed opener
+    before a leading variable (Hola {{1}} / ¡{{1}}!→ reworked / emoji+word),
+    a fixed closer after a trailing variable. Paula's voice and all prior
+    copy rules (no unfulfillable promises) unchanged. Deliver the full
+    before/after set with char counts for my approval. Nothing is deleted
+    or submitted until I approve.
+
+X3. Generator hardening: add START/END VARIABLE as a hard FAIL (exit 1)
+    in validateRows()/toPositional() — rule: the first and last
+    non-whitespace TOKEN of the positional body must not be a variable.
+    Prove it with a forced-fail test pasted. This check was claimed in the
+    original compliance review and evidently never enforced.
+
+X4. On my approval of X2: update ROWS[] canonical bodies, re-run seed
+    (drift hashes resync), regenerate artifact (0 errors), then per
+    template: DELETE old SID → create new → submit approval → merge new
+    SID into results file (the fixed non-destructive merge path). Paste
+    the final 23-row table: trigger_type | new/kept SID | status.
+
+X5. The 7 pending: NO ACTION. Accept Meta's categories when they resolve;
+    twilio:sync writes approved category to DB and emits the ROWS[]
+    category patch per standing policy. welcome_activation is NOT deleted.
+
+X6. Incident log, final correction: ONE unauthorized run. The July 8
+    22-template run was Lloyd's, authorized, in the Shell. The agent's
+    subsequent run created welcome_activation and destructively overwrote
+    the results file. Record it that way.
