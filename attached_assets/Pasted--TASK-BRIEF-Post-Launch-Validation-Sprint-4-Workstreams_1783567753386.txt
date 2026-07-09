@@ -1,0 +1,200 @@
+# TASK BRIEF: Post-Launch Validation Sprint — 4 Workstreams
+
+## Context
+PagoYa has its first organic production users: 3 web_organic signups from Monterrey (81x numbers, arrived via SADM SEO landing pages), 3 whatsapp_organic signups from Jun 11 (likely field-attributed, mis-tagged), and 1 web_organic from PV area code. All have $0 loaded and zero payments. Separately, 22 WhatsApp Content templates were submitted to Meta yesterday and are pending approval; the sending gate is sid_coverage-based and sending remains OFF.
+
+The four workstreams below are ordered by priority. Work each in a branch. **Same evidence standard as the template sprint: every completion claim must be backed by pasted output — a query result, a rendered page, an endpoint response, or a failing-then-passing test. No unverified checkmarks.**
+
+Do NOT touch: PTI scoring logic, the Twilio submission pipeline, PAULA_SENDING_ENABLED, or the 22 pending templates.
+
+---
+
+## WORKSTREAM 1 — Rep Attribution Integrity (bug fix + audit)
+
+Context: Rows joined Jun 11 (William Cameron Shaw + 2 others, same day) are tagged `whatsapp_organic`. These were almost certainly street-team field signups, meaning rep attribution silently failed. William Shaw (ENG-01) is being offboarded as a rep, so this is NOT about paying commissions retroactively — it is about (a) understanding why attribution failed and (b) making the mechanism trustworthy before the next rep is onboarded.
+
+1.1 DIAGNOSE (read-only, report before fixing):
+   - Document the intended attribution flow end-to-end: how is a rep's
+     referral supposed to be captured? Referral code at signup? Rep-specific
+     link with query param? WhatsApp deep link? Quote the actual code paths.
+   - Query the 3 Jun 11 signups: what attribution fields exist on their user
+     rows (referral_code, rep_id, source, utm params, anything)? Paste rows.
+   - Determine the failure mode: was attribution never captured at the entry
+     point, captured but not written, or written but overwritten by a
+     default 'whatsapp_organic' tag?
+   - Check the rep commission tables: were any commission rows created for
+     these signups? (Expected: no — confirm.)
+
+1.2 FIX:
+   - Repair the capture path so a rep-attributed signup writes rep_id +
+     source='rep_referral' atomically at user creation. Attribution must
+     never be silently defaulted — if a referral code is present but
+     invalid/unknown, log ERROR and store the raw code for manual review.
+   - Add attribution fields to the admin user view so future
+     misattributions are visible without SQL.
+
+1.3 OFFBOARD ENG-01:
+   - Deactivate William Shaw's rep account (rep login disabled, referral
+     code/link deactivated so it can't attribute new signups). Preserve all
+     historical rows — no deletes. Report any unpaid commission balance on
+     his account so Lloyd can settle it manually if owed.
+
+1.4 CLASSIFY the Jun 11 rows:
+   - Do NOT retroactively rewrite their source. Instead add a
+     source_note/admin annotation field and mark them
+     'probable ENG-01 field signup, attribution failed — see WS1 report'.
+     Historical data stays honest about what was actually captured.
+
+Acceptance: diagnosis report with pasted rows; forced-test showing a
+referral signup now writes rep_id correctly AND an invalid code logs ERROR;
+ENG-01 deactivated with balance report.
+
+---
+
+## WORKSTREAM 2 — welcome_activation Template + Opt-In Compliance
+
+Context: Every real user is stuck at registered/never-paid, and none of the
+22 submitted templates addresses that state. Also: the 3 Monterrey users
+came via web signup and have NEVER messaged Paula — business-initiated
+templates to them require documented WhatsApp opt-in under Meta policy.
+
+2.1 OPT-IN AUDIT (blocking — do first):
+   - Trace the web signup flow (/crear-cuenta and any variant): is there a
+     WhatsApp opt-in checkbox or consent language? Is consent recorded in
+     the DB (field name, value, timestamp)? Paste the relevant form code
+     and a sample user row.
+   - Trace the WhatsApp-native signup flow: an inbound first message is
+     implicit opt-in — confirm how/whether it's recorded.
+   - If web opt-in is NOT captured: add an explicit checkbox to the signup
+     form ("Acepto recibir mensajes de PagoYa por WhatsApp") storing
+     whatsapp_opt_in boolean + timestamp, AND add an opt_in gate to the
+     trigger evaluator: no business-initiated send to any user where
+     whatsapp_opt_in IS NOT TRUE. Existing users without recorded consent
+     are excluded from nudges until they either message Paula first
+     (inbound = opt-in, record it) or re-consent via a web banner.
+   - Report which of the current 7 real users would be eligible for
+     business-initiated sends under this gate.
+
+2.2 BONUS VERIFICATION:
+   - Confirm signup_bonus_config credited $150 MXN to each real user's
+     wallet at registration. Paste wallet balances for all 7. If any are
+     missing the credit, diagnose why before the template claims it exists.
+
+2.3 NEW TEMPLATE — welcome_activation:
+   - Trigger conditions: registered ≥48h AND zero completed bill_payments
+     AND whatsapp_opt_in=true AND not previously fired (fires once per
+     user). Respects the 24h per-user throttle and global breaker.
+   - TRIGGER_PRIORITY: insert between winback_30d and first_payment tier.
+   - Copy (es-MX, Paula voice, target ≤220 chars, UTILITY):
+     Draft 2 variants for Lloyd's review. Required elements: the $150 MXN
+     welcome balance already in their wallet (hardcode amount — bonus
+     change = new template approval, add the code comment), what they can
+     pay (CFE, agua, Telmex), no bank needed, CTA: escribe *pagar*.
+     Constraint: every sentence must be true if no lender ever materializes
+     (standing rule). No urgency/expiry claims (bonus has no expiry).
+   - Wire into ROWS[], VARIABLES_SCHEMA, teaser rules N/A (not a module),
+     seed, drift hashes. Regenerate twilio-submission.json — must show 23
+     entries, 0 errors. Do NOT submit to Twilio; Lloyd reviews the 2 copy
+     variants and submits the winner himself via twilio:submit (script's
+     idempotency will skip the existing 22).
+   - Update the sending gate expected count 22→23 AFTER the new template
+     is submitted (keep gate at 22 until then so the existing rollout
+     isn't blocked by an unsubmitted template).
+
+Acceptance: opt-in audit with pasted form code + user rows; eligibility
+report; wallet balance table; 2 copy variants delivered; regenerated
+artifact showing 23/0 errors; gate logic handles the 22→23 transition
+explicitly.
+
+---
+
+## WORKSTREAM 3 — Monterrey SEO Expansion
+
+Context: 3 organic Monterrey signups from 2 SADM landing pages with zero
+local presence = the only acquisition channel currently converting without
+headcount. Replicate the pattern.
+
+3.1 PAYMENT COVERAGE CHECK (blocking — do first):
+   - Verify via SIPREL/Taecel service catalog which Monterrey-relevant
+     services are actually payable end-to-end: SADM (Agua y Drenaje de
+     Monterrey), CFE (national — confirm), Telmex (national — confirm),
+     gas natural (which provider serves MTY and is it in catalog?).
+   - Paste the catalog entries or API responses. Any service we cannot
+     complete payment for does NOT get a landing page — a page that
+     converts a signup into a dead end burns the trust the page created.
+
+3.2 BUILD (only for verified-payable services):
+   - New landing pages following the existing SADM Monterrey page pattern
+     (same structure, JSON-LD schema, SEO/GEO stack integration):
+     a. CFE Monterrey ("Pagar CFE en Monterrey sin banco")
+     b. Second SADM variant targeting a different query intent if search
+        data supports it (e.g., "pagar agua Monterrey en línea" vs
+        "SADM sin banco") — avoid cannibalizing the existing pages
+     c. Gas natural MTY page ONLY if 3.1 verified the provider
+     d. A Monterrey city hub page linking the service pages (mirrors the
+        PV colonia-page architecture)
+   - Each page: unique title/meta/H1, es-MX copy consistent with existing
+     pages, internal links to/from existing SADM pages, added to sitemap,
+     llms.txt updated.
+   - Mobile rendering check: paste screenshots or rendered HTML — Monterrey
+     traffic is overwhelmingly mobile.
+
+3.3 MEASUREMENT:
+   - Ensure each new page fires distinct GA4 page_view with clean page
+     titles (the existing pages' titles are how we spotted the signal —
+     keep that legible).
+   - Add source tagging so a signup originating from a Monterrey landing
+     page carries source='web_organic' + landing_page path, so the next
+     cohort analysis doesn't require phone-prefix forensics.
+
+Acceptance: catalog verification pasted; list of pages built with URLs;
+sitemap/llms.txt diffs; landing_page attribution demonstrated with a test
+signup.
+
+---
+
+## WORKSTREAM 4 — GA4 & Bot Traffic Hygiene
+
+Context: Council Bluffs/Ashburn/Boardman/Dallas datacenter traffic is
+~50% of reported active users. The FI metrics story starts now — the
+baseline must be clean.
+
+4.1 CLOUDFLARE (server-side, preferred first line):
+   - Enable/verify Bot Fight Mode (or Super Bot Fight Mode if plan allows)
+     on both pagoyamx.com and pagoseguromx.com. Report current plan tier
+     and which toggles were changed.
+   - Add a WAF rule to challenge known datacenter ASNs hitting marketing
+     pages (Google Cloud/AWS/OVH crawler ranges) EXCEPT verified search
+     engine bots (Googlebot/Bingbot must not be blocked — SEO is the
+     working channel; use CF's verified-bot bypass).
+
+4.2 GA4 FILTERS:
+   - Define internal-traffic and unwanted-referral filters: document the
+     exact GA4 admin steps (Lloyd executes in the GA4 UI — agent cannot;
+     provide click-path instructions).
+   - Recommend a "Real Users" GA4 audience/segment definition excluding
+     the datacenter cities as a stopgap for reporting continuity, since
+     GA4 filters are not retroactive.
+
+4.3 BASELINE SNAPSHOT:
+   - Produce a one-time "clean baseline" report from available data:
+     real active users by city (MTY, CDMX, PV, other MX), sessions by
+     true source (organic, chatgpt.com referral, facebook, brevo, direct-
+     minus-datacenter estimate), and the 7-user signup funnel state.
+     This is the day-zero row of the FI Austin metrics story. Deliver as
+     a table Lloyd can drop into his tracking doc.
+   - Include the chatgpt.com / ai-assistant referral count explicitly —
+     GEO stack validation worth tracking as its own line.
+
+Acceptance: CF changes reported with before/after settings; GA4 click-path
+doc delivered; baseline table delivered.
+
+---
+
+## Sequencing
+Day 1: WS1.1 diagnosis + WS2.1 opt-in audit + WS3.1 catalog check (all
+read-only, all blocking their workstreams — run in parallel, report all
+three before any build work).
+Day 2+: fixes/builds in priority order WS2 → WS1 → WS3 → WS4.
+Throughout: twilio:status daily; if approvals hit 22/22 mid-sprint, pause
+and tell Lloyd — canary takes precedence over everything here.
