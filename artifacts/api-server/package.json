@@ -12,7 +12,10 @@
     "test:card": "vitest run src/wallet/tests/card-topup.test.ts",
     "test:pti": "vitest run src/services/tests/pti.test.ts",
     "test:fairlending": "vitest run src/services/tests/fairLendingAdjustment.test.ts",
-    "test:sandbox": "tsx src/billpay/scripts/sandbox-test.ts"
+    "test:sandbox": "tsx src/billpay/scripts/sandbox-test.ts",
+    "twilio:dry-run": "tsx src/scripts/submitTwilioTemplates.ts --dry-run",
+    "twilio:submit": "tsx src/scripts/submitTwilioTemplates.ts",
+    "twilio:status": "tsx src/scripts/checkTemplateApprovals.ts"
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.0",

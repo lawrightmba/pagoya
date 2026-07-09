@@ -1,0 +1,56 @@
+Build scripts/submitTwilioTemplates.ts — bulk-submits the 22 templates from
+artifacts/twilio-submission.json to Twilio Content API and requests WhatsApp
+approval. Then a companion status/sync script.
+
+SUBMISSION SCRIPT
+For each entry in twilio-submission.json:
+
+1. POST https://content.twilio.com/v1/Content
+   Auth: Basic (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN from env — never
+   hardcode)
+   JSON body:
+   {
+     "friendly_name": "<trigger_type>",        // e.g. "first_payment"
+     "language": "es_MX",
+     "variables": { "1": "María", "2": "45", ... },   // sample values —
+        REQUIRED for Meta review; realistic per variable map:
+        nombre→"María", pti_score→"45", days_streak→"62", pti_delta→"4",
+        weakest_dimension→"Historial de pagos",
+        strongest_dimension→"Consistencia", streak_days→"62",
+        top_gap→"días consecutivos de pago"
+     "types": { "twilio/text": { "body": "<positional body from JSON>" } }
+   }
+   → capture returned ContentSid (HX...)
+
+2. POST https://content.twilio.com/v1/Content/{ContentSid}/ApprovalRequests/whatsapp
+   JSON body:
+   { "name": "<trigger_type>", "category": "<UTILITY|MARKETING from JSON>" }
+   (name must be lowercase alphanumeric/underscores — trigger_types already
+   comply)
+
+3. Write results to artifacts/twilio-submission-results.json:
+   trigger_type, content_sid, category_submitted, approval_status
+
+Rate-limit politely (500ms between calls). Idempotency: before creating,
+GET existing Content list and skip any friendly_name already present —
+re-running must not create duplicates.
+
+STATUS SCRIPT — scripts/checkTemplateApprovals.ts
+For each ContentSid in results file:
+GET https://content.twilio.com/v1/Content/{sid}/ApprovalRequests
+Print a table: trigger_type | status (received/pending/approved/rejected) |
+approved category | rejection_reason if any.
+Flag any template where approved category ≠ submitted category.
+
+SYNC — when a template shows approved, write to DB:
+UPDATE paula_messages SET content_sid=$sid, template_category=$approvedCategory
+WHERE trigger_type=$trigger — via the admin route pattern for prod. Also
+update template_category in ROWS[] if Meta recategorized, so seed stays
+canonical.
+
+DRY RUN FIRST: run submission with a --dry-run flag that prints the exact
+22 request payloads without sending. I review that output, then you submit
+for real.
+
+Do NOT touch PAULA_SENDING_ENABLED. The 22/22 sid_coverage gate still
+controls go-live.
