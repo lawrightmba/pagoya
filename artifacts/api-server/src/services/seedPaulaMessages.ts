@@ -16,8 +16,8 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import type { db as DbType } from "@workspace/db";
 
-export const PAULA_MESSAGES_EXPECTED_ACTIVE = 22;
-export const PAULA_MESSAGES_TOTAL_IN_SEED = 24;
+export const PAULA_MESSAGES_EXPECTED_ACTIVE = 23;
+export const PAULA_MESSAGES_TOTAL_IN_SEED = 25;
 
 // ── Twilio Content template variable schemas ───────────────────────────────────
 // Maps trigger_type → positional variable index → UserContext field name.
@@ -49,6 +49,7 @@ export const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "readiness_hard":         { "1": "nombre", "2": "pti_score" },
   "not_yet_gap_report":     { "1": "nombre", "2": "pti_score" },
   "winback_30d":            { "1": "nombre" },
+  "welcome_activation":     { "1": "nombre" },
   "free_credit_nudge":      { "1": "nombre" },
   "remittance_profile":     { "1": "nombre" },
   "employment_profile":     { "1": "nombre" },
@@ -310,6 +311,17 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
     template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}} 👋 ¿Tienes un recibo de CFE, Telmex o agua pendiente? Te lo pago en 2 minutos desde aquí, sin filas ni efectivo. Solo dime el servicio y tu número de cuenta.",
+  },
+
+  // ── Welcome activation ────────────────────────────────────────────────────────
+  // Fires once after ≥48h with zero completed payments, gated on signup_bonus_claimed.
+  // Hardcoded $150 — if bonus amount changes a new template approval is required.
+  // Submitted as UTILITY; Meta may reclassify MARKETING due to bonus mention —
+  // acceptable per business decision. sync whatever Meta decides via twilio:sync.
+  {
+    trigger_type: "welcome_activation", active: true, cooldown_days: 9999,
+    template_en: null,
+    template_es: "🎁 ¡Tienes $150 MXN de bienvenida en tu wallet de PagoYa, {{nombre}}! Paga CFE, agua o Telmex directo desde tu cel — sin banco, sin filas. Escribe *pagar* para empezar.",
   },
 
   // ── Reward nudge ──────────────────────────────────────────────────────────────

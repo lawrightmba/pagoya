@@ -2,155 +2,184 @@
   {
     "trigger_type": "first_payment",
     "friendly_name": "PagoYa - first_payment",
-    "content_sid": "HX75c33019e6907c2811cea3e055e10f9b",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "streak_5",
     "friendly_name": "PagoYa - streak_5",
-    "content_sid": "HXdcf406d13d20c1ccbcb64e2907d7975c",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "pti_cross_40",
     "friendly_name": "PagoYa - pti_cross_40",
-    "content_sid": "HX738ef3b31fd11d2d8ad9a35949d77e97",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "pti_cross_60",
     "friendly_name": "PagoYa - pti_cross_60",
-    "content_sid": "HX32691d7e2039f027f2a40a28c9615458",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "pti_cross_80",
     "friendly_name": "PagoYa - pti_cross_80",
-    "content_sid": "HXaf54d3d4ca8b55ad351705d61086c91c",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "milestone_90d",
     "friendly_name": "PagoYa - milestone_90d",
-    "content_sid": "HXabf69c0b6c976e698ee285dd1015c2d7",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "late_payment_1",
     "friendly_name": "PagoYa - late_payment_1",
-    "content_sid": "HX6698deab822f34f616277824ec5fc890",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "pti_drop_7d",
     "friendly_name": "PagoYa - pti_drop_7d",
-    "content_sid": "HXad147748eac862de690b8682410b256c",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "stalled_14d",
     "friendly_name": "PagoYa - stalled_14d",
-    "content_sid": "HXb427136b336de45c1eed78412ff39577",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "pattern_late_2x",
     "friendly_name": "PagoYa - pattern_late_2x",
-    "content_sid": "HXcef00ea2d00b053c9adebd1f7b0d1169",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "module_unlock_1",
     "friendly_name": "PagoYa - module_unlock_1",
-    "content_sid": "HX3ac7af923fdcc8c1d8a77a0572094d5d",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "module_unlock_2",
     "friendly_name": "PagoYa - module_unlock_2",
-    "content_sid": "HX8b9587dec6839b7747a9fa662f11166b",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "module_unlock_3",
     "friendly_name": "PagoYa - module_unlock_3",
-    "content_sid": "HX856fc7652c47fedacc1f681181c268ee",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "module_unlock_4",
     "friendly_name": "PagoYa - module_unlock_4",
-    "content_sid": "HX84c92643806035f96bd73d0ec29397dc",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "module_unlock_5",
     "friendly_name": "PagoYa - module_unlock_5",
-    "content_sid": "HX5f2e7cb0d14e4033d1d9b5f6693de258",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "readiness_approaching",
     "friendly_name": "PagoYa - readiness_approaching",
-    "content_sid": "HX6641595ca6a1703090290246b4c26214",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "not_yet_gap_report",
     "friendly_name": "PagoYa - not_yet_gap_report",
-    "content_sid": "HXdf429aea0db23045326d801b4c70e6e0",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "winback_30d",
     "friendly_name": "PagoYa - winback_30d",
-    "content_sid": "HX9328ab8e2d74612f74acaf1a0c119b4b",
+    "content_sid": null,
     "category_submitted": "MARKETING",
+    "approval_status": "skipped:already_exists",
+    "skipped": true
+  },
+  {
+    "trigger_type": "welcome_activation",
+    "friendly_name": "PagoYa - welcome_activation",
+    "content_sid": "HX7b08a0a13db8d010cec343f3bc6bb2e6",
+    "category_submitted": "UTILITY",
     "approval_status": "received"
   },
   {
     "trigger_type": "free_credit_nudge",
     "friendly_name": "PagoYa - free_credit_nudge",
-    "content_sid": "HXca7237d4fc188e9ee70f3f5798eaf803",
+    "content_sid": null,
     "category_submitted": "MARKETING",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "remittance_profile",
     "friendly_name": "PagoYa - remittance_profile",
-    "content_sid": "HX4d3e3fbfe45035f0e11ee40034d32db3",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "employment_profile",
     "friendly_name": "PagoYa - employment_profile",
-    "content_sid": "HX8497996ae402828a3b5002bf4e645338",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   },
   {
     "trigger_type": "address_tenure",
     "friendly_name": "PagoYa - address_tenure",
-    "content_sid": "HX4a41e38fd8ee811ed8332d05c3f32c2a",
+    "content_sid": null,
     "category_submitted": "UTILITY",
-    "approval_status": "received"
+    "approval_status": "skipped:already_exists",
+    "skipped": true
   }
 ]

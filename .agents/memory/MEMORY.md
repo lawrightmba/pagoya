@@ -10,6 +10,7 @@
 - [YC docs generation](yc-docs.md) — use python-docx not JS docx lib; .md files don't download from Replit presenter, use .txt copy as workaround
 - [SIPREL gift card referencia limit](siprel-gift-card-referencia.md) — referencia must be ≤10 chars; always use telefono.replace(/\D/g,"").slice(-10)
 - [Pre-demo checklist](pre-demo-checklist.md) — verify signup_bonus_config is_active=true before every demo and go-live
+- [welcome_activation template](welcome-activation.md) — 48h post-reg, 0 payments, signup_bonus_claimed=true gate; priority 9; UTILITY; var start/end banned by Meta (fixed in v2)
 - [STP CLABE + CEP integration](stp-clabe-cep.md) — per-user CLABE in users.stp_clabe; CLABE assigned on registration (fire-and-forget); webhook matches by CLABE first then conceptoPago phone; CEP URL stored in wallet_transactions.cep_url
 - [Demo video architecture](demo-video-architecture.md) — 13-scene bilingual video; LangProvider in VideoTemplate; lang prop from VideoWithControls; Scene10 has correct $25 MXN / ~40% / 2.75% model
 - [Gift card catalog](gift-card-catalog.md) — 3 groups by purchase intent; denomination principles per brand; routing bypasses reference step; 100% MXN, no exchange rate needed

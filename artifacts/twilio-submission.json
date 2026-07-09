@@ -218,6 +218,17 @@
     "status": "OK"
   },
   {
+    "trigger_type": "welcome_activation",
+    "friendly_name": "PagoYa - welcome_activation",
+    "category": "UTILITY",
+    "body": "🎁 ¡Tienes $150 MXN de bienvenida en tu wallet de PagoYa, {{1}}! Paga CFE, agua o Telmex directo desde tu cel — sin banco, sin filas. Escribe *pagar* para empezar.",
+    "variables": {
+      "1": "nombre"
+    },
+    "char_count": 168,
+    "status": "OK"
+  },
+  {
     "trigger_type": "free_credit_nudge",
     "friendly_name": "PagoYa - free_credit_nudge",
     "category": "MARKETING",

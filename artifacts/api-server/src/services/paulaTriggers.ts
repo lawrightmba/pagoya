@@ -101,6 +101,8 @@ export const TRIGGER = {
   FREE_CREDIT_NUDGE:     "free_credit_nudge",
   // Re-engagement — dispatched from winbackCron, NOT from evaluateTriggersForUser
   WINBACK_30D:           "winback_30d",
+  // Pre-first-payment activation: ≥48h registered, 0 payments, bonus credited
+  WELCOME_ACTIVATION:    "welcome_activation",
   // Partner readiness step 2 — active=false until lending partner is contracted
   READINESS_HARD_STEP2:  "readiness_hard_step2",
   // Remittance profile — queued after Module 1, intercepts SÍ/NO reply
@@ -121,17 +123,18 @@ type TriggerType = (typeof TRIGGER)[keyof typeof TRIGGER];
 //   readiness_hard(0), readiness_approaching(1), not_yet_gap_report(2)
 // Tier 2 — Payment urgency (time-sensitive recovery):
 //   late_payment_1(3), pattern_late_2x(4), pti_drop_7d(5), stalled_14d(6)
-// Tier 3 — Re-engagement:
-//   winback_30d(7) — dispatched from winbackCron, NOT evaluateTriggersForUser
+// Tier 3 — Activation / Re-engagement:
+//   winback_30d(8) — dispatched from winbackCron, NOT evaluateTriggersForUser
+//   welcome_activation(9) — ≥48h registered, 0 payments, bonus credited
 // Tier 4 — Achievement milestones (positive engagement):
-//   first_payment(8), pti_cross_80(9), pti_cross_60(10), pti_cross_40(11),
-//   milestone_90d(12), streak_5(13)
+//   first_payment(10), pti_cross_80(11), pti_cross_60(12), pti_cross_40(13),
+//   milestone_90d(14), streak_5(15)
 // Tier 5 — Educational modules:
-//   module_unlock_1–5 (14–18)
+//   module_unlock_1–5 (16–20)
 // Tier 6 — Data collection follow-ups (deferred from Module 1/2):
-//   remittance_profile(19), employment_profile(20), address_tenure(21)
+//   remittance_profile(21), employment_profile(22), address_tenure(23)
 // Tier 7 — Marketing (lowest priority):
-//   free_credit_nudge(22)
+//   free_credit_nudge(24)
 //
 // ASSERTION: every active trigger_type in paula_messages must appear here.
 // Triggers absent from this map fall back to priority 99 (candidate-sort tail)
@@ -147,21 +150,22 @@ const TRIGGER_PRIORITY: Readonly<Record<string, number>> = {
   [TRIGGER.PTI_DROP_7D]:           6,
   [TRIGGER.STALLED_14D]:           7,
   [TRIGGER.WINBACK_30D]:           8,
-  [TRIGGER.FIRST_PAYMENT]:         9,
-  [TRIGGER.PTI_CROSS_80]:          10,
-  [TRIGGER.PTI_CROSS_60]:          11,
-  [TRIGGER.PTI_CROSS_40]:          12,
-  [TRIGGER.MILESTONE_90D]:         13,
-  [TRIGGER.STREAK_5]:              14,
-  [TRIGGER.MODULE_UNLOCK_1]:       15,
-  [TRIGGER.MODULE_UNLOCK_2]:       16,
-  [TRIGGER.MODULE_UNLOCK_3]:       17,
-  [TRIGGER.MODULE_UNLOCK_4]:       18,
-  [TRIGGER.MODULE_UNLOCK_5]:       19,
-  [TRIGGER.REMITTANCE_PROFILE]:    20,
-  [TRIGGER.EMPLOYMENT_PROFILE]:    21,
-  [TRIGGER.ADDRESS_TENURE]:        22,
-  [TRIGGER.FREE_CREDIT_NUDGE]:     23,
+  [TRIGGER.WELCOME_ACTIVATION]:    9,   // pre-first-payment: ≥48h, 0 payments, bonus credited
+  [TRIGGER.FIRST_PAYMENT]:         10,
+  [TRIGGER.PTI_CROSS_80]:          11,
+  [TRIGGER.PTI_CROSS_60]:          12,
+  [TRIGGER.PTI_CROSS_40]:          13,
+  [TRIGGER.MILESTONE_90D]:         14,
+  [TRIGGER.STREAK_5]:              15,
+  [TRIGGER.MODULE_UNLOCK_1]:       16,
+  [TRIGGER.MODULE_UNLOCK_2]:       17,
+  [TRIGGER.MODULE_UNLOCK_3]:       18,
+  [TRIGGER.MODULE_UNLOCK_4]:       19,
+  [TRIGGER.MODULE_UNLOCK_5]:       20,
+  [TRIGGER.REMITTANCE_PROFILE]:    21,
+  [TRIGGER.EMPLOYMENT_PROFILE]:    22,
+  [TRIGGER.ADDRESS_TENURE]:        23,
+  [TRIGGER.FREE_CREDIT_NUDGE]:     24,
 } as const;
 function triggerPriority(type: string): number {
   return TRIGGER_PRIORITY[type] ?? 99;
@@ -183,7 +187,7 @@ async function onCooldown(
 // Called from index.ts after boot. Logs ERROR (not warn) if active template
 // count falls below the expected constant and surfaces the delta for the admin
 // dashboard. Does NOT crash the app — sending still works for active rows.
-export const PAULA_MESSAGES_EXPECTED_ACTIVE = 22; // 24 total - 2 partner-gated (readiness_hard, readiness_hard_step2)
+export const PAULA_MESSAGES_EXPECTED_ACTIVE = 23; // 25 total - 2 partner-gated (readiness_hard, readiness_hard_step2)
 
 // Triggers that are intentionally kept inactive until a live lending partner exists.
 const KNOWN_INACTIVE_TRIGGERS = new Set(["readiness_hard", "readiness_hard_step2"]);
@@ -353,7 +357,8 @@ export async function evaluateTriggersForUser(
 
   // ── Payment condition data (trigger logic only — not used in messages) ────
   const userRow = await db.execute(sql`
-    SELECT consecutive_payment_months FROM users WHERE telefono = ${telefono} LIMIT 1
+    SELECT consecutive_payment_months, created_at, signup_bonus_claimed
+    FROM users WHERE telefono = ${telefono} LIMIT 1
   `);
   if (!userRow.rows.length) return 0;
   const u            = userRow.rows[0] as Record<string, unknown>;
@@ -562,6 +567,28 @@ export async function evaluateTriggersForUser(
     candidates.push({
       type: TRIGGER.STALLED_14D,
       fire: async () => { await fireTrigger(db, telefono, TRIGGER.STALLED_14D, ctx, templates); fired++; },
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WELCOME ACTIVATION
+  // Fires once after ≥48h registration with zero completed payments, gated on
+  // signup_bonus_claimed so the copy ("$150 MXN de bienvenida") only reaches
+  // users who actually have the balance in their wallet.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const registeredAt    = u.created_at ? new Date(u.created_at as string) : null;
+  const hoursRegistered = registeredAt ? (Date.now() - registeredAt.getTime()) / 3_600_000 : 0;
+  const bonusClaimed    = Boolean(u.signup_bonus_claimed);
+
+  if (
+    totalPaid === 0 &&
+    hoursRegistered >= 48 &&
+    bonusClaimed &&
+    !(await onCooldown(db, telefono, TRIGGER.WELCOME_ACTIVATION, templates))
+  ) {
+    candidates.push({
+      type: TRIGGER.WELCOME_ACTIVATION,
+      fire: async () => { await fireTrigger(db, telefono, TRIGGER.WELCOME_ACTIVATION, ctx, templates); fired++; },
     });
   }
 
