@@ -102,6 +102,24 @@ function toPositional(
   return { positionalBody, varMap };
 }
 
+// ── Meta start/end variable guards ────────────────────────────────────────────
+
+/**
+ * Returns true if the body starts with a positional variable (e.g. {{1}}).
+ * Meta rejects templates whose first non-whitespace content is a variable.
+ */
+function bodyStartsWithVar(body: string): boolean {
+  return /^\{\{\d+\}\}/.test(body.trim());
+}
+
+/**
+ * Returns true if the body ends with a positional variable, optionally followed
+ * only by punctuation (e.g. "{{2}}." or "{{2}}"). Meta rejects these.
+ */
+function bodyEndsWithVar(body: string): boolean {
+  return /\{\{\d+\}\}[.,!?;:]*$/.test(body.trim());
+}
+
 // ── Seed validation ───────────────────────────────────────────────────────────
 
 /**
@@ -115,6 +133,8 @@ function toPositional(
  *   4. Module template_es must be ≤ 4096 chars (WhatsApp max, in-session freeform)
  *   5. Non-module UTILITY rows: template_es ≤ 1024
  *   6. MARKETING rows: template_es ≤ 768
+ *   7. [HARD FAIL] Submission body must not start with a variable (Meta subCode 2388299)
+ *   8. [HARD FAIL] Submission body must not end with a variable (Meta subCode 2388299)
  *
  * Returns array of error strings (empty = all valid).
  */
@@ -146,6 +166,17 @@ export function validateRows(): string[] {
             `TEASER_TOO_LONG [${row.trigger_type}]: teaser_es ${row.teaser_es.length} chars > 1024 UTILITY limit`,
           );
         }
+        // Rules 7 & 8: start/end variable check on teaser (the submission body for modules)
+        if (bodyStartsWithVar(row.teaser_es)) {
+          errors.push(
+            `START_VAR [${row.trigger_type}]: teaser_es starts with a variable — Meta subCode 2388299`,
+          );
+        }
+        if (bodyEndsWithVar(row.teaser_es)) {
+          errors.push(
+            `END_VAR [${row.trigger_type}]: teaser_es ends with a variable — Meta subCode 2388299`,
+          );
+        }
       }
       // Rule 4: template_es ≤ 4096 (in-session freeform)
       if (row.template_es && row.template_es.length > WHATSAPP_MAX) {
@@ -158,6 +189,18 @@ export function validateRows(): string[] {
       if (row.template_es && row.template_es.length > limit) {
         errors.push(
           `BODY_TOO_LONG [${row.trigger_type}]: template_es ${row.template_es.length} chars > ${limit} ${category} limit`,
+        );
+      }
+      // Rules 7 & 8: start/end variable check on submission body
+      const submissionBody = row.template_es ?? "";
+      if (submissionBody && bodyStartsWithVar(submissionBody)) {
+        errors.push(
+          `START_VAR [${row.trigger_type}]: template_es starts with a variable — Meta subCode 2388299`,
+        );
+      }
+      if (submissionBody && bodyEndsWithVar(submissionBody)) {
+        errors.push(
+          `END_VAR [${row.trigger_type}]: template_es ends with a variable — Meta subCode 2388299`,
         );
       }
     }
@@ -200,6 +243,17 @@ export function generate(): TwilioSubmissionEntry[] {
     }
     if (charCount > limit) {
       entryErrors.push(`TOO_LONG: ${charCount} chars > ${limit} ${category} limit`);
+    }
+    // Hard FAIL: Meta subCode 2388299 — variable cannot be first or last content
+    if (bodyStartsWithVar(positionalBody)) {
+      entryErrors.push(
+        `START_VAR: body starts with variable — Meta will reject (subCode 2388299)`,
+      );
+    }
+    if (bodyEndsWithVar(positionalBody)) {
+      entryErrors.push(
+        `END_VAR: body ends with variable — Meta will reject (subCode 2388299)`,
+      );
     }
     // Hard FAIL on schema/body position mismatch — Twilio would map vars to wrong values
     for (const [pos, val] of Object.entries(varMap)) {

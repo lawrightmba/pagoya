@@ -9,7 +9,7 @@
       "2": "pti_score"
     },
     "char_count": 155,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "streak_5",
@@ -21,7 +21,7 @@
       "2": "pti_score"
     },
     "char_count": 147,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "pti_cross_40",
@@ -33,7 +33,7 @@
       "2": "days_streak"
     },
     "char_count": 155,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "pti_cross_60",
@@ -45,7 +45,7 @@
       "2": "strongest_dimension"
     },
     "char_count": 125,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "pti_cross_80",
@@ -58,7 +58,7 @@
       "3": "days_streak"
     },
     "char_count": 117,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "milestone_90d",
@@ -70,7 +70,7 @@
       "2": "pti_score"
     },
     "char_count": 180,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "late_payment_1",
@@ -94,7 +94,7 @@
       "3": "weakest_dimension"
     },
     "char_count": 185,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "stalled_14d",
@@ -105,7 +105,7 @@
       "1": "nombre"
     },
     "char_count": 129,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "pattern_late_2x",
@@ -116,7 +116,7 @@
       "1": "nombre"
     },
     "char_count": 144,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "module_unlock_1",
@@ -127,7 +127,7 @@
       "1": "nombre"
     },
     "char_count": 121,
-    "status": "OK",
+    "status": "ERROR",
     "full_body_chars": 755
   },
   {
@@ -140,7 +140,7 @@
       "2": "pti_score"
     },
     "char_count": 127,
-    "status": "OK",
+    "status": "ERROR",
     "full_body_chars": 1080
   },
   {
@@ -152,7 +152,7 @@
       "1": "nombre"
     },
     "char_count": 112,
-    "status": "OK",
+    "status": "ERROR",
     "full_body_chars": 1072
   },
   {
@@ -164,7 +164,7 @@
       "1": "nombre"
     },
     "char_count": 106,
-    "status": "OK",
+    "status": "ERROR",
     "full_body_chars": 1139
   },
   {
@@ -176,7 +176,7 @@
       "1": "nombre"
     },
     "char_count": 128,
-    "status": "OK",
+    "status": "ERROR",
     "full_body_chars": 1330
   },
   {
@@ -191,7 +191,7 @@
       "4": "top_gap"
     },
     "char_count": 360,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "not_yet_gap_report",
@@ -204,7 +204,7 @@
       "3": "top_gap"
     },
     "char_count": 360,
-    "status": "OK"
+    "status": "ERROR"
   },
   {
     "trigger_type": "winback_30d",
