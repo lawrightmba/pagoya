@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { eq, sql as drizzleSql } from "drizzle-orm";
+import { eq, sql, sql as drizzleSql } from "drizzle-orm";
 import { db, usersTable, walletsTable, signupBonusConfigTable } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { normalizePhone } from "../lib/phoneUtils.js";
@@ -569,6 +569,13 @@ router.post("/", async (req: Request, res: Response) => {
       ${classifyPaulaMessage(userMessage ?? '')}
     )
   `).catch(() => {}); // never block the response on log failure
+
+  // Inbound message = implicit WhatsApp opt-in. Record consent timestamp once
+  // (only if not already set) — fire-and-forget, never blocks the response.
+  db.execute(sql`
+    UPDATE users SET whatsapp_consent_at = NOW()
+    WHERE telefono = ${phoneKey} AND whatsapp_consent_at IS NULL
+  `).catch(() => {});
 
   console.log(
     `[${new Date().toISOString()}] whatsapp-agent inbound | phone=${phoneKey} | msg="${userMessage.slice(0, 50)}"`,

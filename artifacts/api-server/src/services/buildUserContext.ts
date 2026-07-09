@@ -68,6 +68,9 @@ export async function buildUserContext(
       -- Sprint 4: coaching responsiveness
       COALESCE(u.coaching_responsiveness, 'UNKNOWN') AS coaching_responsiveness,
 
+      -- WhatsApp affirmative opt-in (null = never consented)
+      u.whatsapp_consent_at,
+
       -- Device signals (for handoff packet and PTI export)
       u.device_os,
       u.device_type,
@@ -96,7 +99,7 @@ export async function buildUserContext(
       ON bp.telefono = u.telefono
     WHERE u.telefono = ${telefono}
     GROUP BY u.kyc_full_name, u.pti_score, t.delta_30d, t.trend_label, u.pti_breakdown,
-             u.coaching_responsiveness, u.device_os, u.device_type, u.device_access_mode,
+             u.coaching_responsiveness, u.whatsapp_consent_at, u.device_os, u.device_type, u.device_access_mode,
              u.first_load_method, u.last_load_method, u.oxxo_load_count, u.spei_load_count,
              u.card_load_count, u.first_spei_load_at, u.created_at, u.colonia, u.declared_income_bucket
     LIMIT 1
@@ -153,6 +156,7 @@ export async function buildUserContext(
     financial_literacy_score,
     modules_unlocked,
     coaching_responsiveness: String(r.coaching_responsiveness ?? "UNKNOWN"),
+    whatsapp_consent_at:     r.whatsapp_consent_at ? String(r.whatsapp_consent_at) : null,
     // Device signals
     device_os:             r.device_os   ? String(r.device_os)   : undefined,
     device_type:           r.device_type ? String(r.device_type) : undefined,

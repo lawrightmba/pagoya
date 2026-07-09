@@ -40,6 +40,7 @@ export async function runWinbackSweep(): Promise<{ sent: number; skipped: number
         AND u.activation_nudge_24h_sent_at IS NOT NULL
         AND u.winback_sent_at IS NULL
         AND u.telefono IS NOT NULL
+        AND u.whatsapp_consent_at IS NOT NULL
         AND (u.is_test_account IS NULL OR u.is_test_account = false)
         AND NOT EXISTS (
           SELECT 1 FROM wallet_transactions wt

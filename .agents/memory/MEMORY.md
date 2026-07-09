@@ -38,3 +38,4 @@
 - [PTI derived features live wiring](pti-derived-features-live.md) — new snapshot fields MUST be wired into buildPTISnapshotFromDb + covered by the seeded-DB integration gate, or prod silently serves defaults
 - [PTI zero-weight field integration pattern](pti-zero-weight-fields.md) — how to add new derived/event features to PTI without touching scoring: DERIVED_FEATURE_DEFAULTS spread + explicit script destructuring even when generator never sets them
 - [PTI v4.3 weight allocation decision](pti-v4-3-disposition.md) — all 15 derived fields ship at zero weight; 5 permanent_non_scoring vs 10 provisional_zero_weight; disposition registry in ptiV4_3Disposition.ts
+- [WhatsApp consent gate](whatsapp-consent-gate.md) — every proactive send path must check whatsapp_consent_at; snake_case vs camelCase trap; bare `sql` import gotcha in whatsapp-agent

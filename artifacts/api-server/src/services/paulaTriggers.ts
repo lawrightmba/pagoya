@@ -332,6 +332,13 @@ export async function evaluateTriggersForUser(
     return 0;
   }
 
+  // Positive-consent gate: proactive triggers require an affirmative WhatsApp
+  // opt-in (whatsapp_consent_at IS NOT NULL — web checkbox or inbound message).
+  // Paula still responds to direct inbound messages regardless.
+  if (!ctx.whatsapp_consent_at) {
+    return 0;
+  }
+
   // ── Per-user 24h send throttle ────────────────────────────────────────────
   // At most one business-initiated nudge per user per 24h window. No exemptions —
   // all trigger types count (including data-collection follow-ups). This ensures

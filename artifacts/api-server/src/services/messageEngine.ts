@@ -25,6 +25,7 @@ export interface UserContext {
   financial_literacy_score: number;   // 0–5, count of fired module_unlock_% triggers
   modules_unlocked: string[];          // ordered: ['module_unlock_1', 'module_unlock_2', ...]
   coaching_responsiveness: string;     // 'ENGAGED' | 'PASSIVE' | 'OPTED_OUT' | 'UNKNOWN'
+  whatsapp_consent_at: string | null;  // affirmative WhatsApp opt-in timestamp; null = no consent recorded
 
   // Optional readiness fields — populated at trigger evaluation time only
   // Injected into enrichedCtx for readiness_approaching / readiness_hard templates

@@ -1,0 +1,49 @@
+Decisions on all open items, plus one new investigation:
+
+D0 — NEW, HIGH PRIORITY: OXXO load investigation for user 8118963105.
+   A $500 pending OXXO load that never confirmed. Diagnose: was an OXXO
+   reference/barcode generated? Did Conekta register a payment event?
+   Did our webhook receive anything? Determine which case this is:
+   (a) user never paid at the store — reference expired unpaid, or
+   (b) user paid and confirmation failed our side.
+   If (b): full remediation plan before anything else — that user may be
+   out $500 cash. Paste Conekta order status + our webhook log for the
+   reference.
+
+D1 — Bonus: seed signup_bonus_config in prod ($150 MXN, on OTP, no load
+   required — match the live homepage terms exactly) AND backfill $150 to
+   all 7 real users (exclude the 2 test rows). Backfill as an explicit
+   admin-audited credit (audit row: 'retroactive signup bonus — config
+   missing at registration'), not by faking signup_bonus_claimed history.
+   Then set signup_bonus_claimed=true for the 7. Paste post-backfill
+   wallet balances.
+
+D2 — Consent checkbox: change to UNCHECKED by default (affirmative
+   opt-in). Keep whatsapp_consent_at (timestamp beats boolean — agreed).
+   Confirm the consent language shown next to the box and paste it.
+
+D3 — welcome_activation: PASTE THE EXACT SUBMITTED BODY (the HX7b08a
+   version) + its trigger conditions now. I decide keep vs. replace after
+   reading it. Until then it stays unable to fire (bonus gate already
+   ensures this). And restate the standing rule: nothing is submitted to
+   Twilio/Meta without my explicit approval of the exact text — this one
+   went out ahead of review.
+
+D4 — Retroactive consent for the 3 Jun 11 users: set whatsapp_consent_at
+   to their FIRST INBOUND message timestamp from paula_inbound_log /
+   message history — not NOW(). The record should reflect when consent
+   actually occurred.
+
+APPROVED TO PROCEED in parallel:
+- Opt-in gate in trigger evaluator (whatsapp_consent_at IS NOT NULL)
+- Inbound-message consent recording going forward
+- WS1 attribution fix (WhatsApp deep-link rep capture can wait for next
+  rep hire — fix the web path, add admin visibility, annotate the Jun 11
+  rows, log the empty-prod-tables finding)
+- WS3 landing pages: CFE MTY, SADM variant, Naturgy MTY, city hub — all
+  verified payable, green light
+- WS4 per brief
+
+SEQUENCING: D0 first (possible user harm), then D1 (trust repair), then
+the approved parallel work. The welcome_activation send path stays dead
+until D1 backfill is verified AND I've approved the copy.

@@ -217,7 +217,7 @@ export default function Register() {
   const [bonusCredited, setBonusCredited] = useState(false);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [waNumber, setWaNumber] = useState<string | null>(null);
-  const [whatsappConsent, setWhatsappConsent] = useState(true);
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
 
   useEffect(() => {
     setRepId(getQueryParam("rep"));
@@ -1032,7 +1032,6 @@ export default function Register() {
               type="checkbox"
               checked={whatsappConsent}
               onChange={e => setWhatsappConsent(e.target.checked)}
-              required
               style={{
                 marginTop: "3px", accentColor: "#00e5b4",
                 width: "16px", height: "16px", flexShrink: 0, cursor: "pointer",

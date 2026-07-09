@@ -263,6 +263,117 @@ router.get("/stats", async (_req: Request, res: Response) => {
 // ─── Admin auth guard — verified pre-publish [June 2026] ──────────────────────
 router.all(/^\/admin/, adminAuth);
 
+// ─── TEMPORARY: D1+D4 validation-sprint remediation [July 2026] ────────────────
+// One-shot, idempotent prod remediation. REMOVE after verified execution in prod.
+//   1. Seed signup_bonus_config row id=1 ($150 MXN, active) — INSERT, not UPDATE
+//   2. Backfill $150 admin-audited credit to the 7 real users + set signup_bonus_claimed
+//   3. Retroactive whatsapp_consent_at for the 3 Jun-11 users (first Twilio inbound ts)
+//   4. Annotate Jun-11 rows with source_note (never touches signup_source)
+router.post("/admin/run-validation-remediation", async (_req: Request, res: Response) => {
+  const AUDIT_NOTE = "retroactive signup bonus — config missing at registration";
+  const BACKFILL_TELEFONOS = [
+    "4157972483", "3221839799", "4251006528",
+    "3221562382", "8118963105", "8143141695", "8111778514",
+  ];
+  const CONSENT_TS: Record<string, string> = {
+    "4157972483": "2026-06-11T16:20:13Z",
+    "3221839799": "2026-06-11T22:53:53Z",
+    "4251006528": "2026-06-11T23:04:01Z",
+  };
+  const JUN11_NOTE =
+    "Registered via WhatsApp bot before attribution capture existed (Jun 11 2026 cohort); " +
+    "signup_source=whatsapp_organic is correct, rep attribution was never capturable.";
+  try {
+    const report: Record<string, unknown> = {};
+
+    // 1. Seed bonus config (insert-or-update, matches homepage terms: $150, on OTP, no load req)
+    await db.execute(drizzleSql`
+      INSERT INTO signup_bonus_config (id, is_active, bonus_amount, eligible_rep_codes, warning_threshold, block_threshold, updated_at)
+      VALUES (1, true, '150.00', NULL, 10, 20, NOW())
+      ON CONFLICT (id) DO UPDATE
+        SET is_active = true, bonus_amount = '150.00', updated_at = NOW()
+    `);
+    const cfg = await db.execute(drizzleSql`SELECT id, is_active, bonus_amount FROM signup_bonus_config WHERE id = 1`);
+    report.bonus_config = cfg.rows[0];
+
+    // 2. Backfill credits — idempotent per user (skips if audit-note credit already exists)
+    const credited: string[] = [];
+    const skipped: string[] = [];
+    const noUser: string[] = [];
+    for (const tel of BACKFILL_TELEFONOS) {
+      const userRow = await db.execute(drizzleSql`SELECT 1 FROM users WHERE telefono = ${tel} LIMIT 1`);
+      if (!userRow.rows.length) { noUser.push(tel); continue; }
+      await db.execute(drizzleSql`
+        INSERT INTO wallets (user_id)
+        SELECT ${tel} WHERE NOT EXISTS (SELECT 1 FROM wallets WHERE user_id = ${tel})
+      `);
+      const existing = await db.execute(drizzleSql`
+        SELECT 1 FROM wallet_transactions wt
+        JOIN wallets w ON w.id = wt.wallet_id
+        WHERE w.user_id = ${tel} AND wt.type = 'admin_credit' AND wt.description = ${AUDIT_NOTE}
+        LIMIT 1
+      `);
+      if (existing.rows.length) { skipped.push(tel); continue; }
+      // Deterministic single-wallet target (oldest) — guards against duplicate
+      // wallet rows since wallets.user_id has no unique constraint.
+      const walletRow = await db.execute(drizzleSql`
+        SELECT id FROM wallets WHERE user_id = ${tel} ORDER BY created_at ASC, id ASC LIMIT 1
+      `);
+      const walletId = (walletRow.rows[0] as { id: string } | undefined)?.id;
+      if (!walletId) { noUser.push(tel); continue; }
+      // Atomic: ledger insert + balance update commit together or not at all,
+      // so a partial failure never leaves the audit-note skip check inconsistent.
+      await db.transaction(async (tx) => {
+        await tx.execute(drizzleSql`
+          INSERT INTO wallet_transactions (wallet_id, type, amount_mxn, status, confirmed_at, description)
+          VALUES (${walletId}, 'admin_credit', '150.00', 'confirmed', NOW(), ${AUDIT_NOTE})
+        `);
+        await tx.execute(drizzleSql`
+          UPDATE wallets SET balance_mxn = balance_mxn + 150.00, updated_at = NOW() WHERE id = ${walletId}
+        `);
+      });
+      credited.push(tel);
+    }
+    await db.execute(drizzleSql`
+      UPDATE users SET signup_bonus_claimed = true
+      WHERE telefono IN (${drizzleSql.join(BACKFILL_TELEFONOS.map((t) => drizzleSql`${t}`), drizzleSql`, `)})
+    `);
+    report.credited = credited;
+    report.skipped_already_credited = skipped;
+    report.skipped_no_user_row = noUser;
+
+    // 3. Retroactive consent — only if currently null
+    for (const [tel, ts] of Object.entries(CONSENT_TS)) {
+      await db.execute(drizzleSql`
+        UPDATE users SET whatsapp_consent_at = ${ts}::timestamptz
+        WHERE telefono = ${tel} AND whatsapp_consent_at IS NULL
+      `);
+    }
+
+    // 4. Jun-11 annotation
+    await db.execute(drizzleSql`
+      UPDATE users SET source_note = ${JUN11_NOTE}
+      WHERE telefono IN ('4157972483','3221839799','4251006528') AND source_note IS NULL
+    `);
+
+    // Verification snapshot
+    const balances = await db.execute(drizzleSql`
+      SELECT w.user_id AS telefono, w.balance_mxn,
+             u.signup_bonus_claimed, u.whatsapp_consent_at, u.source_note
+      FROM wallets w LEFT JOIN users u ON u.telefono = w.user_id
+      WHERE w.user_id IN (${drizzleSql.join(BACKFILL_TELEFONOS.map((t) => drizzleSql`${t}`), drizzleSql`, `)})
+      ORDER BY w.user_id
+    `);
+    report.post_backfill = balances.rows;
+
+    logger.info({ report }, "admin: validation remediation executed");
+    res.json({ success: true, ...report });
+  } catch (err) {
+    logger.error({ err }, "admin/run-validation-remediation: failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "failed" });
+  }
+});
+
 // POST /api/admin/run-enrichment — manually trigger nightly enrichment + monthly seed
 // Body: { telefono?: string, seed?: boolean }
 // If telefono is provided, runs enrichment for that single user only (faster, for smoke tests).

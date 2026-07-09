@@ -62,6 +62,8 @@ export async function sendLowBalanceNudge(userId: number): Promise<{ sent: boole
     const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
     const user = r.rows[0] as Record<string, unknown> | undefined;
     if (!user) return { sent: false, reason: "user_not_found" };
+    // Consent gate: proactive sends require affirmative WhatsApp opt-in
+    if (!user.whatsapp_consent_at) return { sent: false, reason: "no_consent" };
 
     const telefono = user.telefono as string;
 
@@ -133,6 +135,8 @@ export async function sendBillDiscoveryNudge(userId: number): Promise<{ sent: bo
     const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
     const user = r.rows[0] as Record<string, unknown> | undefined;
     if (!user) return { sent: false, reason: "user_not_found" };
+    // Consent gate: proactive sends require affirmative WhatsApp opt-in
+    if (!user.whatsapp_consent_at) return { sent: false, reason: "no_consent" };
 
     const telefono = user.telefono as string;
 
@@ -247,6 +251,8 @@ export async function sendReferralNudge(userId: number): Promise<{ sent: boolean
     const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
     const user = r.rows[0] as Record<string, unknown> | undefined;
     if (!user) return { sent: false, reason: "user_not_found" };
+    // Consent gate: proactive sends require affirmative WhatsApp opt-in
+    if (!user.whatsapp_consent_at) return { sent: false, reason: "no_consent" };
 
     const telefono = user.telefono as string;
 
@@ -336,6 +342,8 @@ export async function sendActivation24hNudge(userId: number): Promise<{ sent: bo
     const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
     const user = r.rows[0] as Record<string, unknown> | undefined;
     if (!user) return { sent: false, reason: "user_not_found" };
+    // Consent gate: proactive sends require affirmative WhatsApp opt-in
+    if (!user.whatsapp_consent_at) return { sent: false, reason: "no_consent" };
 
     // Skip test accounts
     if (user.is_test_account) return { sent: false, reason: "test_account" };
@@ -459,6 +467,8 @@ export async function sendColoniaBackfillMessage(userId: number): Promise<{ sent
     const r = await db.execute(drizzleSql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`);
     const user = r.rows[0] as Record<string, unknown> | undefined;
     if (!user) return { sent: false, reason: "user_not_found" };
+    // Consent gate: proactive sends require affirmative WhatsApp opt-in
+    if (!user.whatsapp_consent_at) return { sent: false, reason: "no_consent" };
 
     if (user.is_test_account) return { sent: false, reason: "test_account" };
     if (user.colonia) return { sent: false, reason: "already_has_colonia" };

@@ -44,6 +44,10 @@ export const usersTable = pgTable("users", {
   // WhatsApp consent checkbox during registration. Null = legacy user who registered
   // before the checkbox was introduced (passive-consent footer only).
   whatsappConsentAt: timestamp("whatsapp_consent_at", { withTimezone: true }),
+  // ── Attribution annotation ───────────────────────────────────────────────────
+  // Free-text admin note about how signup_source was determined or corrected.
+  // Never overwrites signup_source itself — audit annotation only.
+  sourceNote: text("source_note"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

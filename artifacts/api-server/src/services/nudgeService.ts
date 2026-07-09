@@ -38,6 +38,12 @@ export async function sendActivationNudge(userId: number): Promise<{
       return { sent: false, reason: "user_not_found" };
     }
 
+    // ── 1b. Consent gate: proactive sends require affirmative WhatsApp opt-in ─
+    if (!user.whatsappConsentAt) {
+      logger.info({ userId }, "nudge: no WhatsApp consent — skipping");
+      return { sent: false, reason: "no_consent" };
+    }
+
     // ── 2. De-duplicate: never send twice ─────────────────────────────────
     if (user.nudgeSentAt) {
       logger.info({ userId }, "nudge: already sent — skipping");
