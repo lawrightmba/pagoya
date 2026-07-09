@@ -1105,39 +1105,4 @@ router.get("/admin/handoff-requests", async (_req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/dedup-users — one-time cleanup of duplicate phone registrations.
-// Deletes rows whose phone was registered in a non-canonical format (+52XXXXXXXXXX,
-// "52 XXX XXX XXXX") while a canonical 10-digit row already exists.
-// REMOVE THIS ROUTE after running against production.
-router.post("/admin/dedup-users", async (_req: Request, res: Response) => {
-  const DUPES = [
-    "+523221839799",
-    "52 322 183 9799",
-    "+528118963105",
-    "+528111778514",
-  ];
-  const log: string[] = [];
-  try {
-    for (const phone of DUPES) {
-      // paula_send_queue and paula_trigger_log have a circular FK:
-      //   send_queue.trigger_log_id → trigger_log.id
-      //   trigger_log.send_queue_id → send_queue.id
-      // Break the cycle by NULLing trigger_log.send_queue_id first, then delete both.
-      const q0 = await db.execute(drizzleSql`UPDATE paula_trigger_log SET send_queue_id = NULL WHERE send_queue_id IN (SELECT id FROM paula_send_queue WHERE telefono = ${phone})`);
-      const q1 = await db.execute(drizzleSql`DELETE FROM paula_send_queue   WHERE telefono = ${phone}`);
-      const q2 = await db.execute(drizzleSql`DELETE FROM paula_trigger_log  WHERE telefono = ${phone}`);
-      const q3 = await db.execute(drizzleSql`DELETE FROM paula_inbound_log  WHERE telefono = ${phone}`);
-      const q4 = await db.execute(drizzleSql`DELETE FROM wallet_transactions WHERE wallet_id IN (SELECT id FROM wallets WHERE user_id = ${phone})`);
-      const q5 = await db.execute(drizzleSql`DELETE FROM wallets             WHERE user_id  = ${phone}`);
-      const q6 = await db.execute(drizzleSql`DELETE FROM users               WHERE telefono = ${phone}`);
-      log.push(`${phone}: unlinked=${q0.rowCount ?? 0}, queue=${q1.rowCount ?? 0}, trigger_log=${q2.rowCount ?? 0}, inbound=${q3.rowCount ?? 0}, wallet_txns=${q4.rowCount ?? 0}, wallets=${q5.rowCount ?? 0}, users=${q6.rowCount ?? 0}`);
-    }
-    logger.info({ log }, "admin/dedup-users: complete");
-    res.json({ ok: true, log });
-  } catch (err) {
-    logger.error({ err }, "admin/dedup-users: failed");
-    res.status(500).json({ error: String(err) });
-  }
-});
-
 export default router;
