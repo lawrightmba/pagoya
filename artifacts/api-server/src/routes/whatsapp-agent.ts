@@ -12,6 +12,7 @@ import {
   type PendingPaymentRow,
 } from "../services/pendingPaymentService.js";
 import { creditSignupBonus } from "../services/signupBonusService.js";
+import { resolveRepAttribution } from "../services/repAttribution.js";
 import { scheduleNudge } from "../services/nudgeService.js";
 import { scheduleReferralNudgeIfEligible } from "../services/lifecycleNudgeService.js";
 import { logger } from "../lib/logger.js";
@@ -332,8 +333,14 @@ async function registerWhatsAppUser(
   phoneKey: string,
   name: string,
   colonia?: string,
+  repCode?: string,
 ): Promise<{ userId: number; bonusAmount: number }> {
   const clean = phoneKey.replace(/\D/g, "").slice(-10);
+
+  // WS1: rep code captured earlier in the session (REP_CODE_PATTERN) is now
+  // validated and WRITTEN at user creation — previously it was captured in the
+  // session but silently dropped, defaulting everyone to whatsapp_organic.
+  const attribution = await resolveRepAttribution(repCode, "whatsapp_organic", "whatsapp-agent:registerWhatsAppUser");
 
   // Upsert user
   const [newUser] = await db
@@ -342,8 +349,8 @@ async function registerWhatsAppUser(
       telefono: clean,
       kycFullName: name.trim(),
       signupBonusEligible: true,
-      signupRefCode: "WEB",
-      signupSource: "whatsapp_organic",
+      signupRefCode: attribution.refCode,
+      signupSource: attribution.source,
     })
     .onConflictDoNothing()
     .returning({ id: usersTable.id });
@@ -358,11 +365,17 @@ async function registerWhatsAppUser(
       .where(eq(usersTable.telefono, clean))
       .limit(1);
     userId = existing!.id;
-    // Backfill name + source if the user pre-existed with no name (e.g. partial web flow)
+    // Backfill name + attribution if the user pre-existed with no name (e.g.
+    // partial web flow). WS1: use the RESOLVED attribution — never hardcode
+    // whatsapp_organic, and only overwrite ref_code when the existing row has
+    // no meaningful attribution (NULL, empty, or the WEB default).
     await db.execute(drizzleSql`
       UPDATE users
-      SET kyc_full_name = ${name.trim()},
-          signup_source  = 'whatsapp_organic'
+      SET kyc_full_name  = ${name.trim()},
+          signup_source  = CASE WHEN signup_ref_code IS NULL OR signup_ref_code IN ('', 'WEB')
+                                THEN ${attribution.source} ELSE signup_source END,
+          signup_ref_code = CASE WHEN signup_ref_code IS NULL OR signup_ref_code IN ('', 'WEB')
+                                 THEN ${attribution.refCode} ELSE signup_ref_code END
       WHERE telefono = ${clean}
         AND (kyc_full_name IS NULL OR kyc_full_name = '')
     `);
@@ -693,7 +706,7 @@ router.post("/", async (req: Request, res: Response) => {
       const { name } = session.pendingRegistration;
       saveSession(phoneKey, { awaitingColonia: false, pendingRegistration: undefined });
       try {
-        const { userId, bonusAmount } = await registerWhatsAppUser(phoneKey, name, colonia);
+        const { userId, bonusAmount } = await registerWhatsAppUser(phoneKey, name, colonia, session.repCode);
         const firstName = name.split(" ")[0];
         await sendWhatsApp(phoneKey, m.registrationSuccess(lang, firstName, phoneKey, name, bonusAmount));
         // Wedge 1 — fire 10-min activation nudge

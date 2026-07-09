@@ -365,3 +365,9 @@ id = "lQS7HIW2isvHWrA2n4x8Q"
 uri = "file://.agents/outputs/paula_messages_dev_export_24_active.csv"
 type = "table"
 title = "24 active paula_messages rows (dev) — full content for review"
+
+[[outputs]]
+id = "-n-o5rzZxbDCd5EdvWLpt"
+uri = "file://docs/ws4-analytics-baseline.md"
+type = "text"
+title = "WS4 — Cloudflare/GA4 instructions + prod baseline snapshot"

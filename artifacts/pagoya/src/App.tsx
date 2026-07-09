@@ -43,6 +43,9 @@ import BlogMejoresApps from "@/pages/BlogMejoresApps";
 import BlogServiciosPV from "@/pages/BlogServiciosPV";
 import BlogDineroElectronico from "@/pages/BlogDineroElectronico";
 import PagarAguaMonterrey from "@/pages/PagarAguaMonterrey";
+import PagarAguaMonterreyEnLinea from "@/pages/PagarAguaMonterreyEnLinea";
+import PagarGasNaturalMonterrey from "@/pages/PagarGasNaturalMonterrey";
+import PagarServiciosMonterrey from "@/pages/PagarServiciosMonterrey";
 import PagarAguaCdmx from "@/pages/PagarAguaCdmx";
 import Enviar from "@/pages/Enviar";
 import Verificar from "@/pages/Verificar";
@@ -142,6 +145,9 @@ function Router() {
       <Route path="/recargas-telcel-efectivo" component={BlogRecargasTelcel} />
       <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
       <Route path="/pagar-agua-monterrey" component={PagarAguaMonterrey} />
+      <Route path="/pagar-agua-monterrey-en-linea" component={PagarAguaMonterreyEnLinea} />
+      <Route path="/pagar-gas-natural-monterrey" component={PagarGasNaturalMonterrey} />
+      <Route path="/pagar-servicios-monterrey" component={PagarServiciosMonterrey} />
       <Route path="/pagar-agua-cdmx" component={PagarAguaCdmx} />
       <Route path="/que-es-oxxo-pay" component={BlogOXXOPay} />
       <Route path="/pagar-izzi-sin-cuenta-bancaria" component={BlogPagarIzzi} />
@@ -229,6 +235,13 @@ function AppShell() {
 }
 
 function App() {
+  // WS3.3 — capture the entry (landing) page path once per session so a signup
+  // can be attributed to the landing page that brought the user in.
+  useEffect(() => {
+    if (!sessionStorage.getItem("pagoya_landing_page")) {
+      sessionStorage.setItem("pagoya_landing_page", window.location.pathname);
+    }
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

@@ -5,6 +5,7 @@ import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, stree
 import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
 import { generateOTP, verifyOTP, clearOTP, writeDeviceProfile } from "../services/otpService.js";
+import { resolveRepAttribution } from "../services/repAttribution.js";
 import { issueWelcomeTokens } from "../services/loyalty.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -24,6 +25,7 @@ declare module "express-session" {
       landlord_ref?: string;
       is_generic_landlord?: boolean;
       whatsapp_consent_at?: string;
+      landing_page?: string;
     };
   }
 }
@@ -40,7 +42,7 @@ function validatePhone(phone: string): boolean {
 // POST /api/street-team/signup-with-bonus
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/signup-with-bonus", async (req: Request, res: Response) => {
-  const { name, phone, curp, city, colonia, ref_code, whatsapp_consent_at } = req.body as {
+  const { name, phone, curp, city, colonia, ref_code, whatsapp_consent_at, landing_page } = req.body as {
     name?: string;
     phone?: string;
     curp?: string;
@@ -48,7 +50,14 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
     colonia?: string;
     ref_code?: string;
     whatsapp_consent_at?: string;
+    landing_page?: string;
   };
+
+  // WS3.3 — landing-page attribution: sanitize to an internal path only
+  const landingPageClean =
+    typeof landing_page === "string" && landing_page.startsWith("/") && landing_page.length <= 200
+      ? landing_page
+      : undefined;
 
   // ── Required field validation ──────────────────────────────────────────────
   if (!name?.trim()) {
@@ -70,7 +79,10 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
   // ref_code is optional — web sign-ups that arrive without a rep referral
   // are tagged as "WEB" (organic) and still qualify for the signup bonus
   // when the bonus config has no eligibleRepCodes restriction.
-  const refCodeResolved = ref_code?.trim() || "WEB";
+  // WS1: codes are validated against the reps table; unknown/inactive codes
+  // log ERROR and are stored raw for manual review (never silently defaulted).
+  const attribution = await resolveRepAttribution(ref_code, "web_organic", "streetTeamBonus:signup-with-bonus");
+  const refCodeResolved = attribution.refCode;
 
   // ── Phone format validation ────────────────────────────────────────────────
   const phoneCleaned = phone.trim().replace(/\D/g, "").slice(-10);
@@ -94,9 +106,10 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       .insert(usersTable)
       .values({
         telefono: phoneCleaned,
-        signupSource: refCodeResolved === "WEB" ? "web_organic" : "rep_referral",
-        signupRefCode: refCodeResolved,
+        signupSource: attribution.source,
+        signupRefCode: attribution.refCode,
         signupBonusEligible: true,
+        landingPage: landingPageClean,
       })
       .onConflictDoNothing();
 
@@ -122,6 +135,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       landlord_ref: landlordRef,
       is_generic_landlord: isGenericLandlord || undefined,
       whatsapp_consent_at: whatsapp_consent_at?.trim() || undefined,
+      landing_page: landingPageClean,
     };
 
     // ── 4. Return OTP challenge ────────────────────────────────────────────
@@ -160,6 +174,10 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
     const _isPwa = req.headers["x-pwa-launch"] === "1";
     writeDeviceProfile(pending.phone, _ua, _isPwa).catch(() => {});
 
+    // ── 2c. Re-resolve attribution (rep status may have changed since step 1;
+    // also guards against a raw invalid code stored in the session) ──────────
+    const verifyAttribution = await resolveRepAttribution(pending.ref_code, "web_organic", "streetTeamBonus:verify-bonus-otp");
+
     // ── 3. Rep velocity check (BLOCK does not abort — continue) ───────────
     const velocity = await checkRepVelocity(pending.ref_code);
     const bonusBlocked = velocity.flag === "BLOCK";
@@ -177,8 +195,9 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
           kycFullName: pending.name,
           kycCurp: pending.curp,
           signupBonusEligible: !bonusBlocked,
-          signupRefCode: pending.ref_code,
-          signupSource: pending.ref_code === "WEB" ? "web_organic" : "rep_referral",
+          signupRefCode: verifyAttribution.refCode,
+          signupSource: verifyAttribution.source,
+          landingPage: pending.landing_page,
         })
         .onConflictDoNothing()
         .returning({ id: usersTable.id });
@@ -198,6 +217,21 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
           return;
         }
         userId = existing.id;
+
+        // WS1/WS3.3: the row pre-existed (e.g. partial signup pre-create) —
+        // backfill attribution + landing_page where the existing values are
+        // NULL/empty so they aren't silently lost on the conflict path.
+        await db.execute(drizzleSql`
+          UPDATE users
+          SET kyc_full_name = COALESCE(NULLIF(kyc_full_name, ''), ${pending.name}),
+              kyc_curp      = COALESCE(NULLIF(kyc_curp, ''), ${pending.curp}),
+              signup_ref_code = CASE WHEN signup_ref_code IS NULL OR signup_ref_code = ''
+                                     THEN ${verifyAttribution.refCode} ELSE signup_ref_code END,
+              signup_source   = CASE WHEN signup_source IS NULL OR signup_source = ''
+                                     THEN ${verifyAttribution.source} ELSE signup_source END,
+              landing_page  = COALESCE(landing_page, ${pending.landing_page ?? null})
+          WHERE telefono = ${pending.phone}
+        `);
       }
 
       // ── WhatsApp consent timestamp (fire-and-forget; never blocks) ──────────

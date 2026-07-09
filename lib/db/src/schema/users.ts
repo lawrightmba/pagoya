@@ -48,6 +48,7 @@ export const usersTable = pgTable("users", {
   // Free-text admin note about how signup_source was determined or corrected.
   // Never overwrites signup_source itself — audit annotation only.
   sourceNote: text("source_note"),
+  landingPage: text("landing_page"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

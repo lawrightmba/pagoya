@@ -20,6 +20,16 @@ export default function PagarCFEMonterrey() {
           <button onClick={() => navigate("/")} style={{ background: "#1D9E75", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
             Pagar mi CFE →
           </button>
+
+          <div style={{ marginTop: 36, textAlign: "left" }}>
+            <h2 style={{ color: "#F1F5F9", fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Más servicios en Monterrey</h2>
+            <ul style={{ listStyle: "disc", paddingLeft: 22, margin: 0 }}>
+              <li style={{ marginBottom: 6 }}><a href="/pagar-servicios-monterrey" style={{ color: "#1D9E75" }}>Pagar servicios en Monterrey (agua, luz, gas)</a></li>
+              <li style={{ marginBottom: 6 }}><a href="/pagar-agua-monterrey" style={{ color: "#1D9E75" }}>Pagar agua SADM sin banco</a></li>
+              <li style={{ marginBottom: 6 }}><a href="/pagar-agua-monterrey-en-linea" style={{ color: "#1D9E75" }}>Pagar agua SADM en línea</a></li>
+              <li style={{ marginBottom: 6 }}><a href="/pagar-gas-natural-monterrey" style={{ color: "#1D9E75" }}>Pagar gas natural Naturgy Monterrey</a></li>
+            </ul>
+          </div>
         </div>
       </div>
     </>

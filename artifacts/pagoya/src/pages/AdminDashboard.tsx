@@ -213,6 +213,27 @@ export default function AdminDashboard() {
   const [repKitResult, setRepKitResult] = useState<KitResult | null>(null);
   const [statusToggling, setStatusToggling] = useState<string | null>(null);
 
+  // ── Attribution audit (WS1) ────────────────────────────────────────────────
+  type AttribUserRow = { id: number; phone: string; name: string | null; signup_source: string | null; signup_ref_code: string | null; source_note: string | null; created_at: string };
+  const [attribUsers, setAttribUsers] = useState<AttribUserRow[]>([]);
+  const [attribLoading, setAttribLoading] = useState(false);
+  const [attribError, setAttribError] = useState("");
+
+  const loadAttribUsers = useCallback(async () => {
+    if (!adminKey.trim()) return;
+    setAttribLoading(true);
+    setAttribError("");
+    try {
+      const r = await fetch("/api/admin/users?limit=200", { headers: { "x-admin-key": adminKey } });
+      if (!r.ok) { setAttribError(`Error ${r.status}`); return; }
+      const d = await r.json();
+      setAttribUsers(d.users ?? []);
+    } catch { setAttribError("Error de red"); }
+    finally { setAttribLoading(false); }
+  }, [adminKey]);
+
+  useEffect(() => { if (tab === "reps") loadAttribUsers(); }, [tab, loadAttribUsers]);
+
   const loadRepStats = useCallback(async () => {
     if (!adminKey.trim()) return;
     setRepStatsLoading(true);
@@ -2460,6 +2481,44 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* ── Atribución de usuarios (WS1 audit) ── */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden", marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "1rem", letterSpacing: "0.08em", color: "#5a7080", textTransform: "uppercase" }}>
+                  Usuarios · Atribución
+                </div>
+                <button onClick={loadAttribUsers} disabled={attribLoading} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#39A935", background: "rgba(57,169,53,0.1)", border: "1px solid rgba(57,169,53,0.25)", borderRadius: 20, padding: "3px 10px", cursor: "pointer", opacity: attribLoading ? 0.5 : 1 }}>
+                  ↻ Actualizar
+                </button>
+              </div>
+              {attribError && <div style={{ padding: 16, fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: "#E21A0A" }}>{attribError}</div>}
+              {attribLoading && <div style={{ padding: "24px 16px", textAlign: "center", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", color: "#5a7080" }}>Cargando…</div>}
+              {!attribLoading && attribUsers.length > 0 && (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 130px 90px 1fr 90px", gap: 0, padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    {["USUARIO", "SOURCE", "REF CODE", "NOTA", "ALTA"].map(h => (
+                      <div key={h} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", letterSpacing: "0.07em", textTransform: "uppercase" }}>{h}</div>
+                    ))}
+                  </div>
+                  {attribUsers.map(u => {
+                    const suspect = !!u.signup_ref_code && u.signup_ref_code !== "WEB" && u.signup_source !== "rep_referral";
+                    return (
+                      <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 130px 90px 1fr 90px", gap: 0, padding: "7px 16px", borderTop: "1px solid rgba(255,255,255,0.04)", background: suspect ? "rgba(245,158,11,0.06)" : "transparent" }}>
+                        <div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#e8f0f7" }}>{u.name ?? "—"}</div>
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{u.phone}</div>
+                        </div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: u.signup_source === "rep_referral" ? "#39A935" : "#5a7080" }}>{u.signup_source ?? "—"}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: suspect ? "#F59E0B" : "#e8f0f7", fontWeight: suspect ? 700 : 400 }}>{u.signup_ref_code ?? "—"}{suspect ? " ⚠" : ""}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={u.source_note ?? undefined}>{u.source_note ?? "—"}</div>
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.68rem", color: "#5a7080" }}>{u.created_at?.slice(0, 10) ?? "—"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}

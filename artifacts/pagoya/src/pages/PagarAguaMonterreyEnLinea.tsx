@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 
-export default function PagarAguaMonterrey() {
+export default function PagarAguaMonterreyEnLinea() {
   const [, navigate] = useLocation();
   const [showSticky, setShowSticky] = useState(false);
 
@@ -17,18 +17,18 @@ export default function PagarAguaMonterrey() {
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
-      { "@type": "ListItem", "position": 2, "name": "Pagar servicios", "item": "https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria" },
-      { "@type": "ListItem", "position": 3, "name": "Pagar agua SADM Monterrey", "item": "https://pagoyamx.com/pagar-agua-monterrey" }
+      { "@type": "ListItem", "position": 2, "name": "Pagar servicios en Monterrey", "item": "https://pagoyamx.com/pagar-servicios-monterrey" },
+      { "@type": "ListItem", "position": 3, "name": "Pagar agua SADM en línea", "item": "https://pagoyamx.com/pagar-agua-monterrey-en-linea" }
     ]
   };
 
   const article = {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": "Cómo pagar tu recibo de agua SADM Monterrey sin ir al banco",
-    "description": "Paga tu recibo de agua y drenaje SADM en Monterrey desde tu celular. Sin cuenta bancaria, sin tarjeta, sin filas. Solo efectivo en OXXO y listo.",
-    "url": "https://pagoyamx.com/pagar-agua-monterrey",
-    "datePublished": "2026-06-01",
+    "headline": "Pagar agua SADM Monterrey en línea desde tu celular",
+    "description": "Paga tu recibo de agua SADM Monterrey en línea desde tu celular en 2 minutos. Alternativa al portal sadm.mx, sin tarjeta obligatoria. Comprobante al instante con PagoYa.",
+    "url": "https://pagoyamx.com/pagar-agua-monterrey-en-linea",
+    "datePublished": "2026-07-09",
     "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
     "inLanguage": "es-MX"
   };
@@ -39,28 +39,28 @@ export default function PagarAguaMonterrey() {
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "¿Cómo pago el agua SADM Monterrey sin ir al banco?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Con PagoYa pagas tu recibo de agua SADM desde tu celular en menos de 2 minutos. Recarga tu billetera con efectivo en cualquier OXXO de Monterrey o Nuevo León y paga al instante. No necesitas cuenta bancaria ni tarjeta." }
+        "name": "¿Cómo pago el agua SADM Monterrey en línea desde mi celular?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Abre PagoYa en tu celular, elige Pagar servicio, selecciona Agua (SADM) e ingresa tu número de cuenta. Confirmas y el pago se procesa en segundos. Recibes tu comprobante en pantalla al instante." }
       },
       {
         "@type": "Question",
-        "name": "¿Qué número necesito para pagar el SADM en línea?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Necesitas el número de cuenta o contrato SADM que aparece en la parte superior de tu recibo bimestral. Generalmente tiene entre 9 y 12 dígitos. También puedes encontrarlo en el portal sadm.mx." }
+        "name": "¿PagoYa es una alternativa al portal sadm.mx?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. En lugar de entrar al portal sadm.mx, puedes pagar tu recibo de agua SADM directamente en la app de PagoYa. Es una opción en línea rápida que no depende del sitio del organismo." }
       },
       {
         "@type": "Question",
-        "name": "¿Puedo pagar el agua de Monterrey sin tener mi recibo físico?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Con PagoYa puedes pagar el SADM con tu número de cuenta aunque no tengas el recibo en mano. El número de cuenta no cambia entre bimestres. Si no lo recuerdas, consúltalo en sadm.mx con tu CURP o dirección." }
+        "name": "¿Necesito tarjeta para pagar el SADM en línea?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No es obligatorio. Puedes cargar saldo con efectivo en cualquier OXXO y pagar tu SADM en línea sin tarjeta ni cuenta bancaria. La tarifa de servicio de PagoYa es de $25 MXN por transacción." }
       },
       {
         "@type": "Question",
-        "name": "¿Cuánto tarda en procesarse el pago del agua en Monterrey?",
-        "acceptedAnswer": { "@type": "Answer", "text": "El pago se procesa en segundos. Recibes un comprobante inmediatamente y SADM registra el pago en su sistema en un plazo de 24 a 48 horas hábiles." }
+        "name": "¿Cuánto tarda en reflejarse el pago en línea del SADM?",
+        "acceptedAnswer": { "@type": "Answer", "text": "El pago se procesa en segundos y recibes comprobante de inmediato. SADM registra el pago en su sistema en un plazo de 24 a 48 horas hábiles." }
       },
       {
         "@type": "Question",
-        "name": "¿Dónde más puedo pagar el agua y drenaje de Monterrey?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Además de PagoYa, puedes pagar el SADM en cajas del organismo, bancos (BBVA, Santander, Banorte) con comisión, o en tiendas de conveniencia. Con PagoYa pagas directo desde tu celular sin moverte de casa." }
+        "name": "¿Puedo pagar el SADM en línea desde cualquier lugar?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Como el pago es 100% en línea desde la app, puedes pagar tu recibo de agua de Monterrey desde tu casa, el trabajo o donde estés, siempre que tengas tu número de cuenta SADM." }
       }
     ]
   };
@@ -69,19 +69,19 @@ export default function PagarAguaMonterrey() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Pagar Agua SADM Monterrey Sin Banco | PagoYa</title>
-        <meta name="description" content="Paga tu recibo de agua SADM Monterrey desde tu celular en 2 minutos. Sin banco, sin tarjeta, sin filas. Carga con efectivo en OXXO y paga al instante con PagoYa." />
+        <title>Pagar Agua Monterrey en Línea | SADM desde tu Celular | PagoYa</title>
+        <meta name="description" content="Paga tu recibo de agua SADM Monterrey en línea desde tu celular en 2 minutos. Alternativa al portal sadm.mx, sin tarjeta obligatoria. Comprobante al instante con PagoYa." />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://pagoyamx.com/pagar-agua-monterrey" />
-        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-monterrey" />
-        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-monterrey" />
+        <link rel="canonical" href="https://pagoyamx.com/pagar-agua-monterrey-en-linea" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-monterrey-en-linea" />
+        <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-monterrey-en-linea" />
         <meta name="geo.region" content="MX-NL" />
         <meta name="geo.placename" content="Monterrey, Nuevo León" />
-        <meta property="og:title" content="Pagar Agua SADM Monterrey Sin Banco | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo de agua SADM Monterrey desde tu celular. Sin banco ni tarjeta. Efectivo en OXXO con PagoYa." />
+        <meta property="og:title" content="Pagar Agua Monterrey en Línea | SADM desde tu Celular | PagoYa" />
+        <meta property="og:description" content="Paga tu SADM Monterrey en línea desde tu celular. Alternativa al portal, sin tarjeta obligatoria. Comprobante al instante con PagoYa." />
         <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
         <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://pagoyamx.com/pagar-agua-monterrey" />
+        <meta property="og:url" content="https://pagoyamx.com/pagar-agua-monterrey-en-linea" />
         <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>
         <script type="application/ld+json">{JSON.stringify(article)}</script>
         <script type="application/ld+json">{JSON.stringify(faq)}</script>
@@ -117,10 +117,10 @@ export default function PagarAguaMonterrey() {
         </button>
       </nav>
 
-      {/* Sticky bottom CTA — appears after user scrolls past hero */}
+      {/* Sticky bottom CTA */}
       {showSticky && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,37,64,0.97)", borderTop: "1px solid rgba(29,158,117,0.4)", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(10px)" }}>
-          <p style={{ color: "white", fontWeight: 700, fontSize: "14px", margin: 0 }}>💧 Paga tu SADM ahora</p>
+          <p style={{ color: "white", fontWeight: 700, fontSize: "14px", margin: 0 }}>💧 Paga tu SADM en línea</p>
           <button onClick={() => navigate("/pagar")} style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "20px", padding: "10px 22px", fontWeight: 800, fontSize: "14px", cursor: "pointer" }}>
             Pagar SADM →
           </button>
@@ -130,21 +130,21 @@ export default function PagarAguaMonterrey() {
       {/* Hero */}
       <section style={{ padding: "56px 24px 40px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
         <p style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "12px" }}>
-          💧 Agua y Drenaje · Monterrey, Nuevo León
+          💧 Agua SADM en línea · Monterrey, Nuevo León
         </p>
         <h1 className="mty-h1" style={{ color: "white", fontWeight: 900, lineHeight: 1.2, marginBottom: "20px" }}>
-          Pagar agua SADM Monterrey<br />
-          <span style={{ color: "#1D9E75" }}>sin banco, sin filas, sin tarjeta</span>
+          Pagar agua Monterrey en línea<br />
+          <span style={{ color: "#1D9E75" }}>tu recibo SADM desde el celular</span>
         </h1>
         <p style={{ color: "#94A3B8", fontSize: "18px", lineHeight: 1.7, marginBottom: "32px", maxWidth: "600px" }}>
-          Paga tu recibo de los <strong style={{ color: "white" }}>Servicios de Agua y Drenaje de Monterrey (SADM)</strong> desde tu celular en menos de 2 minutos. Carga saldo con efectivo en cualquier OXXO y paga al instante.
+          Paga tu recibo de los <strong style={{ color: "white" }}>Servicios de Agua y Drenaje de Monterrey (SADM)</strong> 100% en línea desde tu celular. Una alternativa rápida al portal sadm.mx: abres la app, ingresas tu cuenta y listo, en menos de 2 minutos.
         </p>
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <button
             onClick={() => navigate("/pagar")}
             style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "50px", padding: "16px 32px", fontWeight: 800, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(29,158,117,0.4)" }}
           >
-            Pagar SADM ahora →
+            Pagar SADM en línea →
           </button>
           <button
             onClick={() => navigate("/cargar")}
@@ -153,25 +153,28 @@ export default function PagarAguaMonterrey() {
             Cargar saldo primero
           </button>
         </div>
+        <p style={{ color: "#94A3B8", fontSize: "14px", marginTop: "20px" }}>
+          ¿Buscas pagar sin banco? Revisa la guía de <a href="/pagar-agua-monterrey">pagar agua SADM sin banco</a> o explora todos los <a href="/pagar-servicios-monterrey">servicios de Monterrey</a>.
+        </p>
       </section>
 
       {/* Steps */}
       <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "24px" }}>
-          Cómo pagar el agua en Monterrey en 3 pasos
+          Cómo pagar el agua de Monterrey en línea en 3 pasos
         </h2>
         <ol className="mty-ol" style={{ marginBottom: "32px" }}>
-          <li><strong style={{ color: "white" }}>Recarga con efectivo en OXXO.</strong> Ve a cualquier OXXO de Monterrey o Nuevo León, da tu número de teléfono y deposita el monto de tu recibo SADM. Tu saldo PagoYa se acredita al instante.</li>
-          <li><strong style={{ color: "white" }}>Ingresa tu número de cuenta SADM.</strong> Abre PagoYa, elige "Pagar servicio", selecciona Agua (SADM) e ingresa el número de contrato de tu recibo.</li>
-          <li><strong style={{ color: "white" }}>Confirma y listo.</strong> El pago se procesa en segundos. Recibes comprobante en pantalla. SADM registra el pago en 24–48 h hábiles.</li>
+          <li><strong style={{ color: "white" }}>Abre PagoYa y elige Agua (SADM).</strong> Desde tu celular entra a la app, selecciona "Pagar servicio" y toca Agua (SADM). Todo el proceso es en línea, sin salir de casa.</li>
+          <li><strong style={{ color: "white" }}>Ingresa tu número de cuenta SADM.</strong> Captura el número de contrato que aparece en tu recibo o que consultas en sadm.mx. Confirma el monto de tu bimestre.</li>
+          <li><strong style={{ color: "white" }}>Paga y recibe tu comprobante.</strong> El pago se procesa en segundos y ves tu comprobante en pantalla. SADM registra el pago en 24–48 h hábiles.</li>
         </ol>
 
         {/* Feature pills */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "40px" }}>
           {[
-            { icon: "⚡", title: "2 minutos", desc: "de principio a fin" },
-            { icon: "🏪", title: "+19,000 OXXO", desc: "en Nuevo León y todo México" },
-            { icon: "📱", title: "Sin banco", desc: "ni tarjeta requerida" },
+            { icon: "🌐", title: "100% en línea", desc: "sin ir a cajas ni bancos" },
+            { icon: "📱", title: "Desde tu celular", desc: "en cualquier momento" },
+            { icon: "💳", title: "Sin tarjeta", desc: "efectivo en OXXO si prefieres" },
             { icon: "🧾", title: "Comprobante", desc: "inmediato en pantalla" },
           ].map(f => (
             <div key={f.title} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px", padding: "18px 16px" }}>
@@ -183,10 +186,10 @@ export default function PagarAguaMonterrey() {
         </div>
       </section>
 
-      {/* SADM info table */}
+      {/* Info table */}
       <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "20px" }}>
-          Información sobre el pago SADM en línea
+          Pago en línea del SADM: lo que necesitas saber
         </h2>
         <div className="mty-table-wrap">
           <table className="mty-table" style={{ color: "#CBD5E1", fontSize: "14px", marginBottom: "24px" }}>
@@ -198,9 +201,10 @@ export default function PagarAguaMonterrey() {
             </thead>
             <tbody>
               <tr><td>Organismo</td><td>Servicios de Agua y Drenaje de Monterrey (SADM)</td></tr>
-              <tr><td>Cobertura</td><td>Monterrey, San Nicolás, Apodaca, Guadalupe, Escobedo, San Pedro Garza García y más municipios de Nuevo León</td></tr>
-              <tr><td>Frecuencia de facturación</td><td>Bimestral (cada 2 meses)</td></tr>
-              <tr><td>Número de cuenta</td><td>Aparece en la parte superior del recibo físico. Disponible también en <strong>sadm.mx</strong></td></tr>
+              <tr><td>Modalidad</td><td>Pago 100% en línea desde la app PagoYa</td></tr>
+              <tr><td>Alternativa a</td><td>Portal sadm.mx y cajas físicas del organismo</td></tr>
+              <tr><td>Número de cuenta</td><td>Aparece en tu recibo bimestral o en <strong>sadm.mx</strong></td></tr>
+              <tr><td>Métodos de saldo</td><td>Efectivo en OXXO · sin tarjeta ni cuenta bancaria obligatoria</td></tr>
               <tr><td>Costo del servicio PagoYa</td><td>$25 MXN tarifa de servicio por transacción</td></tr>
               <tr><td>Tiempo de acreditación</td><td>Pago instantáneo · SADM actualiza en 24–48 h hábiles</td></tr>
             </tbody>
@@ -208,23 +212,22 @@ export default function PagarAguaMonterrey() {
         </div>
 
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "20px" }}>
-          ¿Dónde más se puede pagar el agua SADM?
+          Formas de pagar el agua de Monterrey en línea
         </h2>
         <div className="mty-table-wrap">
           <table className="mty-table" style={{ color: "#CBD5E1", fontSize: "14px", marginBottom: "32px" }}>
             <thead>
               <tr>
-                <th>Opción de pago</th>
+                <th>Opción en línea</th>
                 <th>Requiere</th>
                 <th>Comisión aprox.</th>
               </tr>
             </thead>
             <tbody>
               <tr><td><strong style={{ color: "#1D9E75" }}>PagoYa (recomendado)</strong></td><td>Solo tu celular</td><td>$25 MXN fija</td></tr>
-              <tr><td>Cajas SADM</td><td>Ir en persona, recibo físico</td><td>Sin comisión</td></tr>
-              <tr><td>Bancos (BBVA, Santander, Banorte)</td><td>Cuenta bancaria</td><td>$15–$30 MXN</td></tr>
               <tr><td>Portal sadm.mx</td><td>Tarjeta de crédito/débito</td><td>Variable</td></tr>
-              <tr><td>OXXO Pay directo</td><td>Ir al OXXO con recibo</td><td>$13 MXN aprox.</td></tr>
+              <tr><td>Banca en línea (BBVA, Santander, Banorte)</td><td>Cuenta bancaria</td><td>$15–$30 MXN</td></tr>
+              <tr><td>Apps bancarias</td><td>Cuenta y tarjeta</td><td>Variable</td></tr>
             </tbody>
           </table>
         </div>
@@ -233,14 +236,14 @@ export default function PagarAguaMonterrey() {
       {/* FAQ */}
       <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "24px" }}>
-          Preguntas frecuentes — pago SADM Monterrey
+          Preguntas frecuentes — pago SADM en línea
         </h2>
         {[
-          { q: "¿Cómo pago el agua SADM Monterrey sin ir al banco?", a: "Con PagoYa pagas tu recibo de agua SADM desde tu celular en menos de 2 minutos. Recarga tu billetera con efectivo en cualquier OXXO de Monterrey o Nuevo León y paga al instante. No necesitas cuenta bancaria ni tarjeta." },
-          { q: "¿Qué número necesito para pagar el SADM en línea?", a: "Necesitas el número de cuenta o contrato SADM que aparece en la parte superior de tu recibo bimestral. También puedes consultarlo en sadm.mx con tu CURP o dirección." },
-          { q: "¿Puedo pagar el agua de Monterrey sin tener mi recibo físico?", a: "Sí. Con PagoYa puedes pagar el SADM con tu número de cuenta aunque no tengas el recibo en mano. El número de cuenta no cambia entre bimestres." },
-          { q: "¿Cuánto tarda en procesarse el pago del agua en Monterrey?", a: "El pago se procesa en segundos. Recibes comprobante inmediatamente. SADM registra el pago en su sistema en 24 a 48 horas hábiles." },
-          { q: "¿Dónde más puedo pagar el SADM?", a: "Además de PagoYa, puedes pagar en cajas del organismo, bancos (BBVA, Santander, Banorte) con comisión, en el portal sadm.mx con tarjeta, o en tiendas de conveniencia. Con PagoYa pagas desde tu celular sin moverte de casa." },
+          { q: "¿Cómo pago el agua SADM Monterrey en línea desde mi celular?", a: "Abre PagoYa en tu celular, elige Pagar servicio, selecciona Agua (SADM) e ingresa tu número de cuenta. Confirmas y el pago se procesa en segundos. Recibes tu comprobante en pantalla al instante." },
+          { q: "¿PagoYa es una alternativa al portal sadm.mx?", a: "Sí. En lugar de entrar al portal sadm.mx, puedes pagar tu recibo de agua SADM directamente en la app de PagoYa. Es una opción en línea rápida que no depende del sitio del organismo." },
+          { q: "¿Necesito tarjeta para pagar el SADM en línea?", a: "No es obligatorio. Puedes cargar saldo con efectivo en cualquier OXXO y pagar tu SADM en línea sin tarjeta ni cuenta bancaria. La tarifa de servicio de PagoYa es de $25 MXN por transacción." },
+          { q: "¿Cuánto tarda en reflejarse el pago en línea del SADM?", a: "El pago se procesa en segundos y recibes comprobante de inmediato. SADM registra el pago en su sistema en un plazo de 24 a 48 horas hábiles." },
+          { q: "¿Puedo pagar el SADM en línea desde cualquier lugar?", a: "Sí. Como el pago es 100% en línea desde la app, puedes pagar tu recibo de agua de Monterrey desde tu casa, el trabajo o donde estés, siempre que tengas tu número de cuenta SADM." },
         ].map((item, i) => (
           <div key={i} style={{ marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: "20px" }}>
             <p style={{ color: "white", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>❓ {item.q}</p>
@@ -254,7 +257,7 @@ export default function PagarAguaMonterrey() {
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "16px" }}>Más servicios en Monterrey</h2>
         <ul className="mty-ul">
           <li><a href="/pagar-servicios-monterrey">Pagar servicios en Monterrey (agua, luz, gas)</a></li>
-          <li><a href="/pagar-agua-monterrey-en-linea">Pagar agua SADM en línea</a></li>
+          <li><a href="/pagar-agua-monterrey">Pagar agua SADM sin banco</a></li>
           <li><a href="/pagar-cfe-monterrey">Pagar CFE Monterrey</a></li>
           <li><a href="/pagar-gas-natural-monterrey">Pagar gas natural Naturgy Monterrey</a></li>
         </ul>
@@ -265,16 +268,16 @@ export default function PagarAguaMonterrey() {
         <div style={{ background: "linear-gradient(135deg, rgba(29,158,117,0.15), rgba(29,158,117,0.05))", border: "1px solid rgba(29,158,117,0.3)", borderRadius: "24px", padding: "40px 24px" }}>
           <p style={{ fontSize: "32px", marginBottom: "12px" }}>💧</p>
           <h2 style={{ color: "white", fontWeight: 900, fontSize: "22px", marginBottom: "10px" }}>
-            Paga tu SADM ahora mismo
+            Paga tu SADM en línea ahora
           </h2>
           <p style={{ color: "#94A3B8", fontSize: "15px", marginBottom: "28px", lineHeight: 1.6 }}>
-            Sin banco, sin tarjeta, sin filas.<br />Solo tu celular y efectivo en OXXO.
+            Desde tu celular, en menos de 2 minutos.<br />Sin filas y sin tarjeta obligatoria.
           </p>
           <button
             onClick={() => navigate("/pagar")}
             style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "50px", padding: "16px 36px", fontWeight: 800, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(29,158,117,0.4)" }}
           >
-            Pagar mi SADM →
+            Pagar mi SADM en línea →
           </button>
         </div>
       </section>

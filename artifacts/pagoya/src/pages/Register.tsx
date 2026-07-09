@@ -287,6 +287,7 @@ export default function Register() {
     ...(repId ? { repId } : {}),
     ...(recoveryEmail.trim() ? { recoveryEmail: recoveryEmail.trim() } : {}),
     whatsapp_consent_at: whatsappConsent ? new Date().toISOString() : null,
+    landing_page: sessionStorage.getItem("pagoya_landing_page") ?? "",
   });
 
   // ── SCREEN: form submit ───────────────────────────────────────────────────

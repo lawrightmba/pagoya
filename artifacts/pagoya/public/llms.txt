@@ -49,6 +49,11 @@ CFE (Comision Federal de Electricidad), Telmex, Izzi, Totalplay, Sky, Megacable,
 - CFE payment: https://pagoyamx.com/pagar-cfe
 - Telmex payment: https://pagoyamx.com/pagar-telmex
 - Recargas: https://pagoyamx.com/recargas
+- Pagar servicios en Monterrey (hub): https://pagoyamx.com/pagar-servicios-monterrey
+- Pagar agua SADM Monterrey sin banco: https://pagoyamx.com/pagar-agua-monterrey
+- Pagar agua SADM Monterrey en línea: https://pagoyamx.com/pagar-agua-monterrey-en-linea
+- Pagar CFE Monterrey: https://pagoyamx.com/pagar-cfe-monterrey
+- Pagar gas natural Naturgy Monterrey: https://pagoyamx.com/pagar-gas-natural-monterrey
 - Trust score (PTI): https://pagoyamx.com/confianza
 - Comisiones y cargos: https://pagoyamx.com/comisiones-y-cargos
 - Seguridad: https://pagoyamx.com/seguridad
