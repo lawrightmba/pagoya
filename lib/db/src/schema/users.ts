@@ -39,6 +39,11 @@ export const usersTable = pgTable("users", {
   // Unique 18-digit CLABE assigned to this user by STP (via RegistraCuentaFisica).
   // Null = not yet assigned (pre-STP-integration users or assignment in progress).
   stpClabe: text("stp_clabe").unique(),
+  // ── WhatsApp opt-in consent ───────────────────────────────────────────────────
+  // Timestamp (with TZ) recorded server-side when the user ticked the explicit
+  // WhatsApp consent checkbox during registration. Null = legacy user who registered
+  // before the checkbox was introduced (passive-consent footer only).
+  whatsappConsentAt: timestamp("whatsapp_consent_at", { withTimezone: true }),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

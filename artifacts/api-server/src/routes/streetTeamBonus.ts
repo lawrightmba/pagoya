@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { assignNextLndCode } from "./landlords.js";
-import { eq, and, count, sum } from "drizzle-orm";
+import { eq, and, count, sum, sql as drizzleSql } from "drizzle-orm";
 import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
 import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
@@ -23,6 +23,7 @@ declare module "express-session" {
       ref_code: string;
       landlord_ref?: string;
       is_generic_landlord?: boolean;
+      whatsapp_consent_at?: string;
     };
   }
 }
@@ -39,13 +40,14 @@ function validatePhone(phone: string): boolean {
 // POST /api/street-team/signup-with-bonus
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/signup-with-bonus", async (req: Request, res: Response) => {
-  const { name, phone, curp, city, colonia, ref_code } = req.body as {
+  const { name, phone, curp, city, colonia, ref_code, whatsapp_consent_at } = req.body as {
     name?: string;
     phone?: string;
     curp?: string;
     city?: string;
     colonia?: string;
     ref_code?: string;
+    whatsapp_consent_at?: string;
   };
 
   // ── Required field validation ──────────────────────────────────────────────
@@ -119,6 +121,7 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       ref_code: refCodeResolved,
       landlord_ref: landlordRef,
       is_generic_landlord: isGenericLandlord || undefined,
+      whatsapp_consent_at: whatsapp_consent_at?.trim() || undefined,
     };
 
     // ── 4. Return OTP challenge ────────────────────────────────────────────
@@ -197,9 +200,21 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
         userId = existing.id;
       }
 
+      // ── WhatsApp consent timestamp (fire-and-forget; never blocks) ──────────
+      // Writes the ISO timestamp recorded when the user ticked the opt-in checkbox.
+      // Only updates rows where the column is still NULL to avoid overwriting a
+      // previously recorded consent (e.g. a returning user re-triggering OTP).
+      if (pending.whatsapp_consent_at) {
+        db.execute(
+          drizzleSql`UPDATE users SET whatsapp_consent_at = ${new Date(pending.whatsapp_consent_at)}
+                     WHERE telefono = ${pending.phone} AND whatsapp_consent_at IS NULL`,
+        ).catch((err: unknown) => {
+          logger.warn({ err, phone: pending.phone }, "streetTeamBonus: consent timestamp write failed (non-fatal)");
+        });
+      }
+
       // ── Landlord referral: tag user + increment landlord counter ──────────
       if (pending.landlord_ref) {
-        const { sql: drizzleSql } = await import("drizzle-orm");
         db.execute(
           drizzleSql`UPDATE users SET referred_by_landlord = ${pending.landlord_ref} WHERE telefono = ${pending.phone}`,
         ).then(() =>

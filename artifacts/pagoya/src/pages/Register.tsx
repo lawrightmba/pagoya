@@ -217,6 +217,7 @@ export default function Register() {
   const [bonusCredited, setBonusCredited] = useState(false);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [waNumber, setWaNumber] = useState<string | null>(null);
+  const [whatsappConsent, setWhatsappConsent] = useState(true);
 
   useEffect(() => {
     setRepId(getQueryParam("rep"));
@@ -285,6 +286,7 @@ export default function Register() {
     ...(!hasSpecificLndCode && isLandlordFlow ? { is_generic_landlord: true } : {}),
     ...(repId ? { repId } : {}),
     ...(recoveryEmail.trim() ? { recoveryEmail: recoveryEmail.trim() } : {}),
+    whatsapp_consent_at: whatsappConsent ? new Date().toISOString() : null,
   });
 
   // ── SCREEN: form submit ───────────────────────────────────────────────────
@@ -1021,6 +1023,26 @@ export default function Register() {
           {/* API error box */}
           {formError && <div style={apiErrorBoxStyle}>{formError}</div>}
 
+          {/* WhatsApp opt-in consent */}
+          <label style={{
+            display: "flex", alignItems: "flex-start", gap: "10px",
+            cursor: "pointer", marginTop: "4px",
+          }}>
+            <input
+              type="checkbox"
+              checked={whatsappConsent}
+              onChange={e => setWhatsappConsent(e.target.checked)}
+              required
+              style={{
+                marginTop: "3px", accentColor: "#00e5b4",
+                width: "16px", height: "16px", flexShrink: 0, cursor: "pointer",
+              }}
+            />
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>
+              Acepto recibir mensajes de WhatsApp de PagoYa para confirmaciones de pago y notificaciones de mi cuenta.
+            </span>
+          </label>
+
           {/* Submit */}
           <button
             type="submit"
@@ -1056,7 +1078,7 @@ export default function Register() {
           textAlign: "center",
           lineHeight: 1.5,
         }}>
-          Al registrarte aceptas recibir mensajes de WhatsApp y que tu actividad en la plataforma sea usada para calcular tu Predictive Trust Index (perfil conductual de confianza financiera). · By registering you consent to WhatsApp messages and behavioral scoring for your Trust Index.
+          Al registrarte aceptas que tu actividad en la plataforma sea usada para calcular tu Predictive Trust Index (perfil conductual de confianza financiera). · By registering you consent to behavioral scoring for your Trust Index.
         </p>
       </div>
     </div>
