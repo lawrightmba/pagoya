@@ -705,7 +705,7 @@ router.get("/user/me", async (req: Request, res: Response) => {
   if (!telefono) { res.status(400).json({ error: "telefono requerido" }); return; }
   try {
     const userRows = await db.execute(
-      drizzleSql`SELECT kyc_full_name, welcome_shown FROM users WHERE telefono = ${telefono} LIMIT 1`,
+      drizzleSql`SELECT kyc_full_name, welcome_shown, whatsapp_consent_at FROM users WHERE telefono = ${telefono} LIMIT 1`,
     );
     const user = userRows.rows[0] as Record<string, unknown> | undefined;
     if (!user) { res.status(404).json({ error: "usuario no encontrado" }); return; }
@@ -722,6 +722,7 @@ router.get("/user/me", async (req: Request, res: Response) => {
       telefono,
       welcomeShown: (user.welcome_shown as boolean) ?? false,
       bonusAmount: config ? parseFloat(config.bonusAmount ?? "25") : 25,
+      whatsappConsentAt: (user.whatsapp_consent_at as string | null) ?? null,
     });
   } catch (err) {
     logger.error({ err }, "user/me: failed");
@@ -742,6 +743,22 @@ router.get("/user/welcome-shown", async (req: Request, res: Response) => {
     res.json({ welcomeShown: (row.welcome_shown as boolean) ?? false });
   } catch (err) {
     logger.error({ err }, "user/welcome-shown GET: failed");
+    res.status(500).json({ error: "Error." });
+  }
+});
+
+// PATCH /api/user/consent — record WhatsApp opt-in for a logged-in user (re-consent banner path)
+router.patch("/user/consent", async (req: Request, res: Response) => {
+  const { telefono } = req.body as { telefono?: string };
+  if (!telefono?.trim()) { res.status(400).json({ error: "telefono requerido" }); return; }
+  try {
+    await db.execute(
+      drizzleSql`UPDATE users SET whatsapp_consent_at = NOW()
+                 WHERE telefono = ${telefono.trim()} AND whatsapp_consent_at IS NULL`,
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "user/consent PATCH: failed");
     res.status(500).json({ error: "Error." });
   }
 });
@@ -1102,6 +1119,72 @@ router.get("/admin/handoff-requests", async (_req: Request, res: Response) => {
   } catch (err) {
     logger.error({ err }, "admin/handoff-requests: failed");
     res.status(500).json({ error: "Failed to fetch handoff requests" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/admin/weekly-baseline — real-user funnel snapshot for weekly review
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/admin/weekly-baseline", adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(drizzleSql`
+      SELECT
+        RIGHT(u.telefono, 4)                    AS last4,
+        u.signup_source,
+        u.signup_ref_code,
+        u.landing_page,
+        u.created_at::date                      AS signup_date,
+        (u.whatsapp_consent_at IS NOT NULL)     AS has_consent,
+        (w.balance_mxn)                         AS balance_mxn,
+        (SELECT COUNT(*)::int FROM bill_payments bp WHERE bp.telefono = u.telefono) AS payments,
+        u.pti_score
+      FROM users u
+      LEFT JOIN wallets w ON w.user_id = u.telefono
+      WHERE u.is_test_account IS NOT TRUE
+      ORDER BY u.created_at
+    `);
+
+    const users = rows.rows as Record<string, unknown>[];
+    const totals = {
+      users_total:       users.length,
+      users_consented:   users.filter(r => r.has_consent).length,
+      users_with_payment: users.filter(r => (r.payments as number) > 0).length,
+      users_web_organic: users.filter(r => r.signup_source === "web_organic").length,
+      users_whatsapp:    users.filter(r => r.signup_source === "whatsapp_organic").length,
+      users_rep:         users.filter(r => r.signup_source === "rep_referral").length,
+    };
+
+    res.json({ as_of: new Date().toISOString(), totals, users });
+  } catch (err) {
+    logger.error({ err }, "admin/weekly-baseline: failed");
+    res.status(500).json({ error: "Failed" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/mark-test-accounts — flag known dev/test rows so they are
+// excluded from all is_test_account IS NOT TRUE filters.
+// Body: { phones: string[] }  — list of telefono values to mark.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/admin/mark-test-accounts", adminAuth, async (req: Request, res: Response) => {
+  const { phones } = req.body as { phones?: string[] };
+  if (!Array.isArray(phones) || phones.length === 0) {
+    res.status(400).json({ error: "phones array required" }); return;
+  }
+  try {
+    const results: { telefono: string; updated: number }[] = [];
+    for (const raw of phones) {
+      const phone = String(raw).trim();
+      const r = await db.execute(
+        drizzleSql`UPDATE users SET is_test_account = true WHERE telefono = ${phone}`,
+      );
+      results.push({ telefono: phone, updated: (r as unknown as { rowCount: number }).rowCount ?? 0 });
+    }
+    logger.info({ results }, "admin/mark-test-accounts: flagged test rows");
+    res.json({ ok: true, results });
+  } catch (err) {
+    logger.error({ err }, "admin/mark-test-accounts: failed");
+    res.status(500).json({ error: "Failed" });
   }
 });
 

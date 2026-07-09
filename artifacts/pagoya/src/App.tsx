@@ -2,6 +2,7 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import Bienvenida from "@/pages/Bienvenida";
 import Juegos from "@/pages/Juegos";
 import { useEffect } from "react";
+import { WhatsAppConsentBanner } from "@/components/WhatsAppConsentBanner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -230,6 +231,7 @@ function AppShell() {
       {!hideBottomNav && <GlobalFooter />}
       {!hideBottomNav && <BottomNav />}
       {!hideSupportChat && <SupportChat />}
+      {!hideBottomNav && <WhatsAppConsentBanner />}
     </>
   );
 }
