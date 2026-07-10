@@ -296,6 +296,20 @@ router.post("/admin/run-winback", async (_req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/run-paula-send-queue — manually trigger one paula_send_queue processing
+// pass (for verification). Mirrors the 2-min in-process cron in paulaSendQueue.ts; useful
+// on autoscale deployments where the interval timer's cadence is not guaranteed.
+router.post("/admin/run-paula-send-queue", async (_req: Request, res: Response) => {
+  try {
+    const { processSendQueue } = await import("../services/paulaSendQueue.js");
+    await processSendQueue();
+    res.json({ ok: true, message: "Send queue pass complete — check server logs / paula_send_queue for results." });
+  } catch (err) {
+    logger.error({ err }, "admin/run-paula-send-queue: failed");
+    res.status(500).json({ error: "Send queue pass failed — check server logs." });
+  }
+});
+
 // POST /api/admin/backfill-payment-counters — one-time backfill for existing users
 // Only updates users where all three load counters are 0 (gate prevents overwrites)
 router.post("/admin/backfill-payment-counters", async (_req: Request, res: Response) => {
