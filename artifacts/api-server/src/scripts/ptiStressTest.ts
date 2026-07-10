@@ -17,11 +17,6 @@
 
 import { computePTI, getPTITier, PTI_MODEL_VERSION, type PTIDataSnapshot } from "../services/pti.js";
 import { DERIVED_FEATURE_DEFAULTS } from "../services/ptiDerivedFeatures.js";
-import {
-  computeFairLendingAdjustment,
-  type AdjustmentFlagState,
-} from "../services/fairLendingAdjustment.js";
-import { FAIR_LENDING_MAPPING_VERSION } from "../config/fairLendingMapping.js";
 import { generatePopulation, type SyntheticUser, type Segment } from "../services/syntheticPopulation.js";
 
 // ─── Small stat helpers ───────────────────────────────────────────────────────
@@ -164,7 +159,6 @@ function reportPopulation(pop: SyntheticUser[]) {
   for (const u of pop) counts.set(u._segment, (counts.get(u._segment) ?? 0) + 1);
   console.log(`  Total synthetic users: ${pop.length}`);
   console.log(`  Model version under test: ${PTI_MODEL_VERSION}`);
-  console.log(`  Fair-lending mapping version: ${FAIR_LENDING_MAPPING_VERSION}`);
   console.log("  Segment breakdown:");
   for (const [seg, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`    ${seg.padEnd(28)} ${String(n).padStart(6)}  (${fmt((n / pop.length) * 100, 1)}%)`);
@@ -285,51 +279,6 @@ function reportTierBoundaries(scored: Scored[]) {
     "SPEC DISCREPANCY (not a code bug): brief lists tier boundaries 30/50/65/80, but getPTITier uses 40/60/80. " +
       "30/50/65 are mid-tier interior values. Confirm whether the brief or the code has the intended cutoffs.",
   );
-}
-
-function makeFlagState(capOverride: number | null): AdjustmentFlagState {
-  return {
-    enabled: true,
-    reasonIfDisabled: null,
-    flagRequested: true,
-    gatePassed: true,
-    mappingVersion: FAIR_LENDING_MAPPING_VERSION,
-    adjustmentCapOverride: capOverride,
-  };
-}
-
-function reportFairLendingCaps(pop: SyntheticUser[]) {
-  header("5. FAIR-LENDING ADJUSTMENT CAPS (±5 pass / ±2 conditional)");
-
-  const passState = makeFlagState(null); // cap ±5
-  const condState = makeFlagState(2);    // cap ±2
-
-  let maxAbsPass = 0;
-  let maxAbsCond = 0;
-  let breaches = 0;
-  let nonZero = 0;
-  for (const u of pop) {
-    const fl = { colonia: u.colonia, coloniaTier: u.coloniaTier, declaredIncomeBucket: u.declaredIncomeBucket };
-    const p = computeFairLendingAdjustment(fl, passState);
-    const c = computeFairLendingAdjustment(fl, condState);
-    maxAbsPass = Math.max(maxAbsPass, Math.abs(p.adjustment));
-    maxAbsCond = Math.max(maxAbsCond, Math.abs(c.adjustment));
-    if (p.adjustment !== 0 || c.adjustment !== 0) nonZero++;
-    if (Math.abs(p.adjustment) > 5 || Math.abs(c.adjustment) > 2) breaches++;
-  }
-
-  console.log(`  users evaluated: ${pop.length}`);
-  console.log(`  max |adjustment| under pass cap (±5):        ${fmt(maxAbsPass, 2)}`);
-  console.log(`  max |adjustment| under conditional cap (±2): ${fmt(maxAbsCond, 2)}`);
-  console.log(`  cap breaches: ${breaches}`);
-  console.log(`  non-zero adjustments: ${nonZero}`);
-  console.log("\n  CAVEAT: FAIR_LENDING_MAPPING ships as an all-zero placeholder (pending");
-  console.log("  bias-testing sign-off), so every adjustment is exactly 0 by construction.");
-  console.log("  The ±5/±2 clamp is therefore trivially satisfied here — this confirms the");
-  console.log("  cap is never EXCEEDED, but does not exercise a non-zero clamp. The clamp math");
-  console.log("  itself is covered by fairLendingAdjustment.test.ts with non-zero values.");
-
-  if (breaches > 0) flagBug(`Fair-lending: ${breaches} adjustments exceeded their cap — clamp logic failure.`);
 }
 
 function reportDisparateImpact(scored: Scored[]) {
@@ -556,7 +505,10 @@ function main() {
   reportDistribution(scored);
   reportColdStart(scored);
   reportTierBoundaries(scored);
-  reportFairLendingCaps(pop);
+  // NOTE: the ±5/±2 fair-lending adjustment layer (fairLendingAdjustment.ts)
+  // was retired 2026-07-10 per phase3-implementation-spec.md §3.2 — it was
+  // always a production no-op (all-zero mapping). The former "FAIR-LENDING
+  // ADJUSTMENT CAPS" report section has been removed along with it.
   reportDisparateImpact(scored);
   reportGamingResistance(scored);
 

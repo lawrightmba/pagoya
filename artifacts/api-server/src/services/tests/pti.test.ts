@@ -15,11 +15,10 @@ import {
 } from "../syntheticPopulation.js";
 import { toSnapshot as ablationToSnapshot } from "../../scripts/ptiAblationStudy.js";
 import { toSnapshot as stressTestToSnapshot } from "../../scripts/ptiStressTest.js";
-import { toSnapshot as fairLendingClampToSnapshot } from "../../scripts/fairLendingClampStressTest.js";
 
 /**
  * Wraps a plain PTIDataSnapshot as a SyntheticUser so it can be fed into the
- * three scripts' toSnapshot(u: SyntheticUser) functions, which only read the
+ * scripts' toSnapshot(u: SyntheticUser) functions, which only read the
  * PTIDataSnapshot-shaped fields off `u` — the metadata fields below are
  * never consulted by any toSnapshot() implementation, they only exist to
  * satisfy the SyntheticUser type.
@@ -592,12 +591,6 @@ describe("PTIDataSnapshot schema completeness", () => {
     const rng = makeRng(2);
     const user = asSyntheticUser(synthFromLatents({ reliability: 0.4, engagement: 0.6, ses: 0.7 }, rng, 1));
     assertExactKeys("ptiStressTest.toSnapshot", stressTestToSnapshot(user));
-  });
-
-  it("fairLendingClampStressTest.ts: toSnapshot matches canonical fields", () => {
-    const rng = makeRng(3);
-    const user = asSyntheticUser(synthFromLatents({ reliability: 0.7, engagement: 0.3, ses: 0.2 }, rng, 1));
-    assertExactKeys("fairLendingClampStressTest.toSnapshot", fairLendingClampToSnapshot(user));
   });
 
   it("pti.test.ts: baseSnapshot() matches canonical fields", () => {

@@ -3,8 +3,6 @@ import { logger } from "./lib/logger";
 import { siprelBalanceCheck } from "./jobs/siprelBalanceCheck.js";
 import { startNudgePollCron } from "./services/nudgeService.js";
 import { startEnrichmentCrons } from "./services/enrichmentCron.js";
-import { assertProductionSafety } from "./services/fairLendingAdjustment.js";
-import { startFairLendingRetestCron } from "./services/fairLendingRetestCron.js";
 import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 import { logRailModes } from "./services/railModeCheck.js";
 
@@ -21,15 +19,6 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
-
-// Blocking boot-time safety check: refuse to start if the fair-lending
-// adjustment layer is enabled in production without a valid, current,
-// passing signoff on file. This must never degrade silently — see
-// fairLendingAdjustment.ts for the full rationale.
-await assertProductionSafety().catch((err) => {
-  logger.error({ err }, "[fairLendingAdjustment] boot-time production safety check failed — refusing to start");
-  process.exit(1);
-});
 
 // Sprint 3b: refuse to start if the sandbox/production licensee-issuance
 // credential separation has silently collapsed. If SANDBOX_ADMIN_TOKEN is
@@ -60,7 +49,10 @@ app.listen(port, (err) => {
   siprelBalanceCheck.start();
   startNudgePollCron();
   startEnrichmentCrons();
-  startFairLendingRetestCron();
+  // The ±5/±2 fair-lending adjustment layer (fairLendingAdjustment.ts) and
+  // its daily retest cron (fairLendingRetestCron.ts) were retired 2026-07-10
+  // per phase3-implementation-spec.md §3.2 — always a production no-op
+  // (all-zero mapping). Terminal audit entry: fair_lending_signoff id=752.
 
   // Non-blocking startup health check: logs ERROR if expected active templates
   // are missing from paula_messages, surfaces delta for admin dashboard.

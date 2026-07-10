@@ -32,9 +32,8 @@
  *    ("full marks") band. No intermediate threshold or step value is
  *    invented. This is the most conservative reading available (it changes
  *    the fewest possible numbers relative to the last signed-off model) but
- *    it IS an interpretation, not a spec quote — flagged here, in the
- *    program record, and to the user, as an open item that should be
- *    confirmed against the signoff owner before v5.0 leaves shadow mode.
+ *    it IS an interpretation, not a spec quote. APPROVED by the signoff
+ *    owner on 2026-07-10 — no longer an open item.
  *    Affected components: payment_day_consistency, self_initiated_ratio,
  *    wallet_load_rhythm, spend_category_mix, signup_utilization_speed,
  *    payment_amount_volatility, load_spend_ratio, account_age.

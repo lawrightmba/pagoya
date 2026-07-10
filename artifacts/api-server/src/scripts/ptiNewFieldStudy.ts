@@ -49,7 +49,7 @@
 
 import { computePTI, type PTIDataSnapshot } from "../services/pti.js";
 import { generatePopulation, makeRng, type SyntheticUser, type Segment } from "../services/syntheticPopulation.js";
-import { toSnapshot } from "./fairLendingClampStressTest.js";
+import { toSnapshot } from "./ptiStressTest.js";
 
 // ─── stat helpers (mirror ptiStressTest.ts) ─────────────────────────────────
 
