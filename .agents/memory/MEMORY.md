@@ -1,3 +1,4 @@
+- [Paula send-enablement gate findings](paula-send-enablement-gates.md) — dev/prod DB SID sync can diverge (sync script hardcodes localhost); Meta blocks MARKETING templates to US numbers (err 63049); canary via direct Twilio call bypasses PAULA_SENDING_ENABLED
 - [Twilio HX7b08a submission incident](twilio-hx7b08a-incident.md) — welcome_activation submitted July 8 without Lloyd approval; full SID HX7b08a0a13db8d010cec343f3bc6bb2e6; NOT submitted to Meta; standing gate: Lloyd must approve before any Twilio submit script runs
 - [PTI fair-lending adjustment retirement](pti-fair-lending-retirement.md) — ±5/±2 layer deleted 2026-07-10 per spec §3.2; fairLendingOwnership.ts kept; regression guard preserved in pti.test.ts/ptiV5.test.ts
 - [WhatsApp agent architecture](whatsapp-agent.md) — inbound webhook live, session store in-memory, calls /api/agent/chat internally
