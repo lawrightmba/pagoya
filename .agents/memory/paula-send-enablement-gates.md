@@ -19,3 +19,17 @@ Since April 1, 2025, Meta will not deliver WhatsApp MARKETING-category template 
 
 ## Canary-testing a WhatsApp template without touching PAULA_SENDING_ENABLED
 There is no dedicated admin test-send route. To canary a specific approved template without flipping the global `PAULA_SENDING_ENABLED` kill switch (which would also open the door for the queue/cron to fire on real qualifying users), call Twilio's Content API directly with the `content_sid` + `contentVariables`, bypassing `paula_send_queue` and `paulaSendQueue.ts` entirely — this is fully isolated from the production send pipeline. Poll `client.messages(sid).fetch()` for terminal status (delivered/failed/undelivered).
+
+## Dev and prod are genuinely separate Postgres databases, and dev can lag prod's schema
+This shell's `DATABASE_URL` points at a dev-only Postgres distinct from prod's (confirmed by comparing db names) — it is not a "just check it matches" formality, it is structurally a different database with its own drift. Concretely: dev's `paula_send_queue` was missing the `variables_json` column that prod already had, discovered only when running a real enqueue through the actual pipeline code.
+
+**Why:** matters for anyone tempted to validate a queue/cron code path "in prod" by just running a script from this shell — you are actually hitting dev data with a potentially stale dev schema.
+
+**How to apply:** before any real pipeline test (not a health/read check) that writes through application code (not raw admin routes), first diff the relevant table's columns between this shell (`information_schema.columns`) and prod (via the read-replica endpoint), and patch dev with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` to match before trusting a "success" or debugging a failure.
+
+## Real pipeline test technique: exercise fireTrigger's real code path without exporting it
+`fireTrigger` in `paulaTriggers.ts` is not exported. To validate the true send pipeline (not a raw SQL insert, not a direct Twilio call) for a specific trigger_type + test contact, write a throwaway script that calls the same exported building blocks in the same order: `buildUserContext` → `loadMessageTemplates` (get by trigger_type) → `injectVariables`/`extractVariables` → manual `paula_trigger_log` insert → `enqueueWhatsApp`. This produces an identical `paula_send_queue` row to a real trigger fire, so the existing cron (`processSendQueue`, runs every 2 min) picks it up exactly as it would in production.
+
+**Why:** the alternative (raw SQL INSERT into `paula_send_queue`) does not exercise `buildUserContext`/variable-rendering code, and a direct Twilio call bypasses the queue/cron entirely — neither actually tests "the real pipeline."
+
+**How to apply:** requires a real row in `users` for the test telefono (mark `is_test_account=true`) since `buildUserContext` throws if the user doesn't exist and renders defaults (e.g. "amig@") if fields are null — insert realistic `kyc_full_name`/`pti_score`/etc. To trigger a real Twilio send during the test without touching prod's kill switch, set `PAULA_SENDING_ENABLED=true` in the **development**-scoped env var only (not shared/prod), restart the workflow so the already-running in-process cron picks it up, run the script, wait ~2min, then revert the dev env var and restart again. Delete the throwaway script afterward — it is not meant to be committed.
