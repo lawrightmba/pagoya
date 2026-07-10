@@ -5,10 +5,34 @@
  * readiness_assessments row (every evaluation is recorded for audit + admin
  * dashboard), and returns a ReadinessResult for use by evaluateTriggersForUser.
  *
- * Hard gate (READY):       PTI ≥ 80, streak ≥ 90d, diversity ≥ 3,
+ * Hard gate (READY):       PTI ≥ 80, streak criterion (see below), diversity ≥ 3,
  *                          KYC verified, zero fraud flags, literacy ≥ 3
  * Soft gate (APPROACHING): PTI ≥ 70, streak ≥ 60d, all other hard criteria met
  * Otherwise:               NOT_YET
+ *
+ * ── GATE G-C (Phase B3, PTI v5.0 fair-lending remediation) ─────────────────
+ * Streak criterion AS SIGNED (program-record.md signature record item 2,
+ * founder-signed 2026-07-09; verbatim credit-committee text in
+ * docs/fair-lending/phase2-frontier.md): a volatility-tolerant streak —
+ * "3 consecutive months, or 2 consecutive months with ≥6 lifetime
+ * payments — one-interruption forgiveness targeting income-regularity
+ * screening without relaxing payment depth." All other hard criteria
+ * (PTI 80, diversity 3, KYC, fraud, literacy) are UNCHANGED — the spec is
+ * explicit that "fraud-free and literacy criteria unchanged."
+ *
+ * This is a REAL-DATA-GROUNDED gate change, not a scoring change: it does
+ * not touch computePTI/computePTIv5 or any point value, only which
+ * lifetime payment history satisfies the streak criterion for handoff
+ * readiness. Per the signed monitoring spec (§3.3 item 5), every
+ * evaluation that clears the gate specifically via the tolerant branch
+ * (i.e. would NOT have cleared under the old ≥90-day-only rule) is logged
+ * and persisted (`tolerant_streak_branch_used`) as a standing real-data
+ * instrument, monitored for whether the branch admits materially more
+ * low-marginación users than the synthetic package predicted (documented
+ * synthetic-null baseline: zero).
+ *
+ * The SOFT (APPROACHING) gate's streak threshold is untouched — the signed
+ * gate text only speaks to the hard READY criterion.
  */
 
 import { sql } from "drizzle-orm";
@@ -23,6 +47,12 @@ const HARD_LITERACY    = 3;
 const SOFT_PTI         = 70;
 const SOFT_STREAK_DAYS = 60;
 
+// Gate G-C (signed 2026-07-09) — volatility-tolerant streak branch: 3
+// consecutive months, OR 2 consecutive months with >=6 lifetime payments.
+const TOLERANT_STREAK_MONTHS         = 2;
+const TOLERANT_STREAK_MIN_LIFETIME_PAYMENTS = 6;
+const STANDARD_STREAK_MONTHS         = 3; // == HARD_STREAK_DAYS at 30d/mo
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type ReadinessStatus = "READY" | "APPROACHING" | "NOT_YET";
 
@@ -34,6 +64,7 @@ export interface ReadinessResult {
   topGapLabel:        string;   // human-readable label for {{top_gap}} template var
   streakDays:         number;   // for {{streak_days}} injection
   billDiversity:      number;   // for {{bill_diversity}} injection
+  tolerantStreakBranchUsed: boolean; // Gate G-C real-data monitor (§3.3 item 5)
   gaps: {
     pti:        number;
     streakDays: number;
@@ -56,12 +87,25 @@ export async function evaluateReadiness(
   const kycRow = await db.execute(sql`
     SELECT
       (kyc_full_name IS NOT NULL AND kyc_full_name != '') AS kyc_verified,
+      COALESCE(consecutive_payment_months, 0)             AS streak_months,
       COALESCE(consecutive_payment_months * 30, 0)        AS streak_days
     FROM users WHERE telefono = ${tel10} LIMIT 1
   `);
   const ku = (kycRow.rows[0] as Record<string, unknown>) ?? {};
-  const kycVerified = Boolean(ku.kyc_verified);
-  const streakDays  = Number(ku.streak_days ?? 0);
+  const kycVerified  = Boolean(ku.kyc_verified);
+  const streakDays   = Number(ku.streak_days ?? 0);
+  const streakMonths = Number(ku.streak_months ?? 0);
+
+  // ── Lifetime payment count (Gate G-C tolerant branch input) ────────────────
+  const lifetimeRow = await db.execute(sql`
+    SELECT COUNT(*) AS lifetime_payments
+    FROM bill_payments
+    WHERE telefono = ${tel10}
+      AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
+  `);
+  const lifetimePaymentCount = Number(
+    (lifetimeRow.rows[0] as Record<string, unknown>)?.lifetime_payments ?? 0,
+  );
 
   // ── Fraud flags ───────────────────────────────────────────────────────────
   const fraudRow = await db.execute(sql`
@@ -94,9 +138,21 @@ export async function evaluateReadiness(
   const literacyScore = ctx.financial_literacy_score;
 
   // ── Evaluate criteria ──────────────────────────────────────────────────────
+  // Gate G-C streak criterion (signed 2026-07-09): 3 consecutive months,
+  // OR 2 consecutive months with >=6 lifetime payments (tolerant branch).
+  const streakMetStandard  = streakMonths >= STANDARD_STREAK_MONTHS;
+  const streakMetTolerant  =
+    streakMonths >= TOLERANT_STREAK_MONTHS &&
+    lifetimePaymentCount >= TOLERANT_STREAK_MIN_LIFETIME_PAYMENTS;
+  const streakMet = streakMetStandard || streakMetTolerant;
+  // Real-data monitoring instrument (§3.3 item 5): true only when the
+  // tolerant branch is what admitted this user (i.e. standard branch alone
+  // would NOT have passed).
+  const tolerantStreakBranchUsed = !streakMetStandard && streakMetTolerant;
+
   const hardMet = {
     pti:       ptiScore      >= HARD_PTI,
-    streak:    streakDays    >= HARD_STREAK_DAYS,
+    streak:    streakMet,
     diversity: billDiversity >= HARD_DIVERSITY,
     kyc:       kycVerified,
     fraud:     fraudFlags    === 0,
@@ -115,11 +171,18 @@ export async function evaluateReadiness(
   const status: ReadinessStatus = allHardMet ? "READY" : softMet ? "APPROACHING" : "NOT_YET";
 
   // ── Compute numeric gaps (0 = criterion already met) ──────────────────────
+  // streakDays gap reflects Gate G-C: 0 once EITHER branch is satisfied;
+  // otherwise reports days remaining to the nearer of the two branches.
+  const daysToStandard = Math.max(0, HARD_STREAK_DAYS - streakDays);
+  const daysToTolerant =
+    lifetimePaymentCount >= TOLERANT_STREAK_MIN_LIFETIME_PAYMENTS
+      ? Math.max(0, TOLERANT_STREAK_MONTHS * 30 - streakDays)
+      : Infinity;
   const gaps = {
-    pti:        Math.max(0, HARD_PTI         - ptiScore),
-    streakDays: Math.max(0, HARD_STREAK_DAYS - streakDays),
-    diversity:  Math.max(0, HARD_DIVERSITY   - billDiversity),
-    literacy:   Math.max(0, HARD_LITERACY    - literacyScore),
+    pti:        Math.max(0, HARD_PTI       - ptiScore),
+    streakDays: streakMet ? 0 : Math.min(daysToStandard, daysToTolerant),
+    diversity:  Math.max(0, HARD_DIVERSITY - billDiversity),
+    literacy:   Math.max(0, HARD_LITERACY  - literacyScore),
   };
 
   // ── Rank gaps ascending — closest to 0 (but > 0) surfaces first ──────────
@@ -157,13 +220,15 @@ export async function evaluateReadiness(
       pti_score_at, streak_days_at, bill_diversity_at,
       kyc_verified_at, fraud_flags_at, literacy_score_at,
       gap_pti, gap_streak_days, gap_diversity, gap_literacy,
-      partner_program_id
+      partner_program_id,
+      tolerant_streak_branch_used, streak_months_at, lifetime_payment_count_at
     ) VALUES (
       ${tel10}, ${status},
       ${ptiScore}, ${streakDays}, ${billDiversity},
       ${kycVerified}, ${fraudFlags}, ${literacyScore},
       ${gaps.pti}, ${gaps.streakDays}, ${gaps.diversity}, ${gaps.literacy},
-      ${partnerProgramId}
+      ${partnerProgramId},
+      ${tolerantStreakBranchUsed}, ${streakMonths}, ${lifetimePaymentCount}
     )
     RETURNING id
   `);
@@ -179,6 +244,7 @@ export async function evaluateReadiness(
     topGapLabel,
     streakDays,
     billDiversity,
+    tolerantStreakBranchUsed,
     gaps,
   };
 }
