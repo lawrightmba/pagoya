@@ -1,3 +1,6 @@
+> **DRAFT — PENDING PACKAGE SIGNOFF AND EXTERNAL REVIEW**
+> This document is not final. No scoring, gate, or generator change described here ships until the full signoff-gate package (Phase 3 spec + Phase 4 pack + external review) is signed.
+
 # PHASE 3 — PTI v5.0 IMPLEMENTATION SPEC (DRAFT for signoff gate)
 
 **Basis:** brief v1.9, frontier package Row 5b + G-C · **Date:** 2026-07-09
