@@ -118,6 +118,7 @@ export const ROWS: SeedRow[] = [
   // ── Recovery ─────────────────────────────────────────────────────────────────
   {
     trigger_type: "late_payment_1", active: true, cooldown_days: 14,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}. Tu último pago llegó tarde. Un retraso no destruye tu historial — dos seguidos sí lo afectan. ¿Quieres que te avise antes de tu próxima fecha de pago?",
   },
@@ -320,6 +321,7 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
   // acceptable per business decision. sync whatever Meta decides via twilio:sync.
   {
     trigger_type: "welcome_activation", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "🎁 ¡Tienes $150 MXN de bienvenida en tu wallet de PagoYa, {{nombre}}! Paga CFE, agua o Telmex directo desde tu cel — sin banco, sin filas. Escribe *pagar* para empezar.",
   },
@@ -343,6 +345,7 @@ Son tuyos. Úsalos.`,
   // ── Enrichment profile questions (deferred from Module 1) ────────────────────
   {
     trigger_type: "remittance_profile", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     // Replies: SÍ / NO only — digits reserved for module teasers and employment options.
     template_es: `💸 *Una pregunta para tu perfil financiero:*
 
@@ -361,6 +364,7 @@ Son tuyos. Úsalos.`,
   },
   {
     trigger_type: "employment_profile", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_es: `📋 *Una pregunta para tu perfil financiero:*
 
   ¿Cómo describes tu situación de trabajo actual?
@@ -388,6 +392,7 @@ Son tuyos. Úsalos.`,
   },
   {
     trigger_type: "address_tenure", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     // Replies: A/B/C — digits reserved for module teasers and employment options.
     // "Última pregunta" is accurate: remittance is sent at +1d, employment at +8d,
     // this at +15d from module_unlock_1 — always the last profile question in the sequence.
