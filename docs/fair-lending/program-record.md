@@ -61,3 +61,36 @@ spec or Phase 4 pack documents themselves, which remain unsigned drafts
 pending further review. Nothing in this program record, the spec, or
 the pack authorizes implementation; v5.0 does not enter the signoff
 registry until the external signature (4.4) is obtained.
+
+### Signoff registry entry — v5.0.0-rc1 (2026-07-10)
+
+External review certification received 2026-07-10 (Dr. Douglas Franklin,
+External Advisor — Behavioral Science, fixed-scope engagement; certification
+dated 7/9/26) and co-signed as founder acknowledgment of receipt by Lloyd
+Wright, Founder & CEO, dated 7/10/26. Full transcription and source file on
+record at `docs/fair-lending/external-review-signature.md`.
+
+| Item | Description | Signed by | Date | Scope |
+|---|---|---|---|---|
+| 3 | External review certification (methodology soundness, LDA search adequacy, business-necessity defensibility per findings F-1a/F-2) | Dr. Douglas Franklin, External Advisor — Behavioral Science | 2026-07-09 | Fixed-scope review per certification §2 |
+| 4 | Founder acknowledgment of receipt of external review certification | Lloyd Wright, Founder & CEO | 2026-07-10 | Receipt/filing only |
+
+Per the certification's own filing instructions: upon this signature,
+(1) the DRAFT watermarks on the Phase 3 implementation spec and Phase 4
+documentation pack lift, (2) the Phase 3 PR merge-blocking checklist item
+"External review signature" is checked, (3) rollout proceeds per Phase 3
+§3.4 (paula_messages schema/seed and the approved Meta transition template
+precede any recompute).
+
+**v5.0.0-rc1 is now entered into the signoff registry as ACTIVE.**
+
+**Flagged open item (not resolved, not fabricated):** the certification
+references "Exhibit A" (the reviewer's full written opinion, including any
+noted reservations) twice as an attachment incorporated into and traveling
+with the certification. Exhibit A was **not** included in the 2-page signed
+PDF provided. Only the certification form and the founder receipt page were
+supplied. This gap is logged here and in `external-review-signature.md` and
+must be closed (Exhibit A obtained and filed) for the record to be complete
+per the certification's own terms. It does not block registry entry per the
+founder's explicit filing instruction on the signed page, but it remains an
+open compliance item.

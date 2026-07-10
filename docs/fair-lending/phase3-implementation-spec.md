@@ -1,10 +1,10 @@
 # PHASE 3 — PTI v5.0 IMPLEMENTATION SPEC (DRAFT for signoff gate)
 
-> ⚠️ **DRAFT — PACKAGE AND GATE TEXT FOUNDER-SIGNED 2026-07-09; DOCUMENT PENDING FOUNDER LINE REVIEW AND EXTERNAL REVIEW.** Founder signatures attach to the Row 5b package and the G-C gate text (signature record 2026-07-09), NOT to this document. Gates remaining on this document: (1) founder line review, (2) external signature per 4.4 (Dr. Franklin or alternate). Any repo copy without this watermark is superseded.
+> ✅ **EXTERNAL REVIEW SIGNED 2026-07-10 (Dr. D. Franklin) — DOCUMENT ACTIVE.** External review certification filed at `docs/fair-lending/external-review-signature.md`; founder acknowledgment of receipt co-signed 2026-07-10 (Lloyd Wright). Implementation authorized per Phase 3 §3.4 (paula_messages schema/seed and the approved Meta transition template precede any recompute). **Open item:** Exhibit A (the reviewer's full written opinion) is referenced by the certification as incorporated but was not included in the signed upload — see the flagged gap in `external-review-signature.md`. Any repo copy without this watermark is superseded.
 
 
 **Basis:** brief v1.9, frontier package Row 5b + G-C · **Date:** 2026-07-09
-**Version:** v5.0 (dimension recomposition = major version per the licensee version registry) · **Status:** DRAFT pending founder line review; the PACKAGE and GATE TEXT it specifies are founder-signed 2026-07-09; nothing ships without the 4.4 external signature; generator patch and this spec travel together through the signoff gate.
+**Version:** v5.0.0-rc1 (dimension recomposition = major version per the licensee version registry) · **Status:** ACTIVE — founder-signed 2026-07-09 (Row 5b package + G-C gate text) and externally signed 2026-07-10 (Dr. Franklin certification + founder acknowledgment of receipt); entered the signoff registry per `program-record.md`. Generator patch and this spec travel together through the signoff gate.
 
 **Package trade profile (signature record item 1 — stated in all downstream materials, no exceptions):** −9.7% handoff volume vs the v4.3 baseline gate (1,093 vs 1,210 at the 15% calibration point), +0.0007 selection quality (mean latent reliability 0.9852 vs 0.9845), ~9× gate four-fifths improvement (0.034 → 0.30 center; four-seed range 0.20–0.30). Documented volume levers exist (Row 2 configuration; G-B/G-D compensatory gates) and reopen the E2 floor audit if chosen.
 

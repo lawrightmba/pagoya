@@ -1,6 +1,6 @@
 # PHASE 4 — DOCUMENTATION PACK (DRAFT)
 
-> ⚠️ **DRAFT — PACKAGE AND GATE TEXT FOUNDER-SIGNED 2026-07-09; DOCUMENT PENDING FOUNDER LINE REVIEW AND EXTERNAL REVIEW.** Founder signatures attach to the Row 5b package and the G-C gate text (signature record 2026-07-09), NOT to this document. Gates remaining on this document: (1) founder line review, (2) external signature per 4.4 (Dr. Franklin or alternate). Any repo copy without this watermark is superseded.
+> ✅ **EXTERNAL REVIEW SIGNED 2026-07-10 (Dr. D. Franklin) — DOCUMENT ACTIVE.** External review certification filed at `docs/fair-lending/external-review-signature.md`; founder acknowledgment of receipt co-signed 2026-07-10 (Lloyd Wright). Implementation authorized per Phase 3 §3.4 (paula_messages schema/seed and the approved Meta transition template precede any recompute). **Open item:** Exhibit A (the reviewer's full written opinion) is referenced by the certification as incorporated but was not included in the signed upload — see the flagged gap in `external-review-signature.md`. Any repo copy without this watermark is superseded.
 
 
 **Basis:** brief v1.9 · frontier record (= the 4.2 LDA search record, complete with logs, scripts, seeds, and checksums) · Phase 3 spec
