@@ -7,6 +7,8 @@ The ±5/±2 fair-lending adjustment layer (`fairLendingAdjustment.ts` + `config/
 
 **Why:** spec required deletion + a terminal `fair_lending_signoff` audit entry once the layer was confirmed to never do anything in prod, while permanently preserving the "computePTI must never read colonia/income" regression guard.
 
+**v4.3-vs-v5 prod diff pattern:** when you need to compare two pure scoring functions against real production data without ever writing to prod or exposing a DB client to a script — pull the needed fields via one SELECT-only `executeSql({ environment: "production" })` call, paste the results as a literal fixture into an offline script, then run the pure functions locally against that fixture. See `scripts/ptiV4v5ProdDiff.ts`. Explicitly flag any fields you didn't query (e.g. near-zero-population derived fields) rather than silently defaulting them.
+
 **How to apply:**
 - `fairLendingOwnership.ts` (threshold-owner auth) was intentionally KEPT — it wasn't named in the spec's deletion scope and is generic/harmless; its tests live in `services/tests/fairLendingOwnership.test.ts` now.
 - The regression guard "pti.ts/computePTI(v5) must never reference colonia/declared_income_bucket" lives in `pti.test.ts` and `ptiV5.test.ts` — do not delete these when touching fair-lending code again.
