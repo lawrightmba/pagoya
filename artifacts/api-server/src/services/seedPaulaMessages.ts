@@ -86,31 +86,37 @@ export const ROWS: SeedRow[] = [
   // ── Achievement ──────────────────────────────────────────────────────────────
   {
     trigger_type: "first_payment", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "¡Felicidades, {{nombre}}! Hiciste tu primer pago puntual. 🎯 Así empieza un historial de confianza — un ladrillo a la vez. Tu PTI subió a {{pti_score}} puntos. Seguimos.",
   },
   {
     trigger_type: "streak_5", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}, llevas 5 pagos consecutivos a tiempo. Eso no es suerte — es un patrón. Los bancos buscan exactamente eso. Tu PTI ya llegó a {{pti_score}} puntos.",
   },
   {
     trigger_type: "pti_cross_40", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}, cruzaste los 40 puntos PTI. 🔵 Nivel Bronce alcanzado. Ya tienes un historial de confianza real — algo que no tenías hace {{days_streak}} días.",
   },
   {
     trigger_type: "pti_cross_60", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}, 60 puntos PTI. 🥈 Nivel Plata alcanzado. Tu dimensión más fuerte ahora mismo: {{strongest_dimension}}. Sigue así.",
   },
   {
     trigger_type: "pti_cross_80", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "¡Felicidades, {{nombre}}! Nivel Oro. 🥇 PTI {{pti_score}}. Llevas {{days_streak}} días construyendo esto. Eso es un historial real.",
   },
   {
     trigger_type: "milestone_90d", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Tres meses, {{nombre}}. 90 días de historial activo. Eso ya es más consistencia de la que tiene la mayoría de personas que piden crédito formal por primera vez. Tu PTI: {{pti_score}} puntos.",
   },
@@ -124,11 +130,13 @@ export const ROWS: SeedRow[] = [
   },
   {
     trigger_type: "pti_drop_7d", active: true, cooldown_days: 7,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}, tu PTI bajó {{pti_delta}} puntos esta semana. Tu área de mayor oportunidad ahora: {{weakest_dimension}}. Cuéntame qué pasó — a veces un ajuste pequeño cambia la trayectoria.",
   },
   {
     trigger_type: "stalled_14d", active: true, cooldown_days: 7,
+    template_category: "MARKETING",
     template_en: null,
     template_es: "Hola {{nombre}}, llevas 14 días sin movimiento en tu historial. Lo que construiste sigue ahí — pero el reloj está pausado. ¿Todo bien?",
   },
@@ -141,6 +149,7 @@ export const ROWS: SeedRow[] = [
   // ── Educational — Literacy modules ───────────────────────────────────────────
   {
     trigger_type: "module_unlock_1", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     teaser_es: "Hola {{nombre}}, tu primer pago quedó registrado. 🧱 Hay algo importante que quiero contarte. Responde con *1* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, acabas de hacer algo más importante de lo que parece.
@@ -161,6 +170,7 @@ En los próximos meses, cada pago que hagas a tiempo es un ladrillo. Yo te voy a
   },
   {
     trigger_type: "module_unlock_2", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     teaser_es: "Hola {{nombre}}, ya llegaste a {{pti_score}} puntos. Hay algo que muy poca gente sabe sobre el crédito en México. Responde con *2* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, {{pti_score}} puntos. Momento de contarte algo que muy poca gente sabe con claridad.
@@ -181,6 +191,7 @@ La próxima vez que hablemos, te cuento exactamente cómo funciona el Buró por 
   },
   {
     trigger_type: "module_unlock_3", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     teaser_es: "Hola {{nombre}}, hay un mito financiero que le ha costado caro a muchos en México. Responde con *3* para descubrirlo.",
     template_en: null,
     template_es: `{{nombre}}, hay un mito que le ha costado mucho dinero a mucha gente en México, y quiero que tú no seas una de esas personas:
@@ -205,6 +216,7 @@ La próxima vez te cuento qué buscan exactamente los bancos cuando lo revisan.`
   },
   {
     trigger_type: "module_unlock_4", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     teaser_es: "Hola {{nombre}}, nivel Plata. 🥈 Lo que los bancos ven en tu perfil ahora mismo. Responde con *4* para saberlo.",
     template_en: null,
     template_es: `{{nombre}}, PTI {{pti_score}}. Nivel Plata. Esto es lo que necesitas saber ahora.
@@ -230,6 +242,7 @@ La próxima vez — el último módulo — te explico exactamente qué pasa cuan
   },
   {
     trigger_type: "module_unlock_5", active: true, cooldown_days: 9999,
+    template_category: "MARKETING",
     teaser_es: "Hola {{nombre}}, llegaste al módulo final. Lo que necesitas saber antes de tu primer crédito formal. Responde con *5* para recibirlo.",
     template_en: null,
     template_es: `{{nombre}}, llegaste al último módulo. Esto es lo que necesitas saber antes de solicitar tu primer crédito formal — para que nadie te sorprenda con letra chica.
@@ -260,6 +273,7 @@ Yo sigo aquí. Cuando estés listo/a para el siguiente paso, me avisas. 💛`,
   // ── Readiness gate ────────────────────────────────────────────────────────────
   {
     trigger_type: "readiness_approaching", active: true, cooldown_days: 14,
+    template_category: "MARKETING",
     template_en: null,
     template_es: `Hola {{nombre}}, estás a punto de alcanzar algo que muy poca gente sin cuenta bancaria logra: un perfil crediticio real. 🎯
 
@@ -296,6 +310,7 @@ Sigue así — estás construyendo el tipo de historial que los prestamistas for
   },
   {
     trigger_type: "not_yet_gap_report", active: true, cooldown_days: 30,
+    template_category: "MARKETING",
     template_en: null,
     template_es: `Hola {{nombre}}, llevas {{streak_days}} días construyendo tu historial financiero desde cero. Eso no es poco.
 
