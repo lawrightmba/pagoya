@@ -567,4 +567,49 @@ router.post("/admin/cancel-stripe-pending", async (req: Request, res: Response) 
   res.json({ total: pendiente.length, results });
 });
 
+// ── Admin: retroactively flag row 22 as error_bill_in_stripe ────────────────
+// POST /api/pagoya/admin/flag-row22-bill-in-stripe
+// Row 22: SADM Monterrey Agua $4,000 — Stripe confirmed the charge (succeeded)
+// but the bill was never submitted to SIPREL. Currently disputed in Stripe.
+// Status "succeeded" in DB is technically accurate but ambiguous — this marks
+// it unambiguously as a card-charged-but-bill-not-delivered case, consistent
+// with the error_bill_in_stripe convention used for row 4.
+// Safe to re-run: if already error_bill_in_stripe, updates nothing (same value).
+// REMOVE this route after confirmed execution.
+router.post("/admin/flag-row22-bill-in-stripe", async (req: Request, res: Response) => {
+  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
+  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
+  if (!key || !expected || key !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const before = await db
+    .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status, paymentIntentId: pagoyaPaymentsTable.paymentIntentId })
+    .from(pagoyaPaymentsTable)
+    .where(eq(pagoyaPaymentsTable.id, 22));
+
+  if (before.length === 0) {
+    res.status(404).json({ error: "Row 22 not found" });
+    return;
+  }
+
+  await db
+    .update(pagoyaPaymentsTable)
+    .set({ status: "error_bill_in_stripe" })
+    .where(eq(pagoyaPaymentsTable.id, 22));
+
+  const after = await db
+    .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status })
+    .from(pagoyaPaymentsTable)
+    .where(eq(pagoyaPaymentsTable.id, 22));
+
+  logger.warn(
+    { id: 22, paymentIntentId: before[0].paymentIntentId, before: before[0].status, after: after[0].status },
+    "pagoya admin: row 22 manually flagged error_bill_in_stripe — Stripe charge confirmed, bill not submitted, dispute open"
+  );
+
+  res.json({ ok: true, row: 22, before: before[0].status, after: after[0].status });
+});
+
 export default router;
