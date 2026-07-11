@@ -311,15 +311,20 @@ router.post("/admin/run-paula-send-queue", async (_req: Request, res: Response) 
   }
 });
 
-// GET /api/admin/db-diagnostic — read-only: returns current_database() and server host only.
-// No query params, no side effects. Used to verify which database the live process connects to.
+// GET /api/admin/db-diagnostic — read-only: returns current_database(), server host,
+// and the in-memory value of PAULA_SENDING_ENABLED as read at process startup.
+// No query params, no side effects.
 router.get("/admin/db-diagnostic", async (_req: Request, res: Response) => {
   try {
     const result = await pool.query<{ db: string; host: string }>(
       "SELECT current_database() AS db, inet_server_addr()::text AS host"
     );
     const row = result.rows[0];
-    res.json({ db: row.db, host: row.host ?? null });
+    res.json({
+      db: row.db,
+      host: row.host ?? null,
+      paula_sending_enabled: process.env.PAULA_SENDING_ENABLED === "true",
+    });
   } catch (err) {
     logger.error({ err }, "admin/db-diagnostic: failed");
     res.status(500).json({ error: "db-diagnostic failed — check server logs." });
