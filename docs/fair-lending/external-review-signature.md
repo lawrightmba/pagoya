@@ -51,10 +51,27 @@ The reviewer validates finished work and signs; the reviewer does not produce. S
 
 ---
 
-## Exhibit A — resolved 2026-07-11
+## Email confirmation — 2026-07-11
 
-**Confirmation received 2026-07-11 (Dr. D. Franklin):** broad approval; reviewer's complete opinion is "agreed with methodology as presented, no changes requested." No reservations, qualifications, or outstanding items were stated.
+Source: email reply received 2026-07-11 from Douglas Franklin, PhD. Transcribed verbatim from screenshot (attached_assets/IMG_5931_1783776849049.jpeg). This is the document the reviewer asked to "serve for your documentation."
 
-The brief certification language in Section 4 above ("In my professional judgment, the fair-lending testing methodology is sound…") is confirmed to constitute the complete reviewer opinion. Exhibit A as referenced in the certification is satisfied by this confirmation. The open gap flagged on initial filing (2026-07-10) is hereby closed.
+---
 
-**Prior gap note (for record continuity):** On initial filing, Exhibit A was not included in the 2-page signed PDF. The gap was flagged in this file and in `program-record.md`. It is now resolved by the 2026-07-11 broad-approval confirmation above.
+**Re: Subject: PTI fair-lending remediation — fixed-scope review & signature**
+
+Lloyd and Pagoya:
+
+I confirm that the scoring methodology presented for my review on July 9, 2026 is in line with acceptable industry standard as recorded in the PTI V5.0 lending remediation packet and agree with the methodology as presented, no changes requested. *Please let this notice serve for your documentation.*
+
+Douglas Franklin, PhD
+Data and Behavioral Science Researcher
+
+*(In reply to Lloyd A. Wright <lawrightmba@gmail.com>, Jul 11, 2026, at 8:05 AM)*
+
+---
+
+**Filing note:** This email is filed as the external-review confirmation for v5.0. It is a separate document from the 2-page signed PDF certification filed 2026-07-10. This email does not reference Exhibit A; the Exhibit A gap noted in the ⚠️ open gap section below applies to the original PDF certification and is not addressed by this email. The founder and CEO (Lloyd Wright) has determined that this email satisfies the external-review gate per Phase 3 §3.4.
+
+## ⚠️ Open gap — applies to the 2026-07-10 PDF certification only
+
+**Exhibit A (the reviewer's full written opinion, including any noted reservations) is referenced twice in the 2-page signed PDF certification as an attachment that travels with it, but was not included in the 2-page PDF provided.** This email (2026-07-11) does not reference Exhibit A and does not resolve or close this gap in the original PDF. The gap remains on record for the PDF certification artifact. The 2026-07-11 email is the document the reviewer designated as the record for documentation purposes.
