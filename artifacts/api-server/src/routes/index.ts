@@ -1240,6 +1240,26 @@ router.get("/admin/weekly-baseline", adminAuth, async (_req: Request, res: Respo
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/test-alert-email — send a test email to verify SMTP config
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/admin/test-alert-email", async (_req: Request, res: Response) => {
+  try {
+    const { alertSignup } = await import("../lib/alertService.js");
+    await alertSignup({
+      telefono: "5512345678",
+      source: "test_ping",
+      isTest: true,
+      timestamp: new Date(),
+    });
+    res.json({ ok: true, message: "Test alert sent — check lawrightmba@gmail.com" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ err }, "test-alert-email: failed");
+    res.status(500).json({ ok: false, error: msg });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/stripe-payments — recent Stripe payments from pagoya_payments
 // Useful for investigating disputes. Accepts optional ?phone= and ?limit= params.
 // ─────────────────────────────────────────────────────────────────────────────
