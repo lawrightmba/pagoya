@@ -530,12 +530,15 @@ router.post("/admin/cancel-stripe-pending", async (req: Request, res: Response) 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       // Treat as effectively dead (safe to mark cancelled in DB):
-      // - already canceled in Stripe
-      // - no longer cancelable (e.g., expired)
-      // - No such payment_intent (PI belongs to a rotated/old Stripe account — auto-expired)
+      // - "already canceled" — Stripe already confirmed cancellation
+      // - "no longer cancelable" — expired or in terminal state
+      // - "No such payment_intent" — PI belongs to a rotated/old Stripe account; auto-expired
+      // NOTE: do NOT use the broad msg.includes("canceled") — the Stripe error for
+      // cancelling a SUCCEEDED PI also contains the word "canceled" in its second
+      // sentence ("Only a PaymentIntent with one of the following statuses may be
+      // canceled: ..."), which would incorrectly shadow the succeededInStripe branch.
       const effectivelyDead = msg.includes("already canceled")
         || msg.includes("no longer cancelable")
-        || msg.includes("canceled")
         || msg.includes("No such payment_intent");
 
       // Treat as "succeeded in Stripe but DB missed the webhook" — needs human review:
@@ -567,16 +570,18 @@ router.post("/admin/cancel-stripe-pending", async (req: Request, res: Response) 
   res.json({ total: pendiente.length, results });
 });
 
-// ── Admin: retroactively flag row 22 as error_bill_in_stripe ────────────────
-// POST /api/pagoya/admin/flag-row22-bill-in-stripe
-// Row 22: SADM Monterrey Agua $4,000 — Stripe confirmed the charge (succeeded)
-// but the bill was never submitted to SIPREL. Currently disputed in Stripe.
-// Status "succeeded" in DB is technically accurate but ambiguous — this marks
-// it unambiguously as a card-charged-but-bill-not-delivered case, consistent
-// with the error_bill_in_stripe convention used for row 4.
-// Safe to re-run: if already error_bill_in_stripe, updates nothing (same value).
-// REMOVE this route after confirmed execution.
-router.post("/admin/flag-row22-bill-in-stripe", async (req: Request, res: Response) => {
+// ── Admin: retroactively flag specific rows as error_bill_in_stripe ─────────
+// POST /api/pagoya/admin/flag-bills-in-stripe
+// Body: { ids: number[] }
+// Marks each listed row as error_bill_in_stripe regardless of current status.
+// Use for rows where Stripe confirmed the charge but the bill was never submitted:
+//   Row 4:  pi_3TLaZkIIjPdZFNnf11gpgpjq — $350 Gas/cfe — marked "cancelled" by
+//           cancel-pending script (broad "canceled" catch bug — now fixed); Stripe
+//           status is actually "succeeded"; test phone 343455555.
+//   Row 22: pi_3To54yIIjPdZFNnf0rBi0cvZ — $4,000 Agua/SADM — DB status "succeeded";
+//           charge disputed in Stripe.
+// Safe to re-run (idempotent). REMOVE this route after confirmed execution.
+router.post("/admin/flag-bills-in-stripe", async (req: Request, res: Response) => {
   const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
   const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
   if (!key || !expected || key !== expected) {
@@ -584,32 +589,39 @@ router.post("/admin/flag-row22-bill-in-stripe", async (req: Request, res: Respon
     return;
   }
 
-  const before = await db
-    .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status, paymentIntentId: pagoyaPaymentsTable.paymentIntentId })
-    .from(pagoyaPaymentsTable)
-    .where(eq(pagoyaPaymentsTable.id, 22));
-
-  if (before.length === 0) {
-    res.status(404).json({ error: "Row 22 not found" });
+  const { ids } = req.body as { ids?: number[] };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: "Body must contain ids: number[]" });
     return;
   }
 
-  await db
-    .update(pagoyaPaymentsTable)
-    .set({ status: "error_bill_in_stripe" })
-    .where(eq(pagoyaPaymentsTable.id, 22));
+  const results: Array<{ id: number; paymentIntentId: string; before: string; after: string }> = [];
 
-  const after = await db
-    .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status })
-    .from(pagoyaPaymentsTable)
-    .where(eq(pagoyaPaymentsTable.id, 22));
+  for (const id of ids) {
+    const before = await db
+      .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status, paymentIntentId: pagoyaPaymentsTable.paymentIntentId })
+      .from(pagoyaPaymentsTable)
+      .where(eq(pagoyaPaymentsTable.id, id));
 
-  logger.warn(
-    { id: 22, paymentIntentId: before[0].paymentIntentId, before: before[0].status, after: after[0].status },
-    "pagoya admin: row 22 manually flagged error_bill_in_stripe — Stripe charge confirmed, bill not submitted, dispute open"
-  );
+    if (before.length === 0) {
+      logger.warn({ id }, "pagoya admin: flag-bills-in-stripe — row not found, skipping");
+      continue;
+    }
 
-  res.json({ ok: true, row: 22, before: before[0].status, after: after[0].status });
+    await db
+      .update(pagoyaPaymentsTable)
+      .set({ status: "error_bill_in_stripe" })
+      .where(eq(pagoyaPaymentsTable.id, id));
+
+    logger.warn(
+      { id, paymentIntentId: before[0].paymentIntentId, before: before[0].status },
+      "pagoya admin: row manually flagged error_bill_in_stripe — Stripe charge confirmed, bill not submitted to SIPREL"
+    );
+
+    results.push({ id, paymentIntentId: before[0].paymentIntentId, before: before[0].status, after: "error_bill_in_stripe" });
+  }
+
+  res.json({ ok: true, flagged: results.length, results });
 });
 
 export default router;
