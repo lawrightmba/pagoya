@@ -16,6 +16,7 @@ import { resolveRepAttribution } from "../services/repAttribution.js";
 import { scheduleNudge } from "../services/nudgeService.js";
 import { scheduleReferralNudgeIfEligible } from "../services/lifecycleNudgeService.js";
 import { logger } from "../lib/logger.js";
+import { alertSignup } from "../lib/alertService.js";
 
 // ── Language detection ────────────────────────────────────────────────────────
 // Strong English-only indicators (words that don't appear naturally in Spanish)
@@ -358,6 +359,13 @@ async function registerWhatsAppUser(
   let userId: number;
   if (newUser) {
     userId = newUser.id;
+    // Fire-and-forget signup alert to Lloyd
+    alertSignup({
+      telefono: clean,
+      source: attribution.source,
+      isTest: false,
+      timestamp: new Date(),
+    }).catch(() => {});
   } else {
     const [existing] = await db
       .select({ id: usersTable.id })

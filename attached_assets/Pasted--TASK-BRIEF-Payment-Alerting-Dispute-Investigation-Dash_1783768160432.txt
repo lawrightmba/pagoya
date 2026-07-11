@@ -1,0 +1,85 @@
+# TASK BRIEF: Payment Alerting, Dispute Investigation, Dashboard Data Audit
+
+Urgency: Lloyd is the sole monitor right now and just learned of a
+disputed charge with zero prior notification. Evidence standard applies
+throughout — every finding backed by pasted query output, not summary.
+
+## PART 0 — STRIPE INVESTIGATION (do first, this is new territory)
+
+Stripe has never appeared in any prior audit of this codebase. Before
+anything else:
+
+0.1 grep the entire repo for "stripe" (case-insensitive) — env vars,
+    imports, webhook routes, package.json dependencies. Report every
+    file that references it.
+0.2 If Stripe integration exists: is it live or test mode? Pull the
+    actual disputed charge from the Stripe dashboard/API — amount,
+    date, customer, and CRITICALLY whether Lloyd's account is in Stripe
+    test mode or live mode (test-mode disputes are simulated/fake but
+    still generate real-looking notification emails).
+0.3 Does this charge correspond to any row in wallets/wallet_transactions
+    in prod (neondb)? If Stripe writes to the same ledger as Conekta,
+    show the linkage. If it writes nowhere, that's the core finding:
+    an entire payment rail exists outside the ledger this program spent
+    weeks reconciling.
+0.4 If Stripe turns out to be a MISNAME for Conekta (i.e., no actual
+    Stripe integration exists), report that plainly and pull the
+    disputed charge from Conekta's dashboard/API instead, with the
+    same questions: live or test, linked to a ledger row or not.
+0.5 Regardless of which processor: is there a webhook handler for
+    dispute/chargeback events at all? If a dispute can occur with zero
+    app-side notification, that's a missing webhook, not just a missing
+    email alert — fix the root cause, not just add a notification on
+    top of a gap.
+
+## PART 1 — DASHBOARD TEST-DATA AUDIT
+
+1.1 Pull the exact query behind the wallet control panel's five numbers
+    (9 active wallets, $1,550 circulation, 2 outstanding OXXO $600,
+    8 confirmed loads $1,550, 0 overdue). Paste the SQL.
+1.2 Cross-reference against is_test_account: does the query filter it
+    out? If not, that's the bug — same class as the earlier weekly-
+    baseline fix. Re-run filtered and report the real numbers.
+1.3 List all 9 "active wallets" individually: telefono (last-4),
+    is_test_account, balance, source of each balance (which
+    wallet_transactions rows sum to it — link back to Part 0 if any
+    trace to Stripe/Conekta).
+1.4 Reconcile the "2 outstanding OXXO charges, $600" against DigitalFemsa/
+    Conekta's actual pending order list — do these correspond to real
+    unconfirmed OXXO references, or stale/orphaned rows from earlier
+    testing (the same class of issue as the July 9 "$500 OXXO never
+    confirmed" investigation)?
+1.5 Fix the dashboard query to exclude is_test_account by default, with
+    an explicit toggle to include test data if Lloyd ever wants to see it.
+
+## PART 2 — REAL-TIME ALERTING (signups + payments, to Lloyd personally)
+
+Given current volume (single digits to low tens of users), a full
+notification infrastructure is overkill — use existing pieces.
+
+2.1 Signup alert: on every new row in `users`, send Lloyd an email
+    (use whatever transactional email is already configured — check for
+    an existing SendGrid/Postmark/SES integration before adding a new
+    one) with: telefono (last-4), source, timestamp, is_test_account
+    flag. Fire on insert, not on a cron delay.
+2.2 Payment alert: on every wallet_transactions insert above a threshold
+    (propose: all of them, given current volume — revisit at scale) OR
+    specifically on OXXO/card confirmations and any dispute/chargeback
+    webhook event (Part 0.5) — email with amount, method, telefono,
+    confirmed/pending status.
+2.3 Dispute/chargeback alert: HIGHEST PRIORITY of the three — immediate
+    email on any dispute webhook from whichever processor(s) are
+    actually live, since this is the gap that just caused today's
+    surprise.
+2.4 Delivery: email to Lloyd's address (confirm which inbox), simple
+    plain-text, no dashboard-only notifications — Lloyd is mobile/
+    reactive right now, not sitting on the admin panel.
+2.5 Rate/volume note: if traction is picking up as stated, revisit
+    per-event email at signup #50 or so — batch into a daily digest
+    before it becomes noise. Flag this as a known future adjustment,
+    not a blocker now.
+
+## Sequencing
+Part 0 first, alone — the dispute is the active fire and determines
+whether Part 2.3 is fixing a webhook gap or an email gap. Parts 1 and 2
+can run in parallel after.

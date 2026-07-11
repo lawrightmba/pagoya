@@ -984,8 +984,8 @@ router.get("/admin/investor-stats", async (_req: Request, res: Response) => {
           (SELECT COUNT(*)::int  FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')                                       AS payments_30d,
           (SELECT COALESCE(SUM(monto),0)::float            FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')              AS volume_30d,
           (SELECT COALESCE(SUM(platform_fee_mxn),0)::float FROM bill_payments WHERE status IN ('confirmed','completed','confirmado','success') AND created_at > NOW() - INTERVAL '30 days')              AS revenue_30d,
-          (SELECT COUNT(*)::int         FROM wallets)                                                                               AS wallet_count,
-          (SELECT COALESCE(SUM(balance_mxn),0)::float FROM wallets)                                                                AS wallet_balance_total,
+          (SELECT COUNT(*)::int         FROM wallets w JOIN users u ON u.telefono = w.user_id WHERE u.is_test_account IS NOT TRUE) AS wallet_count,
+          (SELECT COALESCE(SUM(w.balance_mxn),0)::float FROM wallets w JOIN users u ON u.telefono = w.user_id WHERE u.is_test_account IS NOT TRUE) AS wallet_balance_total,
           (SELECT COALESCE(AVG(pti_score),0)::float   FROM users WHERE is_test_account IS NOT TRUE AND pti_score IS NOT NULL)      AS avg_pti_score
       `),
       db.execute(drizzleSql`
@@ -1235,6 +1235,35 @@ router.get("/admin/weekly-baseline", adminAuth, async (_req: Request, res: Respo
     res.json({ as_of: new Date().toISOString(), totals, users, ledger: ledgerSummary });
   } catch (err) {
     logger.error({ err }, "admin/weekly-baseline: failed");
+    res.status(500).json({ error: "Failed" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/admin/stripe-payments — recent Stripe payments from pagoya_payments
+// Useful for investigating disputes. Accepts optional ?phone= and ?limit= params.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/admin/stripe-payments", async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query.limit ?? "50"), 200);
+    const phone = req.query.phone ? String(req.query.phone).replace(/\D/g, "").slice(-10) : null;
+    const rows = await db.execute(phone
+      ? drizzleSql`
+          SELECT id, payment_intent_id, telefono, monto, status, categoria, referencia, created_at
+          FROM pagoya_payments
+          WHERE telefono = ${phone}
+          ORDER BY created_at DESC
+          LIMIT ${limit}
+        `
+      : drizzleSql`
+          SELECT id, payment_intent_id, telefono, monto, status, categoria, referencia, created_at
+          FROM pagoya_payments
+          ORDER BY created_at DESC
+          LIMIT ${limit}
+        `);
+    res.json({ count: rows.rows.length, payments: rows.rows });
+  } catch (err) {
+    logger.error({ err }, "admin/stripe-payments: failed");
     res.status(500).json({ error: "Failed" });
   }
 });

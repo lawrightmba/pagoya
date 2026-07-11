@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { db, pagoyaPaymentsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { alertDispute, alertPayment } from "../lib/alertService.js";
 import { routePayment } from "../billpay/services/router.js";
 import { getServiceById } from "../billpay/services/catalog.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
@@ -327,6 +328,16 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
         }
       }
       logger.info({ paymentIntentId: intentId, event: event.type }, "pagoya: payment succeeded — status updated to succeeded");
+      if (payment) {
+        alertPayment({
+          telefono: payment.telefono,
+          amountMxn: parseFloat(payment.monto),
+          method: "stripe_card",
+          status: "confirmed",
+          reference: payment.referencia,
+          timestamp: new Date(),
+        }).catch(() => {});
+      }
     } else if (
       event.type === "payment_intent.payment_failed" ||
       event.type === "payment_intent.canceled"
@@ -336,6 +347,24 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
         .set({ status: "failed" })
         .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
       logger.warn({ paymentIntentId: intentId, event: event.type }, "pagoya: payment failed — status updated to failed");
+    } else if (event.type === "charge.dispute.created" || event.type === "charge.dispute.funds_withdrawn") {
+      const dispute = event.data.object as Stripe.Dispute;
+      const stripeMode = (process.env.VITE_STRIPE_PUBLIC_KEY ?? process.env.STRIPE_SECRET_KEY ?? "").startsWith("pk_test_") || (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_test_")
+        ? "test" as const
+        : "live" as const;
+      logger.warn(
+        { disputeId: dispute.id, chargeId: dispute.charge, amount: dispute.amount, reason: dispute.reason, stripeMode },
+        `pagoya: Stripe dispute opened — ${event.type}`,
+      );
+      alertDispute({
+        chargeId: typeof dispute.charge === "string" ? dispute.charge : dispute.charge?.id ?? "unknown",
+        paymentIntentId: typeof dispute.payment_intent === "string" ? dispute.payment_intent : dispute.payment_intent?.id,
+        amountMxn: dispute.amount / 100,
+        reason: dispute.reason ?? undefined,
+        status: dispute.status ?? undefined,
+        timestamp: new Date(),
+        stripeMode,
+      }).catch(() => {});
     } else {
       logger.info({ paymentIntentId: intentId, event: event.type }, "pagoya: webhook event received, no status change");
     }

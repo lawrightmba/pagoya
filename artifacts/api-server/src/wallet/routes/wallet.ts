@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, sql as drizzleSql, count, sum } from "drizzle-orm";
-import { db, walletsTable, walletTransactionsTable, repsTable, repCommissionsTable } from "@workspace/db";
+import { db, walletsTable, walletTransactionsTable, repsTable, repCommissionsTable, usersTable } from "@workspace/db";
 import {
   getOrCreateWallet,
   getBalance,
@@ -516,45 +516,50 @@ router.get("/transactions", async (req: Request, res: Response) => {
 
 // GET /api/wallet/admin/stats
 // Summary stats for the admin command center wallet panel.
-router.get("/admin/stats", async (_req: Request, res: Response) => {
+// By default excludes test accounts. Add ?include_test=true to include them.
+router.get("/admin/stats", async (req: Request, res: Response) => {
   try {
-    const [[walletCount], [txStats], [pendingStats]] = await Promise.all([
-      db.select({ total: count() }).from(walletsTable),
-      db.select({
-        totalBalance: drizzleSql<string>`COALESCE(SUM(balance_mxn::numeric), 0)`,
-      }).from(walletsTable),
-      db.select({
-        pendingCount: count(),
-        pendingAmount: drizzleSql<string>`COALESCE(SUM(amount_mxn::numeric), 0)`,
-      }).from(walletTransactionsTable).where(eq(walletTransactionsTable.status, "pending")),
-    ]);
+    const includeTest = req.query.include_test === "true";
+    const testFilter = includeTest
+      ? drizzleSql`TRUE`
+      : drizzleSql`u.is_test_account IS NOT TRUE`;
 
-    const [confirmedStats] = await db
-      .select({
-        confirmedCount: count(),
-        confirmedAmount: drizzleSql<string>`COALESCE(SUM(amount_mxn::numeric), 0)`,
-      })
-      .from(walletTransactionsTable)
-      .where(eq(walletTransactionsTable.status, "confirmed"));
+    const statsResult = await db.execute(drizzleSql`
+      SELECT
+        COUNT(DISTINCT w.id)::int                                   AS wallet_count,
+        COALESCE(SUM(w.balance_mxn::numeric), 0)::float            AS total_balance,
+        COUNT(wt.id) FILTER (WHERE wt.status = 'pending')::int     AS pending_count,
+        COALESCE(SUM(wt.amount_mxn::numeric) FILTER (WHERE wt.status = 'pending'), 0)::float  AS pending_amount,
+        COUNT(wt.id) FILTER (WHERE wt.status = 'confirmed')::int   AS confirmed_count,
+        COALESCE(SUM(wt.amount_mxn::numeric) FILTER (WHERE wt.status = 'confirmed'), 0)::float AS confirmed_amount,
+        COUNT(wt.id) FILTER (WHERE wt.status = 'failed')::int      AS failed_count,
+        COUNT(wt.id) FILTER (WHERE wt.status = 'pending' AND wt.type = 'load_oxxo')::int  AS oxxo_pending_count,
+        COALESCE(SUM(wt.amount_mxn::numeric) FILTER (WHERE wt.status = 'pending' AND wt.type = 'load_oxxo'), 0)::float AS oxxo_pending_amount
+      FROM wallets w
+      JOIN users u ON u.telefono = w.user_id
+      LEFT JOIN wallet_transactions wt ON wt.wallet_id = w.id
+      WHERE ${testFilter}
+    `);
 
-    const [failedStats] = await db
-      .select({ failedCount: count() })
-      .from(walletTransactionsTable)
-      .where(eq(walletTransactionsTable.status, "failed"));
-
+    const row = (statsResult.rows[0] ?? {}) as Record<string, unknown>;
     res.json({
-      walletCount: walletCount.total,
-      totalBalanceMXN: parseFloat(txStats.totalBalance),
+      include_test: includeTest,
+      walletCount: row.wallet_count ?? 0,
+      totalBalanceMXN: row.total_balance ?? 0,
       pendingLoads: {
-        count: pendingStats.pendingCount,
-        amountMXN: parseFloat(pendingStats.pendingAmount),
+        count:     row.pending_count ?? 0,
+        amountMXN: row.pending_amount ?? 0,
+        oxxo: {
+          count:     row.oxxo_pending_count ?? 0,
+          amountMXN: row.oxxo_pending_amount ?? 0,
+        },
       },
       confirmedLoads: {
-        count: confirmedStats.confirmedCount,
-        amountMXN: parseFloat(confirmedStats.confirmedAmount),
+        count:     row.confirmed_count ?? 0,
+        amountMXN: row.confirmed_amount ?? 0,
       },
       failedLoads: {
-        count: failedStats.failedCount,
+        count: row.failed_count ?? 0,
       },
     });
   } catch (err: unknown) {
