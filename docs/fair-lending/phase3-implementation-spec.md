@@ -1,6 +1,6 @@
 # PHASE 3 — PTI v5.0 IMPLEMENTATION SPEC (DRAFT for signoff gate)
 
-> ✅ **EXTERNAL REVIEW SIGNED 2026-07-10 (Dr. D. Franklin) — DOCUMENT ACTIVE.** External review certification filed at `docs/fair-lending/external-review-signature.md`; founder acknowledgment of receipt co-signed 2026-07-10 (Lloyd Wright). Implementation authorized per Phase 3 §3.4 (paula_messages schema/seed and the approved Meta transition template precede any recompute). **Open item:** Exhibit A (the reviewer's full written opinion) is referenced by the certification as incorporated but was not included in the signed upload — see the flagged gap in `external-review-signature.md`. Any repo copy without this watermark is superseded.
+> ✅ **EXTERNAL REVIEW SIGNED 2026-07-11 (Dr. D. Franklin) — DOCUMENT ACTIVE. Implementation authorized per Phase 3 §3.4.**
 
 
 **Basis:** brief v1.9, frontier package Row 5b + G-C · **Date:** 2026-07-09

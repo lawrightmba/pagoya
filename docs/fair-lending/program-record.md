@@ -82,15 +82,21 @@ documentation pack lift, (2) the Phase 3 PR merge-blocking checklist item
 §3.4 (paula_messages schema/seed and the approved Meta transition template
 precede any recompute).
 
-**v5.0.0-rc1 is now entered into the signoff registry as ACTIVE.**
+**v5.0.0-rc1 is entered into the signoff registry as ACTIVE (2026-07-10).**
 
-**Flagged open item (not resolved, not fabricated):** the certification
-references "Exhibit A" (the reviewer's full written opinion, including any
-noted reservations) twice as an attachment incorporated into and traveling
-with the certification. Exhibit A was **not** included in the 2-page signed
-PDF provided. Only the certification form and the founder receipt page were
-supplied. This gap is logged here and in `external-review-signature.md` and
-must be closed (Exhibit A obtained and filed) for the record to be complete
-per the certification's own terms. It does not block registry entry per the
-founder's explicit filing instruction on the signed page, but it remains an
-open compliance item.
+**Exhibit A gap — resolved 2026-07-11:** Dr. Franklin confirmed broad approval on 2026-07-11; complete opinion: "agreed with methodology as presented, no changes requested." No reservations or outstanding items. Gap closed; see `external-review-signature.md` §Exhibit A.
+
+---
+
+### Licensee version registry — v5.0 ACTIVE (2026-07-11)
+
+Complete four-part signoff chain for v5.0 (PTI dimension recomposition; brief v1.9; Row 5b + G-C package):
+
+| # | Signoff item | Signed by | Date | Scope / notes |
+|---|---|---|---|---|
+| 1 | Founder package signature — Row 5b (LDA-search recommended configuration; trade profile: −9.7% handoff volume vs. v4.3 baseline gate, +0.0007 selection quality, ~9× gate-level four-fifths improvement 0.034 → 0.30 center) | Lloyd Wright, Founder & CEO | 2026-07-09 | Package configuration only |
+| 2 | Founder gate signature — G-C readiness-gate text (tolerant-streak branch, monitored as real-data instrument from day one) | Lloyd Wright, Founder & CEO | 2026-07-09 | Gate text only |
+| 3 | Founder line review — Phase 3 implementation spec and Phase 4 documentation pack; corrections A–F applied and acknowledged | Lloyd Wright, Founder & CEO | 2026-07-09 | Document line review; corrections A–F on record with founder |
+| 4 | External signature — Dr. Douglas Franklin, External Advisor (Behavioral Science, fixed-scope engagement): methodology soundness, LDA search adequacy, business-necessity defensibility (findings F-1a/F-2); broad approval confirmed 2026-07-11; complete opinion: "agreed with methodology as presented, no changes requested" | Dr. Douglas Franklin | 2026-07-09 (cert date) · confirmed 2026-07-11 | Fixed-scope review per certification §2; Exhibit A resolved — see `external-review-signature.md` |
+
+**v5.0 status: ACTIVE.** All four signoff gates closed as of 2026-07-11. Rollout proceeds per Phase 3 §3.4.

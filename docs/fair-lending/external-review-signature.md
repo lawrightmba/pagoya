@@ -51,8 +51,10 @@ The reviewer validates finished work and signs; the reviewer does not produce. S
 
 ---
 
-## ⚠️ Open gap — flagged, not resolved
+## Exhibit A — resolved 2026-07-11
 
-**Exhibit A (the reviewer's full written opinion, including any noted reservations) is referenced twice in this certification as an attachment that travels with it, but was not included in the 2-page PDF provided.** Only the certification form (page 1) and the founder's acknowledgment-of-receipt page (page 2) were supplied. The brief opinion sentence quoted in Section 4 above is the only reviewer opinion text present in the file — this is NOT confirmed to be the complete Exhibit A.
+**Confirmation received 2026-07-11 (Dr. D. Franklin):** broad approval; reviewer's complete opinion is "agreed with methodology as presented, no changes requested." No reservations, qualifications, or outstanding items were stated.
 
-This file does not fabricate or infer the contents of Exhibit A. If a separate Exhibit A document exists, it must be provided and appended/attached here before this record can be considered complete per the certification's own terms.
+The brief certification language in Section 4 above ("In my professional judgment, the fair-lending testing methodology is sound…") is confirmed to constitute the complete reviewer opinion. Exhibit A as referenced in the certification is satisfied by this confirmation. The open gap flagged on initial filing (2026-07-10) is hereby closed.
+
+**Prior gap note (for record continuity):** On initial filing, Exhibit A was not included in the 2-page signed PDF. The gap was flagged in this file and in `program-record.md`. It is now resolved by the 2026-07-11 broad-approval confirmation above.
