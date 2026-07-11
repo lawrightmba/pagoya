@@ -17,6 +17,7 @@ import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { computePTIForAllUsers, computePTIv3Signals } from "./pti.js";
+import { computePTIv5ForUser } from "./ptiV5.js";
 import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 import { runPaulaTriggerBatch } from "./paulaTriggers.js";
 import { processSendQueue } from "./paulaSendQueue.js";
@@ -383,6 +384,15 @@ export async function runNightlyPtiBatch(): Promise<void> {
 
         // KYC upgrade sweep — catch users who crossed $3,200 MXN since last check
         checkAndUpgradeKycTier(telefono).catch(() => {});
+
+        // ── Phase A shadow: v5.0 runs alongside v4.3 ─────────────────────────
+        // NEVER writes to pti_score / pti_breakdown / any user-facing column.
+        // Writes only to pti_v5_shadow_recompute for B5 evidence gates.
+        // G-C tolerant-streak counter is derivable from the stored breakdown
+        // JSONB: rows where payment_streak.value <= 2 hit the tolerant branch.
+        computePTIv5ForUser(telefono).catch((err: unknown) => {
+          logger.warn({ err, telefono }, "pti-shadow: v5.0 shadow compute failed (non-blocking)");
+        });
 
         computed++;
       } catch (err) {

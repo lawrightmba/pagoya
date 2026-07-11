@@ -297,6 +297,41 @@ router.post("/admin/run-winback", async (_req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/run-v5-shadow — Phase A backfill: compute v5.0 shadow scores for all
+// active users and insert rows into pti_v5_shadow_recompute. Fire-and-forget per user;
+// never touches pti_score / pti_breakdown. Remove this route after B4 backfill is confirmed.
+router.post("/admin/run-v5-shadow", async (_req: Request, res: Response) => {
+  try {
+    const { db: dbInst } = await import("@workspace/db");
+    const { sql: sqlTag } = await import("drizzle-orm");
+    const { computePTIv5ForUser } = await import("../services/ptiV5.js");
+
+    const allUsers = await dbInst.execute(sqlTag`
+      SELECT DISTINCT telefono FROM users
+      WHERE telefono IS NOT NULL AND telefono != ''
+      AND is_test_account IS NOT TRUE
+    `);
+    const phones = allUsers.rows.map((r: Record<string, unknown>) => r.telefono as string);
+
+    let ok = 0;
+    let failed = 0;
+    for (const telefono of phones) {
+      try {
+        await computePTIv5ForUser(telefono);
+        ok++;
+      } catch (err) {
+        logger.warn({ err, telefono }, "admin/run-v5-shadow: per-user shadow compute failed");
+        failed++;
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+    res.json({ ok: true, computed: ok, failed, total: phones.length });
+  } catch (err) {
+    logger.error({ err }, "admin/run-v5-shadow: failed");
+    res.status(500).json({ error: "V5 shadow backfill failed — check server logs." });
+  }
+});
+
 // POST /api/admin/run-paula-send-queue — manually trigger one paula_send_queue processing
 // pass (for verification). Mirrors the 2-min in-process cron in paulaSendQueue.ts; useful
 // on autoscale deployments where the interval timer's cadence is not guaranteed.
