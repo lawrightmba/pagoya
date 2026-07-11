@@ -82,6 +82,36 @@ export async function alertPayment(params: {
   );
 }
 
+export async function alertBillInStripePath(params: {
+  paymentIntentId: string;
+  telefono: string;
+  amountMxn: number;
+  empresa: string;
+  categoria: string;
+  referencia: string;
+  timestamp: Date;
+}): Promise<void> {
+  await send(
+    `[PagoYa] 🚨 CRITICAL: bill charge confirmed via Stripe — bill NOT paid`,
+    [
+      `A non-gift-card (bill) payment was confirmed via Stripe.`,
+      `The bill was NOT submitted to the payment provider.`,
+      `A human must review and either refund the card charge or manually submit the bill.`,
+      ``,
+      `Payment Intent:  ${params.paymentIntentId}`,
+      `Phone:          ${params.telefono}`,
+      `Empresa:        ${params.empresa}`,
+      `Categoria:      ${params.categoria}`,
+      `Referencia:     ${params.referencia}`,
+      `Amount charged: $${params.amountMxn.toFixed(2)} MXN (includes $25 platform fee)`,
+      `Timestamp:      ${params.timestamp.toISOString()}`,
+      ``,
+      `Row has been marked "error_bill_in_stripe" in pagoya_payments table.`,
+      `Stripe Dashboard: https://dashboard.stripe.com/payments/${params.paymentIntentId}`,
+    ].join("\n"),
+  );
+}
+
 export async function alertDispute(params: {
   chargeId: string;
   paymentIntentId?: string;

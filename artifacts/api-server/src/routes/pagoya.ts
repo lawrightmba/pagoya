@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import Stripe from "stripe";
 import { db, pagoyaPaymentsTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { alertDispute, alertPayment } from "../lib/alertService.js";
+import { alertDispute, alertPayment, alertBillInStripePath } from "../lib/alertService.js";
 import { routePayment } from "../billpay/services/router.js";
 import { getServiceById } from "../billpay/services/catalog.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
@@ -311,13 +311,45 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
         .limit(1);
 
       if (payment && payment.status !== "gift_card_delivered") {
-        await db
-          .update(pagoyaPaymentsTable)
-          .set({ status: "succeeded" })
-          .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
+        if (!payment.categoria?.includes("_")) {
+          // ───────────────────────────────────────────────────────────────────
+          // SAFETY NET: A bill payment (non-gift-card) reached and completed
+          // the Stripe path. The bill was NOT submitted to any payment provider.
+          // Do NOT silently mark succeeded — flag it loud for human review.
+          // ───────────────────────────────────────────────────────────────────
+          await db
+            .update(pagoyaPaymentsTable)
+            .set({ status: "error_bill_in_stripe" })
+            .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
 
-        // Trigger gift card delivery from webhook if this is a gift card
-        if (payment.categoria?.includes("_")) {
+          logger.error(
+            {
+              paymentIntentId: intentId,
+              telefono: payment.telefono,
+              empresa: payment.empresa,
+              categoria: payment.categoria,
+              monto: payment.monto,
+              referencia: payment.referencia,
+            },
+            "CRITICAL pagoya: bill payment confirmed via Stripe — bill was NOT submitted to provider. Row flagged error_bill_in_stripe. Human review required: refund card or manually submit bill.",
+          );
+
+          alertBillInStripePath({
+            paymentIntentId: intentId,
+            telefono: payment.telefono ?? "",
+            amountMxn: parseFloat(payment.monto),
+            empresa: payment.empresa ?? "",
+            categoria: payment.categoria ?? "",
+            referencia: payment.referencia ?? "",
+            timestamp: new Date(),
+          }).catch(() => {});
+        } else {
+          // Normal gift-card path
+          await db
+            .update(pagoyaPaymentsTable)
+            .set({ status: "succeeded" })
+            .where(eq(pagoyaPaymentsTable.paymentIntentId, intentId));
+
           deliverGiftCard({
             paymentIntentId: payment.paymentIntentId,
             categoria: payment.categoria,
@@ -325,18 +357,18 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
             telefono: payment.telefono,
             referencia: payment.referencia,
           }).catch((err) => logger.error({ paymentIntentId: intentId, err }, "pagoya: webhook gift card delivery failed"));
+
+          logger.info({ paymentIntentId: intentId, event: event.type }, "pagoya: gift card payment succeeded — status updated to succeeded");
+
+          alertPayment({
+            telefono: payment.telefono,
+            amountMxn: parseFloat(payment.monto),
+            method: "stripe_card",
+            status: "confirmed",
+            reference: payment.referencia,
+            timestamp: new Date(),
+          }).catch(() => {});
         }
-      }
-      logger.info({ paymentIntentId: intentId, event: event.type }, "pagoya: payment succeeded — status updated to succeeded");
-      if (payment) {
-        alertPayment({
-          telefono: payment.telefono,
-          amountMxn: parseFloat(payment.monto),
-          method: "stripe_card",
-          status: "confirmed",
-          reference: payment.referencia,
-          timestamp: new Date(),
-        }).catch(() => {});
       }
     } else if (
       event.type === "payment_intent.payment_failed" ||
@@ -375,5 +407,164 @@ export async function handlePagoyaWebhook(req: Request, res: Response): Promise<
     res.status(500).json({ error: message });
   }
 }
+
+// ── DEV ONLY: simulate webhook bill-guard safety net ────────────────────────
+// POST /api/pagoya/admin/test-bill-guard
+// Runs the same bill-guard logic the webhook runs for payment_intent.succeeded,
+// but skips Stripe signature verification. Inserts a fake pendiente row, fires
+// the guard logic, then cleans up. Returns outcome for inspection.
+// Only available when NODE_ENV=development.
+router.post("/admin/test-bill-guard", async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV !== "development") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
+  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
+  if (!key || !expected || key !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const fakeIntentId = `pi_test_bill_guard_${Date.now()}`;
+  const fakeCat = "Agua";  // non-gift-card — no underscore
+
+  // Insert fake pendiente row
+  await db.insert(pagoyaPaymentsTable).values({
+    paymentIntentId: fakeIntentId,
+    empresa: "SADM-TEST",
+    categoria: fakeCat,
+    monto: "100.00",
+    referencia: "000000000",
+    telefono: "5500000000",
+    status: "pendiente",
+  });
+
+  // Run the same bill-guard logic as the webhook
+  const [payment] = await db
+    .select()
+    .from(pagoyaPaymentsTable)
+    .where(eq(pagoyaPaymentsTable.paymentIntentId, fakeIntentId))
+    .limit(1);
+
+  let outcome = "no_payment_found";
+
+  if (payment && payment.status !== "gift_card_delivered") {
+    if (!payment.categoria?.includes("_")) {
+      await db
+        .update(pagoyaPaymentsTable)
+        .set({ status: "error_bill_in_stripe" })
+        .where(eq(pagoyaPaymentsTable.paymentIntentId, fakeIntentId));
+
+      logger.error(
+        {
+          paymentIntentId: fakeIntentId,
+          telefono: payment.telefono,
+          empresa: payment.empresa,
+          categoria: payment.categoria,
+          monto: payment.monto,
+          referencia: payment.referencia,
+          __test: true,
+        },
+        "CRITICAL pagoya: bill payment confirmed via Stripe — bill was NOT submitted to provider. Row flagged error_bill_in_stripe. Human review required: refund card or manually submit bill.",
+      );
+
+      outcome = "error_bill_in_stripe — ERROR logged, alert fired";
+      alertBillInStripePath({
+        paymentIntentId: fakeIntentId,
+        telefono: payment.telefono ?? "",
+        amountMxn: parseFloat(payment.monto),
+        empresa: payment.empresa ?? "",
+        categoria: payment.categoria ?? "",
+        referencia: payment.referencia ?? "",
+        timestamp: new Date(),
+      }).catch(() => {});
+    } else {
+      outcome = "gift_card_path — deliverGiftCard would run";
+    }
+  }
+
+  // Cleanup test row
+  await db.delete(pagoyaPaymentsTable).where(eq(pagoyaPaymentsTable.paymentIntentId, fakeIntentId));
+
+  res.json({
+    test: "bill_guard",
+    fakeIntentId,
+    categoria: fakeCat,
+    isGiftCard: fakeCat.includes("_"),
+    outcome,
+    note: "Check server logs for CRITICAL ERROR log line",
+  });
+});
+
+// ── Admin: cancel all pending Stripe PaymentIntents ─────────────────────────
+// POST /api/pagoya/admin/cancel-stripe-pending
+// Cancels every row with status="pendiente" in Stripe and marks it "cancelled"
+// in the DB. Safe to re-run — already-cancelled intents are caught and skipped.
+router.post("/admin/cancel-stripe-pending", async (req: Request, res: Response) => {
+  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
+  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
+  if (!key || !expected || key !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const stripe = getStripe();
+
+  const pendiente = await db
+    .select()
+    .from(pagoyaPaymentsTable)
+    .where(eq(pagoyaPaymentsTable.status, "pendiente"));
+
+  const results: Array<{ id: number; paymentIntentId: string; outcome: string }> = [];
+
+  for (const row of pendiente) {
+    try {
+      await stripe.paymentIntents.cancel(row.paymentIntentId);
+      await db
+        .update(pagoyaPaymentsTable)
+        .set({ status: "cancelled" })
+        .where(eq(pagoyaPaymentsTable.id, row.id));
+      results.push({ id: row.id, paymentIntentId: row.paymentIntentId, outcome: "cancelled" });
+      logger.info({ id: row.id, paymentIntentId: row.paymentIntentId }, "pagoya admin: pending PaymentIntent cancelled");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Treat as effectively dead (safe to mark cancelled in DB):
+      // - already canceled in Stripe
+      // - no longer cancelable (e.g., expired)
+      // - No such payment_intent (PI belongs to a rotated/old Stripe account — auto-expired)
+      const effectivelyDead = msg.includes("already canceled")
+        || msg.includes("no longer cancelable")
+        || msg.includes("canceled")
+        || msg.includes("No such payment_intent");
+
+      // Treat as "succeeded in Stripe but DB missed the webhook" — needs human review:
+      const succeededInStripe = msg.toLowerCase().includes("status of succeeded");
+
+      if (effectivelyDead) {
+        await db
+          .update(pagoyaPaymentsTable)
+          .set({ status: "cancelled" })
+          .where(eq(pagoyaPaymentsTable.id, row.id));
+        const reason = msg.includes("No such") ? "foreign_account_auto_expired" : "already_cancelled_in_stripe";
+        results.push({ id: row.id, paymentIntentId: row.paymentIntentId, outcome: reason });
+      } else if (succeededInStripe) {
+        // This PI was actually confirmed in Stripe but webhook never updated our DB.
+        // Flag it for human review — do NOT mark as succeeded silently.
+        await db
+          .update(pagoyaPaymentsTable)
+          .set({ status: "error_bill_in_stripe" })
+          .where(eq(pagoyaPaymentsTable.id, row.id));
+        results.push({ id: row.id, paymentIntentId: row.paymentIntentId, outcome: "ERROR_SUCCEEDED_IN_STRIPE_DB_MISSED_WEBHOOK — manual review required" });
+        logger.error({ id: row.id, paymentIntentId: row.paymentIntentId }, "pagoya admin: PI succeeded in Stripe but DB had pendiente — webhook was missed. Flagged error_bill_in_stripe for manual review.");
+      } else {
+        results.push({ id: row.id, paymentIntentId: row.paymentIntentId, outcome: `error: ${msg}` });
+        logger.error({ id: row.id, paymentIntentId: row.paymentIntentId, err }, "pagoya admin: cancel pending PaymentIntent failed");
+      }
+    }
+  }
+
+  res.json({ total: pendiente.length, results });
+});
 
 export default router;

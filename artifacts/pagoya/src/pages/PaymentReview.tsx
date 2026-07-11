@@ -13,9 +13,10 @@ export default function PaymentReview() {
   const es = localStorage.getItem("pagoya_lang") !== "en";
 
   // Gift card detection (serviceId contains "_", e.g. "netflix_300")
+  // Bills (Agua, Luz, Gas, etc.) NEVER have underscores — they MUST go via wallet.
   const isGiftCard = (paymentData.categoria ?? "").includes("_");
 
-  // Wallet balance for gift card payments
+  // Wallet balance — fetched for all payment types so we can gate the pay button
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "wallet">("card");
 
@@ -26,13 +27,13 @@ export default function PaymentReview() {
   }, []);
 
   useEffect(() => {
-    if (isGiftCard && paymentData.telefono) {
+    if (paymentData.telefono) {
       fetch(`${window.location.origin}/api/wallet/balance?telefono=${encodeURIComponent(paymentData.telefono)}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data?.balanceMXN != null) setWalletBalance(data.balanceMXN); })
         .catch(() => {});
     }
-  }, [paymentData.telefono, isGiftCard]);
+  }, [paymentData.telefono]);
 
   const PLATFORM_FEE = 25.00;
 
@@ -46,6 +47,12 @@ export default function PaymentReview() {
   const total = paymentMethod === "wallet"
     ? montoNum
     : montoNum + (hasFreeToken ? 0 : PLATFORM_FEE);
+
+  // Bills ALWAYS go to wallet. Card path is gift cards only.
+  const handlePagar = () => {
+    if (!isGiftCard) return handleWalletPago();
+    return paymentMethod === "wallet" ? handleWalletPago() : handleCardPago();
+  };
 
   // Wallet payment: call /api/bills/pay directly — SIPREL handles redemption + wallet debit
   const handleWalletPago = async () => {
@@ -78,8 +85,13 @@ export default function PaymentReview() {
     }
   };
 
-  // Card payment: create Stripe PaymentIntent → navigate to card entry
+  // Card payment: ONLY for gift cards (categoria contains "_").
+  // Bills must NEVER reach this path — enforced here and in CardEntry.
   const handleCardPago = async () => {
+    if (!isGiftCard) {
+      setApiError("Las facturas de servicios sólo pueden pagarse con tu cartera PagoYa.");
+      return;
+    }
     setLoading(true);
     setApiError("");
     const freeTxToken = localStorage.getItem("pagoya_free_tx_token");
@@ -109,7 +121,6 @@ export default function PaymentReview() {
     }
   };
 
-  const handlePagar = () => paymentMethod === "wallet" ? handleWalletPago() : handleCardPago();
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F7F7F7" }}>
@@ -247,7 +258,7 @@ export default function PaymentReview() {
               </div>
 
               {/* Insufficient balance warning */}
-              {paymentMethod === "wallet" && walletBalance < montoNum && (
+              {paymentMethod === "wallet" && walletBalance !== null && walletBalance < montoNum && (
                 <p className="text-xs font-semibold" style={{ color: "#E21A0A" }}>
                   ⚠ Saldo insuficiente. Tu cartera tiene ${walletBalance.toFixed(2)} MXN, necesitas ${montoNum.toFixed(2)} MXN.
                 </p>
@@ -265,10 +276,25 @@ export default function PaymentReview() {
             </p>
           </div>
 
+          {/* Bill payments: wallet-only notice */}
+          {!isGiftCard && (
+            <div
+              className="rounded-2xl px-5 py-4 flex gap-3 items-start"
+              style={{ background: "#FFF8E1", border: "1px solid #FFE082" }}
+            >
+              <span className="text-base flex-shrink-0">👛</span>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {walletBalance !== null
+                  ? `Saldo disponible: $${walletBalance.toFixed(2)} MXN. Este pago se deducirá de tu cartera.`
+                  : "Este pago se realizará desde tu cartera PagoYa."}
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 pt-1">
             <button
               onClick={handlePagar}
-              disabled={loading || (paymentMethod === "wallet" && walletBalance !== null && walletBalance < montoNum)}
+              disabled={loading || (!isGiftCard && walletBalance !== null && walletBalance < montoNum) || (isGiftCard && paymentMethod === "wallet" && walletBalance !== null && walletBalance < montoNum)}
               className="w-full py-5 px-8 rounded-full text-white text-base font-bold transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
               style={{
                 background: "linear-gradient(135deg, #046C2C 0%, #39A935 100%)",

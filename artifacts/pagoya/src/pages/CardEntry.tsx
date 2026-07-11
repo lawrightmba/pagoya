@@ -36,7 +36,10 @@ export default function CardEntry() {
   const [cardError, setCardError] = useState("");
 
   useEffect(() => {
-    if (!clientSecret || !paymentData.empresa) {
+    // Defense-in-depth: bills must never reach the Stripe card entry page.
+    // categoria contains "_" for gift cards (e.g. "netflix_400"); bill categories never do.
+    const isGiftCard = (paymentData.categoria ?? "").includes("_");
+    if (!clientSecret || !paymentData.empresa || !isGiftCard) {
       navigate("/pagar");
     }
   }, []);
