@@ -100,3 +100,30 @@ Complete four-part signoff chain for v5.0 (PTI dimension recomposition; brief v1
 | 4 | External confirmation — Douglas Franklin, PhD, Data and Behavioral Science Researcher: "I confirm that the scoring methodology presented for my review on July 9, 2026 is in line with acceptable industry standard as recorded in the PTI V5.0 lending remediation packet and agree with the methodology as presented, no changes requested. Please let this notice serve for your documentation." Email received 2026-07-11; reviewer designated this email as the record for documentation purposes. | Douglas Franklin, PhD | 2026-07-11 | Email reply; review date stated as July 9, 2026; source on file at `external-review-signature.md §Email confirmation — 2026-07-11` |
 
 **v5.0 status: ACTIVE.** All four signoff gates closed as of 2026-07-11. Rollout proceeds per Phase 3 §3.4.
+
+---
+
+### Phase status log — 2026-07-11
+
+| Phase | Status | Date | Notes |
+|---|---|---|---|
+| A — Shadow infrastructure | ✅ Complete | 2026-07-11 | `pti_v5_shadow_recompute` table live; nightly cron wired; B5-gated |
+| B5 — Evidence gates | ✅ All green | 2026-07-11 | B1/B2/B3/B4 all pass; corrected stale v4.1-behavioral baseline for 8118963105 |
+| C — Transition message pipeline | ✅ Submitted | 2026-07-11 | See below |
+| D — Monitoring panel | 🔴 Not started | — | Spec §3.3; blocked on Phase E go-order |
+| E — Go-live recompute | 🔴 Gated | — | Requires Meta SID ✅ + Lloyd go-order 🔴 |
+
+**Phase C — Transition message pipeline (2026-07-11):**
+
+- Template text (es-MX, variable-free, UTILITY): *"Actualizamos cómo se calcula tu PTI para que refleje mejor tu esfuerzo — lo que pagas y qué tan constante eres, no cuánto dinero se mueve. Tu número puede cambiar un poco hoy; tu camino no cambia."*
+- Added to `seedPaulaMessages.ts` ROWS[] as `trigger_type = 'pti_v5_transition'`, `active = false`, `pending_approval = true`, category UTILITY, 196 chars, no variables.
+- Submitted to Twilio Content API and WhatsApp approval requested: **content_sid = `HX83365f953386ec00e27da4a959a7f497`**, approval status = `received` (Meta review queue as of 2026-07-11 15:10 UTC).
+- Dispatch service built: `phaseETransition.ts` — `dispatchV5TransitionMessages()` fires before Phase E recompute for users with |v5 − v4.3| > 5 pts. Consent gate: WhatsApp for consented users; `pti_transition_notices` table for non-consented (in-app delivery).
+- Admin routes added: `GET /api/admin/phase-e-transition-status` (probe, no side effects); `POST /api/admin/phase-e-dispatch-transition` (safety-gated, requires `{"confirm":"V5_TRANSITION_DISPATCH"}`).
+- Currently qualifying for dispatch: **1 user** (+523222304213, delta = −6 pts). Consent status to be verified at Phase E dispatch time.
+- **Pending to complete Phase C:** deploy to prod → `POST /api/admin/seed-paula-messages` (inserts row 26) → `POST /api/admin/sync-template-sids` (writes SID). Row is `active = false` — cannot fire until Phase E go-order activates it.
+- Phase C completion gate: Meta approval of SID HX83365f953386ec00e27da4a959a7f497. Monitor daily via `twilio:status` (template #24 = `pti_v5_transition`).
+
+**Product hygiene backlog — logged 2026-07-11 (NOT part of this program):**
+
+Model-version staleness: the monthly PTI batch does not enforce a minimum model version. Users computed under v4.1-behavioral or v4.0-behavioral are silently re-evaluated on those old models at next recompute unless `compute-now` is called explicitly. Two prod users were found in this state today (8118963105: v4.1-behavioral stored; +523222304213: v2.1/v4.0-behavioral stored). Both corrected manually on 2026-07-11. Recommended fix: add `model_version` column to `users`, compare against current model at batch time, and flag/refresh mismatches.

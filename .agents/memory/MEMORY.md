@@ -43,3 +43,5 @@
 - [PTI v4.3 weight allocation decision](pti-v4-3-disposition.md) — all 15 derived fields ship at zero weight; 5 permanent_non_scoring vs 10 provisional_zero_weight; disposition registry in ptiV4_3Disposition.ts
 - [Landing-page + rep attribution](landing-page-attribution.md) — onConflictDoNothing swallows attribution on pre-existing rows; every attribution column needs a guarded conflict-branch backfill UPDATE
 - [WhatsApp consent gate](whatsapp-consent-gate.md) — every proactive send path must check whatsapp_consent_at; snake_case vs camelCase trap; bare `sql` import gotcha in whatsapp-agent
+- [PTI v5.0 Phase C — transition message pipeline](pti-phase-c.md) — SID HX83365f953386ec00e27da4a959a7f497 submitted Jul 11; pending_approval pattern in seedPaulaMessages; phaseETransition.ts dispatch service; deploy needed to land row 26 in prod
+- [PTI v5.0 B5 + stale-model correction](pti-v5-b5-stale-model.md) — two users had stale model_version in stored pti_score (v4.1-behavioral stored vs v4.3 current); corrected Jul 11 via compute-now; B5 canonical table: all 9 deltas ≤0 on same-day data

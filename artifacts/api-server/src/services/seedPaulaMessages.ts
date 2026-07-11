@@ -17,7 +17,7 @@ import { sql as drizzleSql } from "drizzle-orm";
 import type { db as DbType } from "@workspace/db";
 
 export const PAULA_MESSAGES_EXPECTED_ACTIVE = 23;
-export const PAULA_MESSAGES_TOTAL_IN_SEED = 25;
+export const PAULA_MESSAGES_TOTAL_IN_SEED = 26;
 
 // ── Twilio Content template variable schemas ───────────────────────────────────
 // Maps trigger_type → positional variable index → UserContext field name.
@@ -55,6 +55,8 @@ export const VARIABLES_SCHEMA: Record<string, Record<string, string>> = {
   "employment_profile":     { "1": "nombre" },
   "address_tenure":         { "1": "nombre" },
   "readiness_hard_step2":   {},
+  // Variable-free — no positional vars needed for Twilio Content API submission.
+  "pti_v5_transition":      {},
 };
 
 // ── Template bodies ────────────────────────────────────────────────────────────
@@ -80,6 +82,12 @@ interface SeedRow {
   // Twilio category: 'UTILITY' (default) or 'MARKETING'.
   // UTILITY limit: 1024 chars. MARKETING limit: 768 chars.
   template_category?: string;
+  // pending_approval: include in Twilio Content API submission even though active=false.
+  // Use when Meta approval must be obtained BEFORE the template is activated in prod.
+  // The generator includes these rows in twilio-submission.json; they do NOT count
+  // toward PAULA_MESSAGES_EXPECTED_ACTIVE and are NOT fired by the trigger evaluator
+  // until active is flipped to true (done after SID sync at Phase E go-order).
+  pending_approval?: boolean;
 }
 
 export const ROWS: SeedRow[] = [
@@ -431,6 +439,21 @@ Son tuyos. Úsalos.`,
   *C* — More than 2 years
 
   _This is optional. It helps us understand your stability._`,
+  },
+
+  // ── PTI v5.0 transition (Phase C — §3.4 step 4) ──────────────────────────────
+  {
+    // active=false until content_sid is synced from Meta approval (Phase E gate).
+    // Fires once per user whose live score shifts > 5 pts when v5.0 is applied.
+    // Variable-free by spec constraint: no {{nombre}} or any positional vars.
+    // UTILITY category: plain informational notice, no promotional content.
+    // Dispatch: consented users → WhatsApp template; non-consented → in-app notice.
+    // Called by dispatchV5TransitionMessages() BEFORE the recompute writes new scores.
+    // Cooldown=9999: fires once, never repeats.
+    trigger_type: "pti_v5_transition", active: false, pending_approval: true, cooldown_days: 9999,
+    template_category: "UTILITY",
+    template_en: null,
+    template_es: "Actualizamos cómo se calcula tu PTI para que refleje mejor tu esfuerzo — lo que pagas y qué tan constante eres, no cuánto dinero se mueve. Tu número puede cambiar un poco hoy; tu camino no cambia.",
   },
 
   // ── Partner-dependent — active=false until lending partner contract is signed ─

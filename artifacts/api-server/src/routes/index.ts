@@ -332,6 +332,48 @@ router.post("/admin/run-v5-shadow", async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/phase-e-transition-status — Phase C/E probe (no side effects).
+// Returns qualifying users, content_sid state, and already-dispatched counts.
+// Safe to call at any time; used to verify preconditions before Phase E go-order.
+router.get("/admin/phase-e-transition-status", async (_req: Request, res: Response) => {
+  try {
+    const { getTransitionDispatchStatus } = await import("../services/phaseETransition.js");
+    const status = await getTransitionDispatchStatus();
+    res.json({ ok: true, ...status });
+  } catch (err) {
+    logger.error({ err }, "admin/phase-e-transition-status: failed");
+    res.status(500).json({ error: "Status check failed — see server logs." });
+  }
+});
+
+// POST /api/admin/phase-e-dispatch-transition — Phase E step 1 (§3.4 step 5).
+// Dispatches the pti_v5_transition message for users with |delta| > 5 pts.
+// MUST be called BEFORE the v5.0 recompute writes new live scores.
+//
+// Safety gate: requires {"confirm":"V5_TRANSITION_DISPATCH"} in request body.
+// Idempotent: re-running is safe — already-queued rows are detected and skipped.
+//
+// Precondition: pti_v5_transition.content_sid must be set in paula_messages
+// (Meta approval confirmed). Dispatch proceeds without it but delivery will
+// stall in the send-queue until the SID is present.
+router.post("/admin/phase-e-dispatch-transition", async (req: Request, res: Response) => {
+  if (req.body?.confirm !== "V5_TRANSITION_DISPATCH") {
+    res.status(400).json({
+      error: "Safety gate: include {\"confirm\":\"V5_TRANSITION_DISPATCH\"} in request body.",
+    });
+    return;
+  }
+  try {
+    const { dispatchV5TransitionMessages } = await import("../services/phaseETransition.js");
+    const result = await dispatchV5TransitionMessages();
+    logger.info({ result }, "admin/phase-e-dispatch-transition: complete");
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "admin/phase-e-dispatch-transition: failed");
+    res.status(500).json({ error: "Transition dispatch failed — see server logs." });
+  }
+});
+
 // POST /api/admin/run-paula-send-queue — manually trigger one paula_send_queue processing
 // pass (for verification). Mirrors the 2-min in-process cron in paulaSendQueue.ts; useful
 // on autoscale deployments where the interval timer's cadence is not guaranteed.

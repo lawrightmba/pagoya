@@ -223,7 +223,8 @@ export function generate(): TwilioSubmissionEntry[] {
   }
 
   const entries: TwilioSubmissionEntry[] = [];
-  const activeRows = ROWS.filter(r => r.active);
+  // Include active rows + any pending_approval rows (submitted to Meta before activation).
+  const activeRows = ROWS.filter(r => r.active || r.pending_approval);
 
   for (const row of activeRows) {
     const isModule = MODULE_TRIGGERS.has(row.trigger_type);
