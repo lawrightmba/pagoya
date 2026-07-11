@@ -670,6 +670,18 @@ export function getPTITier(score: number): { tier: string; color: string; label:
 
 export async function computePTIForUser(telefono: string): Promise<PTIBreakdown> {
   const { db } = await import("@workspace/db");
+
+  // Guard: verify user exists before any computation.
+  // Without this, a phantom/misformatted phone (e.g. Twilio spaced "52 322 183 9799")
+  // would silently insert into pti_score_history with score=0 because the UPDATE on
+  // users matches 0 rows but the history INSERT has no FK constraint.
+  const exists = await db.execute(sql`
+    SELECT 1 FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  if ((exists.rows as unknown[]).length === 0) {
+    throw new Error(`computePTIForUser: no user row for telefono "${telefono}" — skipping to prevent phantom history insert`);
+  }
+
   const snapshot = await buildPTISnapshotFromDb(telefono);
 
   const { breakdown, confidence } = computePTI(snapshot);
@@ -1181,13 +1193,18 @@ export async function buildPTISnapshotFromDb(telefono: string): Promise<PTIDataS
 }
 
 /** Monthly batch: recompute PTI for all users + send WhatsApp notification */
-export async function computePTIForAllUsers(): Promise<void> {
+export async function computePTIForAllUsers(): Promise<{ updated: number; errors: number }> {
   const { db } = await import("@workspace/db");
   const startedAt = Date.now();
   logger.info("[PTI Monthly] Starting monthly PTI computation (v2.1-4dim)...");
 
+  // DISTINCT prevents double-computation if a phone appears in multiple rows (defensive).
+  // is_test_account IS NOT TRUE excludes test seeds from the monthly batch and its WhatsApp
+  // score update — test numbers should never receive real scoring messages.
   const allUsers = await db.execute(sql`
-    SELECT telefono FROM users WHERE telefono IS NOT NULL AND telefono != ''
+    SELECT DISTINCT telefono FROM users
+    WHERE telefono IS NOT NULL AND telefono != ''
+    AND is_test_account IS NOT TRUE
   `);
   const phones = allUsers.rows.map(r => (r as Record<string,unknown>).telefono as string);
 
@@ -1244,6 +1261,7 @@ export async function computePTIForAllUsers(): Promise<void> {
   }
 
   logger.info(`[PTI Monthly] Complete: ${updated} users updated, ${errors} errors — ${Date.now() - startedAt}ms`);
+  return { updated, errors };
 }
 
 // ─── PTI v3.0 — Granular Data Capture + Trend Layer ──────────────────────────

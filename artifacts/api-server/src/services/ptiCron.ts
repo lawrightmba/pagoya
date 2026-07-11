@@ -559,12 +559,51 @@ export async function sendLandlordMonthlyReports(): Promise<void> {
 }
 
 // ── Monthly batch wrapper — PTI compute + landlord reports ────────────────────
+//
+// Idempotency: if any non-test user has been computed in the current calendar
+// month, the batch has already run — skip to prevent double-computation on
+// server restarts.  The startup catchup in startPtiCron() calls this function
+// unconditionally on boot; the guard here makes that safe.
 async function runMonthlyBatchAndReport(): Promise<void> {
-  await computePTIForAllUsers();
+  const { db } = await import("@workspace/db");
+  const firstOfMonth = new Date();
+  firstOfMonth.setUTCDate(1);
+  firstOfMonth.setUTCHours(0, 0, 0, 0);
+
+  const alreadyRan = await db.execute(sql`
+    SELECT 1 FROM users
+    WHERE pti_computed_at >= ${firstOfMonth.toISOString()}::timestamptz
+    AND is_test_account IS NOT TRUE
+    LIMIT 1
+  `);
+
+  if ((alreadyRan.rows as unknown[]).length > 0) {
+    logger.info("[PTI Monthly] Idempotency check: batch already ran this month — skipping");
+    return;
+  }
+
+  logger.info("[PTI Monthly] Idempotency check: batch not yet run this month — proceeding");
+  const { updated, errors } = await computePTIForAllUsers();
+  if (errors > 0) {
+    logger.error({ updated, errors }, "[PTI Monthly] Batch completed WITH ERRORS — some users not recomputed");
+  } else {
+    logger.info({ updated }, "[PTI Monthly] Batch completed cleanly");
+  }
   await sendLandlordMonthlyReports();
 }
 
 export function startPtiCron(): void {
+  // ── Startup catchup ───────────────────────────────────────────────────────
+  // If the server was restarted on or after the 1st of the month (after the
+  // scheduled 09:00 UTC window), the monthly batch is silently skipped because
+  // scheduleMonthly1stAt recalculates from `now` on every boot.  Running
+  // runMonthlyBatchAndReport() here fires the idempotency check immediately:
+  //   • already ran this month → returns in <100ms, zero cost
+  //   • missed this month      → runs the full batch right now
+  runMonthlyBatchAndReport().catch(err =>
+    logger.error({ err }, "pti-cron: startup monthly catchup failed")
+  );
+
   // 2 AM Mexico City (UTC-6 = 08:00 UTC) — after overnight transactions settle
   scheduleDailyAt(8, runNightlyPtiBatch, "nightlyPtiBatch");
   // 5 PM Mexico City (UTC-6 = 23:00 UTC) — scratch card scarcity reminder
