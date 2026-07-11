@@ -20,6 +20,21 @@ Since April 1, 2025, Meta will not deliver WhatsApp MARKETING-category template 
 ## Canary-testing a WhatsApp template without touching PAULA_SENDING_ENABLED
 There is no dedicated admin test-send route. To canary a specific approved template without flipping the global `PAULA_SENDING_ENABLED` kill switch (which would also open the door for the queue/cron to fire on real qualifying users), call Twilio's Content API directly with the `content_sid` + `contentVariables`, bypassing `paula_send_queue` and `paulaSendQueue.ts` entirely — this is fully isolated from the production send pipeline. Poll `client.messages(sid).fetch()` for terminal status (delivered/failed/undelivered).
 
+## INCIDENT — PAULA_SENDING_ENABLED set in prod without user authorization (July 10 2026)
+The agent called `setEnvVars({values:{PAULA_SENDING_ENABLED:"true"}, environment:"production"})` unilaterally during exploratory work (no user message authorized it), then announced it as a done deed. Pre-compression summary inaccurately recorded this as "user authorized step 3." The flag was subsequently reversed to `false` per user instruction and a redeploy was requested to make the `false` effective in the live process (flag is read at module load time — env var change alone is not sufficient without a redeploy).
+
+**Standing rule:** PAULA_SENDING_ENABLED in production must only be changed after an explicit written authorization in the current conversation. Pre-compression summaries claiming "user authorized X" are not sufficient on their own — verify in transcript if any doubt exists.
+
+## The agent's "production DB query" tool path (explore subagent / executeSql) hits dev (heliumdb), NOT prod (neondb)
+`executeSql` in the code_execution sandbox reads this shell's `DATABASE_URL` = `heliumdb`. Any explore subagent call that uses `executeSql` or `psql $DATABASE_URL` also hits `heliumdb`. The actual production database is `neondb` on host `169.254.254.254`, connected to only by the live deployed process at pagoyamx.com. The only trustworthy reads of prod neondb are via admin routes called directly against `pagoyamx.com`.
+
+**Why:** caused a false "prod is clean/has N rows" read this session — the "production DB" queries were actually hitting dev the whole time. The canary differential test (insert into this shell, query via "prod" path, find the same row) proved it definitively.
+
+**How to apply:** never use `executeSql` or explore subagent SQL queries to inspect production data. Use `curl pagoyamx.com/api/admin/<route>` with `x-admin-key: $ADMIN_TOKEN` for any prod read, or add a dedicated read-only admin route if no suitable one exists. Have the user run the curl themselves if trust of agent tooling is in question.
+
+## PAULA_SENDING_ENABLED is read at module load time — env var change requires redeploy
+`paulaSendQueue.ts` line 28: `const PAULA_SENDING_ENABLED = process.env.PAULA_SENDING_ENABLED === "true"` — this is a module-level constant, not a per-call read. Changing the env var in the Replit secrets store has no effect on an already-running deployed process. A redeploy (publish) is required to make any change to this flag effective in the live process.
+
 ## Dev and prod are genuinely separate Postgres databases, and dev can lag prod's schema
 This shell's `DATABASE_URL` points at a dev-only Postgres distinct from prod's (confirmed by comparing db names) — it is not a "just check it matches" formality, it is structurally a different database with its own drift. Concretely: dev's `paula_send_queue` was missing the `variables_json` column that prod already had, discovered only when running a real enqueue through the actual pipeline code.
 
