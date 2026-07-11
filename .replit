@@ -63,4 +63,4 @@ VAPID_PRIVATE_KEY = "05kjlEwo6qF1K4j_RzNZWUrVqsEGK5dY3hEbTjq1C00"
 VAPID_EMAIL = "mailto:soporte@pagoyamx.com"
 
 [userenv.production]
-PAULA_SENDING_ENABLED = "false"
+PAULA_SENDING_ENABLED = "true"
