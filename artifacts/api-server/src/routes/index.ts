@@ -4,6 +4,7 @@ import path from "path";
 import { eq, desc, gte, sql as drizzleSql } from "drizzle-orm";
 import {
   db,
+  pool,
   usersTable,
   userProfilesTable,
   userBillersTable,
@@ -307,6 +308,21 @@ router.post("/admin/run-paula-send-queue", async (_req: Request, res: Response) 
   } catch (err) {
     logger.error({ err }, "admin/run-paula-send-queue: failed");
     res.status(500).json({ error: "Send queue pass failed — check server logs." });
+  }
+});
+
+// GET /api/admin/db-diagnostic — read-only: returns current_database() and server host only.
+// No query params, no side effects. Used to verify which database the live process connects to.
+router.get("/admin/db-diagnostic", async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query<{ db: string; host: string }>(
+      "SELECT current_database() AS db, inet_server_addr()::text AS host"
+    );
+    const row = result.rows[0];
+    res.json({ db: row.db, host: row.host ?? null });
+  } catch (err) {
+    logger.error({ err }, "admin/db-diagnostic: failed");
+    res.status(500).json({ error: "db-diagnostic failed — check server logs." });
   }
 });
 
