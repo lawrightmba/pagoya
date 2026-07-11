@@ -570,58 +570,5 @@ router.post("/admin/cancel-stripe-pending", async (req: Request, res: Response) 
   res.json({ total: pendiente.length, results });
 });
 
-// ── Admin: retroactively flag specific rows as error_bill_in_stripe ─────────
-// POST /api/pagoya/admin/flag-bills-in-stripe
-// Body: { ids: number[] }
-// Marks each listed row as error_bill_in_stripe regardless of current status.
-// Use for rows where Stripe confirmed the charge but the bill was never submitted:
-//   Row 4:  pi_3TLaZkIIjPdZFNnf11gpgpjq — $350 Gas/cfe — marked "cancelled" by
-//           cancel-pending script (broad "canceled" catch bug — now fixed); Stripe
-//           status is actually "succeeded"; test phone 343455555.
-//   Row 22: pi_3To54yIIjPdZFNnf0rBi0cvZ — $4,000 Agua/SADM — DB status "succeeded";
-//           charge disputed in Stripe.
-// Safe to re-run (idempotent). REMOVE this route after confirmed execution.
-router.post("/admin/flag-bills-in-stripe", async (req: Request, res: Response) => {
-  const key = (req.headers["x-admin-key"] as string | undefined) || (req.query.adminKey as string | undefined);
-  const expected = process.env.ADMIN_TOKEN ?? process.env.ADMIN_SECRET_KEY;
-  if (!key || !expected || key !== expected) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  const { ids } = req.body as { ids?: number[] };
-  if (!Array.isArray(ids) || ids.length === 0) {
-    res.status(400).json({ error: "Body must contain ids: number[]" });
-    return;
-  }
-
-  const results: Array<{ id: number; paymentIntentId: string; before: string; after: string }> = [];
-
-  for (const id of ids) {
-    const before = await db
-      .select({ id: pagoyaPaymentsTable.id, status: pagoyaPaymentsTable.status, paymentIntentId: pagoyaPaymentsTable.paymentIntentId })
-      .from(pagoyaPaymentsTable)
-      .where(eq(pagoyaPaymentsTable.id, id));
-
-    if (before.length === 0) {
-      logger.warn({ id }, "pagoya admin: flag-bills-in-stripe — row not found, skipping");
-      continue;
-    }
-
-    await db
-      .update(pagoyaPaymentsTable)
-      .set({ status: "error_bill_in_stripe" })
-      .where(eq(pagoyaPaymentsTable.id, id));
-
-    logger.warn(
-      { id, paymentIntentId: before[0].paymentIntentId, before: before[0].status },
-      "pagoya admin: row manually flagged error_bill_in_stripe — Stripe charge confirmed, bill not submitted to SIPREL"
-    );
-
-    results.push({ id, paymentIntentId: before[0].paymentIntentId, before: before[0].status, after: "error_bill_in_stripe" });
-  }
-
-  res.json({ ok: true, flagged: results.length, results });
-});
 
 export default router;
