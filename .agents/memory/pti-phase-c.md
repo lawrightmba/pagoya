@@ -7,10 +7,11 @@ description: Phase C build state, SID, pending_approval seed pattern, dispatch s
 
 **Template:** `pti_v5_transition`
 - Text (es-MX, variable-free): "Actualizamos cómo se calcula tu PTI para que refleje mejor tu esfuerzo — lo que pagas y qué tan constante eres, no cuánto dinero se mueve. Tu número puede cambiar un poco hoy; tu camino no cambia."
-- 196 chars, UTILITY category, no variables, no {{nombre}}
+- 196 chars, submitted as UTILITY, **Meta auto-reclassified to MARKETING** on approval
 - Submitted to Twilio Content API: **SID = HX83365f953386ec00e27da4a959a7f497**
-- Approval status at submission: `received` (Meta review queue, 2026-07-11 15:10 UTC)
-- Monitor daily via `twilio:status` — this is template #24
+- Approval status: **APPROVED** (2026-07-12); `allow_category_change: true` confirmed Meta changed it
+- Prod `paula_messages.template_category` corrected to MARKETING on 2026-07-12
+- **MARKETING category blocker:** US numbers (e.g. +523222304213) receive Twilio error 63049; that user falls to `pti_transition_notices` in-app fallback at Phase E dispatch
 
 **Seed changes (seedPaulaMessages.ts):**
 - `PAULA_MESSAGES_TOTAL_IN_SEED`: 25 → 26
