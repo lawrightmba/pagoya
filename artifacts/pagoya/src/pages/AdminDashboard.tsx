@@ -171,7 +171,7 @@ export default function AdminDashboard() {
   const [creditError, setCreditError] = useState("");
   const [creditResult, setCreditResult] = useState<{ phone: string; credited: number; newBalanceMXN: number; transactionId: string } | null>(null);
 
-  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte" | "reps" | "content">("investor");
+  const [tab, setTab] = useState<"investor" | "ops" | "landlords" | "compliance" | "soporte" | "reps" | "content" | "pti_monitor">("investor");
 
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("pagoya_admin_key") ?? "");
 
@@ -602,11 +602,11 @@ export default function AdminDashboard() {
             PagoYa · Admin
           </div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 16 }}>
-            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : tab === "reps" ? "Rep Management" : tab === "content" ? "Content Calendar" : "Soporte"}
+            {tab === "investor" ? "Investor Metrics" : tab === "ops" ? "Rep Commission Center" : tab === "landlords" ? "Propietarios" : tab === "compliance" ? "Cumplimiento" : tab === "reps" ? "Rep Management" : tab === "content" ? "Content Calendar" : tab === "pti_monitor" ? "PTI v5.0 Monitoring" : "Soporte"}
           </div>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["investor", "ops", "reps", "landlords", "compliance", "soporte", "content"] as const).map((t) => (
+            {(["investor", "ops", "reps", "landlords", "compliance", "soporte", "content", "pti_monitor"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -624,7 +624,7 @@ export default function AdminDashboard() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "reps" ? "👥 Reps" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : t === "content" ? "📅 Content" : "🎧 Soporte"}
+                {t === "investor" ? "📊 Investor View" : t === "ops" ? "⚙️ Operaciones" : t === "reps" ? "👥 Reps" : t === "landlords" ? "🏠 Propietarios" : t === "compliance" ? "🛡️ Cumplimiento" : t === "content" ? "📅 Content" : t === "pti_monitor" ? "🔬 PTI v5.0" : "🎧 Soporte"}
               </button>
             ))}
           </div>
@@ -2817,6 +2817,167 @@ export default function AdminDashboard() {
                   );
                 })}
               </div>
+            </div>
+          );
+        })()}
+
+        {tab === "pti_monitor" && (() => {
+          const ADMIN_KEY = adminKey;
+          const API = "/api-server";
+          const [monData, setMonData] = (window as unknown as Record<string, unknown>).__ptiMonState
+            ? [(window as unknown as Record<string, unknown>).__ptiMonState as Record<string, unknown> | null, () => {}]
+            : [null, () => {}];
+          void monData;
+          const [monState, setMonState] = React.useState<{
+            loading: boolean;
+            data: Record<string, unknown> | null;
+            error: string;
+            recomputeLoading: boolean;
+            recomputeResult: Record<string, unknown> | null;
+            recomputeError: string;
+          }>({ loading: false, data: null, error: "", recomputeLoading: false, recomputeResult: null, recomputeError: "" });
+
+          const loadMonitoring = React.useCallback(async () => {
+            setMonState(s => ({ ...s, loading: true, error: "" }));
+            try {
+              const r = await fetch(`${API}/admin/pti-v5-monitoring`, { headers: { "x-admin-key": ADMIN_KEY } });
+              const d = await r.json();
+              setMonState(s => ({ ...s, loading: false, data: d }));
+            } catch (e) {
+              setMonState(s => ({ ...s, loading: false, error: String(e) }));
+            }
+          }, [ADMIN_KEY]);
+
+          React.useEffect(() => { loadMonitoring(); }, [loadMonitoring]);
+
+          const TIER_COLOR: Record<string, string> = { Elite: "#A78BFA", Oro: "#F59E0B", Plata: "#9CA3AF", Bronce: "#CD7F32", Nuevo: "#5a7080" };
+          const d = monState.data as Record<string, unknown> | null;
+          const tiers = (d?.tier_distribution ?? []) as Array<{ tier: string; n: number }>;
+          const totalTier = tiers.reduce((a, r) => a + r.n, 0) || 1;
+          const tripwire70 = (d?.pti_70_tripwire as Record<string, number> | null)?.count ?? 0;
+          const tolerant = (d?.tolerant_streak_counter as Record<string, unknown> | null)?.count ?? 0;
+          const modelCoverage = (d?.model_version_coverage ?? []) as Array<{ model_version: string; n: number }>;
+          const delta = d?.shadow_vs_live_delta as Record<string, unknown> | null;
+          const scoreTable = (monState.recomputeResult as Record<string, unknown> | null)?.score_table as Array<Record<string, unknown>> | null;
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingTop: 8 }}>
+
+              {/* Header row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Model active: <span style={{ color: "#39A935", fontWeight: 700 }}>{String(d?.model_active ?? "—")}</span>
+                  &nbsp;·&nbsp;As of: <span style={{ color: "#e8f0f7" }}>{d?.as_of ? new Date(String(d.as_of)).toLocaleString("es-MX") : "—"}</span>
+                </div>
+                <button onClick={loadMonitoring} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", padding: "6px 14px", borderRadius: 16, border: "1px solid #39A935", background: "transparent", color: "#39A935", cursor: "pointer" }}>
+                  {monState.loading ? "Cargando…" : "↻ Actualizar"}
+                </button>
+              </div>
+
+              {monState.error && <div style={{ color: "#EF4444", fontFamily: "'Space Mono', monospace", fontSize: "0.85rem" }}>{monState.error}</div>}
+
+              {/* Key metrics row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+                {[
+                  { label: "PTI-70 Tripwire", value: String(tripwire70), sub: "Users ≥ 70 pts (live v5.0)", color: tripwire70 > 0 ? "#F59E0B" : "#39A935" },
+                  { label: "G-C Tolerant Streak", value: String(tolerant), sub: "streak_months ≤ 2 (tolerant branch)", color: "#3B82F6" },
+                  { label: "v5.0 Coverage", value: modelCoverage.find(m => m.model_version?.includes("v5"))?.n ?? "—", sub: "Users on v5.0.0-rc1 model", color: "#39A935" },
+                  { label: "Avg |Δ| Shadow→Live", value: delta ? String(delta.avg_abs_delta ?? "—") : "—", sub: "Mean absolute delta", color: "#9CA3AF" },
+                ].map(m => (
+                  <div key={m.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "16px 20px" }}>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{m.label}</div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "2rem", fontWeight: 700, color: m.color, marginBottom: 4 }}>{String(m.value)}</div>
+                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#5a7080" }}>{m.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Score distribution */}
+              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "20px 24px" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16 }}>Score Distribution — v5.0 Live</div>
+                {tiers.length === 0
+                  ? <div style={{ fontFamily: "'Space Mono', monospace", color: "#5a7080", fontSize: "0.85rem" }}>Sin datos aún — carga primero el panel.</div>
+                  : tiers.map(row => (
+                    <div key={row.tier} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", width: 64, fontSize: "0.8rem", color: TIER_COLOR[row.tier] ?? "#9CA3AF", fontWeight: 700 }}>{row.tier}</div>
+                      <div style={{ flex: 1, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 5, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${Math.round(row.n / totalTier * 100)}%`, background: TIER_COLOR[row.tier] ?? "#9CA3AF", borderRadius: 5 }} />
+                      </div>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#e8f0f7", width: 32, textAlign: "right" }}>{row.n}</div>
+                    </div>
+                  ))
+                }
+              </div>
+
+              {/* Model version coverage */}
+              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "20px 24px" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Model Version Coverage</div>
+                {modelCoverage.map(m => (
+                  <div key={m.model_version} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.82rem", color: m.model_version?.includes("v5.0.0-rc1") && !m.model_version?.includes("shadow") ? "#39A935" : "#5a7080", marginBottom: 6 }}>
+                    {m.model_version ?? "null"} — <span style={{ color: "#e8f0f7" }}>{m.n} users</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Phase E recompute trigger */}
+              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, padding: "20px 24px" }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#EF4444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>🔁 Phase E Recompute (Safety-Gated)</div>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.78rem", color: "#5a7080", marginBottom: 16 }}>
+                  One-time batch: writes v5.0 scores as live <code style={{ color: "#e8f0f7" }}>pti_score</code> for all users. Dispatch transition must run first.
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm("Run Phase E live recompute? This writes v5.0 scores to production. Cannot be undone without a new batch.")) return;
+                    setMonState(s => ({ ...s, recomputeLoading: true, recomputeError: "", recomputeResult: null }));
+                    try {
+                      const r = await fetch(`${API}/admin/phase-e-recompute`, {
+                        method: "POST",
+                        headers: { "x-admin-key": ADMIN_KEY, "Content-Type": "application/json" },
+                        body: JSON.stringify({ confirm: "V5_LIVE_RECOMPUTE" }),
+                      });
+                      const d = await r.json();
+                      setMonState(s => ({ ...s, recomputeLoading: false, recomputeResult: d }));
+                      await loadMonitoring();
+                    } catch (e) {
+                      setMonState(s => ({ ...s, recomputeLoading: false, recomputeError: String(e) }));
+                    }
+                  }}
+                  disabled={monState.recomputeLoading}
+                  style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.85rem", fontWeight: 700, padding: "10px 22px", borderRadius: 20, border: "1px solid #EF4444", background: "rgba(239,68,68,0.1)", color: "#EF4444", cursor: "pointer" }}
+                >
+                  {monState.recomputeLoading ? "Recomputando…" : "▶ Run Phase E Recompute"}
+                </button>
+                {monState.recomputeError && <div style={{ color: "#EF4444", fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", marginTop: 10 }}>{monState.recomputeError}</div>}
+
+                {/* Score table */}
+                {scoreTable && scoreTable.length > 0 && (
+                  <div style={{ marginTop: 20, overflowX: "auto" }}>
+                    <table style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.75rem", borderCollapse: "collapse", width: "100%" }}>
+                      <thead>
+                        <tr>
+                          {["telefono", "v4_score", "shadow_v5", "live_v5", "delta", "model", "computed_at"].map(h => (
+                            <th key={h} style={{ textAlign: "left", padding: "6px 10px", color: "#5a7080", borderBottom: "1px solid rgba(255,255,255,0.08)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.68rem" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scoreTable.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                            <td style={{ padding: "6px 10px", color: "#e8f0f7" }}>{String(row.telefono)}</td>
+                            <td style={{ padding: "6px 10px", color: "#9CA3AF" }}>{row.v4_score ?? "—"}</td>
+                            <td style={{ padding: "6px 10px", color: "#9CA3AF" }}>{row.shadow_v5_score ?? "—"}</td>
+                            <td style={{ padding: "6px 10px", color: "#39A935", fontWeight: 700 }}>{row.live_v5_score}</td>
+                            <td style={{ padding: "6px 10px", color: Number(row.delta_from_v4) > 0 ? "#EF4444" : Number(row.delta_from_v4) < 0 ? "#3B82F6" : "#9CA3AF" }}>{row.delta_from_v4 !== null ? (Number(row.delta_from_v4) > 0 ? "+" : "") + String(row.delta_from_v4) : "—"}</td>
+                            <td style={{ padding: "6px 10px", color: String(row.model_version).includes("v5.0.0-rc1") && !String(row.model_version).includes("shadow") ? "#39A935" : "#5a7080" }}>{String(row.model_version)}</td>
+                            <td style={{ padding: "6px 10px", color: "#5a7080" }}>{row.computed_at ? new Date(String(row.computed_at)).toLocaleTimeString("es-MX") : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
             </div>
           );
         })()}

@@ -374,6 +374,165 @@ router.post("/admin/phase-e-dispatch-transition", async (req: Request, res: Resp
   }
 });
 
+// POST /api/admin/phase-e-recompute — Phase E step 2: one-time live recompute of all users
+// under v5.0. Writes to users.pti_score / pti_breakdown / pti_computed_at for every
+// non-test user. Returns before/after score table (9-user evidence standard).
+//
+// Safety gate: requires {"confirm":"V5_LIVE_RECOMPUTE"} in request body.
+// Idempotent: safe to re-run — each call recomputes the score from live data.
+// MUST be called AFTER phase-e-dispatch-transition (transition messages must precede flip).
+router.post("/admin/phase-e-recompute", async (req: Request, res: Response) => {
+  if (req.body?.confirm !== "V5_LIVE_RECOMPUTE") {
+    res.status(400).json({
+      error: 'Safety gate: include {"confirm":"V5_LIVE_RECOMPUTE"} in request body.',
+    });
+    return;
+  }
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const { computePTIv5ForAllUsers } = await import("../services/ptiV5.js");
+
+    // Capture before-scores from pti_v5_shadow_recompute (B5 baselines)
+    const before = await db.execute(sql`
+      SELECT DISTINCT ON (s.telefono)
+        s.telefono,
+        u.pti_score      AS v4_score,
+        s.pti_v5_total   AS shadow_v5_score,
+        u.pti_breakdown->>'model_version' AS v4_model
+      FROM pti_v5_shadow_recompute s
+      JOIN users u ON u.telefono = s.telefono
+      WHERE u.is_test_account IS NOT TRUE
+      ORDER BY s.telefono, s.computed_at DESC
+    `);
+
+    // Run the live recompute
+    const { updated, errors } = await computePTIv5ForAllUsers();
+
+    // Capture after-scores
+    const after = await db.execute(sql`
+      SELECT telefono, pti_score AS v5_live_score,
+             pti_breakdown->>'model_version' AS model_version,
+             pti_computed_at
+      FROM users
+      WHERE is_test_account IS NOT TRUE
+        AND pti_score IS NOT NULL
+      ORDER BY telefono
+    `);
+
+    const beforeMap: Record<string, { v4: number; shadowV5: number }> = {};
+    for (const r of before.rows as Array<Record<string, unknown>>) {
+      beforeMap[String(r.telefono)] = {
+        v4: Number(r.v4_score ?? 0),
+        shadowV5: Number(r.shadow_v5_score ?? 0),
+      };
+    }
+
+    const scoreTable = (after.rows as Array<Record<string, unknown>>).map(r => {
+      const tel = String(r.telefono);
+      const b = beforeMap[tel] ?? { v4: null, shadowV5: null };
+      return {
+        telefono: tel,
+        v4_score: b.v4,
+        shadow_v5_score: b.shadowV5,
+        live_v5_score: Number(r.v5_live_score),
+        delta_from_v4: b.v4 !== null ? Number(r.v5_live_score) - b.v4 : null,
+        model_version: String(r.model_version ?? ""),
+        computed_at: r.pti_computed_at,
+      };
+    });
+
+    logger.info({ updated, errors, users: scoreTable.length }, "admin/phase-e-recompute: complete");
+    res.json({ ok: true, updated, errors, score_table: scoreTable });
+  } catch (err) {
+    logger.error({ err }, "admin/phase-e-recompute: failed");
+    res.status(500).json({ error: "Phase E recompute failed — see server logs." });
+  }
+});
+
+// GET /api/admin/pti-v5-monitoring — Phase E monitoring panel.
+// Returns: PTI-70 tripwire, tolerant-streak counter, score distribution,
+// model version coverage, G-C gate status. Read-only probe.
+router.get("/admin/pti-v5-monitoring", async (_req: Request, res: Response) => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+
+    // Score distribution by tier
+    const tierDist = await db.execute(sql`
+      SELECT
+        CASE
+          WHEN pti_score >= 85 THEN 'Elite'
+          WHEN pti_score >= 70 THEN 'Oro'
+          WHEN pti_score >= 50 THEN 'Plata'
+          WHEN pti_score >= 30 THEN 'Bronce'
+          ELSE 'Nuevo'
+        END AS tier,
+        COUNT(*)::int AS n
+      FROM users
+      WHERE pti_score IS NOT NULL AND is_test_account IS NOT TRUE
+      GROUP BY 1 ORDER BY MIN(pti_score) DESC
+    `);
+
+    // PTI-70 tripwire: users at or above 70
+    const tripwire70 = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM users
+      WHERE pti_score >= 70 AND is_test_account IS NOT TRUE
+    `);
+
+    // Model version coverage
+    const modelCoverage = await db.execute(sql`
+      SELECT pti_breakdown->>'model_version' AS model_version, COUNT(*)::int AS n
+      FROM users
+      WHERE pti_score IS NOT NULL AND is_test_account IS NOT TRUE
+      GROUP BY 1 ORDER BY n DESC
+    `);
+
+    // Tolerant-streak counter: G-C gate (users with streak_months <= 2 in live v5 breakdown)
+    const tolerantStreak = await db.execute(sql`
+      SELECT COUNT(*)::int AS tolerant_count
+      FROM users
+      WHERE pti_score IS NOT NULL
+        AND is_test_account IS NOT TRUE
+        AND (pti_breakdown->'payment_streak'->>'months')::int <= 2
+    `);
+
+    // Shadow vs live delta summary (users with both scores)
+    const deltaSummary = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS users_with_shadow,
+        ROUND(AVG(ABS(u.pti_score - s.pti_v5_total))::numeric, 2) AS avg_abs_delta,
+        MAX(ABS(u.pti_score - s.pti_v5_total))::int AS max_abs_delta,
+        SUM(CASE WHEN u.pti_score < s.pti_v5_total THEN 1 ELSE 0 END)::int AS live_higher_than_shadow,
+        SUM(CASE WHEN u.pti_score = s.pti_v5_total THEN 1 ELSE 0 END)::int AS live_equal_shadow,
+        SUM(CASE WHEN u.pti_score > s.pti_v5_total THEN 1 ELSE 0 END)::int AS live_lower_than_shadow
+      FROM users u
+      JOIN (
+        SELECT DISTINCT ON (telefono) telefono, pti_v5_total
+        FROM pti_v5_shadow_recompute ORDER BY telefono, computed_at DESC
+      ) s ON s.telefono = u.telefono
+      WHERE u.is_test_account IS NOT TRUE AND u.pti_score IS NOT NULL
+    `);
+
+    res.json({
+      ok: true,
+      as_of: new Date().toISOString(),
+      model_active: "v5.0.0-rc1",
+      tier_distribution: tierDist.rows,
+      pti_70_tripwire: { count: Number((tripwire70.rows[0] as Record<string, unknown>).count ?? 0) },
+      tolerant_streak_counter: {
+        count: Number((tolerantStreak.rows[0] as Record<string, unknown>).tolerant_count ?? 0),
+        label: "Users with streak_months ≤ 2 (G-C tolerant branch)",
+      },
+      model_version_coverage: modelCoverage.rows,
+      shadow_vs_live_delta: deltaSummary.rows[0] ?? null,
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/pti-v5-monitoring: failed");
+    res.status(500).json({ error: "Monitoring probe failed — see server logs." });
+  }
+});
+
 // POST /api/admin/run-paula-send-queue — manually trigger one paula_send_queue processing
 // pass (for verification). Mirrors the 2-min in-process cron in paulaSendQueue.ts; useful
 // on autoscale deployments where the interval timer's cadence is not guaranteed.

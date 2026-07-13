@@ -53,7 +53,7 @@ import { DERIVED_FEATURE_DEFAULTS } from "./ptiDerivedFeatures.js";
 import type { PTIDataSnapshot, PTIBreakdown, PTIConfidence } from "./pti.js";
 import { computePTIConfidence } from "./pti.js";
 
-export const PTI_V5_MODEL_VERSION = "v5.0.0-rc1-shadow";
+export const PTI_V5_MODEL_VERSION = "v5.0.0-rc1";
 
 export function computePTIv5(
   snapshot: PTIDataSnapshot,
@@ -331,11 +331,8 @@ export function computePTIv5(
 }
 
 /**
- * Shadow-mode DB entry point: computes v5.0 alongside v4.3 WITHOUT writing to
- * `users.pti_score` / `pti_breakdown` (those columns remain v4.3-owned until
- * Phase E). Writes to `pti_v5_shadow_recompute` for evidence-gate B5 (the
- * SHADOW RECOMPUTE table). Never called from any user-facing or gate-facing
- * code path.
+ * Shadow-mode DB entry point — retained for historical record / backfill only.
+ * Phase E: shadow mode RETIRED. Use computePTIv5LiveForUser for all new writes.
  */
 export async function computePTIv5ForUser(telefono: string): Promise<PTIBreakdown> {
   const { db } = await import("@workspace/db");
@@ -351,4 +348,76 @@ export async function computePTIv5ForUser(telefono: string): Promise<PTIBreakdow
   `);
 
   return breakdown;
+}
+
+/**
+ * Phase E live entry point — computes v5.0 and writes to the production score
+ * columns (users.pti_score, users.pti_breakdown, users.pti_computed_at).
+ * Replaces computePTIForUser (v4.3) from Phase E go-order onwards.
+ * Also logs to pti_score_history for trend continuity.
+ */
+export async function computePTIv5LiveForUser(telefono: string): Promise<PTIBreakdown> {
+  const { db } = await import("@workspace/db");
+  const { sql } = await import("drizzle-orm");
+  const { buildPTISnapshotFromDb } = await import("./pti.js");
+  const { logger } = await import("../lib/logger.js");
+
+  const exists = await db.execute(sql`SELECT 1 FROM users WHERE telefono = ${telefono} LIMIT 1`);
+  if ((exists.rows as unknown[]).length === 0) {
+    throw new Error(`computePTIv5LiveForUser: no user row for "${telefono}" — skipping`);
+  }
+
+  const snapshot = await buildPTISnapshotFromDb(telefono);
+  const { breakdown } = computePTIv5(snapshot);
+
+  await db.execute(sql`
+    UPDATE users SET
+      pti_score             = ${breakdown.total},
+      pti_breakdown         = ${JSON.stringify(breakdown)}::jsonb,
+      pti_computed_at       = NOW(),
+      pti_first_computed_at = COALESCE(pti_first_computed_at, NOW())
+    WHERE telefono = ${telefono}
+  `);
+
+  await db.execute(sql`
+    INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+    VALUES (${telefono}, ${breakdown.total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
+  `).catch(err => logger.warn({ err, telefono }, "ptiV5Live: history log failed — continuing"));
+
+  return breakdown;
+}
+
+/**
+ * Batch wrapper — runs computePTIv5LiveForUser for every non-test user.
+ * Replaces computePTIForAllUsers in the monthly PTI batch from Phase E onwards.
+ */
+export async function computePTIv5ForAllUsers(): Promise<{ updated: number; errors: number }> {
+  const { db } = await import("@workspace/db");
+  const { sql } = await import("drizzle-orm");
+  const { logger } = await import("../lib/logger.js");
+
+  const allUsers = await db.execute(sql`
+    SELECT DISTINCT telefono FROM users
+    WHERE telefono IS NOT NULL AND telefono != ''
+    AND is_test_account IS NOT TRUE
+  `);
+  const phones = allUsers.rows.map(r => (r as Record<string, unknown>).telefono as string);
+  logger.info({ count: phones.length }, "[PTI v5 Live] Starting batch recompute");
+
+  let updated = 0;
+  let errors  = 0;
+
+  for (const telefono of phones) {
+    try {
+      await computePTIv5LiveForUser(telefono);
+      updated++;
+    } catch (err) {
+      logger.error({ err, telefono }, "[PTI v5 Live] User batch failed");
+      errors++;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  logger.info({ updated, errors }, "[PTI v5 Live] Batch complete");
+  return { updated, errors };
 }

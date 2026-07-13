@@ -17,7 +17,7 @@ import { logger } from "../lib/logger.js";
 import { computePagoScore } from "./pagoScore.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { computePTIForAllUsers, computePTIv3Signals } from "./pti.js";
-import { computePTIv5ForUser } from "./ptiV5.js";
+import { computePTIv5ForUser, computePTIv5LiveForUser, computePTIv5ForAllUsers } from "./ptiV5.js";
 import { checkAndUpgradeKycTier } from "./kycUpgradeService.js";
 import { runPaulaTriggerBatch } from "./paulaTriggers.js";
 import { processSendQueue } from "./paulaSendQueue.js";
@@ -385,13 +385,13 @@ export async function runNightlyPtiBatch(): Promise<void> {
         // KYC upgrade sweep — catch users who crossed $3,200 MXN since last check
         checkAndUpgradeKycTier(telefono).catch(() => {});
 
-        // ── Phase A shadow: v5.0 runs alongside v4.3 ─────────────────────────
-        // NEVER writes to pti_score / pti_breakdown / any user-facing column.
-        // Writes only to pti_v5_shadow_recompute for B5 evidence gates.
-        // G-C tolerant-streak counter is derivable from the stored breakdown
-        // JSONB: rows where payment_streak.value <= 2 hit the tolerant branch.
-        computePTIv5ForUser(telefono).catch((err: unknown) => {
-          logger.warn({ err, telefono }, "pti-shadow: v5.0 shadow compute failed (non-blocking)");
+        // ── Phase E live: v5.0 is now the production scoring model ──────────
+        // Shadow mode retired 2026-07-12. computePTIv5LiveForUser writes to
+        // users.pti_score / pti_breakdown / pti_computed_at (same columns as
+        // the retired v4.3 computePTIForUser path). Non-blocking — nightly
+        // batch continues if one user fails.
+        computePTIv5LiveForUser(telefono).catch((err: unknown) => {
+          logger.warn({ err, telefono }, "pti-live-v5: nightly compute failed (non-blocking)");
         });
 
         computed++;
@@ -583,7 +583,7 @@ async function runMonthlyBatchAndReport(): Promise<void> {
   }
 
   logger.info("[PTI Monthly] Idempotency check: batch not yet run this month — proceeding");
-  const { updated, errors } = await computePTIForAllUsers();
+  const { updated, errors } = await computePTIv5ForAllUsers();
   if (errors > 0) {
     logger.error({ updated, errors }, "[PTI Monthly] Batch completed WITH ERRORS — some users not recomputed");
   } else {
