@@ -14,8 +14,13 @@ const LangContext = createContext<LangCtx>({
   toggle: () => {},
 });
 
+function getInitialLang(): Lang {
+  const param = new URLSearchParams(window.location.search).get("lang");
+  return param === "en" ? "en" : "es";
+}
+
 export function LangProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Lang>("es");
+  const [lang, setLang] = useState<Lang>(getInitialLang);
   const toggle = () => setLang((l) => (l === "es" ? "en" : "es"));
   return (
     <LangContext.Provider value={{ lang, es: lang === "es", toggle }}>
