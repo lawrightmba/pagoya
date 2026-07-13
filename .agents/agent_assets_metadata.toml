@@ -383,3 +383,15 @@ id = "Qy0gB4pUOzcFrdZ2RZzNT"
 uri = "file://.local/outputs/PagoYa.pptx"
 type = "slides"
 title = "PagoYa.pptx"
+
+[[outputs]]
+id = "edXlm3CRUcgZRCu2_5wKv"
+uri = "file://.local/outputs/PagoYa-Pitch-Deck-EN.pdf"
+type = "pdf"
+title = "PagoYa Pitch Deck — English (PDF)"
+
+[[outputs]]
+id = "QvAb36eX1bOtqqdBusl2y"
+uri = "file://.local/outputs/PagoYa-Pitch-Deck-EN.pptx"
+type = "slides"
+title = "PagoYa Pitch Deck — English (PPTX)"
