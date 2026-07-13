@@ -377,3 +377,9 @@ id = "dxVlQglu5XzPNPVc3SbTf"
 uri = "file://artifacts/api-server/exports/pti-fairness-bundle.zip"
 type = "unspecified"
 title = "PTI Fairness-Analysis Bundle"
+
+[[outputs]]
+id = "Qy0gB4pUOzcFrdZ2RZzNT"
+uri = "file://.local/outputs/PagoYa.pptx"
+type = "slides"
+title = "PagoYa.pptx"
