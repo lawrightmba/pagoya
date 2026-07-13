@@ -183,6 +183,23 @@ All deltas ≤ 0 (v5.0 scores the same or lower than v4.3 — consistent with fa
 
 ---
 
+---
+
+### Product backlog — phone number normalization (HIGH PRIORITY)
+*Logged 2026-07-13 — surfaced during Phase E evidence review*
+
+**Issue:** Registration flow does not normalize the +52 country-code prefix before writing `telefono`. A user who signs up under `3222304213` (local format) and later re-registers (or vice-versa under `+523222304213`) receives a silent, second user row instead of being matched to the existing record. Occurred once in production during Phase E (id 18 / `3222304213` duplicating `+523222304213`). No transaction has been attempted on the duplicate row yet; no customer-facing risk today.
+
+**Immediate action (next session — not urgent tonight):**
+Merge or tombstone user id 18 (`3222304213`) into the canonical `+523222304213` row before any bill payment, wallet load, or identity action is attempted under the local-format login. Concretely: copy any attributable data (wallet balance, referral, device log) to the +52 row if present; mark id 18 as `is_test_account = true` (or add a dedicated `is_tombstoned` flag) with a `source_note` referencing the canonical row. If deduplication tooling is added as an admin route, gate it behind `x-admin-key` and require explicit confirmation body.
+
+**Systemic fix required:**
+At registration time (and at login time as a defensive backstop), normalize `telefono` to E.164 format (+52 + 10 digits). Reject or auto-merge if the normalized number already exists. Suggested normalization rule for Mexico: strip all non-digits → if 10 digits, prepend `+52`; if 12 digits starting with `52`, prepend `+`; if already E.164, pass through. Add a UNIQUE constraint on the normalized form, or enforce via application layer with a lookup-before-insert guard.
+
+**Risk if unresolved:** A user who transacts under the local-format row accumulates payments, PTI history, and wallet balance on a shadow row that is invisible to the canonical `+52`-format row. Fair-lending scoring, Paula triggers, and B2B export would diverge silently.
+
+---
+
 **Product hygiene backlog — logged 2026-07-11 (NOT part of this program):**
 
 Model-version staleness: the monthly PTI batch does not enforce a minimum model version. Users computed under v4.1-behavioral or v4.0-behavioral are silently re-evaluated on those old models at next recompute unless `compute-now` is called explicitly. Two prod users were found in this state today (8118963105: v4.1-behavioral stored; +523222304213: v2.1/v4.0-behavioral stored). Both corrected manually on 2026-07-11. Recommended fix: add `model_version` column to `users`, compare against current model at batch time, and flag/refresh mismatches.
