@@ -41,14 +41,14 @@ export default function Slide03Paula() {
             >
               <span style={{ fontSize: "1.1vw" }}>🤖</span>
               <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {es ? "Agente con IA" : "AI Agent"}
+                {es ? "Motor de señales" : "Signal engine"}
               </span>
             </div>
           </div>
           <h2
             style={{
               fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "5vw",
+              fontSize: "4.8vw",
               fontWeight: 900,
               color: "#FFFFFF",
               letterSpacing: "-0.01em",
@@ -56,60 +56,52 @@ export default function Slide03Paula() {
               marginBottom: "1.5vh"
             }}
           >
-            {es ? "No es un chatbot.\nEs un agente que actúa." : "Not a chatbot.\nAn agent that acts."}
+            {es ? "No es un chatbot.\nEs el factory de datos\nde PagoYa." : "Not a chatbot.\nIt's PagoYa's\ndata factory."}
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2.5vh" }} />
+          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginBottom: "2vh" }} />
 
-          <div className="flex flex-col gap-[1.8vh]">
+          <div className="flex flex-col gap-[1.5vh]">
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🧠</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
                   {es ? "Entiende lenguaje natural" : "Understands natural language"}
                 </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  {es
-                    ? 'Sin menús, sin formularios, sin app. Di "Paga mi CFE" o "Dame Netflix" — Paula resuelve el resto'
-                    : 'No menus, no forms, no app. Say "Pay my CFE" or "Get me Netflix" — Paula handles the rest'}
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es ? 'Sin menús ni formularios. "Paga mi CFE" o "Dame Netflix" — Paula resuelve el resto' : 'No menus or forms. "Pay my CFE" or "Get me Netflix" — Paula handles the rest'}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>⚡</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
                   {es ? "Razona y actúa de forma autónoma" : "Reasons and acts autonomously"}
                 </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  {es
-                    ? "Consulta la factura, verifica tu saldo, confirma el monto, ejecuta el pago — un mensaje"
-                    : "Looks up the bill, checks your balance, confirms the amount, executes the payment — one message"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-[1.2vw]">
-              <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🔮</span>
-              <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
-                  {es ? "Memoria persistente entre conversaciones" : "Persistent memory across conversations"}
-                </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  {es
-                    ? "Recuerda cada factura, vencimiento y pago. Construye identidad financiera para personas sin cuenta bancaria"
-                    : "Remembers every bill, due date, and payment. Builds financial identity for people without a bank account"}
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es ? "Verifica saldo, consulta factura, confirma monto, ejecuta el pago — un mensaje" : "Checks balance, looks up bill, confirms amount, executes payment — one message"}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-[1.2vw]">
               <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>📡</span>
               <div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
-                  {es ? "Proactiva — avisa antes de los cortes" : "Proactive — alerts before cutoffs"}
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Proactiva — genera señales PTI en cada interacción" : "Proactive — generates PTI signals on every interaction"}
                 </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-                  {es
-                    ? "Paula te escribe 3 días antes de tu vencimiento. Tú no tienes que recordarlo. Ella sí."
-                    : "Paula messages you 3 days before your due date. You don't have to remember it. She does."}
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es ? "Cada mensaje, recordatorio y pago alimenta las 4 dimensiones del PTI — engagement, confiabilidad, consistencia, flujo de caja" : "Every message, reminder, and payment feeds all 4 PTI dimensions — engagement, reliability, consistency, cashflow"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-[1.2vw]">
+              <span style={{ fontSize: "1.9vw", lineHeight: 1, marginTop: "0.15vh", flexShrink: 0 }}>🔮</span>
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.65vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.2vh" }}>
+                  {es ? "Memoria persistente = historial financiero" : "Persistent memory = financial history"}
+                </p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+                  {es ? "Recuerda cada factura, vencimiento y pago. 90 días de conversación = identidad crediticia completa" : "Remembers every bill, due date, and payment. 90 days of conversation = complete credit identity"}
                 </p>
               </div>
             </div>
@@ -177,9 +169,7 @@ export default function Slide03Paula() {
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
-                    {es
-                      ? "⚠️ Aviso — tu recibo CFE ($380 MXN) vence en 3 días.\n\n¿Lo pago ahora de tu saldo? Tienes $520 MXN disponibles."
-                      : "⚠️ Heads up — your CFE bill ($380 MXN) is due in 3 days.\n\nShall I pay it now from your balance? You have $520 MXN available."}
+                    {es ? "⚠️ Aviso — tu recibo CFE ($380 MXN) vence en 3 días.\n\n¿Lo pago ahora de tu saldo? Tienes $520 MXN disponibles." : "⚠️ Heads up — your CFE bill ($380 MXN) is due in 3 days.\n\nShall I pay it now from your balance? You have $520 MXN available."}
                   </p>
                 </div>
               </div>
@@ -193,14 +183,12 @@ export default function Slide03Paula() {
               <div style={{ alignSelf: "flex-start", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
                 <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,200,117,0.18)", border: "1px solid rgba(0,200,117,0.5)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
                   <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
-                    {es ? "✦ Paula razona, verifica y ejecuta" : "✦ Paula reasons, verifies and executes"}
+                    {es ? "✦ Paula genera señal PTI de Confiabilidad" : "✦ Paula generates PTI Reliability signal"}
                   </span>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
-                    {es
-                      ? "Verificando saldo… ✓\nVerificando cuenta CFE… ✓\nProcesando vía SIPREL… ✓\n\n✅ Listo. CFE pagado.\n📄 Recibo #CFE-2026-0604-8821 · $380 MXN + $25 cuota"
-                      : "Checking balance… ✓\nVerifying CFE account… ✓\nProcessing via SIPREL… ✓\n\n✅ Done. CFE paid.\n📄 Receipt #CFE-2026-0604-8821 · $380 MXN + $25 fee"}
+                    {es ? "Verificando saldo… ✓\nVerificando cuenta CFE… ✓\nProcesando vía SIPREL… ✓\n\n✅ Listo. CFE pagado. +12 pts PTI\n📄 Recibo #CFE-2026-0604-8821 · $380 MXN" : "Checking balance… ✓\nVerifying CFE account… ✓\nProcessing via SIPREL… ✓\n\n✅ Done. CFE paid. +12 PTI pts\n📄 Receipt #CFE-2026-0604-8821 · $380 MXN"}
                   </p>
                 </div>
               </div>
@@ -212,16 +200,14 @@ export default function Slide03Paula() {
                 </div>
               </div>
               <div style={{ alignSelf: "flex-start", maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.4vh" }}>
-                <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,200,117,0.18)", border: "1px solid rgba(0,200,117,0.5)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
-                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.04em" }}>
-                    {es ? "✦ Paula recuerda tu historial" : "✦ Paula remembers your history"}
+                <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(255,92,26,0.15)", border: "1px solid rgba(255,92,26,0.4)", borderRadius: "2vw", padding: "0.2vh 0.8vw" }}>
+                  <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.04em" }}>
+                    {es ? "✦ Paula genera señal PTI de Diversidad de servicios" : "✦ Paula generates PTI Service diversity signal"}
                   </span>
                 </div>
                 <div style={{ background: "#FFFFFF", borderRadius: "0.3vw 1.2vw 1.2vw 1.2vw", padding: "1.1vh 1.4vw", boxShadow: "0 0.2vh 0.4vh rgba(0,0,0,0.1)" }}>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "#111", lineHeight: 1.45, whiteSpace: "pre-line" }}>
-                    {es
-                      ? "Listo 🎬 El mes pasado compraste Netflix por $99 MXN.\n\n¿Misma tarjeta? ¿O lo envías como regalo esta vez?"
-                      : "Done 🎬 Last month you bought Netflix for $99 MXN.\n\nSame card? Or are you sending it as a gift this time?"}
+                    {es ? "Listo 🎬 Netflix $99 MXN procesado.\n\nTu PTI hoy: 712 · Nivel Confiable 🟢" : "Done 🎬 Netflix $99 MXN processed.\n\nYour PTI today: 712 · Reliable level 🟢"}
                   </p>
                 </div>
               </div>

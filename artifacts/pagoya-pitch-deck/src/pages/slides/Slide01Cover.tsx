@@ -11,15 +11,15 @@ export default function Slide01Cover() {
         crossOrigin="anonymous"
         alt="Mexico colonia at dusk"
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: 0.3 }}
+        style={{ opacity: 0.28 }}
       />
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(135deg, rgba(0,79,45,0.95) 0%, rgba(0,79,45,0.6) 60%, rgba(0,79,45,0.8) 100%)" }}
+        style={{ background: "linear-gradient(135deg, rgba(0,79,45,0.96) 0%, rgba(0,79,45,0.62) 60%, rgba(0,79,45,0.82) 100%)" }}
       />
 
       <div className="absolute inset-0 flex flex-col justify-between" style={{ padding: "7vh 8vw" }}>
-        <div style={{ maxWidth: "65vw" }}>
+        <div style={{ maxWidth: "68vw" }}>
           <p
             style={{
               fontFamily: "DM Sans, sans-serif",
@@ -31,7 +31,7 @@ export default function Slide01Cover() {
               marginBottom: "2.5vh"
             }}
           >
-            {es ? "Presentación Pre-Semilla · Junio 2026" : "Pre-Seed Presentation · June 2026"}
+            {es ? "Presentación Pre-Semilla · Julio 2026" : "Pre-Seed Presentation · July 2026"}
           </p>
           <h1
             style={{
@@ -46,8 +46,8 @@ export default function Slide01Cover() {
             }}
           >
             {es
-              ? "Identidad financiera\npara los 65 millones\ninvisibles de México."
-              : "Financial identity\nfor Mexico's 65 million\nunbanked."}
+              ? "La app de pagos que\nfabrica el activo de datos\nmás valioso de México."
+              : "The payments app that\nmanufactures Mexico's\nmost valuable data asset."}
           </h1>
           <div style={{ width: "8vw", height: "0.5vh", background: "#FF5C1A", marginBottom: "3vh" }} />
           <p
@@ -62,22 +62,21 @@ export default function Slide01Cover() {
             }}
           >
             {es
-              ? "PagoYa convierte pagos de facturas en puntajes de crédito conductual — el buró que los no bancarizados de México nunca tuvieron. Sin cuenta bancaria. Desde WhatsApp."
-              : "PagoYa turns bill payments into behavioral credit scores — building the credit bureau Mexico's unbanked never had. No bank account needed. Via WhatsApp."}
+              ? "PagoYa convierte pagos de facturas de los 65M no bancarizados de México en puntajes de crédito conductual — el buró que nunca tuvieron. Sin cuenta bancaria. Desde WhatsApp."
+              : "PagoYa turns bill payments from Mexico's 65M unbanked into behavioral credit scores — building the credit bureau they never had. No bank account needed. Via WhatsApp."}
           </p>
-          <p
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.75vw",
-              fontWeight: 400,
-              color: "rgba(255,255,255,0.5)",
-              lineHeight: 1.4
-            }}
-          >
-            {es
-              ? "$25 MXN tarifa fija · Sin descarga de app · Rentable desde la transacción 1"
-              : "$25 MXN flat fee · No app download · Profitable from transaction 1"}
-          </p>
+          <div className="flex items-center gap-[2vw]" style={{ marginTop: "2vh" }}>
+            <div style={{ background: "rgba(0,200,117,0.12)", border: "1px solid rgba(0,200,117,0.3)", borderRadius: "0.5vw", padding: "0.7vh 1.4vw" }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#00C875", fontWeight: 700 }}>
+                {es ? "PTI v5.0 · 90+ señales · Certificado fair-lending" : "PTI v5.0 · 90+ signals · Fair-lending certified"}
+              </p>
+            </div>
+            <div style={{ background: "rgba(255,92,26,0.1)", border: "1px solid rgba(255,92,26,0.3)", borderRadius: "0.5vw", padding: "0.7vh 1.4vw" }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "#FF5C1A", fontWeight: 700 }}>
+                {es ? "$25 MXN · Rentable desde txn #1" : "$25 MXN · Profitable from txn #1"}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-[3vw]">

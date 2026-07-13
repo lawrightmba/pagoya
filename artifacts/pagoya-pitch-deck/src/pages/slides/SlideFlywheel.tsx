@@ -2,205 +2,93 @@ import { LANG } from "@/lang";
 const es = LANG === "es";
 
 export default function SlideFlywheel() {
+  const dims = es ? [
+    { code: "PR", pct: 30, label: "Confiabilidad de Pago", color: "#00C875", signals: ["Racha de pagos consecutivos", "Porcentaje de pagos a tiempo", "Pagos recuperados tras mora", "Días promedio antes del vencimiento"] },
+    { code: "BC", pct: 20, label: "Consistencia Conductual", color: "#00C875", signals: ["Regularidad de pagos por semana", "Concentración en días de semana vs. fin de semana", "Adherencia al calendario de servicios", "Varianza interanual de cadencia"] },
+    { code: "ED", pct: 25, label: "Profundidad de Engagement", color: "#FF5C1A", signals: ["Diversidad de servicios pagados", "Tasa de respuesta a Paula", "Misiones completadas", "Frecuencia de uso mensual activo"] },
+    { code: "CF", pct: 25, label: "Estabilidad de Flujo de Caja", color: "#FF5C1A", signals: ["Nivel promedio de saldo de billetera", "Regularidad de carga de efectivo", "Ratio carga-gasto por ciclo", "Velocidad de depresión de saldo"] },
+  ] : [
+    { code: "PR", pct: 30, label: "Payment Reliability", color: "#00C875", signals: ["Consecutive payment streak", "On-time payment rate", "Recovery after missed payments", "Avg. days before due date"] },
+    { code: "BC", pct: 20, label: "Behavioral Consistency", color: "#00C875", signals: ["Payment regularity by week", "Weekday vs. weekend concentration", "Service calendar adherence", "Year-over-year cadence variance"] },
+    { code: "ED", pct: 25, label: "Engagement Depth", color: "#FF5C1A", signals: ["Service diversity paid", "Paula response rate", "Missions completed", "Monthly active usage frequency"] },
+    { code: "CF", pct: 25, label: "Cashflow Stability", color: "#FF5C1A", signals: ["Avg. wallet balance level", "Cash load regularity", "Load-to-spend ratio per cycle", "Balance depletion velocity"] },
+  ];
+
   return (
-    <div
-      className="relative w-screen h-screen overflow-hidden"
-      style={{ background: "#004F2D" }}
-    >
-      <div
-        className="absolute inset-0"
-        style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(0,200,117,0.1) 0%, transparent 65%)" }}
-      />
+    <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
+      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(0,200,117,0.08) 0%, transparent 65%)" }} />
 
-      <div className="relative z-10 flex flex-col h-full" style={{ padding: "3vh 8vw 2vh" }}>
-
+      <div className="relative z-10 flex flex-col h-full" style={{ padding: "2.5vh 8vw 2vh" }}>
         <div style={{ marginBottom: "1.5vh", flexShrink: 0 }}>
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
-            {es ? "El Efecto Compuesto" : "The Compounding Effect"}
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.7vh" }}>
+            {es ? "Arquitectura PTI" : "PTI Architecture"}
           </p>
-          <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4.8vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 0.95 }}>
-            {es ? "Un volante de inercia que se acelera solo." : "A flywheel that accelerates itself."}
+          <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "4vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.7vh" }}>
+            {es
+              ? <span>4 dimensiones. 90+ señales. <span style={{ color: "#00C875" }}>Un solo puntaje accionable.</span></span>
+              : <span>4 dimensions. 90+ signals. <span style={{ color: "#00C875" }}>One actionable score.</span></span>}
           </h2>
-          <div style={{ width: "6vw", height: "0.4vh", background: "#00C875", marginTop: "1.2vh" }} />
+          <div style={{ width: "6vw", height: "0.35vh", background: "#00C875" }} />
         </div>
 
-        <div className="flex gap-[3vw]" style={{ flex: 1, minHeight: 0 }}>
-
-          <div style={{ width: "44%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-
-            <div style={{
-              width: "38vw", height: "38vw",
-              maxWidth: "62vh", maxHeight: "62vh",
-              borderRadius: "50%",
-              border: "1.5px solid rgba(0,200,117,0.2)",
-              position: "absolute",
-            }} />
-
-            {[0, 60, 120, 180, 240, 300].map(deg => (
-              <div key={deg} style={{
-                position: "absolute",
-                width: "1.8vw", height: "1.8vw",
-                transform: `rotate(${deg}deg) translateX(17vw) rotate(${90}deg)`,
-                transformOrigin: "0 0",
-                fontSize: "1.6vw",
-                color: "rgba(0,200,117,0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>↻</div>
-            ))}
-
-            <div style={{
-              width: "11vw", height: "11vw",
-              maxWidth: "17vh", maxHeight: "17vh",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #046C2C 0%, #007A4A 100%)",
-              border: "2px solid rgba(0,200,117,0.5)",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              zIndex: 2,
-              boxShadow: "0 0 3vw rgba(0,200,117,0.25)",
-              textAlign: "center",
-              padding: "0.5vw",
-            }}>
-              <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.8vw", fontWeight: 900, color: "#00C875", lineHeight: 1, marginBottom: "0.2vh" }}>PagoYa</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.2 }}>Trust Score<br />Engine</p>
-            </div>
-
-            {(es
-              ? [
-                  { angle: -90, label: "Pagos de\nservicios", emoji: "💳", color: "#00C875" },
-                  { angle: -18, label: "Datos de\ncomportamiento", emoji: "🧠", color: "#00C875" },
-                  { angle: 54, label: "Trust Score\ncreció", emoji: "📈", color: "#FF5C1A" },
-                  { angle: 126, label: "Productos\nfinancieros", emoji: "🏦", color: "#FF5C1A" },
-                  { angle: 198, label: "Mayor\nengagement", emoji: "🔄", color: "#00C875" },
-                ]
-              : [
-                  { angle: -90, label: "Service\npayments", emoji: "💳", color: "#00C875" },
-                  { angle: -18, label: "Behavioral\ndata", emoji: "🧠", color: "#00C875" },
-                  { angle: 54, label: "Trust Score\ngrows", emoji: "📈", color: "#FF5C1A" },
-                  { angle: 126, label: "Financial\nproducts", emoji: "🏦", color: "#FF5C1A" },
-                  { angle: 198, label: "Higher\nengagement", emoji: "🔄", color: "#00C875" },
-                ]
-            ).map(({ angle, label, emoji, color }) => {
-              const rad = (angle * Math.PI) / 180;
-              const r = 41;
-              const cx = 50 + r * Math.cos(rad);
-              const cy = 50 + r * Math.sin(rad);
-              return (
-                <div key={label} style={{
-                  position: "absolute",
-                  left: `${cx}%`, top: `${cy}%`,
-                  transform: "translate(-50%, -50%)",
-                  background: "rgba(0,30,20,0.92)",
-                  border: `1.5px solid ${color === "#00C875" ? "rgba(0,200,117,0.5)" : "rgba(255,92,26,0.5)"}`,
-                  borderRadius: "0.6vw",
-                  padding: "0.8vh 0.9vw",
-                  textAlign: "center",
-                  minWidth: "8vw",
-                  zIndex: 3,
-                  boxShadow: `0 0 1.5vw ${color === "#00C875" ? "rgba(0,200,117,0.15)" : "rgba(255,92,26,0.15)"}`,
-                }}>
-                  <p style={{ fontSize: "1.6vw", lineHeight: 1, marginBottom: "0.3vh" }}>{emoji}</p>
-                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.3, whiteSpace: "pre-line" }}>{label}</p>
+        <div className="grid grid-cols-4 gap-[1.5vw]" style={{ flex: 1, minHeight: 0 }}>
+          {dims.map(({ code, pct, label, color, signals }) => (
+            <div key={code} style={{ background: "rgba(255,255,255,0.04)", border: `1.5px solid ${color}33`, borderRadius: "0.8vw", padding: "1.5vh 1.5vw", display: "flex", flexDirection: "column" }}>
+              <div className="flex items-start justify-between" style={{ marginBottom: "0.8vh" }}>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3.5vw", fontWeight: 900, color, lineHeight: 1 }}>{code}</p>
+                <div style={{ background: `${color}22`, borderRadius: "0.4vw", padding: "0.3vh 0.7vw" }}>
+                  <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.6vw", fontWeight: 900, color, lineHeight: 1 }}>{pct}%</p>
                 </div>
-              );
-            })}
+              </div>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, marginBottom: "0.5vh" }}>{label}</p>
+              <div style={{ height: "0.4vh", background: "rgba(255,255,255,0.07)", borderRadius: "1vw", overflow: "hidden", marginBottom: "1vh", flexShrink: 0 }}>
+                <div style={{ width: `${pct / 30 * 100}%`, height: "100%", background: color, borderRadius: "1vw" }} />
+              </div>
+              <div className="flex flex-col gap-[0.5vh]" style={{ flex: 1 }}>
+                {signals.map(s => (
+                  <div key={s} className="flex items-start gap-[0.5vw]">
+                    <div style={{ width: "0.3vw", height: "0.3vw", borderRadius: "50%", background: color, flexShrink: 0, marginTop: "0.6vh" }} />
+                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", color: "rgba(255,255,255,0.6)", lineHeight: 1.35 }}>{s}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-[1.5vw]" style={{ marginTop: "1.2vh", flexShrink: 0 }}>
+          <div style={{ flex: 1, background: "rgba(0,200,117,0.1)", border: "1px solid rgba(0,200,117,0.25)", borderRadius: "0.7vw", padding: "1.2vh 1.8vw" }}>
+            <div className="flex items-center gap-[1vw]">
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {es ? "Versión del modelo" : "Model version"}
+                </p>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#00C875", lineHeight: 1 }}>v5.0.0-rc1</p>
+              </div>
+              <div style={{ width: "1px", height: "4vh", background: "rgba(255,255,255,0.15)" }} />
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {es ? "Rango de puntaje" : "Score range"}
+                </p>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1 }}>300 – 850</p>
+              </div>
+              <div style={{ width: "1px", height: "4vh", background: "rgba(255,255,255,0.15)" }} />
+              <div>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {es ? "Certificación" : "Certification"}
+                </p>
+                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#00C875", lineHeight: 1 }}>
+                  {es ? "Fair-lending · Jul 2026" : "Fair-lending · Jul 2026"}
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.8vh" }}>
-
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
-              {es ? "Aceleradores del volante" : "Flywheel accelerants"}
+          <div style={{ flex: 2, background: "rgba(255,92,26,0.08)", borderLeft: "0.4vw solid #FF5C1A", padding: "1.2vh 2vw", borderRadius: "0 0.6vw 0.6vw 0" }}>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
+              {es
+                ? <><span style={{ color: "#FF5C1A", fontWeight: 700 }}>El pago es el sensor.</span> Cada transacción en PagoYa genera 90+ señales que ningún buró puede capturar para esta población. Después de 90 días de comportamiento, el PTI predice la solvencia mejor que cualquier score de buró tradicional — porque mide acción real, no historial de préstamos.</>
+                : <><span style={{ color: "#FF5C1A", fontWeight: 700 }}>The payment is the sensor.</span> Every transaction on PagoYa generates 90+ signals no bureau can capture for this population. After 90 days of behavior, PTI predicts creditworthiness better than any traditional bureau score — because it measures real action, not loan history.</>}
             </p>
-
-            <div style={{
-              background: "linear-gradient(135deg, rgba(255,92,26,0.1) 0%, rgba(255,92,26,0.04) 100%)",
-              border: "1px solid rgba(255,92,26,0.3)",
-              borderRadius: "0.8vw",
-              padding: "1.4vh 2vw",
-            }}>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.1vh" }}>
-                {es ? "🎮 Capa de lealtad y gamificación" : "🎮 Loyalty & gamification layer"}
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8vh 2vw" }}>
-                {(es
-                  ? [
-                      ["🎡", "Ruleta de bienvenida", "Giro gratis al registrarse — premia desde el día 1"],
-                      ["🎯", "Misiones progresivas", "8 misiones activas: Power Payer, Mes Constante, Multi-Servicio"],
-                      ["🔥", "Bonus semanal", "+15/+30/+50 pts en pagos #3, #5, #10 de la semana"],
-                      ["🏆", "Gran Premio mensual", "$2,000 MXN en sorteo — cada usuario es un participante"],
-                    ]
-                  : [
-                      ["🎡", "Welcome spin", "Free spin on sign-up — rewards from day 1"],
-                      ["🎯", "Progressive missions", "8 active missions: Power Payer, Consistent Month, Multi-Service"],
-                      ["🔥", "Weekly bonus", "+15/+30/+50 pts on payments #3, #5, #10 of the week"],
-                      ["🏆", "Monthly grand prize", "$2,000 MXN raffle — every user is a participant"],
-                    ]
-                ).map(([emoji, title, desc]) => (
-                  <div key={title as string} className="flex items-start gap-[0.7vw]">
-                    <span style={{ fontSize: "1.4vw", flexShrink: 0 }}>{emoji}</span>
-                    <div>
-                      <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1, marginBottom: "0.1vh" }}>{title}</p>
-                      <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>{desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{
-              background: "rgba(0,200,117,0.07)",
-              border: "1px solid rgba(0,200,117,0.2)",
-              borderRadius: "0.8vw",
-              padding: "1.6vh 2vw",
-            }}>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1vh" }}>
-                {es ? "🔒 Costos de cambio — por qué se quedan" : "🔒 Switching costs — why they stay"}
-              </p>
-              <div className="flex gap-[2vw]">
-                {(es
-                  ? [
-                      { label: "90 días", desc: "Trust Score construido — abandonarlo = empezar desde cero" },
-                      { label: "Puntos acumulados", desc: "Canjeable por descuentos — se pierden al salir" },
-                      { label: "Paula me conoce", desc: "Mis facturas, vencimientos, historial. Ningún competidor lo tiene." },
-                    ]
-                  : [
-                      { label: "90 days", desc: "Trust Score built — abandoning it means starting from zero" },
-                      { label: "Accumulated points", desc: "Redeemable for discounts — lost on exit" },
-                      { label: "Paula knows me", desc: "My bills, due dates, history. No competitor has this." },
-                    ]
-                ).map(({ label, desc }) => (
-                  <div key={label} style={{ flex: 1, borderLeft: "0.25vw solid rgba(0,200,117,0.3)", paddingLeft: "0.8vw" }}>
-                    <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.7vw", fontWeight: 800, color: "#00C875", lineHeight: 1, marginBottom: "0.3vh" }}>{label}</p>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.5)", lineHeight: 1.35 }}>{desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.2vh 2vw" }}>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.6vh" }}>
-                {es ? "El resultado después de 12 meses" : "The result after 12 months"}
-              </p>
-              <div className="flex gap-[3vw]">
-                {(es
-                  ? [
-                      { stat: "< $0", label: "CAC neto efectivo", sub: "Rep activa 1 usuario · P2P activa 3–5 más" },
-                      { stat: "85%+", label: "Retención a 90 días", sub: "Trust Score crea lock-in natural" },
-                      { stat: "5×", label: "Transacciones/mes", sub: "Frecuencia objetivo por billetera activa" },
-                    ]
-                  : [
-                      { stat: "< $0", label: "Net effective CAC", sub: "Rep activates 1 user · P2P activates 3–5 more" },
-                      { stat: "85%+", label: "90-day retention", sub: "Trust Score creates natural lock-in" },
-                      { stat: "5×", label: "Transactions/month", sub: "Target frequency per active wallet" },
-                    ]
-                ).map(({ stat, label, sub }) => (
-                  <div key={label} style={{ textAlign: "center" }}>
-                    <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.8vw", fontWeight: 900, color: "#00C875", lineHeight: 1, marginBottom: "0.2vh" }}>{stat}</p>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.1vh" }}>{label}</p>
-                    <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.05vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{sub}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>

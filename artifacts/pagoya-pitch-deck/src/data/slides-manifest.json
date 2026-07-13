@@ -4,7 +4,7 @@
     "position": 1,
     "filepath": "src/pages/slides/Slide01Cover.tsx",
     "title": "PagoYa — Portada",
-    "description": "Mastercard — Identidad financiera para los 65 millones invisibles de México. Paula paga facturas, construye Trust Score, da acceso a crédito.",
+    "description": "La app de pagos que fabrica el activo de datos más valioso de México. PTI v5.0 · 90+ señales · Certificado fair-lending. July 2026.",
     "speakerNotes": ""
   },
   {
@@ -12,71 +12,71 @@
     "position": 2,
     "filepath": "src/pages/slides/Slide02Problem.tsx",
     "title": "El Problema",
-    "description": "65 millones de adultos no bancarizados pagan facturas en tiendas de conveniencia — comisiones, tiempo, riesgo de corte, sin registro digital.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567814",
-    "position": 3,
-    "filepath": "src/pages/slides/Slide03Paula.tsx",
-    "title": "Conoce a Paula",
-    "description": "Paula: agente con IA en WhatsApp. No es un chatbot — es un agente que entiende, razona, recuerda y actúa.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567815",
-    "position": 4,
-    "filepath": "src/pages/slides/Slide03bWallet.tsx",
-    "title": "La Billetera PagoYa",
-    "description": "Carga una vez vía OXXO, tarjeta o débito bancario. Paga servicios, tarjetas de regalo, suscripciones. Construye historial crediticio.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567820",
-    "position": 5,
-    "filepath": "src/pages/slides/SlideTrustScore.tsx",
-    "title": "El PagoYa Trust Score",
-    "description": "Cada pago construye identidad financiera. 90 días de comportamiento = Trust Score que desbloquea crédito, seguros, préstamos e historial portable al extranjero.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567821",
-    "position": 6,
-    "filepath": "src/pages/slides/SlideFlywheel.tsx",
-    "title": "El Volante de Inercia",
-    "description": "Pagos → datos → Trust Score → productos financieros → más engagement → más pagos. Capa de gamificación (ruleta, misiones, bonos semanales) acelera la frecuencia.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
-    "position": 7,
-    "filepath": "src/pages/slides/Slide03Solution.tsx",
-    "title": "La Solución",
-    "description": "Una billetera: paga servicios, compra tarjetas de regalo (Netflix, Amazon, Spotify), confirmado por WhatsApp. Tarifa fija $25 MXN.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
-    "position": 8,
-    "filepath": "src/pages/slides/Slide04Market.tsx",
-    "title": "Lo Que Está Activo Ahora",
-    "description": "No lo presentamos. Lo construimos. 5 rieles activos: Stripe, SIPREL, Conekta/OXXO, Belvo, tarjetas de regalo.",
+    "description": "65M adultos invisibles para el sistema financiero. Population bar chart + costo real de pagar en efectivo. Sus pagos mueren en cash — sin registro, sin historial, sin crédito.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567805",
-    "position": 9,
+    "position": 3,
     "filepath": "src/pages/slides/Slide05HowItWorks.tsx",
-    "title": "Tamaño del Mercado",
-    "description": "Tres mercados: pagos de servicios $180B MXN, tarjetas de regalo $4.2B MXN, transferencias P2P $42B MXN.",
+    "title": "Tamaño de Mercado",
+    "description": "3 capas: Layer 1 pagos de consumidores (SAM $1B+ MXN), Layer 2 datos PTI (TAM $28B USD), Layer 3 originación de crédito (2027). Las dos primeras activas hoy.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide03Solution.tsx",
+    "title": "La Solución",
+    "description": "Una billetera. Todas las facturas. Todas las tarjetas de regalo. Desde tu teléfono. $25 MXN tarifa fija. Sin descarga de app.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567814",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide03Paula.tsx",
+    "title": "Conoce a Paula — Motor de Señales",
+    "description": "Paula: agente IA en WhatsApp y motor de datos PTI. Cada mensaje, recordatorio y pago genera señales para las 4 dimensiones del PTI.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide04Market.tsx",
+    "title": "Tracción",
+    "description": "5 rieles activos, PTI v5.0 certificado, milestone timeline: May 31 live → Jun gift cards → Jul PTI v5 → Q3 500 wallets → Q1 2027 2,500 wallets.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567820",
+    "position": 7,
+    "filepath": "src/pages/slides/SlideTrustScore.tsx",
+    "title": "Posicionamiento PTI",
+    "description": "Comparación 2 columnas: Buró tradicional vs PTI. 4 dimensiones (PR 30%, BC 20%, ED 25%, CF 25%). v5.0 fair-lending certified.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567821",
+    "position": 8,
+    "filepath": "src/pages/slides/SlideFlywheel.tsx",
+    "title": "Arquitectura PTI",
+    "description": "4 dimensiones en grid: PR/BC/ED/CF con señales detalladas. Versión modelo v5.0.0-rc1, rango 300-850, fair-lending certified Jul 2026.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
+    "position": 9,
+    "filepath": "src/pages/slides/Slide09GoToMarket.tsx",
+    "title": "PTI B2B — Compradores de Datos",
+    "description": "Quién paga los datos PTI: SOFOM, microfinanzas, aseguradoras, neobancos. La barrera de datos — mercado de crédito de $28B USD bloqueado por falta de datos.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567806",
     "position": 10,
     "filepath": "src/pages/slides/Slide06BusinessModel.tsx",
-    "title": "Modelo de Negocio e Ingresos",
-    "description": "Fase 1: $25 MXN / txn. Fase 2 (2027): 2–4% originación crédito. Fase 3 (2028+): Trust Score API SaaS para bancos, seguros, diáspora.",
+    "title": "Modelo de Negocio",
+    "description": "3 capas: (1) $25 MXN pagos — ACTIVO, (2) API B2B datos PTI — ACTIVO, (3) Originación crédito 2–4% — 2027. Tablas de escalado.",
     "speakerNotes": ""
   },
   {
@@ -84,55 +84,31 @@
     "position": 11,
     "filepath": "src/pages/slides/Slide07Infrastructure.tsx",
     "title": "Estrategia de Mercado",
-    "description": "Equipo en campo + red de referidos: modelo de 3 capas. El rep activa, gana comisión pasiva, los usuarios refieren usuarios.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567808",
-    "position": 12,
-    "filepath": "src/pages/slides/Slide08Competition.tsx",
-    "title": "P2P: Los Pagos se Vuelven Sociales",
-    "description": "Siguiente fase: divide gastos, envía saldo, págense entre sí en WhatsApp. Cada pago es una demo del producto.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
-    "position": 13,
-    "filepath": "src/pages/slides/Slide09GoToMarket.tsx",
-    "title": "La Barrera de Datos",
-    "description": "La IA construye identidad financiera para 65M personas invisibles. Los datos desbloquean crédito, BNPL, seguros y microcréditos.",
-    "speakerNotes": ""
-  },
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567810",
-    "position": 14,
-    "filepath": "src/pages/slides/Slide10Traction.tsx",
-    "title": "Infraestructura",
-    "description": "5 rieles activos: Stripe, SIPREL, Conekta/OXXO, Belvo, tarjetas de regalo. STP/SPEI en proceso. Sin intermediarios.",
+    "description": "Equipo en campo + red de referidos: modelo de 3 capas. Activación directa → comisión pasiva → ciclo de referidos. Puerto Vallarta → Guadalajara → CDMX.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567811",
-    "position": 15,
+    "position": 12,
     "filepath": "src/pages/slides/Slide11Why500.tsx",
     "title": "Panorama Competitivo",
-    "description": "Tabla comparativa con fila Trust Score añadida — la única dimensión que ningún competidor puede replicar en 18 meses.",
+    "description": "Mercado Pago mueve dinero. PagoYa mide confianza. Feature matrix con fila PTI exclusiva como moat. Ningún competidor puede replicar en 18 meses.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567812",
-    "position": 16,
+    "position": 13,
     "filepath": "src/pages/slides/Slide12Ask.tsx",
-    "title": "Por Qué Acción Ventures",
-    "description": "Navegación regulatoria, escalar red de representantes, acceso a inversores fintech LATAM que entienden nuestra economía unitaria.",
+    "title": "¿Por Qué un Acelerador?",
+    "description": "Genérico — lo que un acelerador desbloquea: navegación regulatoria, red de distribución, acceso B2B, capital LATAM. Stack vivo, solo falta la red.",
     "speakerNotes": ""
   },
   {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567813",
-    "position": 17,
+    "position": 14,
     "filepath": "src/pages/slides/Slide13TheAsk.tsx",
     "title": "La Inversión",
-    "description": "Pre-semilla $250K–$750K USD en SAFE. 18 meses de operación. Meta 2,500 billeteras activas. FI Austin Verano 2026.",
+    "description": "Pre-semilla $250K–$750K USD SAFE. 4 bloques uso de fondos con unlock flags. 5 rieles activos · PTI v5.0 · gift cards live · equipo en campo.",
     "speakerNotes": ""
   }
 ]

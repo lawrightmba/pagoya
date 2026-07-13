@@ -3,58 +3,24 @@ const es = LANG === "es";
 
 export default function Slide06BusinessModel() {
   return (
-    <div
-      className="relative w-screen h-screen overflow-hidden"
-      style={{ background: "#004F2D" }}
-    >
-      <div
-        className="absolute inset-0"
-        style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }}
-      />
+    <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
+      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }} />
 
-      <div className="relative z-10 flex flex-col" style={{ padding: "1.8vh 8vw 1.5vh" }}>
-        <div style={{ marginBottom: "0.8vh" }}>
-          <p
-            style={{
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "1.4vw",
-              fontWeight: 700,
-              color: "#00C875",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              marginBottom: "0.5vh"
-            }}
-          >
-            {es ? "Modelo de Negocio e Ingresos" : "Business Model & Revenue"}
+      <div className="relative z-10 flex flex-col h-full" style={{ padding: "2.5vh 8vw 2vh" }}>
+        <div style={{ marginBottom: "1vh", flexShrink: 0 }}>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.5vh" }}>
+            {es ? "Modelo de Negocio" : "Business Model"}
           </p>
-          <h2
-            style={{
-              fontFamily: "Barlow Condensed, sans-serif",
-              fontSize: "3.8vw",
-              fontWeight: 900,
-              color: "#FFFFFF",
-              letterSpacing: "-0.01em",
-              lineHeight: 1,
-              marginBottom: "0.6vh"
-            }}
-          >
+          <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "3.8vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.5vh" }}>
             {es
-              ? "Tarifa fija de $25 MXN por transacción.\nBase 2× · Meta 5× por billetera."
-              : "Flat $25 MXN fee per transaction.\nBase 2× · Target 5× per wallet."}
+              ? "Tres capas de ingresos. Las dos primeras están activas hoy."
+              : "Three revenue layers. The first two are active today."}
           </h2>
           <div style={{ width: "6vw", height: "0.4vh", background: "#00C875" }} />
         </div>
 
-        <div className="flex gap-[3vw]" style={{ marginBottom: "1.2vh" }}>
-          <div
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "0.8vw",
-              padding: "1.2vh 2vw",
-              flex: "0 0 18vw"
-            }}
-          >
+        <div className="flex gap-[2vw]" style={{ marginBottom: "1vh", flexShrink: 0 }}>
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", padding: "1.2vh 2vw", flex: "0 0 16vw" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.8vh" }}>
               {es ? "Por Transacción" : "Per Transaction"}
             </p>
@@ -63,10 +29,8 @@ export default function Slide06BusinessModel() {
               {es ? "MXN fija" : "MXN flat"}
             </p>
             <div style={{ height: "0.15vh", background: "rgba(255,255,255,0.1)", margin: "1vh 0" }} />
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.35vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
-              {es
-                ? "Facturas o tarjetas de regalo. Rieles directos — rentable desde la transacción 1."
-                : "Bills or gift cards. Direct rails — profitable from transaction 1."}
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.3vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.3 }}>
+              {es ? "Facturas o tarjetas de regalo. Rieles directos — rentable desde txn 1." : "Bills or gift cards. Direct rails — profitable from txn 1."}
             </p>
           </div>
 
@@ -81,142 +45,91 @@ export default function Slide06BusinessModel() {
                 overflow: "hidden"
               }}
             >
-              <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                  {es ? "Billeteras Activas" : "Active Wallets"}
-                </p>
-              </div>
-              <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", fontWeight: 700, color: "rgba(0,200,117,0.8)", textTransform: "uppercase", letterSpacing: "0.06em" }}>2× / {es ? "mes" : "mo"}</p>
-              </div>
-              <div style={{ background: "rgba(255,92,26,0.1)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", fontWeight: 700, color: "#FF5C1A", textTransform: "uppercase", letterSpacing: "0.06em" }}>5× / {es ? "mes" : "mo"}</p>
-              </div>
-              <div style={{ background: "rgba(255,255,255,0.08)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {es ? "Equivalente USD" : "USD Equiv."}
-                </p>
-              </div>
-
-              <div style={{ background: "transparent", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 800, color: "#FFFFFF" }}>2,500</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$150K MXN</p>
-              </div>
-              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$375K MXN</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", color: "rgba(255,255,255,0.4)" }}>—</p>
-              </div>
-
-              <div style={{ background: "transparent", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 800, color: "#FFFFFF" }}>25,000</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$1.5M MXN</p>
-              </div>
-              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$3.75M MXN</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", color: "rgba(255,255,255,0.4)" }}>—</p>
-              </div>
-
-              <div style={{ background: "transparent", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 800, color: "#FFFFFF" }}>250,000</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$15M MXN</p>
-              </div>
-              <div style={{ background: "rgba(255,92,26,0.04)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "rgba(255,255,255,0.8)" }}>$37.5M MXN</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", color: "rgba(255,255,255,0.4)" }}>~$880K–$2.2M USD</p>
-              </div>
-
-              <div style={{ background: "rgba(0,200,117,0.1)", padding: "1.1vh 1.8vw", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2vw", fontWeight: 800, color: "#00C875" }}>1,000,000</p>
-              </div>
-              <div style={{ background: "rgba(0,200,117,0.08)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "#00C875", fontWeight: 700 }}>$600M MXN</p>
-              </div>
-              <div style={{ background: "rgba(255,92,26,0.1)", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", color: "#FF5C1A", fontWeight: 700 }}>$1.5B MXN</p>
-              </div>
-              <div style={{ background: "transparent", padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.45vw", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>~$35M–$88M USD</p>
-              </div>
+              {[
+                { label: es ? "Billeteras Activas" : "Active Wallets", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" },
+                { label: `2× / ${es ? "mes" : "mo"}`, bg: "rgba(255,255,255,0.08)", color: "rgba(0,200,117,0.8)" },
+                { label: `5× / ${es ? "mes" : "mo"}`, bg: "rgba(255,92,26,0.1)", color: "#FF5C1A" },
+                { label: es ? "Equiv. USD" : "USD Equiv.", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" },
+              ].map(({ label, bg, color }) => (
+                <div key={label} style={{ background: bg, padding: "1.1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.08)", borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.4vw", fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
+                </div>
+              ))}
+              {[
+                ["2,500", "$150K MXN", "$375K MXN", "—"],
+                ["25,000", "$1.5M MXN", "$3.75M MXN", "—"],
+                ["250,000", "$15M MXN", "$37.5M MXN", "~$880K–$2.2M USD"],
+                ["1,000,000", "$600M MXN", "$1.5B MXN", "~$35M–$88M USD"],
+              ].map((row, ri) => (
+                row.map((cell, ci) => (
+                  <div key={`${ri}-${ci}`} style={{ background: ci === 3 && ri >= 2 ? "transparent" : ci === 2 ? "rgba(255,92,26,0.04)" : ci === 0 && ri === 3 ? "rgba(0,200,117,0.1)" : "transparent", padding: "1vh 1.5vw", borderBottom: ri < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined, borderRight: ci < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
+                    <p style={{ fontFamily: ci === 0 ? "Barlow Condensed, sans-serif" : "DM Sans, sans-serif", fontSize: ci === 0 ? "2vw" : "1.5vw", fontWeight: ci === 0 ? 800 : 400, color: ci === 0 && ri === 3 ? "#00C875" : ci === 2 && ri === 3 ? "#FF5C1A" : ci === 0 && ri === 3 ? "#00C875" : "rgba(255,255,255,0.8)" }}>
+                      {cell}
+                    </p>
+                  </div>
+                ))
+              ))}
             </div>
           </div>
         </div>
 
-        <div
-          style={{
-            background: "rgba(0,200,117,0.1)",
-            borderLeft: "0.4vw solid #00C875",
-            padding: "1.5vh 2.5vw",
-            borderRadius: "0 0.6vw 0.6vw 0",
-            marginBottom: "1.5vh"
-          }}
-        >
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.6vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
+        <div style={{ background: "rgba(0,200,117,0.1)", borderLeft: "0.4vw solid #00C875", padding: "1.2vh 2.5vw", borderRadius: "0 0.6vw 0.6vw 0", marginBottom: "1vh", flexShrink: 0 }}>
+          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.35 }}>
             {es
-              ? <>Rieles directos (SIPREL, Conekta, Stripe) eliminan márgenes de intermediarios —<span style={{ color: "#00C875", fontWeight: 700 }}> rentable a $25 MXN desde la transacción 1</span>.</>
-              : <>Direct rails (SIPREL, Conekta, Stripe) eliminate intermediary margins —<span style={{ color: "#00C875", fontWeight: 700 }}> profitable at $25 MXN from transaction 1</span>.</>
-            }
+              ? <>Rieles directos (SIPREL, Conekta, Stripe) eliminan márgenes intermediarios —<span style={{ color: "#00C875", fontWeight: 700 }}> rentable a $25 MXN desde transacción 1</span>.</>
+              : <>Direct rails (SIPREL, Conekta, Stripe) eliminate intermediary margins —<span style={{ color: "#00C875", fontWeight: 700 }}> profitable at $25 MXN from transaction 1</span>.</>}
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.2vw" }}>
-          <div style={{ background: "rgba(0,200,117,0.1)", border: "1px solid rgba(0,200,117,0.35)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.2vw", flexShrink: 0 }}>
+          <div style={{ background: "rgba(0,200,117,0.1)", border: "1px solid rgba(0,200,117,0.35)", borderRadius: "0.7vw", padding: "1.4vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.7vh" }}>
               <div style={{ background: "#00C875", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#004F2D" }}>1</p>
               </div>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#00C875", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                 {es ? "Ahora · Pagos" : "Now · Payments"}
               </p>
+              <div style={{ background: "#00C87522", border: "1px solid #00C87555", borderRadius: "0.3vw", padding: "0.2vh 0.5vw", marginLeft: "auto" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#00C875" }}>✅ ACTIVO</p>
+              </div>
             </div>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.4vh" }}>$25 MXN</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
-              {es
-                ? "Tarifa fija por transacción — facturas, gift cards, recargas"
-                : "Flat fee per transaction — bills, gift cards, top-ups"}
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.3vh" }}>$25 MXN</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
+              {es ? "Tarifa fija por transacción — facturas, gift cards, recargas" : "Flat fee per transaction — bills, gift cards, top-ups"}
             </p>
           </div>
-          <div style={{ background: "rgba(255,92,26,0.08)", border: "1px solid rgba(255,92,26,0.3)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+          <div style={{ background: "rgba(255,92,26,0.1)", border: "1px solid rgba(255,92,26,0.35)", borderRadius: "0.7vw", padding: "1.4vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.7vh" }}>
               <div style={{ background: "#FF5C1A", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#fff" }}>2</p>
               </div>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {es ? "2027 · Crédito" : "2027 · Credit"}
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "#FF5C1A", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {es ? "Ahora · Datos PTI" : "Now · PTI Data"}
               </p>
+              <div style={{ background: "#FF5C1A22", border: "1px solid #FF5C1A55", borderRadius: "0.3vw", padding: "0.2vh 0.5vw", marginLeft: "auto" }}>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#FF5C1A" }}>✅ ACTIVO</p>
+              </div>
             </div>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.4vh" }}>2–4%</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
-              {es
-                ? "Fee de originación sobre micro-créditos y BNPL habilitados por el Trust Score"
-                : "Origination fee on micro-loans and BNPL enabled by Trust Score"}
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.3vh" }}>
+              {es ? "API B2B" : "B2B API"}
+            </p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.55)", lineHeight: 1.35 }}>
+              {es ? "PTI licenciado a prestamistas, aseguradoras y fintechs · conjuntos de datos anonimizados" : "PTI licensed to lenders, insurers, fintechs · anonymized datasets"}
             </p>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "0.7vw", padding: "1.5vh 1.8vw" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.8vh" }}>
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "0.7vw", padding: "1.4vh 1.8vw" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7vw", marginBottom: "0.7vh" }}>
               <div style={{ background: "rgba(255,255,255,0.3)", borderRadius: "50%", width: "2vh", height: "2vh", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "1.1vw", fontWeight: 900, color: "#004F2D" }}>3</p>
               </div>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.15vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {es ? "2028+ · API de Datos" : "2028+ · Data API"}
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.1vw", fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {es ? "2027 · Originación de Crédito" : "2027 · Credit Origination"}
               </p>
             </div>
-            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.4vw", fontWeight: 900, color: "rgba(255,255,255,0.6)", lineHeight: 1, marginBottom: "0.4vh" }}>Data API</p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.35 }}>
-              {es
-                ? "API de crédito conductual licenciada a prestamistas, aseguradoras y fintechs que no pueden evaluar a los no bancarizados"
-                : "Behavioral credit data API licensed to lenders, insurers, and fintechs who can't underwrite the unbanked"}
+            <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "rgba(255,255,255,0.6)", lineHeight: 1, marginBottom: "0.3vh" }}>2–4%</p>
+            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.4)", lineHeight: 1.35 }}>
+              {es ? "Fee de originación sobre micro-créditos y BNPL habilitados por el PTI" : "Origination fee on micro-loans and BNPL enabled by PTI"}
             </p>
           </div>
         </div>
