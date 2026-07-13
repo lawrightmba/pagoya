@@ -162,6 +162,8 @@ Complete four-part signoff chain for v5.0 (PTI dimension recomposition; brief v1
 
 All deltas ≤ 0 (v5.0 scores the same or lower than v4.3 — consistent with fair-lending remediation removing favorable score bias). No score increased.
 
+**Note on `3222304213` (id 18):** This is the local-format duplicate of `+523222304213` — same underlying phone number, stored as a separate row because the registration flow did not normalize the +52 prefix on 2026-07-13 00:10 UTC. The row is real (signup_source: web_organic, no test flag) and was correctly included in the batch. Score of 0 is accurate — no payment history on this row. Data hygiene item: two rows for one phone; recommend deduplication before first real transaction on `3222304213`. Not a fair-lending concern. The canonical 9-user B5 baseline (shadow recompute) remains unaffected — this row had no shadow entry.
+
 **Evidence gates — post-recompute (15:46 UTC probe):**
 
 | Gate | Value | Status |
