@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide13TheAsk() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(0,200,117,0.12) 0%, transparent 65%)" }} />
@@ -12,7 +12,7 @@ export default function Slide13TheAsk() {
             {es ? "La Inversión" : "The Investment"}
           </p>
           <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "5vw", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.8vh" }}>
-            {es ? "Pre-semilla: $250K–$750K USD" : "Pre-Seed: $250K–$750K USD"}
+            {es ? "Pre-semilla: $500K–$1.5MM USD" : "Pre-Seed: $500K–$1.5MM USD"}
           </h2>
           <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.55vw", color: "rgba(255,255,255,0.55)", marginBottom: "0.8vh" }}>
             {es
@@ -51,7 +51,7 @@ export default function Slide13TheAsk() {
             <div style={{ background: "rgba(0,200,117,0.1)", borderLeft: "0.4vw solid #00C875", padding: "1.4vh 2vw", borderRadius: "0 0.6vw 0.6vw 0" }}>
               <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.7vw", fontWeight: 500, color: "#FFFFFF", lineHeight: 1.4 }}>
                 {es
-                  ? <><span style={{ color: "#00C875", fontWeight: 700 }}>5 rieles activos · PTI v5.0 certificado · Git cards vivo · Equipo en campo.</span> El stack completo existe — este capital escala lo que ya funciona.</>
+                  ? <><span style={{ color: "#00C875", fontWeight: 700 }}>5 rieles activos · PTI v5.0 certificado · Gift cards vivo · Equipo en campo.</span> El stack completo existe — este capital escala lo que ya funciona.</>
                   : <><span style={{ color: "#00C875", fontWeight: 700 }}>5 live rails · PTI v5.0 certified · Gift cards live · Field team deployed.</span> The complete stack exists — this capital scales what already works.</>}
               </p>
             </div>

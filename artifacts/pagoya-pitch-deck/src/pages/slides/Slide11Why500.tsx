@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide11Why500() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 20%, rgba(255,92,26,0.07) 0%, transparent 55%)" }} />
@@ -19,18 +19,7 @@ export default function Slide11Why500() {
           <div style={{ width: "6vw", height: "0.4vh", background: "#FF5C1A" }} />
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "22vw 1fr 1fr 1fr 1fr",
-            gap: 0,
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "0.8vw",
-            overflow: "hidden",
-            marginBottom: "1.5vh",
-            flexShrink: 0
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "22vw 1fr 1fr 1fr 1fr", gap: 0, border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", overflow: "hidden", marginBottom: "1.5vh", flexShrink: 0 }}>
           {[
             { label: " ", bg: "rgba(255,255,255,0.06)", color: "transparent" },
             { label: "OXXO Pay", bg: "rgba(255,255,255,0.03)", color: "#FFFFFF" },
@@ -44,21 +33,18 @@ export default function Slide11Why500() {
           ))}
 
           {[
-            { feature: es ? "Tarifa fija" : "Flat fee", vals: [es ? "Por servicio" : "Per service", es ? "Variable" : "Variable", es ? "Variable" : "Variable", "$25 MXN"], hi: 3 },
-            { feature: es ? "Sin descarga de app" : "No app download", vals: ["N/A", es ? "Requerida" : "Required", es ? "Requerida" : "Required", es ? "No requerida" : "Not required"], hi: 3 },
-            { feature: es ? "Agente IA WhatsApp" : "WhatsApp AI agent", vals: ["No", es ? "Solo bot" : "Bot only", "No", "Yes — Paula"], hi: 3 },
-            { feature: es ? "Tarjetas de regalo" : "Gift cards", vals: ["No", es ? "Limitadas" : "Limited", "No", es ? "Sí — activas" : "Yes — live"], hi: 3 },
-            { feature: es ? "Activación en campo" : "Field activation", vals: ["No", "No", "No", es ? "Sí" : "Yes"], hi: 3 },
-          ].map(({ feature, vals, hi }) => (
-            vals.map((v, i) => (
-              <div key={`${feature}-${i}`} style={{ background: i === hi ? "rgba(0,200,117,0.07)" : i === -1 ? "rgba(255,255,255,0.03)" : "transparent", padding: "1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-                {i === 0
-                  ? <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>{feature}</p>
-                  : <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: i === hi ? "#00C875" : "rgba(255,255,255,0.4)", fontWeight: i === hi ? 700 : 400 }}>{v}</p>
-                }
+            { feature: es ? "Tarifa fija" : "Flat fee", vals: [es ? "Por servicio" : "Per service", es ? "Variable" : "Variable", es ? "Variable" : "Variable", "$25 MXN"] },
+            { feature: es ? "Sin descarga de app" : "No app download", vals: ["N/A", es ? "Requerida" : "Required", es ? "Requerida" : "Required", es ? "No requerida" : "Not required"] },
+            { feature: es ? "Agente IA WhatsApp" : "WhatsApp AI agent", vals: ["No", es ? "Solo bot" : "Bot only", "No", "Yes — Paula"] },
+            { feature: es ? "Tarjetas de regalo" : "Gift cards", vals: ["No", es ? "Limitadas" : "Limited", "No", es ? "Sí — activas" : "Yes — live"] },
+            { feature: es ? "Activación en campo" : "Field activation", vals: ["No", "No", "No", es ? "Sí" : "Yes"] },
+          ].flatMap(({ feature, vals }) =>
+            [feature, ...vals].map((cell, ci) => (
+              <div key={`${feature}-${ci}`} style={{ background: ci === 4 ? "rgba(0,200,117,0.07)" : ci === 0 ? "rgba(255,255,255,0.03)" : "transparent", padding: "1vh 1.5vw", borderBottom: "1px solid rgba(255,255,255,0.06)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+                <p style={{ fontFamily: ci === 0 ? "DM Sans, sans-serif" : "DM Sans, sans-serif", fontSize: "1.5vw", color: ci === 0 ? "rgba(255,255,255,0.55)" : ci === 4 ? "#00C875" : "rgba(255,255,255,0.4)", fontWeight: ci === 0 ? 500 : ci === 4 ? 700 : 400 }}>{cell}</p>
               </div>
             ))
-          )).flat()}
+          )}
 
           <div style={{ background: "rgba(255,92,26,0.06)", padding: "1.1vh 1.8vw", borderRight: "1px solid rgba(255,92,26,0.2)" }}>
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.5vw", color: "rgba(255,255,255,0.55)", fontWeight: 500 }}>

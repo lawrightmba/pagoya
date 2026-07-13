@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 import { slides } from "@/slideLoader";
+import { LangProvider, useLang } from "@/LangContext";
 
 function getSlideIndex(pathname: string): number {
   const match = pathname.match(/^\/slide(\d+)$/);
@@ -24,14 +25,56 @@ function getSlideIndex(pathname: string): number {
   return slides.findIndex((s) => s.position === position);
 }
 
+function LangToggle() {
+  const { lang, toggle } = useLang();
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); toggle(); }}
+      style={{
+        position: "absolute",
+        top: "2.8vh",
+        right: "3vw",
+        zIndex: 101,
+        display: "flex",
+        alignItems: "center",
+        gap: "0.4vw",
+        background: "rgba(0,20,12,0.75)",
+        border: "1px solid rgba(0,200,117,0.45)",
+        borderRadius: "2vw",
+        padding: "0.55vh 1.1vw",
+        cursor: "pointer",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+      }}
+    >
+      {(["es", "en"] as const).map((l, i) => (
+        <span key={l}>
+          {i > 0 && (
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.2vw", color: "rgba(255,255,255,0.25)", margin: "0 0.2vw" }}>|</span>
+          )}
+          <span
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: "1.2vw",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: lang === l ? "#00C875" : "rgba(255,255,255,0.35)",
+              transition: "color 0.15s",
+            }}
+          >
+            {l}
+          </span>
+        </span>
+      ))}
+    </button>
+  );
+}
+
 function SlideEditor() {
   const [location, navigate] = useLocation();
   const currentIndex = getSlideIndex(location);
 
-  // In the workspace, the slide iframe is nested inside another iframe,
-  // so window.parent !== window.parent.parent. In the deployed SlideViewer,
-  // the parent is the top-level window, so they're equal. Disable local
-  // navigation only in the workspace — the parent owns it there.
   const navigationDisabledRef = useRef(window.parent !== window.parent.parent);
   const touchHandledRefStable = useRef(false);
 
@@ -147,6 +190,7 @@ function SlideEditor() {
               zIndex: 100,
             }}
           />
+          <LangToggle />
         </div>
       ))}
     </div>
@@ -260,7 +304,7 @@ export default function App() {
     return () => window.removeEventListener("message", onMessage);
   }, [navigate]);
 
-  if (location === "/") return <SlideViewer />;
-  if (location === "/allslides") return <AllSlides />;
-  return <SlideEditor />;
+  if (location === "/") return <LangProvider><SlideViewer /></LangProvider>;
+  if (location === "/allslides") return <LangProvider><AllSlides /></LangProvider>;
+  return <LangProvider><SlideEditor /></LangProvider>;
 }

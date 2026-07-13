@@ -1,10 +1,10 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function SlideFlywheel() {
+  const { es } = useLang();
   const dims = es ? [
     { code: "PR", pct: 30, label: "Confiabilidad de Pago", color: "#00C875", signals: ["Racha de pagos consecutivos", "Porcentaje de pagos a tiempo", "Pagos recuperados tras mora", "Días promedio antes del vencimiento"] },
-    { code: "BC", pct: 20, label: "Consistencia Conductual", color: "#00C875", signals: ["Regularidad de pagos por semana", "Concentración en días de semana vs. fin de semana", "Adherencia al calendario de servicios", "Varianza interanual de cadencia"] },
+    { code: "BC", pct: 20, label: "Consistencia Conductual", color: "#00C875", signals: ["Regularidad de pagos por semana", "Concentración en días de semana", "Adherencia al calendario de servicios", "Varianza interanual de cadencia"] },
     { code: "ED", pct: 25, label: "Profundidad de Engagement", color: "#FF5C1A", signals: ["Diversidad de servicios pagados", "Tasa de respuesta a Paula", "Misiones completadas", "Frecuencia de uso mensual activo"] },
     { code: "CF", pct: 25, label: "Estabilidad de Flujo de Caja", color: "#FF5C1A", signals: ["Nivel promedio de saldo de billetera", "Regularidad de carga de efectivo", "Ratio carga-gasto por ciclo", "Velocidad de depresión de saldo"] },
   ] : [

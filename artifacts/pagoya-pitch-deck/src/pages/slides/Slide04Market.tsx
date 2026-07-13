@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide04Market() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 75% 30%, rgba(0,200,117,0.1) 0%, transparent 60%)" }} />
@@ -55,7 +55,7 @@ export default function Slide04Market() {
                 { date: "Jul 2026", label: "STP/SPEI", detail: "Unique CLABE per user · direct deposit", color: "#00C875", done: true },
                 { date: "Q3 2026", label: "500 active wallets", detail: "Q3 growth target", color: "#FF5C1A", done: false },
                 { date: "Q1 2027", label: "2,500 active wallets", detail: "Pre-seed target · 3 cities", color: "#FF5C1A", done: false },
-              ]).map(({ date, label, detail, color, done }, i) => (
+              ]).map(({ date, label, detail, color, done }) => (
                 <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.8vh", width: "14vw" }}>
                   <div style={{ background: "rgba(0,20,10,0.9)", border: `1.5px solid ${color}66`, borderRadius: "0.7vw", padding: "0.9vh 1.2vw", textAlign: "center", width: "100%" }}>
                     <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.05vw", color: color, fontWeight: 700, marginBottom: "0.2vh" }}>{date}</p>

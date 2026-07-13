@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide12Ask() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 70% 50%, rgba(0,200,117,0.1) 0%, transparent 60%)" }} />

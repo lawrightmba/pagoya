@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide06BusinessModel() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 60% 40%, rgba(0,200,117,0.09) 0%, transparent 60%)" }} />
@@ -35,16 +35,7 @@ export default function Slide06BusinessModel() {
           </div>
 
           <div style={{ flex: 1 }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.8fr 1fr 1fr 1.4fr",
-                gap: 0,
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "0.8vw",
-                overflow: "hidden"
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr 1fr 1.4fr", gap: 0, border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.8vw", overflow: "hidden" }}>
               {[
                 { label: es ? "Billeteras Activas" : "Active Wallets", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" },
                 { label: `2× / ${es ? "mes" : "mo"}`, bg: "rgba(255,255,255,0.08)", color: "rgba(0,200,117,0.8)" },
@@ -60,15 +51,15 @@ export default function Slide06BusinessModel() {
                 ["25,000", "$1.5M MXN", "$3.75M MXN", "—"],
                 ["250,000", "$15M MXN", "$37.5M MXN", "~$880K–$2.2M USD"],
                 ["1,000,000", "$600M MXN", "$1.5B MXN", "~$35M–$88M USD"],
-              ].map((row, ri) => (
+              ].map((row, ri) =>
                 row.map((cell, ci) => (
-                  <div key={`${ri}-${ci}`} style={{ background: ci === 3 && ri >= 2 ? "transparent" : ci === 2 ? "rgba(255,92,26,0.04)" : ci === 0 && ri === 3 ? "rgba(0,200,117,0.1)" : "transparent", padding: "1vh 1.5vw", borderBottom: ri < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined, borderRight: ci < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
-                    <p style={{ fontFamily: ci === 0 ? "Barlow Condensed, sans-serif" : "DM Sans, sans-serif", fontSize: ci === 0 ? "2vw" : "1.5vw", fontWeight: ci === 0 ? 800 : 400, color: ci === 0 && ri === 3 ? "#00C875" : ci === 2 && ri === 3 ? "#FF5C1A" : ci === 0 && ri === 3 ? "#00C875" : "rgba(255,255,255,0.8)" }}>
+                  <div key={`${ri}-${ci}`} style={{ background: ci === 2 ? "rgba(255,92,26,0.04)" : ci === 0 && ri === 3 ? "rgba(0,200,117,0.1)" : "transparent", padding: "1vh 1.5vw", borderBottom: ri < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined, borderRight: ci < 3 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
+                    <p style={{ fontFamily: ci === 0 ? "Barlow Condensed, sans-serif" : "DM Sans, sans-serif", fontSize: ci === 0 ? "2vw" : "1.5vw", fontWeight: ci === 0 ? 800 : 400, color: ci === 0 && ri === 3 ? "#00C875" : ci === 2 && ri === 3 ? "#FF5C1A" : "rgba(255,255,255,0.8)" }}>
                       {cell}
                     </p>
                   </div>
                 ))
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -91,7 +82,7 @@ export default function Slide06BusinessModel() {
                 {es ? "Ahora · Pagos" : "Now · Payments"}
               </p>
               <div style={{ background: "#00C87522", border: "1px solid #00C87555", borderRadius: "0.3vw", padding: "0.2vh 0.5vw", marginLeft: "auto" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#00C875" }}>✅ ACTIVO</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#00C875" }}>✅ {es ? "ACTIVO" : "LIVE"}</p>
               </div>
             </div>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.3vh" }}>$25 MXN</p>
@@ -108,7 +99,7 @@ export default function Slide06BusinessModel() {
                 {es ? "Ahora · Datos PTI" : "Now · PTI Data"}
               </p>
               <div style={{ background: "#FF5C1A22", border: "1px solid #FF5C1A55", borderRadius: "0.3vw", padding: "0.2vh 0.5vw", marginLeft: "auto" }}>
-                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#FF5C1A" }}>✅ ACTIVO</p>
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.9vw", fontWeight: 700, color: "#FF5C1A" }}>✅ {es ? "ACTIVO" : "LIVE"}</p>
               </div>
             </div>
             <p style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "2.2vw", fontWeight: 900, color: "#FFFFFF", lineHeight: 1, marginBottom: "0.3vh" }}>

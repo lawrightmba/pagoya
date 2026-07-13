@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function SlideTrustScore() {
+  const { es } = useLang();
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: "#004F2D" }}>
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 70% 40%, rgba(0,200,117,0.13) 0%, transparent 60%)" }} />
@@ -99,18 +99,18 @@ export default function SlideTrustScore() {
 
             <div className="flex flex-col gap-[0.5vh]" style={{ flex: 1 }}>
               {(es ? [
-                { label: "Cadencia y consistencia de pagos de servicios", v: true },
-                { label: "Comportamiento de carga de efectivo y saldo de billetera", v: true },
-                { label: "Diversidad de servicios pagados (CFE + Telmex + streaming)", v: true },
-                { label: "Señales de ingresos informales y estabilidad de flujo de caja", v: true },
-                { label: "Patrones de engagement con Paula y responsiveness", v: true },
+                "Cadencia y consistencia de pagos de servicios",
+                "Comportamiento de carga de efectivo y saldo de billetera",
+                "Diversidad de servicios pagados (CFE + Telmex + streaming)",
+                "Señales de ingresos informales y estabilidad de flujo de caja",
+                "Patrones de engagement con Paula y responsiveness",
               ] : [
-                { label: "Payment cadence and on-time consistency", v: true },
-                { label: "Cash load behavior and wallet balance patterns", v: true },
-                { label: "Service diversity (CFE + Telmex + streaming)", v: true },
-                { label: "Informal income signals and cashflow stability", v: true },
-                { label: "Paula engagement patterns and responsiveness", v: true },
-              ]).map(({ label, v }) => (
+                "Payment cadence and on-time consistency",
+                "Cash load behavior and wallet balance patterns",
+                "Service diversity (CFE + Telmex + streaming)",
+                "Informal income signals and cashflow stability",
+                "Paula engagement patterns and responsiveness",
+              ]).map((label) => (
                 <div key={label} className="flex items-center gap-[0.8vw]">
                   <span style={{ fontSize: "1.2vw", color: "#00C875", flexShrink: 0 }}>✓</span>
                   <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "1.25vw", color: "rgba(255,255,255,0.75)", lineHeight: 1.3 }}>{label}</p>

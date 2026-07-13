@@ -1,7 +1,7 @@
-import { LANG } from "@/lang";
-const es = LANG === "es";
+import { useLang } from "@/lang";
 
 export default function Slide03Solution() {
+  const { es } = useLang();
   return (
     <div
       className="relative w-screen h-screen overflow-hidden flex"
