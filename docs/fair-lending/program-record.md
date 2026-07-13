@@ -110,8 +110,8 @@ Complete four-part signoff chain for v5.0 (PTI dimension recomposition; brief v1
 | A — Shadow infrastructure | ✅ Complete | 2026-07-11 | `pti_v5_shadow_recompute` table live; nightly cron wired; B5-gated |
 | B5 — Evidence gates | ✅ All green | 2026-07-11 | B1/B2/B3/B4 all pass; corrected stale v4.1-behavioral baseline for 8118963105 |
 | C — Transition message pipeline | ✅ Submitted | 2026-07-11 | See below |
-| D — Monitoring panel | 🔴 Not started | — | Spec §3.3; blocked on Phase E go-order |
-| E — Go-live recompute | 🔴 Gated | — | Requires Meta SID ✅ + Lloyd go-order 🔴 |
+| D — Monitoring panel | ✅ Complete | 2026-07-13 | `GET /api/admin/pti-v5-monitoring` + AdminDashboard `🔬 PTI v5.0` tab |
+| E — Go-live recompute | ✅ Complete | 2026-07-13 | Lloyd go-order confirmed; recompute fired 15:46 UTC — see evidence below |
 
 **Phase C — Transition message pipeline (2026-07-11):**
 
@@ -123,6 +123,63 @@ Complete four-part signoff chain for v5.0 (PTI dimension recomposition; brief v1
 - Currently qualifying for dispatch: **1 user** (+523222304213, delta = −6 pts). Consent status to be verified at Phase E dispatch time.
 - **Pending to complete Phase C:** deploy to prod → `POST /api/admin/seed-paula-messages` (inserts row 26) → `POST /api/admin/sync-template-sids` (writes SID). Row is `active = false` — cannot fire until Phase E go-order activates it.
 - Phase C completion gate: Meta approval of SID HX83365f953386ec00e27da4a959a7f497. Monitor daily via `twilio:status` (template #24 = `pti_v5_transition`).
+
+---
+
+### Phase E go-live — 2026-07-13
+
+**Go-order:** Lloyd — "Proceed with Phase E recompute." Confirmed.
+
+**Step 1 — Transition message dispatch (pre-recompute):**
+- `POST /api/admin/phase-e-dispatch-transition` fired (Step 1 — completed previous session, 2026-07-12).
+- Qualifying users (|delta| > 5): 1 — +523222304213 (v4.3 = 11, shadow v5 = 5, Δ = −6).
+- WhatsApp blocked (US number + MARKETING template reclassification); in-app notice queued to `pti_transition_notices` (1 row confirmed).
+
+**Step 2 — Live flip (model version, nightly + monthly cron):**
+- `PTI_V5_MODEL_VERSION` changed from `"v5.0.0-rc1-shadow"` → `"v5.0.0-rc1"`.
+- `computePTIv5LiveForUser` added — writes to `users.pti_score / pti_breakdown / pti_computed_at + pti_score_history`.
+- `ptiCron.ts` nightly batch: shadow fire-and-forget retired; replaced with `computePTIv5LiveForUser` (live, non-blocking).
+- `ptiCron.ts` monthly batch: `computePTIForAllUsers` (v4.3) → `computePTIv5ForAllUsers` (v5.0).
+
+**Step 3 — One-time prod recompute (2026-07-13 15:46 UTC):**
+- Route: `POST /api/admin/phase-e-recompute` (safety-gated: `{"confirm":"V5_LIVE_RECOMPUTE"}`).
+- Result: `updated: 10, errors: 0`. All 10 non-test users recomputed cleanly.
+
+**Evidence table — 10-user score record:**
+
+| telefono | v4.3 score | shadow v5 | live v5 | Δ (v5 − v4.3) | model_version |
+|---|---|---|---|---|---|
+| +523222304213 | 11 | 5 | 5 | **−6** | v5.0.0-rc1 |
+| 8118963105 | 7 | 5 | 5 | −2 | v5.0.0-rc1 |
+| 3221839799 | 5 | 3 | 4 | −1 | v5.0.0-rc1 |
+| 4157972483 | 5 | 3 | 4 | −1 | v5.0.0-rc1 |
+| 4251006528 | 5 | 3 | 4 | −1 | v5.0.0-rc1 |
+| 3221562382 | 5 | 3 | 3 | −2 | v5.0.0-rc1 |
+| 8111778514 | 5 | 3 | 3 | −2 | v5.0.0-rc1 |
+| 8143141695 | 5 | 3 | 3 | −2 | v5.0.0-rc1 |
+| 5555550001 | 3 | 1 | 1 | −2 | v5.0.0-rc1 |
+| 3222304213 | — | — | 0 | — | v5.0.0-rc1 |
+
+All deltas ≤ 0 (v5.0 scores the same or lower than v4.3 — consistent with fair-lending remediation removing favorable score bias). No score increased.
+
+**Evidence gates — post-recompute (15:46 UTC probe):**
+
+| Gate | Value | Status |
+|---|---|---|
+| PTI-70 tripwire (users ≥ 70) | **0** | ✅ Clean — no users at premium tier under v5.0 |
+| G-C tolerant-streak (streak_months ≤ 2) | **10 / 10** | ✅ Expected — new platform, all users in early-history branch |
+| Model version coverage | **10 / 10 on v5.0.0-rc1** | ✅ 100% — no v4.x stragglers |
+| Shadow → live delta convergence | avg = 0.33 pts, max = 1 pt | ✅ Shadow compute validated — marginal gap is fresh-data timing only |
+
+**Shadow mode status: RETIRED.** Nightly batch no longer writes to `pti_v5_shadow_recompute`. The shadow table is preserved as the B5 audit baseline.
+
+**Step 4 — Monitoring panel:**
+- `GET /api/admin/pti-v5-monitoring` live on prod — returns tier distribution, tripwire, streak counter, model coverage, shadow/live delta.
+- AdminDashboard `🔬 PTI v5.0` tab live — includes recompute trigger button + score table rendering.
+
+**Program status: ALL PHASES COMPLETE.** PTI v5.0 is the production scoring model as of 2026-07-13 15:46 UTC.
+
+---
 
 **Product hygiene backlog — logged 2026-07-11 (NOT part of this program):**
 

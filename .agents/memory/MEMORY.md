@@ -45,3 +45,4 @@
 - [WhatsApp consent gate](whatsapp-consent-gate.md) — every proactive send path must check whatsapp_consent_at; snake_case vs camelCase trap; bare `sql` import gotcha in whatsapp-agent
 - [PTI v5.0 Phase C — transition message pipeline](pti-phase-c.md) — SID HX83365f953386ec00e27da4a959a7f497 submitted Jul 11; pending_approval pattern in seedPaulaMessages; phaseETransition.ts dispatch service; deploy needed to land row 26 in prod
 - [PTI v5.0 B5 + stale-model correction](pti-v5-b5-stale-model.md) — two users had stale model_version in stored pti_score (v4.1-behavioral stored vs v4.3 current); corrected Jul 11 via compute-now; B5 canonical table: all 9 deltas ≤0 on same-day data
+- [PTI v5.0 Phase E go-live](pti-phase-e-complete.md) — COMPLETE 2026-07-13; v5.0.0-rc1 is prod model; shadow retired; 10/10 recomputed; tripwire=0; coverage=100%; prod routes at /api/admin/ not /api-server/
