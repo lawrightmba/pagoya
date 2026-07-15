@@ -1,0 +1,19 @@
+The problem
+Millions of adults in Mexico are unbanked or thinly-banked, which locks them out of formal credit even when they're reliably paying bills every month. There's no good way to translate "pays CFE and rent on time" into a credit signal a lender can use.
+The product
+PagoYa is a WhatsApp-native bill payment platform — people pay things like CFE (electricity) directly through WhatsApp, no app download required. The flagship CTA on the site is "Paga tu CFE ahora." Fee structure is a flat 25 MXN per transaction, and new users get a 150 MXN signup bonus credited immediately on OTP verification (no OXXO cash-load required to unlock it).
+Underneath the payment layer sits the real engine: PTI (Predictive Trust Index), a behavioral credit-scoring system that turns payment consistency, diversity of billers, and other behavioral signals into a trust/creditworthiness score. PTI is being built as a standalone, licensable product — it's now at v5.0-rc1, and importantly it's designed to sit outside Banxico's SIC (credit bureau) authorization requirement by operating as a "predictive indicator of payment capacity" rather than a credit history/report — a deliberate regulatory-moat play.
+On top of PTI is Paula, a WhatsApp-based "Trust Trajectory Counselor" — she runs users through a financial literacy curriculum (Modules 1–5, PTI-gated), tells them what's missing to qualify for credit (NOT_YET → APPROACHING → READY), and eventually facilitates consent-based handoff to a lending partner once someone hits the readiness bar (PTI ≥ 80, 90-day streak, ≥3 billers, KYC complete, fraud-free, literacy ≥ 3).
+Recent milestones
+
+Fair-lending remediation on PTI just wrapped: a compensatory gating package delivered roughly a 9x improvement in the four-fifths fairness ratio, at a ~9.7% cost in handoff volume — externally certified by Dr. Douglas Franklin (July 11, 2026).
+PTI is live in shadow mode in production; the next step (Phase E, the live flip) is waiting on Meta's approval of the WhatsApp transition template plus your go-order.
+Paula's outbound WhatsApp system (23 Meta-approved templates) went live July 10, 2026.
+Compliance item still open: the HMAC-SHA256 fix for pti_export_safe (moving off a hardcoded salt) needs to close out before any B2B data licensing starts.
+
+Traction, honestly stated
+Soft launch has been modest so far — 11 real users between May 8 and June 30, only 3 wallet transactions total, none past the wallet-load stage. This reads as early data-maturity rather than a product problem, but it's worth being upfront about rather than glossing over if this profile is investor-facing. Separately, there've been 3 organic signups from Monterrey via SEO landing pages at zero CAC — a small but real signal.
+Team & structure
+PagoYa sits under Longview Meridian Holdings, LLC, your Texas-based holding company, alongside PagoSeguro (rent collection, Puerto Vallarta/Riviera Nayarit), MAHALI (Tanzania proptech), and PTI itself as a spinout-able B2B licensing product.
+The raise
+Positioning is a $3M–$5M PTI-standalone valuation, $5M–$8M for the portfolio, bridging toward an $8M–$20M Series A — contingent on landing 3–5 signed licensing contracts and completing MFI backtest validation. Comparable benchmarks you've used: Nova Credit (~$200–295M on pure licensing) and Esusu (~$1B via embedded finance stacking).
