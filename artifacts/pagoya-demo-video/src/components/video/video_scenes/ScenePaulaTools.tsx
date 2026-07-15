@@ -25,6 +25,7 @@ export function ScenePaulaTools() {
     { icon: '📲', name: 'get_deposit_instructions', desc: 'OXXO / SPEI / card funding steps' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Stages payment + gift cards with 2FA' },
     { icon: '🤝', name: 'escalate_to_support', desc: 'Hands off to human with full context' },
+    { icon: '📊', name: 'get_pti_score', desc: 'PTI score + real-time improvement tips' },
   ] : [
     { icon: '💰', name: 'get_wallet_balance', desc: 'Saldo MXN en tiempo real de la DB' },
     { icon: '📋', name: 'get_payment_history', desc: 'Últimas transacciones narradas en español' },
@@ -33,6 +34,7 @@ export function ScenePaulaTools() {
     { icon: '📲', name: 'get_deposit_instructions', desc: 'Pasos para cargar vía OXXO / SPEI / tarjeta' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Prepara pago de facturas y gift cards con 2FA' },
     { icon: '🤝', name: 'escalate_to_support', desc: 'Traspasa a agente humano con contexto completo' },
+    { icon: '📊', name: 'get_pti_score', desc: 'Score PTI + consejos de mejora en tiempo real' },
   ];
 
   return (
@@ -54,29 +56,30 @@ export function ScenePaulaTools() {
         transition={{ duration: 0.4 }}
       >
         <span style={{ color: C, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>
-          {lang === 'en' ? 'Paula · 7 Live Tools' : 'Paula · 7 Herramientas en Vivo'}
+          {lang === 'en' ? 'Paula · 8 Live Tools' : 'Paula · 8 Herramientas en Vivo'}
         </span>
       </motion.div>
 
-      <div className="overflow-hidden mb-6">
+      <div className="overflow-hidden mb-5">
         <motion.h2
           style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.15, fontSize: 'clamp(26px, 3.2vw, 48px)' }}
           initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          {lang === 'en' ? <>Paula takes <span style={{ color: C }}>real actions.</span><br />Not just answers.</> : <>Paula toma <span style={{ color: C }}>acciones reales.</span><br />No solo responde.</>}
+          {lang === 'en'
+            ? <>Paula takes <span style={{ color: C }}>real actions.</span><br />Not just answers.</>
+            : <>Paula toma <span style={{ color: C }}>acciones reales.</span><br />No solo responde.</>}
         </motion.h2>
       </div>
 
-      {/* Tools grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', width: '100%', maxWidth: 900 }}>
+      {/* Tools grid — 4 columns, 2 rows */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', width: '100%', maxWidth: 920 }}>
         {tools.map((tool, i) => (
           <motion.div key={tool.name}
             className="rounded-xl px-3 py-3"
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${i === 5 ? C + '55' : 'rgba(255,255,255,0.08)'}`,
-              gridColumn: i === 6 ? 'span 2' : 'span 1',
+              background: i === 5 ? `${C}0D` : i === 7 ? 'rgba(0,200,117,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${i === 5 || i === 7 ? C + '55' : 'rgba(255,255,255,0.08)'}`,
             }}
             initial={{ opacity: 0, y: 16, scale: 0.92 }}
             animate={{ opacity: phase >= 2 ? 1 : 0, y: phase >= 2 ? 0 : 16, scale: phase >= 2 ? 1 : 0.92 }}
@@ -84,7 +87,7 @@ export function ScenePaulaTools() {
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span style={{ fontSize: 16 }}>{tool.icon}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: i === 5 ? C : 'rgba(255,255,255,0.85)', fontSize: 'clamp(9px, 0.75vw, 11px)', fontWeight: 700 }}>{tool.name}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: i === 5 || i === 7 ? C : 'rgba(255,255,255,0.85)', fontSize: 'clamp(9px, 0.75vw, 11px)', fontWeight: 700 }}>{tool.name}</span>
             </div>
             <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(9px, 0.7vw, 11px)', lineHeight: 1.4 }}>{tool.desc}</p>
           </motion.div>
@@ -92,13 +95,13 @@ export function ScenePaulaTools() {
       </div>
 
       <motion.p
-        style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.3)', fontSize: 'clamp(10px, 0.85vw, 12px)', marginTop: 16, textAlign: 'center' }}
+        style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.3)', fontSize: 'clamp(10px, 0.85vw, 12px)', marginTop: 14, textAlign: 'center' }}
         initial={{ opacity: 0 }} animate={{ opacity: phase >= 3 ? 1 : 0 }}
         transition={{ duration: 0.5 }}
       >
         {lang === 'en'
-          ? 'In WhatsApp and in-app · localStorage session memory · post-payment retention hook · 2FA deterministic at session layer'
-          : 'En WhatsApp y en la app · memoria de sesión en localStorage · hook de retención post-pago · 2FA determinista en capa de sesión'}
+          ? 'Every interaction = a PTI signal · WhatsApp + in-app · 2FA · session memory · post-payment retention'
+          : 'Cada interacción = una señal PTI · WhatsApp + app · 2FA · memoria de sesión · retención post-pago'}
       </motion.p>
     </motion.div>
   );

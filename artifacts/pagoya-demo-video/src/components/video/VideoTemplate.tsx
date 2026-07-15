@@ -12,9 +12,11 @@ import { Scene6 } from './video_scenes/Scene6';
 import { SceneGiftCards } from './video_scenes/SceneGiftCards';
 import { Scene7 } from './video_scenes/Scene7';
 import { ScenePaulaTools } from './video_scenes/ScenePaulaTools';
+import { ScenePTICoach } from './video_scenes/ScenePTICoach';
 import { Scene10 } from './video_scenes/Scene10';
 import { Scene11 } from './video_scenes/Scene11';
 import { SceneStreetTeam } from './video_scenes/SceneStreetTeam';
+import { SceneAPIMarket } from './video_scenes/SceneAPIMarket';
 import { Scene13 } from './video_scenes/Scene13';
 import logoPng from '@assets/pagoya_logo_transparent.png';
 
@@ -28,10 +30,12 @@ export const SCENE_DURATIONS: Record<string, number> = {
   scene7: 16000,
   scene8: 12000,
   scene9: 14000,
-  scene10: 13000,
-  scene11: 11000,
-  scene12: 13000,
-  scene13: 15000,
+  scene10: 15000,
+  scene11: 13000,
+  scene12: 11000,
+  scene13: 13000,
+  scene14: 15000,
+  scene15: 15000,
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
@@ -44,18 +48,20 @@ const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
   scene7: SceneGiftCards,
   scene8: Scene7,
   scene9: ScenePaulaTools,
-  scene10: Scene10,
-  scene11: Scene11,
-  scene12: SceneStreetTeam,
-  scene13: Scene13,
+  scene10: ScenePTICoach,
+  scene11: Scene10,
+  scene12: Scene11,
+  scene13: SceneStreetTeam,
+  scene14: SceneAPIMarket,
+  scene15: Scene13,
 };
 
-const GX = ['0vw','20vw','-20vw','0vw','10vw','-10vw','0vw','20vw','-20vw','0vw','10vw','-10vw','0vw'];
-const GY = ['0vh','-20vh','20vh','0vh','10vh','-10vh','0vh','-20vh','20vh','0vh','10vh','-10vh','0vh'];
-const GS = [1,1.2,0.8,1,1.1,0.9,1,1.2,0.8,1,1.1,0.9,1];
-const OX = ['20vw','-20vw','0vw','20vw','-10vw','10vw','20vw','-20vw','0vw','20vw','-10vw','10vw','20vw'];
-const OY = ['20vh','0vh','-20vh','20vh','10vh','-10vh','20vh','0vh','-20vh','20vh','10vh','-10vh','20vh'];
-const OS = [0.8,1,1.2,0.9,1.1,1,0.8,1,1.2,0.9,1.1,1,0.8];
+const GX = ['0vw','20vw','-20vw','0vw','10vw','-10vw','0vw','20vw','-20vw','0vw','10vw','-10vw','0vw','15vw','-15vw'];
+const GY = ['0vh','-20vh','20vh','0vh','10vh','-10vh','0vh','-20vh','20vh','0vh','10vh','-10vh','0vh','-10vh','10vh'];
+const GS = [1,1.2,0.8,1,1.1,0.9,1,1.2,0.8,1,1.1,0.9,1,1.15,0.85];
+const OX = ['20vw','-20vw','0vw','20vw','-10vw','10vw','20vw','-20vw','0vw','20vw','-10vw','10vw','20vw','-15vw','15vw'];
+const OY = ['20vh','0vh','-20vh','20vh','10vh','-10vh','20vh','0vh','-20vh','20vh','10vh','-10vh','20vh','15vh','-10vh'];
+const OS = [0.8,1,1.2,0.9,1.1,1,0.8,1,1.2,0.9,1.1,1,0.8,1.1,0.9];
 
 interface VideoTemplateProps {
   durations?: Record<string, number>;
@@ -105,7 +111,7 @@ export default function VideoTemplate({ lang = 'es' }: VideoTemplateProps) {
             left: 28,
             zIndex: 9999,
             pointerEvents: 'none',
-            opacity: currentScene === 0 || currentScene === 12 ? 0 : 1,
+            opacity: currentScene === 0 || currentScene === 14 ? 0 : 1,
             transition: 'opacity 0.5s ease',
           }}
         >

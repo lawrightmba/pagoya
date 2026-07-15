@@ -18,13 +18,15 @@ export function Scene10() {
   }, []);
 
   const streams = lang === 'en' ? [
-    { label: 'Bill Payment Fee', value: '$25 MXN', sub: '~$1.35 USD · per transaction', color: C, width: '100%' },
-    { label: 'Gift Card Margin', value: '~40%', sub: 'Wholesale spread on 9 brands · 32 SKUs', color: '#A78BFA', width: '70%' },
-    { label: 'PagoSeguro Brokerage', value: '2.75%', sub: 'Rent & P2P collection · coming soon', color: '#FF5C1A', width: '45%' },
+    { label: 'Bill Payment Fee', value: '$25 MXN', sub: '~$1.35 USD · per transaction · LIVE', color: C, width: '100%', badge: 'ACTIVE' },
+    { label: 'Gift Card Margin', value: '~40%', sub: 'Wholesale spread · 9 brands · 32 SKUs · LIVE', color: '#A78BFA', width: '70%', badge: 'ACTIVE' },
+    { label: 'PTI API License', value: 'B2B', sub: 'Behavioral data · SOFOMs · insurers · neobancos', color: '#FF5C1A', width: '55%', badge: 'ACTIVE' },
+    { label: 'Credit Origination', value: '2–4%', sub: 'Lending marketplace · Q1 2027', color: '#FCD34D', width: '35%', badge: '2027' },
   ] : [
-    { label: 'Comisión por pago de facturas', value: '$25 MXN', sub: '~$1.35 USD · por transacción', color: C, width: '100%' },
-    { label: 'Margen tarjetas de regalo', value: '~40%', sub: 'Diferencial wholesale · 9 marcas · 32 SKUs', color: '#A78BFA', width: '70%' },
-    { label: 'Corretaje PagoSeguro', value: '2.75%', sub: 'Cobro de renta y P2P · próximamente', color: '#FF5C1A', width: '45%' },
+    { label: 'Comisión por pago de facturas', value: '$25 MXN', sub: '~$1.35 USD · por transacción · EN VIVO', color: C, width: '100%', badge: 'ACTIVO' },
+    { label: 'Margen tarjetas de regalo', value: '~40%', sub: 'Diferencial wholesale · 9 marcas · 32 SKUs · EN VIVO', color: '#A78BFA', width: '70%', badge: 'ACTIVO' },
+    { label: 'Licencia API PTI', value: 'B2B', sub: 'Datos conductuales · SOFOMs · aseguradoras · neobancos', color: '#FF5C1A', width: '55%', badge: 'ACTIVO' },
+    { label: 'Originación de crédito', value: '2–4%', sub: 'Marketplace para prestamistas · T1 2027', color: '#FCD34D', width: '35%', badge: '2027' },
   ];
 
   const economics = lang === 'en' ? [
@@ -72,7 +74,9 @@ export function Scene10() {
               animate={{ y: phase >= 1 ? '0%' : '110%' }}
               transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
             >
-              {lang === 'en' ? <>3 streams.<br /><span style={{ color: C }}>All live.</span></> : <>3 fuentes.<br /><span style={{ color: C }}>Todas activas.</span></>}
+              {lang === 'en'
+                ? <>4 streams.<br /><span style={{ color: C }}>3 active now.</span></>
+                : <>4 fuentes.<br /><span style={{ color: C }}>3 activas hoy.</span></>}
             </motion.h2>
           </div>
 
@@ -82,12 +86,23 @@ export function Scene10() {
                 key={i}
                 initial={{ opacity: 0, x: -18 }}
                 animate={{ opacity: phase >= 1 ? 1 : 0, x: phase >= 1 ? 0 : -18 }}
-                transition={{ duration: 0.5, delay: 0.15 + i * 0.12 }}
+                transition={{ duration: 0.5, delay: 0.12 + i * 0.12 }}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(11px, 1vw, 15px)', fontWeight: 500 }}>
-                    {s.label}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(11px, 1vw, 14px)', fontWeight: 500 }}>
+                      {s.label}
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 'clamp(8px, 0.7vw, 10px)',
+                      color: s.badge === '2027' ? '#FCD34D' : C,
+                      background: s.badge === '2027' ? 'rgba(252,211,77,0.12)' : `${C}18`,
+                      border: `1px solid ${s.badge === '2027' ? 'rgba(252,211,77,0.3)' : C + '40'}`,
+                      borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em',
+                    }}>
+                      {s.badge}
+                    </span>
+                  </div>
                   <span style={{ fontFamily: 'var(--font-display)', color: s.color, fontWeight: 800, fontSize: 'clamp(13px, 1.3vw, 19px)' }}>
                     {s.value}
                   </span>

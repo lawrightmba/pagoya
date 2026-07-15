@@ -5,6 +5,43 @@ import { useLang } from '@/lib/video/LangContext';
 const C = '#00C875';
 const CD = '#007A4A';
 
+function PaulaAvatarSmall() {
+  return (
+    <div style={{ position: 'relative', width: 36, height: 36 }}>
+      <motion.div
+        style={{
+          position: 'absolute', inset: -3, borderRadius: '50%',
+          border: `1.5px solid ${C}`,
+          opacity: 0.5,
+        }}
+        animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.1, 0.5] }}
+        transition={{ duration: 2.2, repeat: Infinity }}
+      />
+      <div style={{
+        width: 36, height: 36, borderRadius: '50%',
+        background: `linear-gradient(135deg, ${CD}, ${C})`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ display: 'flex', gap: 5, marginBottom: 3 }}>
+          {[0, 0.3].map((d, i) => (
+            <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }}
+              animate={{ opacity: [1, 0.4, 1], scale: [1, 0.8, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity, delay: d }} />
+          ))}
+        </div>
+        <motion.div style={{
+          position: 'absolute', bottom: 8, width: 12, height: 5,
+          borderBottom: '2px solid rgba(255,255,255,0.7)',
+          borderRadius: '0 0 6px 6px',
+        }}
+          animate={{ scaleX: [1, 1.1, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity }} />
+      </div>
+    </div>
+  );
+}
+
 export function ScenePaula() {
   const lang = useLang();
   const [phase, setPhase] = useState(0);
@@ -12,6 +49,7 @@ export function ScenePaula() {
   const [showTyping, setShowTyping] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [showCard, setShowCard] = useState(false);
+  const [showPTIBadge, setShowPTIBadge] = useState(false);
 
   const userMsg = lang === 'en' ? 'I need to pay my CFE electricity bill' : 'necesito pagar mi CFE';
   const paulaReply = lang === 'en'
@@ -30,7 +68,7 @@ export function ScenePaula() {
     const iv = setInterval(() => {
       i++;
       setTyped(userMsg.slice(0, i));
-      if (i >= userMsg.length) { clearInterval(iv); }
+      if (i >= userMsg.length) clearInterval(iv);
     }, 55);
     return () => clearInterval(iv);
   }, [phase, userMsg]);
@@ -40,7 +78,8 @@ export function ScenePaula() {
     const t1 = setTimeout(() => setShowTyping(true), 600);
     const t2 = setTimeout(() => { setShowTyping(false); setShowReply(true); }, 2400);
     const t3 = setTimeout(() => setShowCard(true), 3800);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t4 = setTimeout(() => setShowPTIBadge(true), 5200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [typed, userMsg]);
 
   return (
@@ -52,7 +91,6 @@ export function ScenePaula() {
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Ambient glow */}
       <motion.div className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse 70% 60% at 30% 50%, rgba(0,200,117,0.12) 0%, transparent 70%)' }}
         animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 5, repeat: Infinity }} />
@@ -76,7 +114,9 @@ export function ScenePaula() {
             initial={{ y: '110%' }} animate={{ y: phase >= 1 ? '0%' : '110%' }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            {lang === 'en' ? <>Your AI<br /><span style={{ color: C }}>financial</span><br />agent</> : <>Tu agente<br /><span style={{ color: C }}>financiero</span><br />con IA</>}
+            {lang === 'en'
+              ? <>Your AI<br /><span style={{ color: C }}>financial</span><br />agent</>
+              : <>Tu agente<br /><span style={{ color: C }}>financiero</span><br />con IA</>}
           </motion.h1>
         </div>
 
@@ -86,8 +126,8 @@ export function ScenePaula() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           {lang === 'en'
-            ? 'Paula lives in WhatsApp. No app. No bank account. Real payments in 2 minutes.'
-            : 'Paula vive en WhatsApp. Sin app. Sin cuenta bancaria. Pagos reales en 2 minutos.'}
+            ? 'Paula lives in WhatsApp. No app. No bank account. Real payments — and every one builds your credit score.'
+            : 'Paula vive en WhatsApp. Sin app. Sin cuenta bancaria. Pagos reales — y cada uno construye tu puntaje de crédito.'}
         </motion.p>
 
         <motion.div className="flex items-center gap-2 mt-6"
@@ -96,9 +136,28 @@ export function ScenePaula() {
         >
           <div className="w-2 h-2 rounded-full" style={{ background: C }} />
           <span style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem', letterSpacing: '0.08em' }}>
-            Powered by Claude claude-sonnet-4-5 · Anthropic
+            {lang === 'en' ? 'AI agent + PTI credit coach' : 'Agente IA + coach de crédito PTI'}
           </span>
         </motion.div>
+
+        {/* PTI badge - appears after payment */}
+        <AnimatePresence>
+          {showPTIBadge && (
+            <motion.div
+              className="inline-flex self-start items-center gap-2 mt-5 px-4 py-2.5 rounded-xl"
+              style={{ background: `${C}15`, border: `1px solid ${C}50` }}
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <motion.div style={{ width: 8, height: 8, borderRadius: '50%', background: C }}
+                animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
+              <span style={{ fontFamily: 'var(--font-body)', color: C, fontWeight: 700, fontSize: 'clamp(11px, 0.95vw, 14px)' }}>
+                {lang === 'en' ? 'PTI +3 pts · Payment recorded' : 'PTI +3 pts · Pago registrado'}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* RIGHT — WhatsApp phone mockup */}
@@ -111,16 +170,15 @@ export function ScenePaula() {
         >
           {/* WhatsApp header */}
           <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#1F2C34', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: `linear-gradient(135deg, ${CD}, ${C})` }}>P</div>
+            <PaulaAvatarSmall />
             <div>
               <p style={{ fontFamily: 'var(--font-body)', color: 'white', fontWeight: 700, fontSize: 14 }}>Paula · PagoYa</p>
-              <p style={{ fontFamily: 'var(--font-body)', color: C, fontSize: 11 }}>● online</p>
+              <p style={{ fontFamily: 'var(--font-body)', color: C, fontSize: 11 }}>● {lang === 'en' ? 'online · PTI coach' : 'en línea · coach PTI'}</p>
             </div>
           </div>
 
           {/* Chat messages */}
           <div className="flex flex-col gap-3 px-4 py-4" style={{ minHeight: 220 }}>
-            {/* User message */}
             <AnimatePresence>
               {phase >= 2 && (
                 <motion.div className="self-end max-w-[78%]"
@@ -129,13 +187,14 @@ export function ScenePaula() {
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <div className="px-3 py-2 rounded-2xl rounded-tr-sm" style={{ background: '#005C4B' }}>
-                    <p style={{ fontFamily: 'var(--font-body)', color: 'white', fontSize: 13, lineHeight: 1.4 }}>{typed}<span className={typed.length < userMsg.length ? 'animate-pulse' : ''} style={{ opacity: typed.length < userMsg.length ? 1 : 0 }}>|</span></p>
+                    <p style={{ fontFamily: 'var(--font-body)', color: 'white', fontSize: 13, lineHeight: 1.4 }}>
+                      {typed}<span className={typed.length < userMsg.length ? 'animate-pulse' : ''} style={{ opacity: typed.length < userMsg.length ? 1 : 0 }}>|</span>
+                    </p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Typing indicator */}
             <AnimatePresence>
               {showTyping && (
                 <motion.div className="self-start"
@@ -152,7 +211,6 @@ export function ScenePaula() {
               )}
             </AnimatePresence>
 
-            {/* Paula reply */}
             <AnimatePresence>
               {showReply && (
                 <motion.div className="self-start max-w-[85%]"
@@ -169,7 +227,6 @@ export function ScenePaula() {
               )}
             </AnimatePresence>
 
-            {/* SÍ / CANCELAR card */}
             <AnimatePresence>
               {showCard && (
                 <motion.div className="self-start w-full"

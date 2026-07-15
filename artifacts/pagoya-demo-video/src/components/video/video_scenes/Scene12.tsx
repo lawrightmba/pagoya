@@ -116,7 +116,7 @@ export function Scene12() {
           animate={{ opacity: phase >= 5 ? 1 : 0 }}
           transition={{ duration: 0.7 }}
         >
-          {['YC S25', '52M potential users', 'Mexico · Latam'].map((tag, i) => (
+          {['54M potential users', 'Mexico · LATAM', 'PTI B2B'].map((tag, i) => (
             <motion.div
               key={i}
               className="px-4 py-2 rounded-full"

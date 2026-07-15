@@ -21,19 +21,19 @@ export function Scene13() {
   }, []);
 
   const tiles = lang === 'en' ? [
-    { icon: '💳', value: 'Stripe Live', sub: 'Card payments activated May 31', color: C },
-    { icon: '🎁', value: '9 Brands', sub: 'Gift cards · 40%+ margins', color: '#A78BFA' },
-    { icon: '🤖', value: 'Paula', sub: '7 tools · WhatsApp + in-app', color: '#60A5FA' },
-    { icon: '🏘️', value: 'Street Team', sub: '$5/payment · community model', color: '#FF5C1A' },
-    { icon: '✅', value: '17/17', sub: 'Smoke tests passing · June 2, 2026', color: '#34D399' },
-    { icon: '⚡', value: '3 events', sub: 'STP · Belvo · RENAPO from scale', color: '#FCD34D' },
+    { icon: '💳', value: 'Stripe Live', sub: 'Card payments · bill pay active', color: C },
+    { icon: '📊', value: 'PTI v5.0', sub: 'Fair-lending certified · July 2026', color: '#34D399' },
+    { icon: '🤖', value: 'Paula', sub: '8 tools · PTI coach · WhatsApp + app', color: '#60A5FA' },
+    { icon: '🏘️', value: 'Street Team', sub: 'CAC ≈ $0 · community model', color: '#FF5C1A' },
+    { icon: '🎁', value: '9 Brands', sub: 'Gift cards · 40%+ margins live', color: '#A78BFA' },
+    { icon: '🔌', value: 'B2B API', sub: 'PTI data licensing · pilots open', color: '#FCD34D' },
   ] : [
-    { icon: '💳', value: 'Stripe Activo', sub: 'Pagos con tarjeta desde el 31 mayo', color: C },
-    { icon: '🎁', value: '9 Marcas', sub: 'Gift cards · márgenes 40%+', color: '#A78BFA' },
-    { icon: '🤖', value: 'Paula', sub: '7 herramientas · WhatsApp + app', color: '#60A5FA' },
-    { icon: '🏘️', value: 'Equipo de campo', sub: '$5/pago · modelo comunitario', color: '#FF5C1A' },
-    { icon: '✅', value: '17/17', sub: 'Pruebas smoke · 2 junio 2026', color: '#34D399' },
-    { icon: '⚡', value: '3 eventos', sub: 'STP · Belvo · RENAPO para escalar', color: '#FCD34D' },
+    { icon: '💳', value: 'Stripe Activo', sub: 'Pagos con tarjeta · pago de facturas', color: C },
+    { icon: '📊', value: 'PTI v5.0', sub: 'Certificado fair-lending · julio 2026', color: '#34D399' },
+    { icon: '🤖', value: 'Paula', sub: '8 herramientas · coach PTI · WhatsApp + app', color: '#60A5FA' },
+    { icon: '🏘️', value: 'Equipo de campo', sub: 'CAC ≈ $0 · modelo comunitario', color: '#FF5C1A' },
+    { icon: '🎁', value: '9 Marcas', sub: 'Gift cards · márgenes 40%+ activos', color: '#A78BFA' },
+    { icon: '🔌', value: 'API B2B', sub: 'Licencia datos PTI · pilotos abiertos', color: '#FCD34D' },
   ];
 
   return (
@@ -45,7 +45,6 @@ export function Scene13() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.7 }}
     >
-      {/* Rings */}
       {[
         { w: '72vw', h: '72vw', opacity: 0.08, delay: 0 },
         { w: '52vw', h: '52vw', opacity: 0.10, delay: 0.3 },
@@ -63,7 +62,6 @@ export function Scene13() {
         animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 4, repeat: Infinity }} />
 
       <div className="relative z-10 flex flex-col items-center w-full px-[6vw]">
-        {/* Logo */}
         <motion.div className="mb-5"
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: phase >= 1 ? 1 : 0.6, opacity: phase >= 1 ? 1 : 0 }}
@@ -72,14 +70,15 @@ export function Scene13() {
           <img src={logoPng} alt="PagoYa" style={{ height: 'clamp(44px, 5.5vh, 72px)', width: 'auto', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.5))' }} />
         </motion.div>
 
-        {/* Headline */}
         <div className="overflow-hidden mb-2">
           <motion.h1
             style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', textAlign: 'center', lineHeight: 1.15, fontSize: 'clamp(38px, 5.5vw, 80px)' }}
             initial={{ y: '110%' }} animate={{ y: phase >= 2 ? '0%' : '110%' }}
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
           >
-            {lang === 'en' ? <>Live. Revenue.<br /><span style={{ color: C }}>June 2026.</span></> : <>En vivo. Ingresos.<br /><span style={{ color: C }}>Junio 2026.</span></>}
+            {lang === 'en'
+              ? <>Live. Revenue.<br /><span style={{ color: C }}>PTI v5.0.</span></>
+              : <>En vivo. Ingresos.<br /><span style={{ color: C }}>PTI v5.0.</span></>}
           </motion.h1>
         </div>
 
@@ -89,11 +88,10 @@ export function Scene13() {
           transition={{ duration: 0.55 }}
         >
           {lang === 'en'
-            ? 'The infrastructure supports thousands of transactions per day. Distribution is what starts now.'
-            : 'La infraestructura soporta miles de transacciones por día. La distribución comienza ahora.'}
+            ? 'The infrastructure supports thousands of transactions per day. The data asset grows with every payment.'
+            : 'La infraestructura soporta miles de transacciones por día. El activo de datos crece con cada pago.'}
         </motion.p>
 
-        {/* 6 tile grid */}
         <motion.div
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', width: '100%', maxWidth: 740, marginBottom: 20 }}
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: phase >= 3 ? 1 : 0, y: phase >= 3 ? 0 : 16 }}
@@ -116,7 +114,6 @@ export function Scene13() {
           ))}
         </motion.div>
 
-        {/* CTA + tags */}
         <motion.div className="flex items-center gap-5 mb-4"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: phase >= 4 ? 1 : 0, y: phase >= 4 ? 0 : 12 }}
           transition={{ duration: 0.5 }}
@@ -130,7 +127,7 @@ export function Scene13() {
           </motion.div>
           <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.12)' }} />
           <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.35)', fontSize: 'clamp(11px, 1vw, 14px)' }}>
-            Longview Meridian Technologies LLC
+            Longview Meridian Holdings LLC
           </p>
         </motion.div>
 
@@ -139,7 +136,8 @@ export function Scene13() {
           transition={{ duration: 0.6 }}
         >
           {[
-            lang === 'en' ? 'YC S26' : 'YC S26',
+            lang === 'en' ? 'PTI B2B' : 'PTI B2B',
+            lang === 'en' ? 'Data licensing live' : 'Datos en licencia',
             lang === 'en' ? '54M potential users' : '54M usuarios potenciales',
             lang === 'en' ? 'Mexico · LATAM' : 'México · LATAM',
             lang === 'en' ? 'Built by 1 founder + AI' : 'Construido por 1 fundador + IA',
