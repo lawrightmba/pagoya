@@ -36,11 +36,11 @@ export function Scene2() {
 
   const stats = lang === 'en' ? [
     { value: 40, suffix: 'B', prefix: '$', label: 'payments market in Mexico', unit: 'USD', color: C },
-    { value: 54, suffix: 'M', prefix: '', label: 'adults without a bank account', unit: 'people', color: O },
+    { value: 65, suffix: 'M', prefix: '', label: 'adults without a bank account', unit: 'people', color: O },
     { value: 45, suffix: ' min', prefix: '', label: 'average time per payment', unit: 'avg wait', color: '#818CF8' },
   ] : [
     { value: 40, suffix: 'B', prefix: '$', label: 'mercado de pagos en México', unit: 'USD', color: C },
-    { value: 54, suffix: 'M', prefix: '', label: 'adultos sin cuenta bancaria', unit: 'personas', color: O },
+    { value: 65, suffix: 'M', prefix: '', label: 'adultos sin cuenta bancaria', unit: 'personas', color: O },
     { value: 45, suffix: ' min', prefix: '', label: 'tiempo promedio por pago', unit: 'espera', color: '#818CF8' },
   ];
 

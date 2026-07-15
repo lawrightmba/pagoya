@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useLang } from '@/lib/video/LangContext';
+import paulaAvatarSrc from '@assets/image_1784142661984.png';
 
 const C = '#00C875';
-const CD = '#007A4A';
 
 function PaulaAvatarSmall() {
   return (
@@ -12,31 +12,16 @@ function PaulaAvatarSmall() {
         style={{
           position: 'absolute', inset: -3, borderRadius: '50%',
           border: `1.5px solid ${C}`,
-          opacity: 0.5,
         }}
-        animate={{ scale: [1, 1.25, 1], opacity: [0.5, 0.1, 0.5] }}
+        animate={{ scale: [1, 1.28, 1], opacity: [0.5, 0.08, 0.5] }}
         transition={{ duration: 2.2, repeat: Infinity }}
       />
       <div style={{
         width: 36, height: 36, borderRadius: '50%',
-        background: `linear-gradient(135deg, ${CD}, ${C})`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden',
+        overflow: 'hidden',
+        border: `2px solid ${C}55`,
       }}>
-        <div style={{ display: 'flex', gap: 5, marginBottom: 3 }}>
-          {[0, 0.3].map((d, i) => (
-            <motion.div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }}
-              animate={{ opacity: [1, 0.4, 1], scale: [1, 0.8, 1] }}
-              transition={{ duration: 1.8, repeat: Infinity, delay: d }} />
-          ))}
-        </div>
-        <motion.div style={{
-          position: 'absolute', bottom: 8, width: 12, height: 5,
-          borderBottom: '2px solid rgba(255,255,255,0.7)',
-          borderRadius: '0 0 6px 6px',
-        }}
-          animate={{ scaleX: [1, 1.1, 1] }}
-          transition={{ duration: 2.5, repeat: Infinity }} />
+        <img src={paulaAvatarSrc} alt="Paula" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
       </div>
     </div>
   );

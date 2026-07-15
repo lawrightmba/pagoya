@@ -1,51 +1,30 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useLang } from '@/lib/video/LangContext';
+import paulaAvatarSrc from '@assets/image_1784142661984.png';
 
 const C = '#00C875';
-const CD = '#007A4A';
 
 function PaulaAvatarLarge() {
   return (
     <div style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
-      {[1.6, 1.3].map((s, i) => (
+      {[1.55, 1.25].map((s, i) => (
         <motion.div key={i} style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: '50%',
+          position: 'absolute', inset: 0, borderRadius: '50%',
           border: `1.5px solid ${C}`,
         }}
-          animate={{ scale: [s, s * 1.12, s], opacity: [0.25, 0.05, 0.25] }}
+          animate={{ scale: [s, s * 1.12, s], opacity: [0.3, 0.05, 0.3] }}
           transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.7 }}
         />
       ))}
       <div style={{
         width: 88, height: 88, borderRadius: '50%',
-        background: `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden',
-        boxShadow: `0 0 32px ${C}55`,
+        overflow: 'hidden',
+        border: `3px solid ${C}`,
+        boxShadow: `0 0 28px ${C}55`,
+        position: 'relative',
       }}>
-        <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
-          {[0, 0.35].map((d, i) => (
-            <motion.div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: 'white' }}
-              animate={{ opacity: [1, 0.3, 1], scaleY: [1, 0.2, 1] }}
-              transition={{ duration: 2.2, repeat: Infinity, delay: d }} />
-          ))}
-        </div>
-        <motion.div style={{
-          width: 22, height: 9,
-          borderBottom: '2.5px solid rgba(255,255,255,0.8)',
-          borderRadius: '0 0 11px 11px',
-        }}
-          animate={{ scaleX: [1, 1.1, 1] }}
-          transition={{ duration: 3, repeat: Infinity }} />
-        <motion.div style={{
-          position: 'absolute', bottom: 12, left: 10, right: 10,
-          height: 2, background: 'rgba(255,255,255,0.15)', borderRadius: 2,
-        }}
-          animate={{ scaleX: [0, 1, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }} />
+        <img src={paulaAvatarSrc} alt="Paula" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
       </div>
     </div>
   );
