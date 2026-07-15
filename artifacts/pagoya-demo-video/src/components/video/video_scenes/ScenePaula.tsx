@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useLang } from '@/lib/video/LangContext';
-import paulaAvatarSrc from '@assets/image_1784142661984.png';
+import paulaAvatarSrc from '@assets/image_1784143033276.png';
 
 const C = '#00C875';
 
@@ -21,7 +21,7 @@ function PaulaAvatarSmall() {
         overflow: 'hidden',
         border: `2px solid ${C}55`,
       }}>
-        <img src={paulaAvatarSrc} alt="Paula" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+        <img src={paulaAvatarSrc} alt="Paula" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }} />
       </div>
     </div>
   );

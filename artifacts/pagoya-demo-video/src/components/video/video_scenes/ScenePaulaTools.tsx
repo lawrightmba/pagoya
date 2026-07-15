@@ -24,8 +24,7 @@ export function ScenePaulaTools() {
     { icon: '⭐', name: 'get_loyalty_points', desc: 'Points, tier, and next-level progress' },
     { icon: '📲', name: 'get_deposit_instructions', desc: 'OXXO / SPEI / card funding steps' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Stages payment + gift cards with 2FA' },
-    { icon: '🤝', name: 'escalate_to_support', desc: 'Hands off to human with full context' },
-    { icon: '📊', name: 'get_pti_score', desc: 'PTI score + real-time improvement tips' },
+    { icon: '🤝', name: 'escalate_to_support', desc: 'Hands off to human agent with full context' },
   ] : [
     { icon: '💰', name: 'get_wallet_balance', desc: 'Saldo MXN en tiempo real de la DB' },
     { icon: '📋', name: 'get_payment_history', desc: 'Últimas transacciones narradas en español' },
@@ -34,7 +33,6 @@ export function ScenePaulaTools() {
     { icon: '📲', name: 'get_deposit_instructions', desc: 'Pasos para cargar vía OXXO / SPEI / tarjeta' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Prepara pago de facturas y gift cards con 2FA' },
     { icon: '🤝', name: 'escalate_to_support', desc: 'Traspasa a agente humano con contexto completo' },
-    { icon: '📊', name: 'get_pti_score', desc: 'Score PTI + consejos de mejora en tiempo real' },
   ];
 
   return (
@@ -56,7 +54,7 @@ export function ScenePaulaTools() {
         transition={{ duration: 0.4 }}
       >
         <span style={{ color: C, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>
-          {lang === 'en' ? 'Paula · 8 Live Tools' : 'Paula · 8 Herramientas en Vivo'}
+          {lang === 'en' ? 'Paula · 7 Live Tools' : 'Paula · 7 Herramientas en Vivo'}
         </span>
       </motion.div>
 
@@ -78,8 +76,9 @@ export function ScenePaulaTools() {
           <motion.div key={tool.name}
             className="rounded-xl px-3 py-3"
             style={{
-              background: i === 5 ? `${C}0D` : i === 7 ? 'rgba(0,200,117,0.08)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${i === 5 || i === 7 ? C + '55' : 'rgba(255,255,255,0.08)'}`,
+              background: i === 5 ? `${C}0D` : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${i === 5 ? C + '55' : 'rgba(255,255,255,0.08)'}`,
+              gridColumn: i === 6 ? 'span 2' : 'span 1',
             }}
             initial={{ opacity: 0, y: 16, scale: 0.92 }}
             animate={{ opacity: phase >= 2 ? 1 : 0, y: phase >= 2 ? 0 : 16, scale: phase >= 2 ? 1 : 0.92 }}
