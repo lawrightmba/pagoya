@@ -21,7 +21,7 @@ export function ScenePaulaTools() {
     { icon: '💰', name: 'get_wallet_balance', desc: 'Real-time MXN balance from the DB' },
     { icon: '📋', name: 'get_payment_history', desc: 'Last transactions, narrated in Spanish' },
     { icon: '🏪', name: 'get_pending_oxxo', desc: 'OXXO cash-in status check' },
-    { icon: '⭐', name: 'get_loyalty_points', desc: 'Points, tier, and next-level progress' },
+    { icon: '⭐', name: 'get_loyalty_points', desc: 'Points, tier & financial progress toward next milestone' },
     { icon: '📲', name: 'get_deposit_instructions', desc: 'OXXO / SPEI / card funding steps' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Stages payment + gift cards with 2FA' },
     { icon: '🤝', name: 'escalate_to_support', desc: 'Hands off to human agent with full context' },
@@ -29,7 +29,7 @@ export function ScenePaulaTools() {
     { icon: '💰', name: 'get_wallet_balance', desc: 'Saldo MXN en tiempo real de la DB' },
     { icon: '📋', name: 'get_payment_history', desc: 'Últimas transacciones narradas en español' },
     { icon: '🏪', name: 'get_pending_oxxo', desc: 'Estado de depósito OXXO pendiente' },
-    { icon: '⭐', name: 'get_loyalty_points', desc: 'Puntos, nivel y progreso siguiente nivel' },
+    { icon: '⭐', name: 'get_loyalty_points', desc: 'Puntos, nivel y progreso financiero al siguiente hito' },
     { icon: '📲', name: 'get_deposit_instructions', desc: 'Pasos para cargar vía OXXO / SPEI / tarjeta' },
     { icon: '⚡', name: 'prepare_bill_payment', desc: 'Prepara pago de facturas y gift cards con 2FA' },
     { icon: '🤝', name: 'escalate_to_support', desc: 'Traspasa a agente humano con contexto completo' },
@@ -54,7 +54,7 @@ export function ScenePaulaTools() {
         transition={{ duration: 0.4 }}
       >
         <span style={{ color: C, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-body)' }}>
-          {lang === 'en' ? 'Paula · 7 Live Tools' : 'Paula · 7 Herramientas en Vivo'}
+          {lang === 'en' ? 'Paula · 7 Live Actions' : 'Paula · 7 Acciones en Vivo'}
         </span>
       </motion.div>
 
@@ -86,7 +86,7 @@ export function ScenePaulaTools() {
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span style={{ fontSize: 16 }}>{tool.icon}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: i === 5 || i === 7 ? C : 'rgba(255,255,255,0.85)', fontSize: 'clamp(9px, 0.75vw, 11px)', fontWeight: 700 }}>{tool.name}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: i === 5 ? C : 'rgba(255,255,255,0.85)', fontSize: 'clamp(9px, 0.75vw, 11px)', fontWeight: 700 }}>{tool.name}</span>
             </div>
             <p style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(9px, 0.7vw, 11px)', lineHeight: 1.4 }}>{tool.desc}</p>
           </motion.div>
@@ -99,8 +99,8 @@ export function ScenePaulaTools() {
         transition={{ duration: 0.5 }}
       >
         {lang === 'en'
-          ? 'Every interaction = a PTI signal · WhatsApp + in-app · 2FA · session memory · post-payment retention'
-          : 'Cada interacción = una señal PTI · WhatsApp + app · 2FA · memoria de sesión · retención post-pago'}
+          ? '📚 Financial literacy coaching is ambient — woven into every response via live PTI context · 2FA · session memory'
+          : '📚 Coaching financiero siempre activo — integrado en cada respuesta via contexto PTI en tiempo real · 2FA · memoria de sesión'}
       </motion.p>
     </motion.div>
   );
