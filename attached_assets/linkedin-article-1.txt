@@ -98,6 +98,102 @@ ARTICLE 2 (publish Week 3)
 ======================================
 Title: What a PTI score actually measures — and why FICO doesn't work for cash-economy workers
 
-[To be written — DM or flag when ready to proceed]
+PASTE THIS AS YOUR OPENING LINES (before "see more" fold — do not change these):
+---------------------------------------------------------------------------
+A woman in Guadalajara has paid her electricity bill without fail for nineteen years.
+
+She has never missed a month. She has paid through two recessions, a pandemic, and three changes of government. She budgets for it the way most people budget for rent — because for her family, the lights staying on is not optional.
+
+Her FICO score equivalent: zero. Because she has never had a credit card. Because the system was never watching.
+---------------------------------------------------------------------------
+
+FULL ARTICLE BODY:
+---------------------------------------------------------------------------
+This is not a fringe case. This is the majority of working adults in Mexico.
+
+And it surfaces a problem that the credit industry has known about for decades but never had a clean answer to: FICO — and every bureau-based scoring model built on the same logic — was designed for a financial system that most of the world doesn't use.
+
+
+WHY FICO FAILS CASH-ECONOMY WORKERS
+
+FICO scores are generated from bureau data. Bureau data comes from lenders. Lenders report to bureaus when someone opens a card, takes a loan, misses a payment, or closes an account.
+
+If you have never done any of those things — because you live in a cash economy, because no one ever offered you a card, because the formal financial system treated you as invisible — you generate no bureau data. No bureau data means no score. No score means no credit. No credit means no score.
+
+It is a perfectly circular trap. And it is not a personal failure. It is a structural one.
+
+The credit gap in Mexico is not a gap in payment discipline. It is a gap in data coverage. The people most locked out of formal credit are frequently the most disciplined payers in the economy — they have to be, because they have no safety net. One missed utility payment means no water. Two missed payments means no electricity. There is no revolving credit line to float them through a hard month.
+
+That discipline is real. It is economically meaningful. And until recently, it was completely invisible.
+
+
+WHAT PTI ACTUALLY MEASURES
+
+PTI — the Predictive Trust Index — is a behavioral credit score built for people the bureaus have never seen.
+
+It does not ask: "Have you borrowed money before and paid it back?"
+
+It asks something different: "How do you behave with money when no one is offering you a structured product?"
+
+The score runs across four domains:
+
+Payment Reliability — not just whether you pay, but whether you pay early, on time, or under pressure. A payment made three days before the due date tells a different story than one made the same day the lights would go off.
+
+Behavioral Consistency — how stable your financial behavior is over time. Does your deposit timing follow a pattern? Do your payment amounts vary erratically, or are they disciplined and regular? Consistency is a signal that bureaus never capture because bureaus only see events, not patterns between events.
+
+Economic Diversity — how many distinct billers you manage. Someone who pays CFE, water, internet, and a streaming service across a rolling 90-day window is demonstrating something meaningful about their financial organization. That's not the same as someone paying one bill sporadically.
+
+Financial Engagement — how actively you engage with coaching, literacy content, and financial goal-setting. A person who completes a financial literacy module unprompted is signaling something about their future behavior that historical payment data alone cannot.
+
+These four signals combine into a single score. The score is not a FICO replacement — it is a complement, purpose-built for the population FICO was never designed to serve.
+
+
+THE REGULATORY STRUCTURE MATTERS
+
+PTI is deliberately designed to sit outside Mexico's SIC (credit bureau) authorization framework. It operates as a "predictive indicator of payment capacity" — not a regulated credit score — which means it can be licensed to financial institutions, MFIs, and fintechs without the regulatory overhead that would otherwise slow this by years.
+
+That distinction matters for the people being scored, too. A PTI score is not a judgment about your past. It is a forward-looking signal about your behavior. Those are meaningfully different things, and the distinction is built into how the model is constructed.
+
+We also completed external fair-lending certification in July 2026 — a compensatory gating framework that delivered a 9x improvement in the four-fifths fairness ratio. If a scoring model is going to be used in lending decisions for a population that has historically been excluded, it needs to meet a higher standard of equity than the models that excluded them in the first place.
+
+
+THE LARGER POINT
+
+Credit scoring is not a neutral technology. Every scoring model embeds assumptions about what financial behavior looks like and whose behavior is worth measuring.
+
+FICO assumed formal employment. It assumed bank accounts. It assumed that creditworthiness expressed itself through institutions. For the people those institutions chose to serve, that worked. For everyone else, it produced a permanent blind spot.
+
+PTI is one answer to that blind spot — built for a specific market, calibrated on real behavioral data, designed from the start with fair-lending constraints baked in. It is not the only answer. But it is a more honest one.
+
+The woman in Guadalajara with nineteen years of on-time electricity payments is not a credit risk. She is a data problem. And data problems, unlike character problems, can be solved.
+
+---------------------------------------------------------------------------
+SIGN-OFF LINE (after the body):
+
+If you're working in alternative credit, financial inclusion, or LATAM fintech — I'd enjoy the conversation. Connect or DM.
+
+---------------------------------------------------------------------------
+HASHTAGS (paste at the very bottom):
+
+#AlternativeCredit #FinancialInclusion #Fintech #CreditScoring #LATAM #Mexico #BehavioralData #UnbankedPopulation
+
+======================================
+POSTING GUIDE
+======================================
+
+BEST DAY: Tuesday or Wednesday (Week 3 — two weeks after Article 1)
+BEST TIME: 7:45–8:30 AM Central Time
+  → Catches CDMX at 8 AM and US East Coast at 9 AM simultaneously
+
+AVOID: Publishing within 5 days of Article 1 — give the first post time to breathe
+
+AFTER YOU PUBLISH:
+- Reply to every comment within the first 2 hours
+- Do NOT edit the post after publishing — editing resets the engagement clock
+- Share to LinkedIn Story 24 hours later: "For anyone who found Article 1 interesting — this is the technical follow-up."
+- This post will land differently than Article 1: Article 1 was emotional, this one is analytical. Tag 1–2 people in credit risk, alternative data, or LATAM lending — this is the post that will resonate with that audience specifically
+
+EXPECTED REACH:
+Analytical posts trend slightly lower on raw reach but significantly higher on qualified engagement — the people who comment on this one are the people you want to be talking to.
 
 ======================================
