@@ -12,7 +12,7 @@ export default function HeroPrideCTA({ lang }: Props) {
     <section
       style={{
         background: "linear-gradient(180deg, #004F2D 0%, #006B3C 100%)",
-        padding: "40px 24px 44px",
+        padding: "36px 24px 40px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
@@ -43,7 +43,7 @@ export default function HeroPrideCTA({ lang }: Props) {
           fontSize: "14px",
           color: "rgba(255,255,255,0.72)",
           lineHeight: 1.6,
-          margin: "0 0 28px",
+          margin: "0 0 24px",
           maxWidth: "300px",
         }}
       >
@@ -52,47 +52,33 @@ export default function HeroPrideCTA({ lang }: Props) {
           : "No bank account needed. No lines. Just you, taking care of what matters — wherever you are."}
       </p>
 
+      {/* Softer secondary action — trust closer, not competing CTA */}
       <button
-        onClick={() => navigate("/register")}
+        onClick={() => navigate("/pagar")}
         style={{
           fontFamily: "DM Sans, sans-serif",
-          background: "linear-gradient(135deg, #F5C842 0%, #E8A800 100%)",
-          color: "#3A2000",
-          border: "none",
-          borderRadius: "14px",
-          padding: "0 28px",
-          height: "52px",
-          fontSize: "16px",
-          fontWeight: 800,
+          background: "transparent",
+          color: "#6EF5B0",
+          border: "1.5px solid rgba(110,245,176,0.45)",
+          borderRadius: "10px",
+          padding: "10px 24px",
+          fontSize: "14px",
+          fontWeight: 700,
           cursor: "pointer",
           letterSpacing: "0.01em",
-          boxShadow: "0 4px 20px rgba(232,168,0,0.45)",
-          transition: "transform 0.12s, box-shadow 0.12s",
+          transition: "border-color 0.15s, color 0.15s",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.03)";
-          e.currentTarget.style.boxShadow = "0 6px 26px rgba(232,168,0,0.58)";
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = "rgba(110,245,176,0.80)";
+          e.currentTarget.style.color = "#FFFFFF";
         }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "0 4px 20px rgba(232,168,0,0.45)";
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = "rgba(110,245,176,0.45)";
+          e.currentTarget.style.color = "#6EF5B0";
         }}
-        onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }}
-        onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
       >
-        {es ? "Crear cuenta gratis" : "Create free account"}
+        {es ? "Ver todos los servicios →" : "Browse all services →"}
       </button>
-
-      {/* Bonus note — subordinate to CTA, reads as supporting detail */}
-      <p style={{
-        fontFamily: "DM Sans, sans-serif",
-        fontSize: "12px",
-        color: "rgba(255,255,255,0.50)",
-        margin: "14px 0 0",
-        letterSpacing: "0.01em",
-      }}>
-        🎁 {es ? "+$150 MXN de bienvenida incluidos" : "+$150 MXN welcome bonus included"}
-      </p>
     </section>
   );
 }

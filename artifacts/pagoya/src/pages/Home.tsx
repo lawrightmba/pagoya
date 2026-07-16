@@ -68,6 +68,9 @@ export default function Home() {
   // Live payment counter — fetched from public /api/stats
   const [paymentCount, setPaymentCount]   = useState<number>(0);
 
+  // US visitor detection — for language nudge
+  const [isUSVisitor, setIsUSVisitor]     = useState<boolean>(false);
+
   // PWA install prompt (S3.6)
   const deferredPrompt = useRef<Event & { prompt: () => void } | null>(null);
   const [showPwaSheet, setShowPwaSheet]   = useState(false);
@@ -213,6 +216,15 @@ export default function Home() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  // ── US visitor detection — prompt lang switch for diaspora ──────────────
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const mxTZs = ["America/Mexico_City","America/Tijuana","America/Chihuahua","America/Hermosillo","America/Monterrey","America/Merida","America/Cancun","America/Mazatlan","America/Bahia_Banderas"];
+      if (tz && tz.startsWith("America/") && !mxTZs.includes(tz)) setIsUSVisitor(true);
+    } catch { /* ignore */ }
   }, []);
 
   // ── PWA install prompt (S3.6) ─────────────────────────────────────────────
@@ -430,22 +442,34 @@ export default function Home() {
         ══════════════════════════════════════════════════════ */}
         <section style={{
           background: "linear-gradient(180deg, #005432 0%, #007A4A 70%, #008A52 100%)",
-          padding: "48px 24px 0",
+          padding: "40px 24px 40px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
           borderBottom: "1px solid rgba(255,255,255,0.18)",
         }}>
+
+          {/* ── US visitor language nudge ── */}
+          {isUSVisitor && lang === "es" && (
+            <div
+              onClick={() => { setLang("en"); setLangPref("en"); }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "6px",
+                background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.30)",
+                borderRadius: "999px", padding: "6px 16px", marginBottom: "20px",
+                fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.90)",
+                cursor: "pointer",
+              }}
+            >
+              🇺🇸 Paying a Mexican bill from the US?&nbsp;
+              <span style={{ color: "#6EF5B0", textDecoration: "underline" }}>Switch to English →</span>
+            </div>
+          )}
+
           <h1
             className="hero-h1"
-            style={{
-              fontWeight: 900,
-              color: "#FFFFFF",
-              lineHeight: 1.15,
-              letterSpacing: "-0.02em",
-              margin: "0 0 12px",
-            }}
+            style={{ fontWeight: 900, color: "#FFFFFF", lineHeight: 1.15, letterSpacing: "-0.02em", margin: "0 0 12px" }}
           >
             {es ? "Paga cualquier servicio" : "Pay any bill"}
             <br />
@@ -454,61 +478,80 @@ export default function Home() {
             </span>
           </h1>
 
-          <p style={{
-            fontSize: "16px",
-            color: "rgba(255,255,255,0.78)",
-            maxWidth: "340px",
-            lineHeight: 1.6,
-            margin: "0 0 12px",
-          }}>
-            {es
-              ? "Sin filas. Sin apps. Sin cuenta de banco."
-              : "No lines. No apps. No bank account needed."}
+          <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.78)", maxWidth: "340px", lineHeight: 1.6, margin: "0 0 20px" }}>
+            {es ? "Sin filas. Sin apps. Sin cuenta de banco." : "No lines. No apps. No bank account needed."}
           </p>
 
-          {/* ── HERO BONUS BADGE — quiet supporting note, not competing headline ── */}
-          <p
-            className="bonus-strip"
+          {/* ── Utility chips — fixes CTA mismatch: users self-select their biller ── */}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "20px", maxWidth: "360px" }}>
+            {[
+              { id: "cfe",    name: "CFE",    label: "⚡ CFE" },
+              { id: "agua",   name: "Agua",   label: "💧 Agua" },
+              { id: "telcel", name: "Telcel", label: "📱 Telcel" },
+              { id: "izzi",   name: "Izzi",   label: "📺 Izzi" },
+            ].map(u => (
+              <button key={u.id}
+                onClick={() => handleQuickAccess(u.id, u.name)}
+                style={{
+                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.28)",
+                  borderRadius: "999px", padding: "6px 14px", fontSize: "13px", fontWeight: 700,
+                  color: "white", cursor: "pointer", fontFamily: "inherit",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+              >{u.label}</button>
+            ))}
+            <button
+              onClick={() => navigate("/pagar")}
+              style={{
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: "999px", padding: "6px 14px", fontSize: "13px", fontWeight: 600,
+                color: "rgba(255,255,255,0.65)", cursor: "pointer", fontFamily: "inherit",
+              }}
+            >+ {es ? "más" : "more"}</button>
+          </div>
+
+          {/* ── Social proof — always visible, real count or fallback ── */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            background: "rgba(255,255,255,0.10)", borderRadius: "999px",
+            padding: "5px 14px", marginBottom: "20px",
+            fontSize: "12px", fontWeight: 700, color: "rgba(255,255,255,0.82)",
+          }}>
+            <span style={{ color: "#6EF5B0", fontSize: "13px" }}>✓</span>
+            {paymentCount > 0
+              ? (es ? `${paymentCount.toLocaleString("es-MX")} pagos completados` : `${paymentCount.toLocaleString("en-US")} bills paid`)
+              : (es ? "Disponible 24/7 · Monterrey, CDMX, Puerto Vallarta" : "Available 24/7 · No bank account needed")}
+          </div>
+
+          {/* ── Primary CTA — gold button, above the fold ── */}
+          <button
+            className="hero-cta-btn"
             onClick={() => navigate("/register")}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "5px",
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: "999px",
-              padding: "4px 13px",
-              fontSize: "11px",
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.55)",
-              cursor: "pointer",
-              marginBottom: "24px",
-              letterSpacing: "0.02em",
+              fontFamily: "DM Sans, sans-serif",
+              background: "linear-gradient(135deg, #F5C842 0%, #E8A800 100%)",
+              color: "#3A2000", border: "none", borderRadius: "14px",
+              padding: "0 32px", height: "54px", fontSize: "17px", fontWeight: 800,
+              cursor: "pointer", letterSpacing: "0.01em",
+              boxShadow: "0 4px 20px rgba(232,168,0,0.45)",
+              transition: "transform 0.12s, box-shadow 0.12s",
+              marginBottom: "14px", width: "100%", maxWidth: "320px",
             }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.boxShadow = "0 6px 26px rgba(232,168,0,0.58)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(232,168,0,0.45)"; }}
+            onMouseDown={e => { e.currentTarget.style.transform = "scale(0.97)"; }}
+            onMouseUp={e => { e.currentTarget.style.transform = "scale(1.03)"; }}
           >
-            🎁&nbsp;{es ? "$150 MXN de bienvenida incluidos" : "$150 MXN welcome bonus included"}
-          </p>
+            {es ? "Crear cuenta gratis" : "Create free account"}
+          </button>
 
-          {/* ── Live payment counter social proof ─────────────────────── */}
-          {paymentCount > 0 && (
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "rgba(255,255,255,0.10)",
-              borderRadius: "999px",
-              padding: "5px 14px",
-              marginBottom: "20px",
-              fontSize: "12px",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.82)",
-            }}>
-              <span style={{ color: "#6EF5B0", fontSize: "13px" }}>✓</span>
-              {es
-                ? `${paymentCount.toLocaleString("es-MX")} pagos completados`
-                : `${paymentCount.toLocaleString("en-US")} bills paid`}
-            </div>
-          )}
+          {/* ── Trust microcopy — reassurance right under the ask ── */}
+          <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", margin: "0", lineHeight: 1.5 }}>
+            🔒 {es
+              ? "Sin cuenta bancaria · $25 MXN por pago · $150 MXN de bienvenida"
+              : "No bank account needed · $25 MXN per payment · $150 MXN welcome bonus"}
+          </p>
         </section>
 
         {/* ══════════════════════════════════════════════════════
