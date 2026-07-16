@@ -1,27 +1,275 @@
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 
 export default function PagarCFECdmx() {
   const [, navigate] = useLocation();
+  const [showSticky, setShowSticky] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowSticky(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const breadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://pagoyamx.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Pagar servicios", "item": "https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria" },
+      { "@type": "ListItem", "position": 3, "name": "Pagar CFE CDMX", "item": "https://pagoyamx.com/pagar-cfe-cdmx" }
+    ]
+  };
+
+  const article = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Cómo pagar tu recibo de CFE en la CDMX sin ir al banco",
+    "description": "Paga tu recibo de luz CFE en la Ciudad de México desde tu celular en 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Las 16 alcaldías. Efectivo en OXXO y listo.",
+    "url": "https://pagoyamx.com/pagar-cfe-cdmx",
+    "datePublished": "2026-06-01",
+    "publisher": { "@type": "Organization", "name": "PagoYa", "url": "https://pagoyamx.com" },
+    "inLanguage": "es-MX"
+  };
+
+  const faq = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "¿Cómo pago el recibo de CFE en la CDMX sin ir al banco?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Con PagoYa pagas tu recibo de luz CFE desde tu celular en menos de 2 minutos. Recarga tu billetera con efectivo en cualquier OXXO de la Ciudad de México y paga al instante. No necesitas cuenta bancaria ni tarjeta." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué número necesito para pagar CFE en línea en la CDMX?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Necesitas el Número de Servicio o RPU de CFE que aparece en la parte superior de tu recibo bimestral. También puedes consultarlo en el portal portalcfemx.com con tu dirección o CURP." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Puedo pagar CFE CDMX sin tener el recibo físico?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Con tu Número de Servicio CFE puedes pagar aunque no tengas el recibo en mano. El número no cambia entre bimestres. Si no lo recuerdas, consúltalo en portalcfemx.com." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cuánto tarda en acreditarse el pago de CFE en la Ciudad de México?",
+        "acceptedAnswer": { "@type": "Answer", "text": "El pago se procesa en segundos y recibes comprobante inmediatamente en pantalla. CFE División Centro-Oriente registra el pago en su sistema en un plazo de 24 a 48 horas hábiles." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Dónde más puedo pagar CFE en la CDMX?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Además de PagoYa, puedes pagar en oficinas CFE de la División Centro-Oriente, bancos (BBVA, Santander, Citibanamex) con comisión, en el portal portalcfemx.com con tarjeta, o en tiendas OXXO con recibo físico. Con PagoYa pagas desde tu celular sin moverte de casa." }
+      }
+    ]
+  };
+
   return (
-    <>
+    <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
-        <title>Pagar CFE CDMX sin banco — 16 alcaldías · Sin recibo · 2 min | PagoYa</title>
-        <meta name="description" content="Paga tu CFE en la CDMX sin banco ni tarjeta. Iztapalapa, Coyoacán, Benito Juárez y las 16 alcaldías. Efectivo en OXXO → pago en 2 min. Comprobante al instante." />
+        <html lang="es-MX" />
+        <title>Pagar CFE CDMX Sin Banco — 16 Alcaldías · Sin Recibo · 2 min | PagoYa</title>
+        <meta name="description" content="Paga tu recibo de luz CFE en la CDMX sin banco ni tarjeta. Iztapalapa, Coyoacán, Benito Juárez y las 16 alcaldías. Efectivo en OXXO → 2 min. $25 MXN fijo." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-cfe-cdmx" />
-        <meta property="og:title" content="Pagar CFE CDMX sin banco — 16 alcaldías · Sin recibo | PagoYa" />
+        <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-cfe-cdmx" />
+        <meta name="geo.region" content="MX-CMX" />
+        <meta name="geo.placename" content="Ciudad de México" />
+        <meta property="og:title" content="Pagar CFE CDMX Sin Banco — 16 Alcaldías | PagoYa" />
+        <meta property="og:description" content="Paga tu recibo de luz CFE en la CDMX desde tu celular. Sin banco ni tarjeta. Efectivo en OXXO con PagoYa." />
+        <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
+        <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-cfe-cdmx" />
+        <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>
+        <script type="application/ld+json">{JSON.stringify(article)}</script>
+        <script type="application/ld+json">{JSON.stringify(faq)}</script>
       </Helmet>
-      <div style={{ minHeight: "100vh", background: "#0A2540", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-        <div style={{ maxWidth: 480, textAlign: "center" }}>
-          <h1 style={{ color: "#F1F5F9", fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Pagar CFE en la CDMX sin banco</h1>
-          <p style={{ color: "#94A3B8", fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>Las 16 alcaldías · Sin tarjeta · Sin recibo · $25 MXN fijo · 2 minutos</p>
-          <button onClick={() => navigate("/")} style={{ background: "#1D9E75", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+
+      <style>{`
+        .mty-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .mty-body a { color: #1D9E75; text-decoration: underline; }
+        .mty-h1 { font-size: clamp(26px, 5vw, 42px); }
+        .mty-h2 { font-size: clamp(20px, 3.5vw, 28px); }
+        .mty-table { width: 100%; border-collapse: collapse; }
+        .mty-table th, .mty-table td { padding: 10px 14px; border: 1px solid rgba(255,255,255,0.12); text-align: left; vertical-align: top; }
+        .mty-table th { background: rgba(29,158,117,0.18); color: #1D9E75; font-weight: 700; }
+        .mty-table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+        .mty-ol { padding-left: 20px; }
+        .mty-ol li { margin-bottom: 10px; line-height: 1.6; color: #CBD5E1; }
+        .mty-ul { list-style: disc; padding-left: 22px; }
+        .mty-ul li { margin-bottom: 6px; line-height: 1.6; color: #CBD5E1; }
+        @media(max-width:640px){ .mty-table-wrap { overflow-x: auto; } .mty-body { padding: 0 16px 48px; } }
+      `}</style>
+
+      {/* Nav */}
+      <nav style={{ background: "rgba(10,37,64,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "14px 24px", display: "flex", alignItems: "center", gap: "12px", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(8px)" }}>
+        <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <img src="/pagoya-logo.png" alt="PagoYa" style={{ height: "32px" }} />
+        </button>
+        <span style={{ flex: 1 }} />
+        <button
+          onClick={() => navigate("/pagar")}
+          style={{ background: "#1D9E75", color: "white", border: "none", borderRadius: "20px", padding: "8px 18px", fontWeight: 700, fontSize: "14px", cursor: "pointer" }}
+        >
+          Pagar ahora
+        </button>
+      </nav>
+
+      {/* Sticky bottom CTA */}
+      {showSticky && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,37,64,0.97)", borderTop: "1px solid rgba(29,158,117,0.4)", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", backdropFilter: "blur(10px)" }}>
+          <p style={{ color: "white", fontWeight: 700, fontSize: "14px", margin: 0 }}>⚡ Paga tu CFE CDMX</p>
+          <button onClick={() => navigate("/pagar")} style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "20px", padding: "10px 22px", fontWeight: 800, fontSize: "14px", cursor: "pointer" }}>
+            Pagar CFE →
+          </button>
+        </div>
+      )}
+
+      {/* Hero */}
+      <section style={{ padding: "56px 24px 40px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
+        <p style={{ color: "#1D9E75", fontWeight: 700, fontSize: "13px", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "12px" }}>
+          ⚡ Luz CFE · División Centro-Oriente · Ciudad de México
+        </p>
+        <h1 className="mty-h1" style={{ color: "white", fontWeight: 900, lineHeight: 1.2, marginBottom: "20px" }}>
+          Pagar CFE CDMX<br />
+          <span style={{ color: "#1D9E75" }}>sin banco, sin filas, sin tarjeta</span>
+        </h1>
+        <p style={{ color: "#94A3B8", fontSize: "18px", lineHeight: 1.7, marginBottom: "32px", maxWidth: "600px" }}>
+          Paga tu recibo de luz <strong style={{ color: "white" }}>CFE División Centro-Oriente</strong> en cualquiera de las 16 alcaldías de la Ciudad de México desde tu celular en menos de 2 minutos. Iztapalapa, Gustavo A. Madero, Coyoacán, Benito Juárez y más — sin moverte de casa.
+        </p>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => navigate("/pagar")}
+            style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "50px", padding: "16px 32px", fontWeight: 800, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(29,158,117,0.4)" }}
+          >
+            Pagar CFE ahora →
+          </button>
+          <button
+            onClick={() => navigate("/cargar")}
+            style={{ background: "rgba(255,255,255,0.08)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "50px", padding: "16px 28px", fontWeight: 700, fontSize: "15px", cursor: "pointer" }}
+          >
+            Cargar saldo primero
+          </button>
+        </div>
+      </section>
+
+      {/* Steps */}
+      <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
+        <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "24px" }}>
+          Cómo pagar CFE en la CDMX en 3 pasos
+        </h2>
+        <ol className="mty-ol" style={{ marginBottom: "32px" }}>
+          <li><strong style={{ color: "white" }}>Recarga con efectivo en OXXO.</strong> Ve a cualquier OXXO de la CDMX, da tu número de teléfono y deposita el monto de tu recibo CFE. Tu saldo PagoYa se acredita al instante.</li>
+          <li><strong style={{ color: "white" }}>Ingresa tu Número de Servicio CFE.</strong> Abre PagoYa, elige "Pagar servicio", selecciona CFE e ingresa el número que aparece en la parte superior de tu recibo bimestral.</li>
+          <li><strong style={{ color: "white" }}>Confirma y listo.</strong> El pago se procesa en segundos. Recibes comprobante en pantalla. CFE registra el pago en 24–48 h hábiles.</li>
+        </ol>
+
+        {/* Feature pills */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "40px" }}>
+          {[
+            { icon: "⚡", title: "2 minutos", desc: "de principio a fin" },
+            { icon: "🏪", title: "+19,000 OXXO", desc: "en la CDMX y todo México" },
+            { icon: "📱", title: "Sin banco", desc: "ni tarjeta requerida" },
+            { icon: "🧾", title: "Comprobante", desc: "inmediato en pantalla" },
+          ].map(f => (
+            <div key={f.title} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px", padding: "18px 16px" }}>
+              <p style={{ fontSize: "24px", marginBottom: "6px" }}>{f.icon}</p>
+              <p style={{ color: "white", fontWeight: 800, fontSize: "15px", marginBottom: "2px" }}>{f.title}</p>
+              <p style={{ color: "#94A3B8", fontSize: "13px" }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CFE CDMX info table */}
+      <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
+        <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "20px" }}>
+          Información sobre el pago CFE en la Ciudad de México
+        </h2>
+        <div className="mty-table-wrap">
+          <table className="mty-table" style={{ color: "#CBD5E1", fontSize: "14px", marginBottom: "24px" }}>
+            <thead>
+              <tr><th>Detalle</th><th>Información</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Organismo</td><td>Comisión Federal de Electricidad (CFE) — División Centro-Oriente</td></tr>
+              <tr><td>Cobertura</td><td>Las 16 alcaldías: Iztapalapa, Gustavo A. Madero, Álvaro Obregón, Coyoacán, Benito Juárez, Cuauhtémoc, Miguel Hidalgo, Xochimilco, Tlalpan, Azcapotzalco y más</td></tr>
+              <tr><td>Frecuencia de facturación</td><td>Bimestral (cada 2 meses)</td></tr>
+              <tr><td>Número de servicio</td><td>RPU o Número de Servicio — aparece en la parte superior del recibo. Consúltalo también en <strong>portalcfemx.com</strong></td></tr>
+              <tr><td>Costo del servicio PagoYa</td><td>$25 MXN tarifa de servicio por transacción</td></tr>
+              <tr><td>Tiempo de acreditación</td><td>Pago instantáneo · CFE actualiza en 24–48 h hábiles</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "20px" }}>
+          ¿Dónde más se puede pagar CFE en la CDMX?
+        </h2>
+        <div className="mty-table-wrap">
+          <table className="mty-table" style={{ color: "#CBD5E1", fontSize: "14px", marginBottom: "32px" }}>
+            <thead>
+              <tr><th>Opción de pago</th><th>Requiere</th><th>Comisión aprox.</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong style={{ color: "#1D9E75" }}>PagoYa (recomendado)</strong></td><td>Solo tu celular</td><td>$25 MXN fija</td></tr>
+              <tr><td>Oficinas CFE División Centro-Oriente</td><td>Ir en persona, recibo físico</td><td>Sin comisión</td></tr>
+              <tr><td>Bancos (BBVA, Santander, Citibanamex)</td><td>Cuenta bancaria</td><td>$15–$30 MXN</td></tr>
+              <tr><td>Portal portalcfemx.com</td><td>Tarjeta de crédito/débito</td><td>Variable</td></tr>
+              <tr><td>OXXO Pay directo</td><td>Ir al OXXO con recibo físico</td><td>$13 MXN aprox.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section style={{ padding: "0 24px 48px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
+        <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "24px" }}>
+          Preguntas frecuentes — pago CFE Ciudad de México
+        </h2>
+        {[
+          { q: "¿Cómo pago el recibo de CFE en la CDMX sin ir al banco?", a: "Con PagoYa pagas tu recibo de luz CFE desde tu celular en menos de 2 minutos. Recarga tu billetera con efectivo en cualquier OXXO de la Ciudad de México y paga al instante. No necesitas cuenta bancaria ni tarjeta." },
+          { q: "¿Qué número necesito para pagar CFE en línea en la CDMX?", a: "Necesitas el Número de Servicio o RPU de CFE que aparece en la parte superior de tu recibo bimestral. También puedes consultarlo en portalcfemx.com con tu dirección o CURP." },
+          { q: "¿Puedo pagar CFE CDMX sin tener el recibo físico?", a: "Sí. Con tu Número de Servicio CFE puedes pagar aunque no tengas el recibo en mano. El número no cambia entre bimestres. Si no lo recuerdas, consúltalo en portalcfemx.com." },
+          { q: "¿Cuánto tarda en acreditarse el pago de CFE en la Ciudad de México?", a: "El pago se procesa en segundos y recibes comprobante inmediatamente en pantalla. CFE División Centro-Oriente registra el pago en su sistema en un plazo de 24 a 48 horas hábiles." },
+          { q: "¿Dónde más puedo pagar CFE en la CDMX?", a: "Además de PagoYa, puedes pagar en oficinas CFE de la División Centro-Oriente, bancos (BBVA, Santander, Citibanamex) con comisión, en el portal portalcfemx.com con tarjeta, o en tiendas OXXO con recibo físico. Con PagoYa pagas desde tu celular sin moverte de casa." },
+        ].map((item, i) => (
+          <div key={i} style={{ marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: "20px" }}>
+            <p style={{ color: "white", fontWeight: 700, fontSize: "16px", marginBottom: "8px" }}>❓ {item.q}</p>
+            <p style={{ color: "#94A3B8", lineHeight: 1.7, fontSize: "15px" }}>{item.a}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* Más servicios en CDMX */}
+      <section style={{ padding: "0 24px 40px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
+        <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "16px" }}>Más servicios en la Ciudad de México</h2>
+        <ul className="mty-ul">
+          <li><a href="/pagar-agua-cdmx">Pagar agua SACMEX CDMX sin banco</a></li>
+          <li><a href="/pagar-servicios-cdmx">Pagar servicios en la CDMX (agua, luz, teléfono)</a></li>
+          <li><a href="/pagar-cfe">Pagar CFE en cualquier estado</a></li>
+          <li><a href="/guia-pagar-servicios-sin-cuenta-bancaria">Guía completa: pagar servicios sin cuenta bancaria</a></li>
+        </ul>
+      </section>
+
+      {/* Final CTA */}
+      <section style={{ padding: "0 24px 64px", maxWidth: "760px", margin: "0 auto", width: "100%", textAlign: "center" }} className="mty-body">
+        <div style={{ background: "linear-gradient(135deg, rgba(29,158,117,0.15), rgba(29,158,117,0.05))", border: "1px solid rgba(29,158,117,0.3)", borderRadius: "24px", padding: "40px 24px" }}>
+          <p style={{ fontSize: "32px", marginBottom: "12px" }}>⚡</p>
+          <h2 style={{ color: "white", fontWeight: 900, fontSize: "22px", marginBottom: "10px" }}>
+            Paga tu CFE CDMX ahora mismo
+          </h2>
+          <p style={{ color: "#94A3B8", fontSize: "15px", marginBottom: "28px", lineHeight: 1.6 }}>
+            Sin banco, sin tarjeta, sin filas.<br />Solo tu celular y efectivo en OXXO.
+          </p>
+          <button
+            onClick={() => navigate("/pagar")}
+            style={{ background: "linear-gradient(135deg, #1D9E75, #25C090)", color: "white", border: "none", borderRadius: "50px", padding: "16px 36px", fontWeight: 800, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(29,158,117,0.4)" }}
+          >
             Pagar mi CFE →
           </button>
         </div>
-      </div>
-    </>
+      </section>
+    </div>
   );
 }

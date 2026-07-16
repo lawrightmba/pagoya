@@ -462,7 +462,7 @@ export default function Home() {
                 cursor: "pointer",
               }}
             >
-              🇺🇸 Paying a Mexican bill from the US?&nbsp;
+              Paying a Mexican bill from the US?&nbsp;
               <span style={{ color: "#6EF5B0", textDecoration: "underline" }}>Switch to English →</span>
             </div>
           )}
