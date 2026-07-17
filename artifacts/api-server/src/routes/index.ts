@@ -1544,6 +1544,25 @@ router.get("/admin/stripe-payments", async (req: Request, res: Response) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/expire-stale-oxxo — one-shot: mark old pending OXXO loads as expired
+// Targets: status='pending', type contains 'oxxo', created_at older than 24h
+router.post("/admin/expire-stale-oxxo", adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const r = await db.execute(drizzleSql`
+      UPDATE wallet_transactions
+      SET status = 'expired'
+      WHERE status = 'pending'
+        AND (type ILIKE '%oxxo%' OR type ILIKE '%load%')
+        AND created_at < NOW() - INTERVAL '24 hours'
+      RETURNING id, wallet_id, type, amount_mxn, created_at
+    `);
+    return res.json({ expired: r.rows.length, rows: r.rows });
+  } catch (err) {
+    logger.error({ err }, "expire-stale-oxxo failed");
+    return res.status(500).json({ error: "Failed" });
+  }
+});
+
 // POST /api/admin/mark-test-accounts — flag known dev/test rows so they are
 // excluded from all is_test_account IS NOT TRUE filters.
 // Body: { phones: string[] }  — list of telefono values to mark.
