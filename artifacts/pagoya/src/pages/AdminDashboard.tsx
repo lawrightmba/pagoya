@@ -146,6 +146,8 @@ export default function AdminDashboard() {
   const [walletLoading, setWalletLoading] = useState(true);
   const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [revenueLoading, setRevenueLoading] = useState(true);
+  const [expireOxxoLoading, setExpireOxxoLoading] = useState(false);
+  const [expireOxxoResult, setExpireOxxoResult] = useState<string | null>(null);
 
   const [colonia, setColonia] = useState<ColoniaBreakdown | null>(null);
   const [coloniaLoading, setColoniaLoading] = useState(true);
@@ -987,6 +989,34 @@ export default function AdminDashboard() {
         {/* ══════════════ OPS TAB ══════════════ */}
         {tab === "ops" && (
         <div>
+
+        {/* ── DB Maintenance ── */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,80,50,0.2)", borderRadius: 14, padding: "16px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>DB Maintenance</div>
+            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.85rem" }}>Expire stale OXXO loads — marks <code style={{ color: "#6EF5B0" }}>pending</code> OXXO/load transactions older than 24h as <code style={{ color: "#94A3B8" }}>expired</code>. Safe: only affects records with no confirmed balance.</div>
+            {expireOxxoResult && <div style={{ marginTop: 8, fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#6EF5B0" }}>{expireOxxoResult}</div>}
+          </div>
+          <button
+            disabled={expireOxxoLoading}
+            onClick={async () => {
+              if (!window.confirm("Expire all pending OXXO loads older than 24h?")) return;
+              setExpireOxxoLoading(true);
+              setExpireOxxoResult(null);
+              try {
+                const r = await fetch("/api/admin/expire-stale-oxxo", { method: "POST", headers: { "x-admin-key": adminKey, "Content-Type": "application/json" } });
+                const d = await r.json();
+                setExpireOxxoResult(d.expired != null ? `✅ Expired ${d.expired} transaction(s)` : `❌ ${d.error || "Unknown error"}`);
+              } catch (e) {
+                setExpireOxxoResult("❌ Network error");
+              }
+              setExpireOxxoLoading(false);
+            }}
+            style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#FF5C1A", background: "rgba(255,92,26,0.1)", border: "1px solid rgba(255,92,26,0.3)", borderRadius: 20, padding: "6px 16px", cursor: "pointer", opacity: expireOxxoLoading ? 0.5 : 1, whiteSpace: "nowrap" }}
+          >
+            {expireOxxoLoading ? "Running…" : "🧹 Expire Stale OXXO"}
+          </button>
+        </div>
 
         {/* ── Wallet Command Center Panel ── */}
         <div style={{
