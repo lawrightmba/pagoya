@@ -327,14 +327,17 @@ export default function Home() {
         <PTIIntroModal telefono={storedPhone} onDismiss={handlePTIIntroDismiss} />
       )}
       <Helmet>
-        <title>PagoYa | Paga tus servicios desde tu celular | Puerto Vallarta</title>
+        <title>PagoYa — Paga Tus Recibos Sin Cuenta Bancaria</title>
         <meta name="robots" content="index, follow" />
-        <meta name="description" content="Paga luz, agua, teléfono y más desde tu celular sin ir al banco. PagoYa: pagos de servicios en Puerto Vallarta y Guadalajara. Sin cuenta bancaria." />
+        <meta name="description" content="¿No tienes cuenta de banco? No hay problema. Paga luz, agua, teléfono y más desde tu WhatsApp. Recibe $150 MXN al registrarte. Disponible en Puerto Vallarta." />
         <meta name="keywords" content="pagar servicios en línea, pago de luz Puerto Vallarta, pagar CFE, pago de agua, app de pagos México" />
-        <meta property="og:title" content="PagoYa | Paga tus servicios desde tu celular" />
-        <meta property="og:description" content="Sin banco, sin filas. Paga todos tus servicios desde tu celular en Puerto Vallarta." />
+        <meta property="og:title" content="PagoYa — Paga Tus Recibos Sin Cuenta Bancaria" />
+        <meta property="og:description" content="¿No tienes cuenta de banco? No hay problema. Paga tus servicios desde tu celular, sin complicaciones." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://pagoyamx.com" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="PagoYa — Paga Tus Recibos Sin Cuenta Bancaria" />
+        <meta name="twitter:description" content="¿No tienes cuenta de banco? No hay problema. Paga tus servicios desde tu celular, sin complicaciones." />
         <link rel="canonical" href="https://pagoyamx.com/" />
       </Helmet>
 
