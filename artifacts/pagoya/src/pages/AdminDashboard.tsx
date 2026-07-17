@@ -2912,7 +2912,7 @@ export default function AdminDashboard() {
 
         {tab === "pti_monitor" && (() => {
           const ADMIN_KEY = adminKey;
-          const API = "/api-server";
+          const API = "/api";
           const [monData, setMonData] = (window as unknown as Record<string, unknown>).__ptiMonState
             ? [(window as unknown as Record<string, unknown>).__ptiMonState as Record<string, unknown> | null, () => {}]
             : [null, () => {}];
