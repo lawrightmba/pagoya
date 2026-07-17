@@ -471,15 +471,17 @@ export default function Home() {
             className="hero-h1"
             style={{ fontWeight: 900, color: "#FFFFFF", lineHeight: 1.15, letterSpacing: "-0.02em", margin: "0 0 12px" }}
           >
-            {es ? "Paga cualquier servicio" : "Pay any bill"}
+            {es ? "No tienes cuenta de banco." : "No bank account?"}
             <br />
             <span style={{ color: "#6EF5B0" }}>
-              {es ? "en menos de 2 minutos" : "in under 2 minutes"}
+              {es ? "No hay problema." : "No problem."}
             </span>
           </h1>
 
           <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.78)", maxWidth: "340px", lineHeight: 1.6, margin: "0 0 20px" }}>
-            {es ? "Sin filas. Sin apps. Sin cuenta de banco." : "No lines. No apps. No bank account needed."}
+            {es
+              ? "Paga luz, agua, teléfono y más desde tu WhatsApp — sin cuenta bancaria, sin filas, sin complicaciones."
+              : "Pay your utility bills from WhatsApp — no bank account, no lines, no hassle."}
           </p>
 
           {/* ── Utility chips — fixes CTA mismatch: users self-select their biller ── */}
@@ -543,14 +545,14 @@ export default function Home() {
             onMouseDown={e => { e.currentTarget.style.transform = "scale(0.97)"; }}
             onMouseUp={e => { e.currentTarget.style.transform = "scale(1.03)"; }}
           >
-            {es ? "Crear cuenta gratis" : "Create free account"}
+            {es ? "Paga tus servicios ahora →" : "Pay your bills now →"}
           </button>
 
           {/* ── Trust microcopy — reassurance right under the ask ── */}
           <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", margin: "0", lineHeight: 1.5 }}>
-            🔒 {es
-              ? "Sin cuenta bancaria · $25 MXN por pago · $150 MXN de bienvenida"
-              : "No bank account needed · $25 MXN per payment · $150 MXN welcome bonus"}
+            🎁 {es
+              ? "Recibe $150 MXN al registrarte · Sin cuenta bancaria"
+              : "Get $150 MXN when you sign up · No bank account needed"}
           </p>
         </section>
 
