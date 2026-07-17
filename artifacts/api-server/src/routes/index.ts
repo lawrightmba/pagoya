@@ -1090,6 +1090,7 @@ router.get("/admin/users", async (req: Request, res: Response) => {
                         nudge_sent_at, welcome_shown,
                         low_balance_nudge_sent_at, bill_discovery_nudge_sent_at,
                         referral_nudge_sent_at, referral_code,
+                        kyc_curp,
                         created_at
                  FROM users
                  ORDER BY created_at DESC
