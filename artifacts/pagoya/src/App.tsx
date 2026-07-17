@@ -227,8 +227,8 @@ function AppShell() {
   const isPublicOnePager = location === "/employer" || location === "/empresa" || location === "/pti-data";
   // BottomNav hidden on full-screen onboarding flows and public standalone pages
   const hideBottomNav = isVincularBanco || isPublicOnePager;
-  // SupportChat (Paula) hidden on same
-  const hideSupportChat = isVincularBanco || isPublicOnePager;
+  // SupportChat (Paula) hidden on internal/admin pages and full-screen flows
+  const hideSupportChat = isVincularBanco || isPublicOnePager || location === "/admin" || location === "/command-center";
   return (
     <>
       <Router />
