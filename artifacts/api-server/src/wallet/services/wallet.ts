@@ -16,10 +16,17 @@ export async function getOrCreateWallet(rawTelefono: string): Promise<Wallet> {
 
   if (existing.length > 0) return existing[0];
 
-  await db
+  const [newWebUser] = await db
     .insert(usersTable)
     .values({ telefono, signupSource: 'web_organic' })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: usersTable.id });
+
+  if (newWebUser?.id) {
+    import("../../services/nudgeService.js")
+      .then(({ scheduleNudge }) => scheduleNudge(newWebUser.id))
+      .catch(() => {});
+  }
 
   const [wallet] = await db
     .insert(walletsTable)

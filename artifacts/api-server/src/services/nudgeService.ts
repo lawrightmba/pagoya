@@ -92,12 +92,15 @@ export async function sendActivationNudge(userId: number): Promise<{
     } catch { /* use default */ }
 
     const message =
-      `Hola ${firstName} 👋 Tu cuenta PagoYa ya está activa.\n\n` +
+      `Hola ${firstName} 👋 ¡Bienvenido a PagoYa!\n\n` +
       `Tienes *${bonusDisplay} de bienvenida* en tu billetera ahora mismo 🎁\n\n` +
-      `Úsalos para pagar tu CFE, Telmex, Izzi o recargar tu celular — ` +
-      `sin banco, sin filas, en segundos.\n\n` +
-      `¿Quieres pagar algo? Solo dime el servicio aquí mismo.\n` +
-      `¿Preguntas? Responde y te ayudo.`;
+      `¿Con qué empezamos?\n\n` +
+      `1️⃣ Pagar un servicio (CFE, Telmex, Izzi, agua…)\n` +
+      `2️⃣ Enviar dinero a alguien\n` +
+      `3️⃣ Recargar tiempo aire (Telcel, AT&T, Movistar)\n` +
+      `🎁 Tarjetas de regalo o Netflix\n\n` +
+      `Sin banco, sin filas — en segundos.\n` +
+      `Solo responde con el número o dime qué necesitas 👇`;
 
     // ── 5. Send via Twilio ─────────────────────────────────────────────────
     await sendWhatsApp(phone, message);

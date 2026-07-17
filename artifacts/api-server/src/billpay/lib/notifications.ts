@@ -13,30 +13,40 @@ export async function sendWhatsAppReceipt(params: {
 }): Promise<void> {
   const adminNumber = process.env.ADMIN_WHATSAPP_NUMBER;
 
-  const msg =
+  const customerMsg =
+    `✅ *¡Pago confirmado!*\n` +
+    `📋 *${params.serviceName}* — $${params.monto.toFixed(2)} MXN\n` +
+    `🔖 Folio: ${params.confirmationCode}\n\n` +
+    `¿Qué más puedo hacer por ti?\n\n` +
+    `1️⃣ Pagar otro servicio (CFE, Telmex, Izzi, agua…)\n` +
+    `2️⃣ Enviar dinero a alguien\n` +
+    `3️⃣ Recargar tiempo aire (Telcel, AT&T, Movistar)\n` +
+    `🎁 Tarjetas de regalo o Netflix\n\n` +
+    `Solo responde con el número o dime qué necesitas 👇`;
+
+  const adminMsg =
     `✅ *PagoYa — Pago Confirmado*\n` +
     `Servicio: ${params.serviceName}\n` +
     `Monto: $${params.monto.toFixed(2)} MXN\n` +
     `Referencia: ${params.referencia}\n` +
     `Folio: ${params.confirmationCode}\n` +
     `Proveedor: ${params.provider.toUpperCase()}\n` +
-    `Tel cliente: ${params.telefono}\n\n` +
-    `¿Tienes dudas o necesitas algo más? Responde aquí y Paula, nuestra asistente, te ayuda al instante 💬`;
-
-  const targets: string[] = [];
+    `Tel cliente: ${params.telefono}`;
 
   const cleanTel = params.telefono.replace(/\D/g, "");
-  if (cleanTel) targets.push(cleanTel);
+  if (cleanTel) {
+    await sendWhatsApp(cleanTel, customerMsg).catch((err) => {
+      logger.warn({ number: cleanTel, err }, "billpay: WhatsApp customer receipt send failed (non-fatal)");
+    });
+  }
 
   if (adminNumber) {
     const cleanAdmin = adminNumber.replace(/\D/g, "");
-    if (cleanAdmin && cleanAdmin !== cleanTel) targets.push(cleanAdmin);
-  }
-
-  for (const number of targets) {
-    await sendWhatsApp(number, msg).catch((err) => {
-      logger.warn({ number, err }, "billpay: WhatsApp receipt send failed (non-fatal)");
-    });
+    if (cleanAdmin && cleanAdmin !== cleanTel) {
+      await sendWhatsApp(cleanAdmin, adminMsg).catch((err) => {
+        logger.warn({ err }, "billpay: WhatsApp admin receipt send failed (non-fatal)");
+      });
+    }
   }
 }
 
