@@ -93,6 +93,7 @@ import ComisionesYCargos from "@/pages/ComisionesYCargos";
 import Seguridad from "@/pages/Seguridad";
 import ComoPresentarUnaQueja from "@/pages/ComoPresentarUnaQueja";
 import FAQ from "@/pages/FAQ";
+import CommandCenter from "@/pages/CommandCenter";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -133,6 +134,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/rep-dashboard" component={RepDashboard} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/command-center" component={CommandCenter} />
       <Route path="/guia-pagar-servicios-sin-cuenta-bancaria" component={GuiaBlog} />
       <Route path="/pagar-cfe" component={PagarCFE} />
       <Route path="/pagar-telmex" component={PagarTelmex} />
