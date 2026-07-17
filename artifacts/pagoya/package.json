@@ -79,6 +79,7 @@
     "@stripe/stripe-js": "^9.1.0",
     "@zxing/library": "^0.21.3",
     "jspdf": "^4.2.1",
+    "qrcode.react": "^4.2.0",
     "react-helmet-async": "^3.0.0"
   }
 }

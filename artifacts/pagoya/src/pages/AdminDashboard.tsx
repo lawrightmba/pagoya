@@ -148,6 +148,7 @@ export default function AdminDashboard() {
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [expireOxxoLoading, setExpireOxxoLoading] = useState(false);
   const [expireOxxoResult, setExpireOxxoResult] = useState<string | null>(null);
+  const [customRepCode, setCustomRepCode] = useState("");
 
   const [colonia, setColonia] = useState<ColoniaBreakdown | null>(null);
   const [coloniaLoading, setColoniaLoading] = useState(true);
@@ -2304,6 +2305,64 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* ── QR Codes ── */}
+            {(() => {
+              const BASE = "https://pagoyamx.com/registro";
+              const qrUrl = (data: string) =>
+                `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=14&color=004F2D&bgcolor=FFFFFF&data=${encodeURIComponent(data)}`;
+              const repCodes: string[] = repStats.map((r: RepRow) => r.rep_code).filter(Boolean);
+              const previewCode = customRepCode.trim().toUpperCase();
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 14, padding: "20px 24px", marginBottom: 24 }}>
+                  <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.8rem", color: "#5a7080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>📱 QR Codes — Registro</div>
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+
+                    {/* General */}
+                    <div style={{ textAlign: "center" }}>
+                      <img src={qrUrl(BASE)} alt="QR General" style={{ width: 160, height: 160, borderRadius: 10, display: "block", marginBottom: 8 }} />
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#6EF5B0", marginBottom: 4 }}>GENERAL</div>
+                      <div style={{ fontSize: "0.68rem", color: "#5a7080", marginBottom: 6 }}>pagoyamx.com/registro</div>
+                      <a href={qrUrl(BASE)} download="pagoya-qr-general.png" style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#1D9E75", textDecoration: "none", background: "rgba(29,158,117,0.1)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: 20, padding: "3px 10px" }}>⬇ Descargar</a>
+                    </div>
+
+                    {/* Per-rep QRs */}
+                    {repCodes.map((code: string) => (
+                      <div key={code} style={{ textAlign: "center" }}>
+                        <img src={qrUrl(`${BASE}?rep=${code}`)} alt={`QR ${code}`} style={{ width: 160, height: 160, borderRadius: 10, display: "block", marginBottom: 8 }} />
+                        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#F5C842", marginBottom: 4 }}>{code}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#5a7080", marginBottom: 6 }}>/registro?rep={code}</div>
+                        <a href={qrUrl(`${BASE}?rep=${code}`)} download={`pagoya-qr-${code.toLowerCase()}.png`} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#1D9E75", textDecoration: "none", background: "rgba(29,158,117,0.1)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: 20, padding: "3px 10px" }}>⬇ Descargar</a>
+                      </div>
+                    ))}
+
+                    {/* Custom code generator */}
+                    <div style={{ textAlign: "center", minWidth: 160 }}>
+                      {previewCode ? (
+                        <>
+                          <img src={qrUrl(`${BASE}?rep=${previewCode}`)} alt={`QR ${previewCode}`} style={{ width: 160, height: 160, borderRadius: 10, display: "block", marginBottom: 8 }} />
+                          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.72rem", color: "#F5C842", marginBottom: 4 }}>{previewCode}</div>
+                          <div style={{ fontSize: "0.68rem", color: "#5a7080", marginBottom: 6 }}>/registro?rep={previewCode}</div>
+                          <a href={qrUrl(`${BASE}?rep=${previewCode}`)} download={`pagoya-qr-${previewCode.toLowerCase()}.png`} style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", color: "#1D9E75", textDecoration: "none", background: "rgba(29,158,117,0.1)", border: "1px solid rgba(29,158,117,0.3)", borderRadius: 20, padding: "3px 10px" }}>⬇ Descargar</a>
+                        </>
+                      ) : (
+                        <div style={{ width: 160, height: 160, borderRadius: 10, border: "2px dashed rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                          <span style={{ color: "#5a7080", fontSize: "0.75rem", fontFamily: "'Space Mono', monospace", textAlign: "center", padding: 12 }}>Ingresa código de rep →</span>
+                        </div>
+                      )}
+                      <input
+                        value={customRepCode}
+                        onChange={e => setCustomRepCode(e.target.value)}
+                        placeholder="REP_001"
+                        style={{ width: 150, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "6px 10px", color: "white", fontSize: "0.8rem", fontFamily: "'Space Mono', monospace", textAlign: "center", outline: "none", marginTop: 6, textTransform: "uppercase" }}
+                      />
+                      <div style={{ fontSize: "0.65rem", color: "#5a7080", marginTop: 4 }}>Genera QR para cualquier código</div>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── Summary strip ── */}
             {repStats.length > 0 && (() => {

@@ -395,3 +395,9 @@ id = "QvAb36eX1bOtqqdBusl2y"
 uri = "file://.local/outputs/PagoYa-Pitch-Deck-EN.pptx"
 type = "slides"
 title = "PagoYa Pitch Deck — English (PPTX)"
+
+[[outputs]]
+id = "EImlh68cy1B3t3SdpoYMK"
+uri = "file://pagoya-qr-general.png"
+type = "image"
+title = "PagoYa — General Registration QR"
