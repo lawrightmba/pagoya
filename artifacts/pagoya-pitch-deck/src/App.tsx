@@ -222,10 +222,22 @@ function AllSlides() {
 // This component is used for the deployed view at `/`
 function SlideViewer() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [dims, setDims] = useState(() => ({
     width: Math.min(window.innerWidth, window.innerHeight * (16 / 9)),
     height: Math.min(window.innerHeight, window.innerWidth * (9 / 16)),
   }));
+
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const goTo = (index: number) => {
+    const clamped = Math.max(0, Math.min(slides.length - 1, index));
+    setCurrentIndex(clamped);
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "navigateToSlide", position: slides[clamped].position },
+      "*",
+    );
+  };
 
   useEffect(() => {
     const update = () => {
@@ -242,20 +254,61 @@ function SlideViewer() {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== " ") return;
       if (event.key === " ") event.preventDefault();
-      iframeRef.current?.contentWindow?.dispatchEvent(
-        new KeyboardEvent("keydown", { key: event.key, code: event.code, bubbles: true }),
-      );
+      if (event.key === "ArrowLeft") {
+        setCurrentIndex(prev => { const next = Math.max(0, prev - 1); goTo(next); return next; });
+      } else {
+        setCurrentIndex(prev => { const next = Math.min(slides.length - 1, prev + 1); goTo(next); return next; });
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  // Handle advanceSlide postMessage from inner SlideEditor
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "advanceSlide") {
+        setCurrentIndex(prev => {
+          const next = Math.min(slides.length - 1, prev + 1);
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "navigateToSlide", position: slides[next].position },
+            "*",
+          );
+          return next;
+        });
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const firstPosition = slides.length > 0 ? slides[0].position : 1;
+
+  const btnStyle = (disabled: boolean): React.CSSProperties => ({
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    zIndex: 10,
+    background: disabled ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.15)",
+    border: "1px solid rgba(255,255,255,0.25)",
+    borderRadius: "50%",
+    width: "44px",
+    height: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: disabled ? "default" : "pointer",
+    color: disabled ? "rgba(255,255,255,0.25)" : "#fff",
+    fontSize: "18px",
+    transition: "background 0.15s",
+    backdropFilter: "blur(4px)",
+    WebkitBackdropFilter: "blur(4px)",
+  });
 
   return (
     <div
       className="slide-viewer h-screen w-screen overflow-hidden bg-black flex items-center justify-center"
+      style={{ position: "relative" }}
       onClick={() => iframeRef.current?.focus()}
     >
       <iframe
@@ -265,6 +318,44 @@ function SlideViewer() {
         onLoad={() => iframeRef.current?.focus()}
         title="Slide viewer"
       />
+
+      {/* ── Prev button ── */}
+      <button
+        onClick={(e) => { e.stopPropagation(); goTo(currentIndex - 1); }}
+        disabled={currentIndex === 0}
+        style={{ ...btnStyle(currentIndex === 0), left: "16px" }}
+        aria-label="Previous slide"
+      >‹</button>
+
+      {/* ── Next button ── */}
+      <button
+        onClick={(e) => { e.stopPropagation(); goTo(currentIndex + 1); }}
+        disabled={currentIndex === slides.length - 1}
+        style={{ ...btnStyle(currentIndex === slides.length - 1), right: "16px" }}
+        aria-label="Next slide"
+      >›</button>
+
+      {/* ── Slide counter ── */}
+      <div style={{
+        position: "absolute",
+        bottom: "16px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "rgba(0,0,0,0.45)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        borderRadius: "999px",
+        padding: "4px 14px",
+        fontSize: "12px",
+        fontFamily: "DM Sans, sans-serif",
+        fontWeight: 600,
+        color: "rgba(255,255,255,0.7)",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        zIndex: 10,
+        pointerEvents: "none",
+      }}>
+        {currentIndex + 1} / {slides.length}
+      </div>
     </div>
   );
 }
