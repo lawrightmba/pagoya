@@ -4,107 +4,64 @@
   <!-- ── Primary landing page ─────────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- ── App feature pages ─────────────────────────────────────────────── -->
-  <url>
-    <loc>https://pagoyamx.com/puntos</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/juegos</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/confianza</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pti</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/enviar</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/verificar</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- ── SEO service landing pages ────────────────────────────────────── -->
+  <!-- ── Core service landing pages ───────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/pagar-cfe</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-telmex</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/recargas</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/deposito-oxxo</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-cfe-sin-banco</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-telmex-en-linea-efectivo</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/recargar-saldo-sin-tarjeta</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-luz-sin-banco</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -112,28 +69,28 @@
   <!-- ── Guadalajara city landing pages ───────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/pagar-servicios-guadalajara</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/recargas-guadalajara</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-cfe-guadalajara</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-agua-guadalajara</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -141,42 +98,42 @@
   <!-- ── Monterrey city landing pages ─────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/pagar-agua-monterrey</loc>
-    <lastmod>2026-06-22</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-agua-sin-recibo</loc>
-    <lastmod>2026-06-22</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-cfe-monterrey</loc>
-    <lastmod>2026-07-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-servicios-monterrey</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-agua-monterrey-en-linea</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-gas-natural-monterrey</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -184,135 +141,86 @@
   <!-- ── CDMX city landing pages ──────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/pagar-agua-cdmx</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-cfe-cdmx</loc>
-    <lastmod>2026-07-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
-  <!-- ── Blog / guides ─────────────────────────────────────────────────── -->
+  <!-- ── Tijuana ───────────────────────────────────────────────────────── -->
   <url>
-    <loc>https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pagar-telmex-sin-tarjeta</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/recargas-telcel-efectivo</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pagar-agua-mexico</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/que-es-oxxo-pay</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pagar-predial-puerto-vallarta</loc>
-    <lastmod>2026-06-11</lastmod>
+    <loc>https://pagoyamx.com/pagar-agua-tijuana</loc>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/es-seguro-pagar-servicios-celular-mexico</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/que-pasa-si-pago-cfe-tarde</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/mejores-apps-pagar-servicios-mexico</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/pagar-servicios-puerto-vallarta</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-
-  <url>
-    <loc>https://pagoyamx.com/que-es-dinero-electronico-mexico</loc>
-    <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
   </url>
 
   <!-- ── Puerto Vallarta service pages ───────────────────────────────── -->
   <url>
+    <loc>https://pagoyamx.com/pagar-servicios-puerto-vallarta</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
     <loc>https://pagoyamx.com/pagar-agua-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-cfe-vallarta</loc>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-telmex-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-internet-vallarta</loc>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-izzi-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-telcel-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pagar-totalplay-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-predial-puerto-vallarta</loc>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -320,56 +228,56 @@
   <!-- ── Puerto Vallarta colonia pages ────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/emiliano-zapata-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/versalles-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/5-de-diciembre-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/pitillal-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/fluvial-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/las-juntas-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/zona-romantica-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/marina-vallarta</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -377,51 +285,122 @@
   <!-- ── Diaspora ──────────────────────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/pagar-cfe-desde-usa</loc>
-    <lastmod>2026-07-16</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <!-- ── Blog / guides ─────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://pagoyamx.com/guia-pagar-servicios-sin-cuenta-bancaria</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-telmex-sin-tarjeta</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/recargas-telcel-efectivo</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-agua-mexico</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/que-es-oxxo-pay</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/es-seguro-pagar-servicios-celular-mexico</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/que-pasa-si-pago-cfe-tarde</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/mejores-apps-pagar-servicios-mexico</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://pagoyamx.com/que-es-dinero-electronico-mexico</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 
   <!-- ── Legal ─────────────────────────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/terminos-y-condiciones</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/aviso-de-privacidad</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
-  <!-- ── Trust & disclosure pages (added 2026-06-30) ──────────────────── -->
+  <!-- ── Trust & disclosure pages ──────────────────────────────────────── -->
   <url>
     <loc>https://pagoyamx.com/comisiones-y-cargos</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/seguridad</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/como-presentar-una-queja</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://pagoyamx.com/faq</loc>
-    <lastmod>2026-06-30</lastmod>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
