@@ -209,7 +209,7 @@ export default function CommandCenter() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
           <div style={{ background: "#0D1F2D", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "20px", padding: "28px", maxWidth: "440px", width: "100%" }}>
             <h2 style={{ color: "white", fontWeight: 800, marginBottom: "20px" }}>PageSeguro Connection</h2>
-            <p style={{ color: "#94A3B8", fontSize: "13px", marginBottom: "16px" }}>The PageSeguro API must expose <code style={{ color: "#6EF5B0" }}>/api/admin/investor-stats</code> returning the standard stats shape. See the agent prompt for setup instructions.</p>
+            <p style={{ color: "#94A3B8", fontSize: "13px", marginBottom: "16px" }}>The PageSeguro API must expose <code style={{ color: "#6EF5B0" }}>/api/admin/investor-stats</code> returning the standard stats shape.</p>
             <label style={{ ...LABEL, display: "block", marginBottom: "6px" }}>PageSeguro production URL</label>
             <input value={psUrl} onChange={e => setPsUrl(e.target.value)} placeholder="https://pageseguro.replit.app" style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "10px 14px", color: "white", fontSize: "14px", marginBottom: "14px", outline: "none" }} />
             <label style={{ ...LABEL, display: "block", marginBottom: "6px" }}>PageSeguro admin key</label>
@@ -311,7 +311,7 @@ export default function CommandCenter() {
                   Configure →
                 </button>
                 <p style={{ color: "#475569", fontSize: "12px", marginTop: "12px" }}>
-                  The PageSeguro agent must expose<br /><code style={{ color: "#6EF5B0" }}>/api/admin/investor-stats</code><br />See agent prompt below.
+                  The PageSeguro API must expose<br /><code style={{ color: "#6EF5B0" }}>/api/admin/investor-stats</code><br />Enter the URL and key in ⚙ Config.
                 </p>
               </div>
             ) : ps ? (
@@ -353,52 +353,6 @@ export default function CommandCenter() {
           </div>
         )}
 
-        {/* Agent prompt card */}
-        <SectionHeader>PageSeguro Agent Setup</SectionHeader>
-        <div style={{ ...CARD, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)" }}>
-          <p style={{ color: "#93C5FD", fontWeight: 700, fontSize: "13px", marginBottom: "10px" }}>Copy this prompt into the PageSeguro Replit agent to wire up the stats endpoint:</p>
-          <pre style={{ color: "#CBD5E1", fontSize: "12px", lineHeight: 1.7, whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.3)", borderRadius: "10px", padding: "16px", margin: 0, overflowX: "auto" }}>
-{`Add a read-only stats endpoint to this project so it can connect to
-a unified Command Center dashboard.
-
-ENDPOINT TO CREATE
-  GET /api/admin/investor-stats
-  Protected by: x-admin-key header (or ?adminKey= query param)
-    — use the same admin token pattern already in this project.
-    — if no admin auth exists yet, check the PRODUCTION_ADMIN_TOKEN
-      or SANDBOX_ADMIN_TOKEN environment secret and validate against it.
-
-REQUIRED RESPONSE SHAPE (JSON)
-{
-  "as_of": "<ISO timestamp>",
-  "users": {
-    "total":   <int — all non-test users>,
-    "new_7d":  <int — signups in last 7 days>,
-    "new_30d": <int — signups in last 30 days>
-  },
-  "payments": {
-    "completed":    <int — all successful payments>,
-    "volume_total": <float — sum of payment amounts, MXN>,
-    "revenue_total":<float — sum of platform fees, MXN>,
-    "last_7d":  { "count": <int>, "volume": <float>, "revenue": <float> },
-    "last_30d": { "count": <int>, "volume": <float>, "revenue": <float> }
-  }
-}
-
-OPTIONAL (include if the data exists)
-  "growth": { "weekly_signups": [{ "week": "YYYY-MM-DD", "signups": <int> }] }
-
-NOTES
-- Return 0s for any fields where data doesn't exist yet, never null.
-- Set Cache-Control: no-store on the response.
-- The endpoint must be reachable from external origins (CORS: allow all,
-  or at minimum allow the PagoYa origin).
-- Add the route alongside any existing /api/admin/* routes.
-- Do not expose any user PII, phone numbers, or payment details.
-- Test locally with:
-    curl -H "x-admin-key: YOUR_TOKEN" http://localhost:PORT/api/admin/investor-stats`}
-          </pre>
-        </div>
 
         {py?.as_of && (
           <p style={{ color: "#334155", fontSize: "11px", textAlign: "center", marginTop: "24px" }}>
