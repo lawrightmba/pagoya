@@ -1203,7 +1203,8 @@ router.get("/admin/ps-proxy", async (req: Request, res: Response) => {
   const { url, key } = req.query as { url?: string; key?: string };
   if (!url || !key) return res.status(400).json({ error: "Missing url or key query params" });
   try {
-    const endpoint = url.replace(/\/$/, "") + "/api/admin/investor-stats";
+    const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const endpoint = normalizedUrl.replace(/\/$/, "") + "/api/admin/investor-stats";
     const upstream = await fetch(endpoint, { headers: { "x-admin-key": key } });
     const body = await upstream.json();
     if (!upstream.ok) return res.status(upstream.status).json(body);
