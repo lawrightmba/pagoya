@@ -99,11 +99,13 @@ export default function CommandCenter() {
       setPyErr(e instanceof Error ? e.message : "Error");
     }
 
-    // PageSeguro
+    // PageSeguro — proxied through PagoYa API to avoid CORS
     if (psUrl && psKey) {
       try {
-        const url = psUrl.replace(/\/$/, "") + "/api/admin/investor-stats";
-        const r = await fetch(url, { headers: { "x-admin-key": psKey } });
+        const params = new URLSearchParams({ url: psUrl, key: psKey });
+        const r = await fetch(`${BASE_URL}/api/admin/ps-proxy?${params}`, {
+          headers: { "x-admin-key": adminKey },
+        });
         if (!r.ok) throw new Error(`${r.status}`);
         setPs(await r.json());
       } catch (e: unknown) {

@@ -1197,6 +1197,24 @@ router.get("/admin/bonus-stats", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/ps-proxy — server-side proxy for PageSeguro investor-stats (avoids browser CORS)
+// Accepts: ?url=https://pagoseguromx.com&key=pagoseguro-admin-2026
+router.get("/admin/ps-proxy", async (req: Request, res: Response) => {
+  const { url, key } = req.query as { url?: string; key?: string };
+  if (!url || !key) return res.status(400).json({ error: "Missing url or key query params" });
+  try {
+    const endpoint = url.replace(/\/$/, "") + "/api/admin/investor-stats";
+    const upstream = await fetch(endpoint, { headers: { "x-admin-key": key } });
+    const body = await upstream.json();
+    if (!upstream.ok) return res.status(upstream.status).json(body);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(body);
+  } catch (err) {
+    logger.error({ err }, "ps-proxy: upstream fetch failed");
+    return res.status(502).json({ error: "Failed to reach PageSeguro API" });
+  }
+});
+
 // GET /api/admin/investor-stats — comprehensive investor-facing metrics
 // Protected by existing adminAuth (/admin/* guard above). Apps Script uses ?adminKey=
 router.get("/admin/investor-stats", async (_req: Request, res: Response) => {
