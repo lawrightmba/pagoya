@@ -272,7 +272,7 @@ export default function PTIScoreCard({ telefono, refreshKey = 0, pendingCompute 
       {/* Header */}
       <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#005432", margin: "0 0 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span>🛡️ {es ? "Predictive Trust Index" : "Predictive Trust Index"}</span>
-        {is4Dim && <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#9CA3AF", letterSpacing: "0.05em" }}>v2.0</span>}
+        {is4Dim && <span style={{ fontSize: "0.65rem", fontWeight: 500, color: "#9CA3AF", letterSpacing: "0.05em" }}>v5.0</span>}
       </p>
 
       {/* Score circle + tier */}
