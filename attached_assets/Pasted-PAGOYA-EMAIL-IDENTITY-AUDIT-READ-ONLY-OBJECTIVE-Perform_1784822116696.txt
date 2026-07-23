@@ -1,0 +1,280 @@
+PAGOYA EMAIL IDENTITY AUDIT — READ ONLY
+
+OBJECTIVE
+
+Perform a complete read-only audit of the PagoYa project for any use of the old,
+inaccessible email address:
+
+lloyd@longview-realty.com
+
+The sole approved email address going forward is:
+
+lawrightmba@gmail.com
+
+Do not modify, replace, delete, migrate, or provision anything during this audit.
+
+This is an inspection-and-report task only.
+
+SEARCH SCOPE
+
+Search the entire PagoYa project and its active runtime configuration for:
+
+1. Exact old email address:
+   lloyd@longview-realty.com
+
+2. Case-insensitive variants of the old email address.
+
+3. Related domain references:
+   longview-realty.com
+   @longview-realty.com
+
+4. Any partial or constructed references that could generate the old address,
+   including separate username and domain configuration values.
+
+AUDIT ALL OF THE FOLLOWING
+
+SOURCE AND PROJECT FILES
+
+Search all:
+
+- Python files
+- JavaScript and TypeScript files
+- HTML and CSS
+- JSON
+- Markdown
+- TXT
+- TOML
+- YAML and YML
+- environment templates
+- shell scripts
+- configuration files
+- package files
+- migration files
+- test files
+- fixtures
+- seed files
+- static assets containing text
+- hidden files
+- dot-files
+- .config
+- .local
+- replit.md
+- agent instruction files
+- CLAUDE.md or equivalent project guidance files
+
+REPLIT CONFIGURATION
+
+Inspect, without exposing secret values:
+
+- Replit Secrets
+- environment variables
+- deployment environment variables
+- development and production deployment settings
+- scheduled deployments or jobs
+- webhook configuration
+- sender-email configuration
+- notification-email configuration
+- administrator-email configuration
+- support and contact-email configuration
+- authentication callback settings
+- domain and DNS-related configuration visible to the project
+
+Do not print secret values. Report only whether the old address or old domain is
+present and the variable or setting name where it appears.
+
+DATABASES
+
+Inspect both development and production databases.
+
+Search every text-bearing column and JSON/JSONB field in all tables, including where
+applicable:
+
+- users
+- admins
+- profiles
+- accounts
+- organizations
+- merchants
+- customers
+- payments
+- transactions
+- notifications
+- email logs
+- contact submissions
+- support requests
+- settings
+- integrations
+- audit logs
+- task records
+- metadata
+- seeded demo accounts
+
+Search exact and case-insensitive matches.
+
+Do not alter database records.
+
+AUTHENTICATION AND ACCOUNT RECOVERY
+
+Check whether the old email is used as:
+
+- an admin login
+- owner login
+- super-admin account
+- recovery email
+- password-reset destination
+- verification destination
+- notification destination
+- backup account
+- allowlisted user
+- seeded demo user
+- default account owner
+- Supabase, Firebase, Auth0, Clerk, or other authentication identity
+- Replit project owner or collaborator reference visible to the application
+
+EXTERNAL SERVICES AND INTEGRATIONS
+
+Audit any configured integrations, including where present:
+
+- Gmail or Google OAuth
+- Google Cloud
+- Resend
+- SendGrid
+- Mailgun
+- Postmark
+- Brevo
+- SMTP
+- Twilio
+- WhatsApp
+- Stripe
+- Mercado Pago
+- SPEI or banking integrations
+- Supabase
+- Firebase
+- Clerk
+- Auth0
+- Sentry
+- analytics platforms
+- CRM systems
+- form services
+- webhook destinations
+
+Determine whether the old email is used as:
+
+- account owner
+- sender
+- reply-to
+- recipient
+- alert destination
+- billing contact
+- technical contact
+- recovery email
+- OAuth identity
+
+Do not access or modify external accounts beyond what can be safely inspected from
+the existing project configuration.
+
+APPLICATION EXPERIENCE
+
+Inspect all visible application content for the old email or domain, including:
+
+- footer
+- contact page
+- privacy policy
+- terms of service
+- help page
+- support links
+- admin dashboard
+- email templates
+- transactional messages
+- error messages
+- metadata
+- Open Graph tags
+- structured data
+- downloadable documents
+- demo data
+
+GIT HISTORY AND BUILD OUTPUTS
+
+Search the current working tree first.
+
+Also inspect, where safely available:
+
+- git history
+- deleted files
+- prior configuration references
+- generated build files
+- cached deployment artifacts
+
+Clearly distinguish current active references from historical-only references.
+
+CLASSIFICATION
+
+For every occurrence found, classify it as exactly one of:
+
+1. ACTIVE CONFIGURATION — immediate replacement required
+2. ACTIVE ACCOUNT OR LOGIN — access or recovery risk
+3. ACTIVE APPLICATION CONTENT — user-visible replacement required
+4. DATABASE RECORD — determine whether operational or historical
+5. TEST OR FIXTURE — replace before future testing
+6. DOCUMENTATION — replace
+7. EXTERNAL SERVICE REFERENCE — requires manual account update
+8. HISTORICAL ONLY — no operational effect
+9. FALSE POSITIVE — unrelated occurrence
+
+REPORT FORMAT
+
+Return a clear report containing:
+
+A. Executive conclusion:
+   - SAFE: no old-email dependency found
+   - AT RISK: one or more operational dependencies found
+   - INCONCLUSIVE: something could not be inspected
+
+B. Every occurrence found, with:
+   - exact location
+   - table and column if database
+   - variable or setting name if configuration
+   - classification
+   - operational impact
+   - recommended corrective action
+
+C. Explicit answers to:
+
+1. Can Lloyd currently administer PagoYa without access to
+   lloyd@longview-realty.com?
+
+2. Could password recovery, login verification, alerts, payments, or deployment
+   access still depend on that address?
+
+3. Is lawrightmba@gmail.com already configured anywhere?
+
+4. Are any external services likely still owned by or recoverable only through the
+   old address?
+
+5. Is it safe to remove the old address immediately?
+
+6. What manual checks must Lloyd perform outside the repository?
+
+D. List all areas successfully inspected.
+
+E. List anything that could not be inspected and explain why.
+
+STOP CONDITION
+
+Do not make changes.
+
+Do not replace the old email.
+
+Do not create new accounts.
+
+Do not change authentication.
+
+Do not update Replit Secrets.
+
+Do not send test emails.
+
+Do not run migrations.
+
+Do not provision integrations.
+
+Stop after producing the audit report and wait for approval.
