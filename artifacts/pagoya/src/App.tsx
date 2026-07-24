@@ -94,6 +94,7 @@ import Seguridad from "@/pages/Seguridad";
 import ComoPresentarUnaQueja from "@/pages/ComoPresentarUnaQueja";
 import FAQ from "@/pages/FAQ";
 import CommandCenter from "@/pages/CommandCenter";
+import SADMPagoEnLinea from "@/pages/SADMPagoEnLinea";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY ?? "");
 
@@ -149,6 +150,7 @@ function Router() {
       <Route path="/recargas-telcel-efectivo" component={BlogRecargasTelcel} />
       <Route path="/pagar-agua-mexico" component={BlogAguaMexico} />
       <Route path="/pagar-agua-monterrey" component={PagarAguaMonterrey} />
+      <Route path="/sadm-pago-en-linea" component={SADMPagoEnLinea} />
       <Route path="/pagar-agua-monterrey-en-linea" component={PagarAguaMonterreyEnLinea} />
       <Route path="/pagar-gas-natural-monterrey" component={PagarGasNaturalMonterrey} />
       <Route path="/pagar-servicios-monterrey" component={PagarServiciosMonterrey} />

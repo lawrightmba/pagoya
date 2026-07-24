@@ -1,0 +1,317 @@
+# PagoYa SEO Consolidation and CTR Update — Replit Agent Instructions
+
+Paste this whole thing into the Replit Agent chat for the pagoyamx.com project.
+
+Implement a focused SEO update for **pagoyamx.com**. The goal is to consolidate duplicate ranking signals, improve click-through rates on pages already ranking near page one, and strengthen the highest-opportunity utility payment pages.
+
+Do not redesign the entire site or introduce unnecessary dependencies. Preserve the current visual identity and existing payment functionality.
+
+## ⚠️ Completion Gate
+
+This work is **not considered complete** — and should not be reported as done — until all three of the following are produced and included in the final report:
+
+1. **Redirect map** (old URL → new URL → status code)
+2. **Metadata map** (URL → title → description → H1 → canonical, for every priority page)
+3. **Test results** (passed/failed, redirect checks, broken-link checks, structured-data checks, mobile checks)
+
+If any of these three can't be completed, stop and report what's blocking it rather than marking the task done.
+
+## Current Search Performance (context, not to be changed)
+
+Approximate Google Search Console performance, last 28 days:
+
+* 12,763 impressions / 47 clicks / 0.37% CTR
+* Average position: approximately 9–10
+* Mobile impressions: ~9,703 (avg. position 8.55) — Desktop: ~2,954 (avg. position 14.39)
+
+The site already has meaningful visibility. The objective is to convert more impressions into clicks and stop duplicate URLs from splitting ranking authority — not to chase new keywords.
+
+---
+
+# Phase 1: Audit Before Editing
+
+Before making changes:
+
+1. Inspect the current route structure, static HTML files, sitemap, robots.txt, metadata generation, internal links, and hosting configuration.
+2. Identify every page available in both `.html` and extensionless formats.
+3. Determine how redirects are currently handled in Replit and the production hosting environment.
+4. Identify whether metadata is manually embedded, generated from templates, or controlled through a shared component.
+5. Confirm the current canonical URL structure.
+6. Run the existing test suite and record the baseline result.
+7. Create a short implementation plan before modifying files.
+
+Use **extensionless URLs** as the preferred canonical format (e.g. `/pagar-agua-monterrey`, not `/pagar-agua-monterrey.html`).
+
+---
+
+# Phase 2: Eliminate Duplicate URLs
+
+The largest issue: duplicate `.html` and extensionless URLs ranking for the same queries, splitting authority between them.
+
+Known examples:
+
+```text
+/pagar-agua-monterrey.html      ↔  /pagar-agua-monterrey
+/pagar-cfe-guadalajara.html     ↔  /pagar-cfe-guadalajara
+/pagar-agua-cdmx.html           ↔  /pagar-agua-cdmx
+/pagar-agua-guadalajara.html    ↔  /pagar-agua-guadalajara   (confirm non-.html route exists; create if not)
+/pagar-cfe-monterrey.html       ↔  /pagar-cfe-monterrey       (confirm non-.html route exists before redirecting — don't redirect into a 404)
+```
+
+There may be additional duplicates beyond this list — find and fix all of them; report anything found that wasn't already known.
+
+For each duplicate:
+
+1. Keep the extensionless URL as canonical.
+2. Add a permanent **301** redirect from the `.html` URL (no JavaScript or meta-refresh redirects).
+3. Add a self-referencing canonical tag to the preferred page, using the full absolute URL, e.g.:
+   ```html
+   <link rel="canonical" href="https://pagoyamx.com/pagar-agua-monterrey">
+   ```
+4. Remove the `.html` duplicate from the sitemap.
+5. Update all internal links (nav, buttons, city links, related-service links, footer) to point directly to the extensionless URL — none should pass through a redirect.
+6. Confirm no redirect chains or loops exist.
+
+---
+
+# Phase 3: Rewrite Titles and Meta Descriptions
+
+Pages ranking around positions 6–11 are getting impressions but almost no clicks. Rewrite titles/descriptions so they directly answer the query and communicate a clear benefit — without overpromising.
+
+**Rules:**
+* Titles ~45–60 characters; primary search phrase near the beginning; brand name near the end when space allows; unique per page; no keyword stuffing.
+* Descriptions ~130–160 characters; state exactly what the user can do; mention city/service where relevant; natural Mexican Spanish; unique per page.
+* **Do not claim "sin comisión," "instantáneo," "24/7," or specific processing times unless the current product genuinely supports them** — verify against the live product before using this language. Where a claim can't be verified, use neutral phrasing instead (e.g. "en línea" rather than "instantáneo").
+
+Suggested starting copy for the highest-priority pages — treat as a draft to verify against actual product capability, not as final copy to ship blindly:
+
+| Page | Draft title | Draft description |
+|---|---|---|
+| `/pagar-agua-monterrey` | Pagar Agua Monterrey en Línea \| PagoYa | Consulta y paga tu recibo de agua de Monterrey (SADM) en línea, sin cuenta bancaria. Acepta OXXO y tarjeta. |
+| Page targeting "recibo de agua" | Recibo de Agua en Línea 2026 \| PagoYa | Consulta tu recibo de agua y págalo desde tu celular. Sin cuenta bancaria, con OXXO o tarjeta. |
+| Page targeting "donde puedo pagar el recibo del agua vencido" | Recibo de Agua Vencido: Págalo en Línea \| PagoYa | Evita cortes de servicio: paga tu recibo de agua vencido en línea, sin ir al banco. Acepta OXXO y tarjeta. |
+| Page targeting "como pagar el recibo de agua en linea" | Cómo Pagar el Recibo de Agua en Línea (Guía) \| PagoYa | Te explicamos paso a paso cómo pagar tu recibo de agua en línea desde México, sin cuenta bancaria. |
+| `/pagar-agua-y-drenaje` (or equivalent) | Pagar Agua y Drenaje en Línea \| PagoYa | Paga tu servicio de agua y drenaje desde donde estés. Acepta OXXO y tarjeta. Confirmación de pago clara. |
+| `/pagar-agua-vallarta` | (audit and reuse existing pattern — this page already has the site's best CTR; don't rewrite without checking what's working) | — |
+| `/pagar-agua-cdmx` | Pagar Agua CDMX en Línea \| PagoYa | Paga tu recibo de agua de la Ciudad de México en línea, sin cuenta bancaria. Rápido y sencillo. |
+| `/pagar-agua-guadalajara` | Pagar Agua Guadalajara en Línea \| PagoYa | Consulta y paga tu recibo de agua de Guadalajara en línea. Acepta OXXO y tarjeta. |
+| `/pagar-cfe-guadalajara` | Pagar CFE Guadalajara en Línea \| PagoYa | Paga tu recibo de luz CFE en Guadalajara en línea, sin cuenta bancaria. |
+| `/pagar-cfe` | Pagar CFE en Línea \| PagoYa | Consulta y paga tu recibo de luz CFE en línea desde cualquier parte de México. |
+| `/pagar-izzi-sin-cuenta-bancaria` | Pagar Izzi Sin Cuenta Bancaria \| PagoYa | Paga tu servicio Izzi sin necesidad de una cuenta bancaria. Acepta OXXO y tarjeta. |
+| `/mejores-apps-pagar-servicios-mexico` | Mejores Apps para Pagar Servicios en México \| PagoYa | Comparamos las mejores apps para pagar luz, agua e internet en México sin cuenta bancaria. |
+
+All copy in this table is a **draft to verify**, not text to paste unverified — confirm every capability claim (OXXO, tarjeta, "sin cuenta bancaria," etc.) against what the product actually supports before publishing.
+
+---
+
+# Phase 4: Create a Dedicated SADM Page
+
+We already rank on page 1 for "sadm pago" (~position 8) and "sadm pago en línea" (~position 9) with no dedicated page targeting that term. Create:
+
+```text
+/sadm-pago-en-linea
+```
+
+Primary search intent: `sadm pago`, `sadm pago en línea`, `pagar agua y drenaje Monterrey`, `pagar recibo de agua Monterrey`.
+
+Recommended structure (must be genuinely useful, not just a keyword page):
+
+```text
+H1: SADM Pago en Línea: Cómo Pagar tu Recibo de Agua
+Introduction
+What SADM is
+How to identify the information on a SADM bill
+Available ways to pay
+How PagoYa fits into the process
+How to handle an overdue bill
+Common payment problems
+Frequently asked questions
+Clear PagoYa call to action
+Related payment guides
+```
+
+Draft title/description (verify before publishing):
+* Title: `SADM Pago en Línea: Cómo Pagar tu Recibo | PagoYa`
+* Description: `Paga tu recibo SADM (agua Monterrey) en línea sin cuenta bancaria. Guía completa paso a paso.`
+
+Explicitly state whether PagoYa processes the SADM payment directly, assists the user through the process, or is preparing the feature — don't imply capability that doesn't exist. Do not imply an official relationship with SADM unless one exists; if not, include a disclaimer such as:
+
+```text
+PagoYa es una plataforma independiente y no está afiliada oficialmente con SADM, salvo que se indique expresamente.
+```
+
+Only include that disclaimer if accurate.
+
+Link this page internally from: the Monterrey water page, related water-payment articles, the relevant city/service hub, and relevant FAQ sections.
+
+---
+
+# Phase 5: Improve High-Opportunity Pages
+
+Expand and strengthen (content, not just metadata):
+
+```text
+/pagar-agua-monterrey
+/pagar-agua-cdmx
+/pagar-agua-guadalajara
+/pagar-cfe
+/pagar-cfe-guadalajara
+/pagar-izzi-sin-cuenta-bancaria
+/mejores-apps-pagar-servicios-mexico
+```
+
+Do not add filler to reach a word count — each page should completely answer the search intent. Where relevant, cover: who the guide is for, what info the user needs, step-by-step payment instructions, payment methods, whether a bank account is required, what to do with an overdue bill, what happens after payment, processing expectations, common errors, safety/fraud warnings, FAQs, related services/cities, and a clear next action.
+
+Use headings that mirror actual search questions, e.g. "¿Dónde puedo pagar un recibo de agua vencido?", "¿Puedo pagar sin cuenta bancaria?", "¿Cuánto tarda en reflejarse el pago?"
+
+Only state processing times, fees, supported providers, and payment availability when verified in the current product.
+
+---
+
+# Phase 6: Use Vallarta as the Content Template
+
+`/pagar-agua-vallarta` currently has the site's strongest CTR (~3.01%, avg. position ~6.13). Audit it and compare against Monterrey, CDMX, and Guadalajara across: title, meta description, H1, opening paragraph, CTA placement, page length, content organization, internal links, FAQ section, trust language, structured data, mobile layout.
+
+Reuse the effective structural pattern on the other city pages, but do not duplicate exact text — each city page must stay unique and locally relevant.
+
+---
+
+# Phase 7: Internal Linking and Topic Structure
+
+Strengthen internal linking between related pages using a logical hub structure:
+
+```text
+Water payment hub
+├── Monterrey
+├── SADM payment guide
+├── CDMX
+├── Guadalajara
+└── Vallarta
+
+Electricity payment hub
+├── CFE general guide
+└── CFE Guadalajara
+
+Internet and telecom hub
+├── Izzi
+├── Telmex
+└── Telcel
+```
+
+If hubs don't currently exist, don't build an overly complex new architecture in this pass — create logical contextual links using the current site structure instead. Each priority page should link to: one relevant parent/category page, two or more related guides, the most relevant PagoYa action page, and any necessary trust/"How PagoYa Works" page. Use descriptive anchor text (e.g. "Consulta cómo pagar CFE en línea") instead of "haz clic aquí."
+
+---
+
+# Phase 8: Structured Data
+
+Add valid JSON-LD where appropriate:
+
+* Organization schema on the main site
+* WebSite schema on the homepage
+* BreadcrumbList schema on utility and city pages
+* WebPage or Article schema depending on page type
+* FAQPage schema only when the visible page contains the same questions and answers shown in the schema
+
+Do not add HowTo schema unless the visible page truly contains a complete step-by-step process meeting schema requirements. Do not add false reviews, ratings, prices, official affiliations, or unsupported service claims. Validate structured data syntax before completion.
+
+---
+
+# Phase 9: Trust and Conversion Signals
+
+Review priority pages for trust gaps. Where appropriate, link to or include: how PagoYa works, security/data handling, contact information, privacy policy, terms and conditions, supported payment methods, payment confirmation process, troubleshooting/support, and independent-platform disclaimers. Do not add decorative security badges that haven't been earned or verified.
+
+---
+
+# Phase 10: Mobile and Performance Review
+
+The site is mobile-dominant, so mobile usability matters most. Check priority pages at common mobile widths for: no horizontal scrolling, no clipped headings, tappable buttons, visible CTA, mobile-friendly forms, readable fonts, working navigation, compressed images with explicit dimensions, lazy loading where appropriate, non-blocking JS, minimized layout shift, and metadata/content rendered in the initial HTML where possible.
+
+Also investigate why mobile currently outranks desktop (position 8.55 vs. 14.39) — this is unusual and worth a specific finding, not just a general check. Do not make speculative performance changes that could break the application — prioritize measurable issues.
+
+---
+
+# Sitemap and Robots Requirements
+
+Update the XML sitemap to contain only canonical URLs, only indexable pages, no `.html` duplicates, no redirected URLs, no broken URLs, the correct production domain, and the new SADM page.
+
+Review robots.txt: confirm it doesn't block important pages, references the correct sitemap, and doesn't expose unnecessary internal environments.
+
+---
+
+# Testing and Verification
+
+After implementation:
+
+1. Run all existing tests.
+2. Add tests for redirect behavior if the project supports automated route testing.
+3. Verify every known `.html` duplicate returns a 301.
+4. Verify each redirect destination returns 200.
+5. Verify canonical tags match the final destination (not the redirected URL).
+6. Verify no redirect chains exist.
+7. Verify the sitemap includes only canonical URLs.
+8. Verify every priority page has a unique title, description, canonical tag, and H1.
+9. Verify the SADM page is accessible and internally linked.
+10. Check for broken internal links.
+11. Validate structured data.
+12. Test key pages on mobile and desktop.
+13. Confirm no existing payment or form functionality was broken.
+
+Create a lightweight SEO audit script if practical (don't introduce a large SEO framework) that detects: missing titles, duplicate titles, missing meta descriptions, missing canonicals, canonicals pointing to redirects, multiple H1 tags, broken internal links, and sitemap URLs returning non-200 responses.
+
+---
+
+# Required Deliverables (do not report completion without these)
+
+## 1. Implementation Summary
+List every file created or changed and why.
+
+## 2. Redirect Map *(required)*
+```text
+Old URL | New URL | Redirect status
+```
+
+## 3. Metadata Map *(required)*
+For every priority page:
+```text
+URL | Title | Meta description | H1 | Canonical URL
+```
+
+## 4. Content Changes
+Summarize which pages were expanded and what new sections were added.
+
+## 5. Structured Data
+List the schema types implemented and where.
+
+## 6. Test Results *(required)*
+```text
+Tests passed
+Tests failed
+Redirect checks
+Broken-link checks
+Structured-data checks
+Mobile checks
+```
+
+## 7. Remaining Recommendations
+Split anything not implemented into: Required next / Recommended later / Optional.
+
+---
+
+# Acceptance Criteria
+
+The update is complete only when:
+
+* All known `.html` duplicates permanently redirect (301) to extensionless URLs
+* All indexable pages have self-referencing canonical tags
+* Internal links use canonical URLs, not redirected ones
+* The sitemap contains no duplicate or redirected URLs
+* Priority pages have unique titles and meta descriptions
+* A dedicated SADM payment page exists and is internally linked
+* High-opportunity pages contain useful, query-aligned content
+* Relevant pages are connected through internal links
+* Structured data is valid and matches visible content
+* Mobile functionality and existing payment flows remain intact
+* Tests pass, with no broken internal links introduced
+* **The redirect map, metadata map, and test results have all been produced and included in the final report**
+
+Prioritize technical correctness and high-impact improvements over volume of new content. Complete the redirect and canonical work first, then metadata, then the SADM page and content expansions.

@@ -50,12 +50,12 @@ export default function PagarCFEGuadalajara() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es" />
-        <title>Pagar CFE Guadalajara Sin Banco | PagoYa</title>
-        <meta name="description" content="Paga tu recibo de CFE en Guadalajara desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Carga con efectivo en OXXO y paga al instante." />
+        <title>Pagar CFE Guadalajara en Línea | PagoYa</title>
+        <meta name="description" content="Paga tu recibo de luz CFE en Guadalajara en línea, sin cuenta bancaria. Acepta OXXO y tarjeta." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-cfe-guadalajara" />
-        <meta property="og:title" content="Pagar CFE Guadalajara Sin Banco | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo de CFE en Guadalajara desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas." />
+        <meta property="og:title" content="Pagar CFE Guadalajara en Línea | PagoYa" />
+        <meta property="og:description" content="Paga tu recibo de luz CFE en Guadalajara en línea, sin cuenta bancaria. Acepta OXXO y tarjeta con PagoYa." />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-cfe-guadalajara" />
         <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>

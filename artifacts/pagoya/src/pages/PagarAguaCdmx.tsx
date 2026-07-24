@@ -61,16 +61,16 @@ export default function PagarAguaCdmx() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Pagar Agua SACMEX CDMX Sin Banco | PagoYa</title>
-        <meta name="description" content="Paga tu recibo de agua SACMEX en la Ciudad de México desde tu celular en 2 minutos. Sin banco, sin tarjeta, sin filas. Solo efectivo en OXXO con PagoYa." />
+        <title>Pagar Agua CDMX en Línea | PagoYa</title>
+        <meta name="description" content="Paga tu recibo de agua de la Ciudad de México en línea, sin cuenta bancaria. Rápido y sencillo desde tu celular." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-agua-cdmx" />
         <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-cdmx" />
         <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-cdmx" />
         <meta name="geo.region" content="MX-CMX" />
         <meta name="geo.placename" content="Ciudad de México, CDMX" />
-        <meta property="og:title" content="Pagar Agua SACMEX CDMX Sin Banco | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo de agua SACMEX en la CDMX sin banco ni tarjeta. Solo efectivo en OXXO con PagoYa." />
+        <meta property="og:title" content="Pagar Agua CDMX en Línea | PagoYa" />
+        <meta property="og:description" content="Paga tu recibo de agua de la Ciudad de México en línea, sin cuenta bancaria con PagoYa." />
         <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-agua-cdmx" />

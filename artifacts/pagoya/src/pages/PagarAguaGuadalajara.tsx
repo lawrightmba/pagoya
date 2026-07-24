@@ -6,11 +6,11 @@ export default function PagarAguaGuadalajara() {
   return (
     <>
       <Helmet>
-        <title>Pagar agua SIAPA Guadalajara sin banco — Sin recibo · 2 min | PagoYa</title>
-        <meta name="description" content="Paga tu agua SIAPA en Guadalajara, Tonalá, Tlaquepaque o Zapopan sin banco ni recibo. Efectivo en OXXO → pago en 2 min. Comprobante al instante." />
+        <title>Pagar Agua Guadalajara en Línea | PagoYa</title>
+        <meta name="description" content="Consulta y paga tu recibo de agua de Guadalajara en línea, sin cuenta bancaria. Acepta OXXO y tarjeta." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-agua-guadalajara" />
-        <meta property="og:title" content="Pagar agua SIAPA Guadalajara sin banco — Sin recibo | PagoYa" />
+        <meta property="og:title" content="Pagar Agua Guadalajara en Línea | PagoYa" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-agua-guadalajara" />
       </Helmet>
       <div style={{ minHeight: "100vh", background: "#0A2540", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>

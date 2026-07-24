@@ -69,16 +69,16 @@ export default function PagarAguaMonterrey() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Pagar Agua SADM Monterrey Sin Banco | PagoYa</title>
-        <meta name="description" content="Paga tu recibo de agua SADM Monterrey desde tu celular en 2 minutos. Sin banco, sin tarjeta, sin filas. Carga con efectivo en OXXO y paga al instante con PagoYa." />
+        <title>Pagar Agua Monterrey en Línea | PagoYa</title>
+        <meta name="description" content="Consulta y paga tu recibo de agua de Monterrey (SADM) en línea, sin cuenta bancaria. Acepta OXXO y tarjeta." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-agua-monterrey" />
         <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-agua-monterrey" />
         <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-agua-monterrey" />
         <meta name="geo.region" content="MX-NL" />
         <meta name="geo.placename" content="Monterrey, Nuevo León" />
-        <meta property="og:title" content="Pagar Agua SADM Monterrey Sin Banco | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo de agua SADM Monterrey desde tu celular. Sin banco ni tarjeta. Efectivo en OXXO con PagoYa." />
+        <meta property="og:title" content="Pagar Agua Monterrey en Línea | PagoYa" />
+        <meta property="og:description" content="Paga tu recibo de agua de Monterrey (SADM) en línea, sin cuenta bancaria. Acepta OXXO y tarjeta con PagoYa." />
         <meta property="og:image" content="https://pagoyamx.com/og-default.png" />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-agua-monterrey" />
@@ -253,6 +253,7 @@ export default function PagarAguaMonterrey() {
       <section style={{ padding: "0 24px 40px", maxWidth: "760px", margin: "0 auto", width: "100%" }} className="mty-body">
         <h2 className="mty-h2" style={{ color: "white", fontWeight: 800, marginBottom: "16px" }}>Más servicios en Monterrey</h2>
         <ul className="mty-ul">
+          <li><a href="/sadm-pago-en-linea">Guía completa: SADM pago en línea</a></li>
           <li><a href="/pagar-servicios-monterrey">Pagar servicios en Monterrey (agua, luz, gas)</a></li>
           <li><a href="/pagar-agua-monterrey-en-linea">Pagar agua SADM en línea</a></li>
           <li><a href="/pagar-cfe-monterrey">Pagar CFE Monterrey</a></li>

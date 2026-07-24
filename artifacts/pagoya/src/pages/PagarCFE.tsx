@@ -10,16 +10,16 @@ export default function PagarCFE() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Cómo Pagar tu Recibo de CFE Sin Ir al Banco | PagoYa</title>
-        <meta name="description" content="Paga tu recibo de CFE desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Recarga con efectivo en OXXO y paga al instante con PagoYa." />
+        <title>Pagar CFE en Línea | PagoYa</title>
+        <meta name="description" content="Consulta y paga tu recibo de luz CFE en línea desde cualquier parte de México. Sin cuenta bancaria, con OXXO o tarjeta." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-cfe" />
         <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-cfe" />
         <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-cfe" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
-        <meta property="og:title" content="Cómo Pagar tu Recibo de CFE Sin Ir al Banco | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo de CFE desde tu celular en menos de 2 minutos. Sin cuenta bancaria, sin tarjeta, sin filas. Recarga con efectivo en OXXO y paga al instante con PagoYa." />
+        <meta property="og:title" content="Pagar CFE en Línea | PagoYa" />
+        <meta property="og:description" content="Paga tu recibo de luz CFE en línea desde cualquier parte de México, sin cuenta bancaria. Con OXXO o tarjeta." />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-cfe" />
         <script type="application/ld+json">{JSON.stringify({

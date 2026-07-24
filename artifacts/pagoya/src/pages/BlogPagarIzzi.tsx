@@ -40,16 +40,16 @@ export default function BlogPagarIzzi() {
     <div style={{ background: "#0A2540", minHeight: "100vh", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
       <Helmet>
         <html lang="es-MX" />
-        <title>Cómo Pagar Izzi sin Cuenta Bancaria en México | PagoYa</title>
-        <meta name="description" content="Guía paso a paso para pagar tu recibo Izzi sin tarjeta ni banco. Usa efectivo, OXXO o PagoYa desde tu celular. Rápido y sin filas." />
+        <title>Pagar Izzi Sin Cuenta Bancaria | PagoYa</title>
+        <meta name="description" content="Paga tu servicio Izzi sin necesidad de una cuenta bancaria. Acepta OXXO y tarjeta. Guía paso a paso." />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
         <link rel="alternate" hrefLang="es-MX" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
         <link rel="alternate" hrefLang="x-default" href="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
         <meta name="geo.region" content="MX" />
         <meta name="geo.placename" content="México" />
-        <meta property="og:title" content="Cómo Pagar Izzi sin Cuenta Bancaria | PagoYa" />
-        <meta property="og:description" content="Paga tu recibo Izzi en efectivo desde tu celular. Sin tarjeta, sin banco, sin filas." />
+        <meta property="og:title" content="Pagar Izzi Sin Cuenta Bancaria | PagoYa" />
+        <meta property="og:description" content="Paga tu servicio Izzi sin cuenta bancaria con PagoYa. Acepta OXXO y tarjeta." />
         <meta property="og:type" content="article" />
         <meta property="og:url" content="https://pagoyamx.com/pagar-izzi-sin-cuenta-bancaria" />
         <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>

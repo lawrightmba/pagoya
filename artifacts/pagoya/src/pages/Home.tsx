@@ -339,6 +339,27 @@ export default function Home() {
         <meta name="twitter:title" content="PagoYa — Paga Tus Recibos Sin Cuenta Bancaria" />
         <meta name="twitter:description" content="¿No tienes cuenta de banco? No hay problema. Paga tus servicios desde tu celular, sin complicaciones." />
         <link rel="canonical" href="https://pagoyamx.com/" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "PagoYa",
+          "url": "https://pagoyamx.com",
+          "logo": "https://pagoyamx.com/pagoya-logo.png",
+          "description": "PagoYa es una plataforma de pagos de servicios para usuarios sin cuenta bancaria en México. Paga luz, agua, teléfono y más desde tu celular.",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "availableLanguage": "Spanish"
+          }
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "PagoYa",
+          "url": "https://pagoyamx.com",
+          "description": "Paga luz, agua, teléfono y más desde tu celular, sin cuenta bancaria. Disponible en México.",
+          "inLanguage": "es-MX"
+        })}</script>
       </Helmet>
 
       {/* ── CSS ── */}

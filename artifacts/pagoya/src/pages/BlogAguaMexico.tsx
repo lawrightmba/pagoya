@@ -181,6 +181,7 @@ export default function BlogAguaMexico() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
             {[
               { href: "/pagar-agua-monterrey", city: "Monterrey / Nuevo León", org: "SADM", icon: "🏔️" },
+              { href: "/sadm-pago-en-linea", city: "Guía SADM completa", org: "Monterrey · paso a paso", icon: "📋" },
               { href: "/pagar-agua-cdmx", city: "Ciudad de México", org: "SACMEX", icon: "🏙️" },
             ].map(c => (
               <a key={c.href} href={c.href} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "18px 20px", display: "block", transition: "border-color 0.2s" }}>
@@ -194,7 +195,7 @@ export default function BlogAguaMexico() {
 
         <div style={{ marginTop: "32px", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "13px", color: "#475569" }}>
           <strong style={{ color: "#64748B" }}>También te puede interesar: </strong>
-          <a href="/pagar-cfe">Pagar CFE</a> · <a href="/pagar-telmex">Pagar Telmex</a> · <a href="/pagar-agua-monterrey">Agua Monterrey (SADM)</a> · <a href="/pagar-agua-cdmx">Agua CDMX (SACMEX)</a> · <a href="/guia-pagar-servicios-sin-cuenta-bancaria">Guía completa sin banco</a>
+          <a href="/pagar-cfe">Pagar CFE</a> · <a href="/pagar-telmex">Pagar Telmex</a> · <a href="/sadm-pago-en-linea">SADM pago en línea</a> · <a href="/pagar-agua-monterrey">Agua Monterrey</a> · <a href="/pagar-agua-cdmx">Agua CDMX (SACMEX)</a> · <a href="/guia-pagar-servicios-sin-cuenta-bancaria">Guía completa sin banco</a>
         </div>
       </main>
     </div>
