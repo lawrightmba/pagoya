@@ -218,6 +218,91 @@ describe("PTI model-lineage — DB integration", () => {
     await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL_F}`);
   }, 30000);
 
+  // ── (h) hadScoreBelow — three cases: below+same-model, at/above+same-model, cross-model ──
+  //
+  // Directly replicates the SQL inside hadScoreBelow() in paulaTriggers.ts.
+  // Three sub-assertions in one self-contained test:
+  //   h1. same-model row that IS below threshold → found (returns true)
+  //   h2. same-model row that is NOT below threshold → not found (returns false)
+  //   h3. cross-model row that IS below threshold → excluded (returns false)
+  it("(h) hadScoreBelow SQL correctly handles below+same-model, above+same-model, and cross-model rows", async () => {
+    const { db } = await import("@workspace/db");
+    const TEL_H = "pti_lineage_h_test";
+    const THRESHOLD = 70;
+
+    // Isolated setup
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL_H}`);
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL_H}`);
+
+    const v5Breakdown = JSON.stringify({ total: 65, model_version: V5 });
+    await db.execute(sql`
+      INSERT INTO users (telefono, pti_score, pti_breakdown)
+      VALUES (${TEL_H}, 65, ${v5Breakdown}::jsonb)
+    `);
+
+    // Read currentModelVersion the same way paulaTriggers.ts does
+    const mvRow = await db.execute(sql`
+      SELECT pti_breakdown->>'model_version' AS model_version
+      FROM users WHERE telefono = ${TEL_H} LIMIT 1
+    `);
+    const currentModelVersion =
+      ((mvRow.rows[0] as Record<string, unknown>)?.model_version as string | null) ?? null;
+    expect(currentModelVersion).toBe(V5);
+
+    // ── h1: same-model row with score below threshold → must be found ─────────
+    const v5BelowBreakdown = JSON.stringify({ total: 65, model_version: V5 });
+    await db.execute(sql`
+      INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+      VALUES (${TEL_H}, 65, ${v5BelowBreakdown}::jsonb, NOW() - INTERVAL '5 days')
+    `);
+    const h1 = await db.execute(sql`
+      SELECT 1 FROM pti_score_history
+      WHERE telefono = ${TEL_H}
+        AND pti_score < ${THRESHOLD}
+        AND breakdown->>'model_version' = ${currentModelVersion}
+      LIMIT 1
+    `);
+    expect(h1.rows.length).toBe(1); // score 65 < 70, same model → found
+
+    // ── h2: same-model row with score AT threshold → must NOT be found ────────
+    // (hadScoreBelow uses strict <, not <=)
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL_H}`);
+    const v5AtBreakdown = JSON.stringify({ total: 70, model_version: V5 });
+    await db.execute(sql`
+      INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+      VALUES (${TEL_H}, 70, ${v5AtBreakdown}::jsonb, NOW() - INTERVAL '5 days')
+    `);
+    const h2 = await db.execute(sql`
+      SELECT 1 FROM pti_score_history
+      WHERE telefono = ${TEL_H}
+        AND pti_score < ${THRESHOLD}
+        AND breakdown->>'model_version' = ${currentModelVersion}
+      LIMIT 1
+    `);
+    expect(h2.rows.length).toBe(0); // score 70 is not < 70 → not found
+
+    // ── h3: cross-model row with score below threshold → must be excluded ─────
+    // Even though score 50 is well below 70, the wrong model_version must block it.
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL_H}`);
+    const v4BelowBreakdown = JSON.stringify({ total: 50, model_version: V4 });
+    await db.execute(sql`
+      INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+      VALUES (${TEL_H}, 50, ${v4BelowBreakdown}::jsonb, NOW() - INTERVAL '5 days')
+    `);
+    const h3 = await db.execute(sql`
+      SELECT 1 FROM pti_score_history
+      WHERE telefono = ${TEL_H}
+        AND pti_score < ${THRESHOLD}
+        AND breakdown->>'model_version' = ${currentModelVersion}
+      LIMIT 1
+    `);
+    expect(h3.rows.length).toBe(0); // score 50 < 70 but v4.3 model → excluded
+
+    // Isolated cleanup
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL_H}`);
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL_H}`);
+  }, 30000);
+
   // ── (g) New snapshot rows store model_version from actual breakdown ─────────
   //
   // Self-contained: creates its own isolated user, runs the INSERT that
