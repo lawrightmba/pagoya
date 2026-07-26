@@ -181,15 +181,17 @@ describe("PTI model-lineage — DB integration", () => {
     const v4Breakdown = JSON.stringify({ total: 85, model_version: V4 });
     const v5Breakdown = JSON.stringify({ total: 72, model_version: V5 });
 
-    await db.execute(sql`INSERT INTO users (telefono, pti_score) VALUES (${TEL_F}, 72)`);
+    // Single INSERT sets pti_breakdown atomically — no separate UPDATE step,
+    // which would leave a window for a parallel test's table-wipe to delete
+    // the row between the two statements.
+    await db.execute(sql`
+      INSERT INTO users (telefono, pti_score, pti_breakdown)
+      VALUES (${TEL_F}, 72, ${v5Breakdown}::jsonb)
+    `);
     // Seed a v4.3 history row with score 85 (above 80) written 5 days ago.
     await db.execute(sql`
       INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
       VALUES (${TEL_F}, 85, ${v4Breakdown}::jsonb, NOW() - INTERVAL '5 days')
-    `);
-    // Set current live breakdown to v5.0 (score 72, below 80 → never crossed under v5)
-    await db.execute(sql`
-      UPDATE users SET pti_breakdown = ${v5Breakdown}::jsonb WHERE telefono = ${TEL_F}
     `);
 
     // Replicate the model-aware crossedThresholdRecently SQL from paulaTriggers.ts
