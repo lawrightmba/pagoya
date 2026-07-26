@@ -669,26 +669,31 @@ export function getPTITier(score: number): { tier: string; color: string; label:
 // ─── Compute PTI for a single user ───────────────────────────────────────────
 
 /**
- * @deprecated For new usage only. Existing callers must NOT be migrated or
- * removed without explicit review — each call site has been classified
- * separately (see PTI lineage audit, 2026-07-26).
+ * ⚠️  NOT deprecated for existing callers — but new code must not call this.
  *
- * **v5.0 (`computePTIv5LiveForUser`) is the current production baseline.**
- * It is the authoritative scoring function for all nightly and monthly batch
- * writes to `users.pti_score` and `pti_score_history` as of Phase E
- * (2026-07-13).
+ * This function (v4.3, model version `"v4.3-signal-expansion"`) is still the
+ * live terminal scoring function on two production paths that cannot be
+ * migrated without a dedicated review sprint:
  *
- * This function (v4.3, `"v4.3-signal-expansion"`) remains active on:
- *   - `POST /api/pti/compute-now` (admin on-demand recompute)
- *   - `computePTIForAllUsers` startup-catchup path in `ptiCron.ts`
- *   - The external Licensee API (`POST /api/v1/score`) via `computeLicenseeScore`,
- *     which is version-pinned to v4.3 per partner contract.
+ *   1. **Licensee API** (`POST /api/v1/score` → `computeLicenseeScore` →
+ *      here): version-pinned to v4.3 by external partner contract. Any change
+ *      requires partner notification and contract review.
  *
- * Do not create new dependencies on this function for internal PagoYa
- * scoring, Paula coaching, or B2B exports. Note that this function still
- * writes to `pti_score_history` and updates `users.pti_score`, which means
- * it can introduce cross-model contamination in trajectory calculations
- * if triggered alongside the v5.0 nightly path.
+ *   2. **Admin on-demand recompute** (`POST /api/pti/compute-now` →
+ *      `routes/pti.ts:81`): still writes v4.3-scored rows to
+ *      `pti_score_history` and overwrites `users.pti_score`, which can
+ *      introduce cross-model contamination in trajectory calculations.
+ *
+ * **For all new scoring integrations, use `computePTIv5LiveForUser`.**
+ * v5.0 (`"v5.0.0-rc1"`) is the production baseline for all automated
+ * scoring as of Phase E (2026-07-13) — it handles every nightly and monthly
+ * batch write. Do not create new call sites here for internal PagoYa
+ * scoring, Paula coaching, B2B exports, or any other purpose.
+ *
+ * Migrating the two existing callers above to v5.0 requires a dedicated
+ * sprint: the Licensee API migration has external partner contract
+ * implications, and the compute-now route migration must account for the
+ * history contamination risk described above.
  */
 export async function computePTIForUser(telefono: string): Promise<PTIBreakdown> {
   const { db } = await import("@workspace/db");
