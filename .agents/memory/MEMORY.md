@@ -39,6 +39,9 @@
 - [PTI new-field ablation study](pti-newfield-study.md) — 15 derived fields synthesized via separate per-user PRNG; deltas are circular upper bounds (relHat both generates fields and defines cohorts); prod coverage ~0%
 - [Quarantine-tier signals](quarantine-tier-signals.md) — LIKE 'load_%' misses spei_in; billpay setup.ts wipes core tables afterEach (seed in beforeEach); vitest needs --disableConsoleIntercept for console evidence
 - [PTI derived features live wiring](pti-derived-features-live.md) — new snapshot fields MUST be wired into buildPTISnapshotFromDb + covered by the seeded-DB integration gate, or prod silently serves defaults
+- [CFR archetype analysis](cfr-archetype-analysis.md) — CFR 35% weight is structurally sound across 10 archetypes; GIG-FAIR + FAIR-BANK + WALLET-ONLY all pass; do not change aggregation weight
+- [Paula module → PTI v2 mapping](paula-module-pti-v2-mapping.md) — M1→PR, M2→PR+CFR, M3→ED+BS, M4→all, M5→EO+CFR; Paula uses user-facing labels only (Pago de Servicios / Flujo de Fondos / Rutina Financiera)
+- [buildPTIv2PaulaContext service](paula-pti-v2-context.md) — Sprint 9 Part B; read-only; 5 stances; renderPTIv2PromptSection pure; agentChat.ts 11th param; computeBehavioralTrajectory takes (currentBreakdown, historyRows, ref) NOT (historyRows, ref)
 - [PTI zero-weight field integration pattern](pti-zero-weight-fields.md) — how to add new derived/event features to PTI without touching scoring: DERIVED_FEATURE_DEFAULTS spread + explicit script destructuring even when generator never sets them
 - [PTI v4.3 weight allocation decision](pti-v4-3-disposition.md) — all 15 derived fields ship at zero weight; 5 permanent_non_scoring vs 10 provisional_zero_weight; disposition registry in ptiV4_3Disposition.ts
 - [Landing-page + rep attribution](landing-page-attribution.md) — onConflictDoNothing swallows attribution on pre-existing rows; every attribution column needs a guarded conflict-branch backfill UPDATE

@@ -5,6 +5,11 @@ import { eq, desc, and, gt, sql } from "drizzle-orm";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 import { getServiceById } from "../billpay/services/catalog.js";
+import {
+  buildPTIv2PaulaContext,
+  renderPTIv2PromptSection,
+  type PTIv2PaulaContextResult,
+} from "../services/buildPTIv2PaulaContext.js";
 
 const router = Router();
 
@@ -35,7 +40,7 @@ export interface PendingWithdrawalStage {
 }
 
 // ─── System prompt ─────────────────────────────────────────────────────────────
-function buildSystemPrompt(
+export function buildSystemPrompt(
   profileName?: string | null,
   ptiTier?: string | null,
   ptiScore?: number | null,
@@ -46,6 +51,7 @@ function buildSystemPrompt(
   financialLiteracyScore?: number | null,
   modulesUnlocked?: string[] | null,
   coachingResponsiveness?: string | null,
+  ptiV2Context?: PTIv2PaulaContextResult | null,
 ): string {
   const greeting = profileName ? ` El nombre del usuario en WhatsApp es "${profileName}".` : "";
 
@@ -228,7 +234,7 @@ RETIROS / TRANSFERENCIA A CUENTA BANCARIA (SPEI OUT): Cuando el usuario quiere r
 
 TRANSFERENCIA ENTRE USUARIOS PAGOYA (P2P): Cuando el usuario quiere enviarle dinero a otra persona que también usa PagoYa, usa prepare_p2p_transfer. Es instantáneo, sin comisión, mínimo $10 MXN, límite diario $2,500 MXN. Necesitas: número de teléfono del destinatario y monto. Puedes pedir una nota opcional. Si el destinatario no está registrado en PagoYa, infórmale al usuario: "Esa persona todavía no tiene cuenta PagoYa. Pueden registrarse gratis en pagoyamx.com o escribiéndole a este número de WhatsApp."
 
-Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}${literacyContext}`;
+Sé conciso — máximo 3 oraciones por respuesta salvo que el usuario pida más detalle. No menciones que eres Claude ni que usas IA de Anthropic.${langInstruction}${literacyContext}${ptiV2Context != null ? renderPTIv2PromptSection(ptiV2Context) : ""}`;
 }
 
 // ─── Tool definitions ──────────────────────────────────────────────────────────
@@ -821,6 +827,14 @@ router.post("/", async (req: Request, res: Response) => {
       } catch { /* responsiveness unavailable — degrades gracefully */ }
     }
 
+    // PTI v2 coaching context — read-only; any error → null (Paula unaffected)
+    let ptiV2CoachingCtx: PTIv2PaulaContextResult | null = null;
+    if (telefono) {
+      try {
+        ptiV2CoachingCtx = await buildPTIv2PaulaContext(telefono);
+      } catch { /* context unavailable — degrades gracefully */ }
+    }
+
     const messages: MessageParam[] = [
       ...history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: message.trim() },
@@ -839,7 +853,7 @@ router.post("/", async (req: Request, res: Response) => {
       }>)({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
-        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths, ptiTrend, financialLiteracyScore, modulesUnlocked, coachingResponsiveness),
+        system: buildSystemPrompt(profileName, ptiTier, ptiScore, lang, ptiBreakdown, consecutivePaymentMonths, ptiTrend, financialLiteracyScore, modulesUnlocked, coachingResponsiveness, ptiV2CoachingCtx),
         tools: TOOLS,
         messages,
       });
