@@ -514,6 +514,101 @@ router.get("/admin/pti-v5-monitoring", async (_req: Request, res: Response) => {
       WHERE u.is_test_account IS NOT TRUE AND u.pti_score IS NOT NULL
     `);
 
+    // ── NEW: History table row counts by model_version ───────────────────────
+    // Catches silent version-drift: if nightly computes write to the wrong
+    // model_version bucket, counts here diverge from model_version_coverage above.
+    const historyByModel = await db.execute(sql`
+      SELECT
+        COALESCE(breakdown->>'model_version', '(null)') AS model_version,
+        COUNT(*)::int                                   AS n
+      FROM pti_score_history
+      GROUP BY 1
+      ORDER BY n DESC
+    `);
+
+    // ── NEW: Trend snapshot row counts by model_version ───────────────────────
+    // pti_trend_snapshots.model_version was widened from VARCHAR(10) to TEXT;
+    // any truncation bug would show mismatched counts here vs historyByModel.
+    const snapshotsByModel = await db.execute(sql`
+      SELECT
+        COALESCE(model_version, '(null)') AS model_version,
+        COUNT(*)::int                     AS n
+      FROM pti_trend_snapshots
+      GROUP BY 1
+      ORDER BY n DESC
+    `);
+
+    // ── NEW: Users with ≥ 3 same-model trend snapshot rows ───────────────────
+    // A user needs at least 3 same-model snapshots for a meaningful trajectory
+    // calculation. Low coverage here signals the trajectory layer is starved.
+    const usersWithEnoughSnapshots = await db.execute(sql`
+      SELECT COUNT(*)::int AS count
+      FROM (
+        SELECT user_id
+        FROM pti_trend_snapshots
+        WHERE model_version IS NOT NULL
+        GROUP BY user_id, model_version
+        HAVING COUNT(*) >= 3
+      ) sub
+    `);
+
+    // ── NEW: Same-model history span distribution ─────────────────────────────
+    // "span_days" = MAX(recorded_at) - MIN(recorded_at) for the active model.
+    // Users with < 30 days of same-model history have very limited trajectory
+    // signal. Update the hardcoded model string when the active model changes.
+    // NOTE: 'v5.0.0-rc1' is hardcoded intentionally — update alongside model_active.
+    const historySpanDist = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE span_days >= 30)::int AS users_30d_span,
+        COUNT(*) FILTER (WHERE span_days >= 60)::int AS users_60d_span,
+        COUNT(*) FILTER (WHERE span_days >= 90)::int AS users_90d_span
+      FROM (
+        SELECT
+          telefono,
+          EXTRACT(EPOCH FROM (MAX(recorded_at) - MIN(recorded_at))) / 86400.0 AS span_days
+        FROM pti_score_history
+        WHERE breakdown->>'model_version' = 'v5.0.0-rc1'
+        GROUP BY telefono
+      ) sub
+    `);
+
+    // ── NEW: Silent write failure detection ───────────────────────────────────
+    // Compares the set of users who received a pti_score_history row in the most
+    // recent nightly batch against those who received a pti_trend_snapshots row
+    // in the same window. A non-zero mismatch_count indicates a silent failure
+    // of the same kind found in the model_version VARCHAR(10) audit: history rows
+    // written but corresponding snapshot rows silently failing.
+    //
+    // "Last nightly batch" is approximated as all rows within 2 hours of the
+    // most recent recorded_at in pti_score_history. This is robust to normal
+    // batch sizes but may conflate two consecutive batches if they run < 2h apart
+    // (unlikely for a nightly cadence).
+    const silentWriteCheck = await db.execute(sql`
+      WITH last_batch_anchor AS (
+        SELECT MAX(recorded_at) AS max_recorded FROM pti_score_history
+      ),
+      history_batch AS (
+        SELECT DISTINCT h.telefono
+        FROM pti_score_history h
+        CROSS JOIN last_batch_anchor
+        WHERE h.recorded_at >= max_recorded - INTERVAL '2 hours'
+      ),
+      snapshot_batch AS (
+        SELECT DISTINCT u.telefono
+        FROM pti_trend_snapshots pts
+        JOIN users u ON u.id = pts.user_id
+        CROSS JOIN last_batch_anchor
+        WHERE pts.computed_at >= max_recorded - INTERVAL '2 hours'
+      )
+      SELECT
+        (SELECT COUNT(*)::int    FROM history_batch)                              AS users_got_history,
+        (SELECT COUNT(*)::int    FROM snapshot_batch)                             AS users_got_snapshot,
+        (SELECT COUNT(*)::int    FROM history_batch h
+         LEFT JOIN snapshot_batch s ON s.telefono = h.telefono
+         WHERE s.telefono IS NULL)                                                AS snapshot_write_mismatches,
+        (SELECT max_recorded::text FROM last_batch_anchor)                        AS last_batch_at
+    `);
+
     res.json({
       ok: true,
       as_of: new Date().toISOString(),
@@ -526,6 +621,14 @@ router.get("/admin/pti-v5-monitoring", async (_req: Request, res: Response) => {
       },
       model_version_coverage: modelCoverage.rows,
       shadow_vs_live_delta: deltaSummary.rows[0] ?? null,
+      // ── New monitoring fields ──────────────────────────────────────────────
+      score_history_by_model: historyByModel.rows,
+      snapshots_by_model: snapshotsByModel.rows,
+      users_with_3plus_snapshots: Number(
+        (usersWithEnoughSnapshots.rows[0] as Record<string, unknown>)?.count ?? 0,
+      ),
+      history_span_distribution: historySpanDist.rows[0] ?? null,
+      silent_write_check: silentWriteCheck.rows[0] ?? null,
     });
   } catch (err) {
     logger.error({ err }, "admin/pti-v5-monitoring: failed");

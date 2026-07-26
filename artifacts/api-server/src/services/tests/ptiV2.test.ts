@@ -57,6 +57,21 @@ import {
   computeAlignment,
   // Main adapter
   buildPTIv2Profile,
+  // Expected Obligation v1 constants
+  EXPECTED_OBLIGATION_VERSION,
+  EO_MIN_OBSERVATION_COUNT,
+  EO_INTERVAL_TOLERANCE_PCT,
+  EO_HIGH_CONFIDENCE_TOLERANCE_PCT,
+  EO_STALE_MULTIPLIER,
+  // Expected Obligation v1 pure functions
+  deriveObligationId,
+  computeMedianValue,
+  computeIntervals,
+  classifyCadence,
+  computeExpectationConfidence,
+  computeLifecycleStatus,
+  computeSingleExpectedObligation,
+  computeExpectedObligations,
 } from "../ptiV2.js";
 import type {
   EvidenceDepthRawInputs,
@@ -64,6 +79,10 @@ import type {
   DimTrajectoryDirection,
   AlignmentSignal,
   PTIv2DimensionTrajectories,
+  BillPaymentObservation,
+  ExpectedObligation,
+  ExpectedObligationsResult,
+  ObligationLifecycleStatus,
 } from "../ptiV2.js";
 import type { PTIBreakdown } from "../pti.js";
 
@@ -1922,4 +1941,520 @@ describe("PTIv2Trajectory — top-level aliases verified via buildPTIv2Profile D
 
     await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
   }, 30000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 12 — Expected Obligation V1 tests
+//
+// All tests use pure functions only — no DB calls, no mocking required.
+// The module-level helper `pay()` builds BillPaymentObservation fixtures with
+// a fixed reference time so results are fully deterministic and reproducible.
+//
+// Test naming convention: EO-<COMPONENT>-<N>
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Expected Obligation V1 — pure functions", () => {
+  /** Fixed reference point — all "days ago" helpers are relative to this. */
+  const REF = new Date("2024-07-15T12:00:00.000Z");
+  const ENTITY = "+521234567890";
+  const D = MSEC_PER_DAY; // reuse the module-level constant
+
+  /**
+   * Builds a BillPaymentObservation with `daysAgoFromRef` days before REF.
+   * Overrides are shallow-merged after the defaults.
+   */
+  function pay(
+    serviceId: string,
+    daysAgoFromRef: number,
+    overrides: Partial<BillPaymentObservation> = {},
+  ): BillPaymentObservation {
+    return {
+      serviceId,
+      serviceName: "CFE",
+      categoria:   "utilities",
+      monto:       500,
+      createdAt:   new Date(REF.getTime() - daysAgoFromRef * D),
+      ...overrides,
+    };
+  }
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+
+  it("EO-CONST-1: exported constants have the expected values", () => {
+    expect(EXPECTED_OBLIGATION_VERSION).toBe("expected-obligation-v1.0-deterministic");
+    expect(EO_MIN_OBSERVATION_COUNT).toBe(3);
+    expect(EO_INTERVAL_TOLERANCE_PCT).toBe(0.30);
+    expect(EO_HIGH_CONFIDENCE_TOLERANCE_PCT).toBe(0.15);
+    expect(EO_STALE_MULTIPLIER).toBe(2.5);
+  });
+
+  it("EO-CONST-2: EO version is independent of Evidence Depth and BT version strings", () => {
+    expect(EXPECTED_OBLIGATION_VERSION).not.toBe(EVIDENCE_DEPTH_VERSION);
+    expect(EXPECTED_OBLIGATION_VERSION).not.toBe(BEHAVIORAL_TRAJECTORY_VERSION);
+  });
+
+  // ── deriveObligationId ─────────────────────────────────────────────────────
+
+  it("EO-ID-1: deriveObligationId is deterministic and reproducible", () => {
+    expect(deriveObligationId("A", "CFE")).toBe("eo::A::CFE");
+    expect(deriveObligationId("A", "CFE")).toBe(deriveObligationId("A", "CFE"));
+  });
+
+  it("EO-ID-2: different entity or service yields a different id", () => {
+    expect(deriveObligationId("A", "CFE")).not.toBe(deriveObligationId("B", "CFE"));
+    expect(deriveObligationId("A", "CFE")).not.toBe(deriveObligationId("A", "TELMEX"));
+  });
+
+  // ── computeMedianValue ─────────────────────────────────────────────────────
+
+  it("EO-MEDIAN-1: median of odd-length array", () => {
+    expect(computeMedianValue([1, 2, 3])).toBe(2);
+    expect(computeMedianValue([30])).toBe(30);
+  });
+
+  it("EO-MEDIAN-2: median of even-length array is average of two middle values", () => {
+    expect(computeMedianValue([1, 3])).toBe(2);
+    expect(computeMedianValue([29, 30, 31, 32])).toBe(30.5);
+  });
+
+  it("EO-MEDIAN-3: empty array returns 0 without throwing", () => {
+    expect(computeMedianValue([])).toBe(0);
+  });
+
+  // ── computeIntervals ───────────────────────────────────────────────────────
+
+  it("EO-INT-1: consecutive intervals computed correctly in days", () => {
+    const sorted = [
+      pay("CFE", 60),
+      pay("CFE", 30),
+      pay("CFE", 0),
+    ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const ivs = computeIntervals(sorted);
+    expect(ivs).toHaveLength(2);
+    expect(ivs[0]).toBeCloseTo(30, 1);
+    expect(ivs[1]).toBeCloseTo(30, 1);
+  });
+
+  it("EO-INT-2: single-payment list produces empty intervals array", () => {
+    expect(computeIntervals([pay("CFE", 0)])).toHaveLength(0);
+  });
+
+  // ── classifyCadence ────────────────────────────────────────────────────────
+
+  it("EO-CADENCE-1: cadence boundaries map to correct labels", () => {
+    expect(classifyCadence(7)).toBe("weekly");
+    expect(classifyCadence(9)).toBe("weekly");
+    expect(classifyCadence(10)).toBe("biweekly");
+    expect(classifyCadence(20)).toBe("biweekly");
+    expect(classifyCadence(21)).toBe("monthly");
+    expect(classifyCadence(30)).toBe("monthly");
+    expect(classifyCadence(40)).toBe("monthly");
+    expect(classifyCadence(41)).toBe("bimonthly");
+    expect(classifyCadence(60)).toBe("bimonthly");
+    expect(classifyCadence(70)).toBe("bimonthly");
+    expect(classifyCadence(71)).toBe("quarterly");
+    expect(classifyCadence(90)).toBe("quarterly");
+    expect(classifyCadence(120)).toBe("quarterly");
+    expect(classifyCadence(121)).toBe("irregular");
+    expect(classifyCadence(180)).toBe("irregular");
+  });
+
+  // ── computeExpectationConfidence ───────────────────────────────────────────
+
+  it("EO-CONF-1: 3 observations → LOW", () => {
+    expect(computeExpectationConfidence(3, [30, 30], 30)).toBe("LOW");
+  });
+
+  it("EO-CONF-2: 4–5 observations → MODERATE", () => {
+    expect(computeExpectationConfidence(4, [30, 30, 30], 30)).toBe("MODERATE");
+    expect(computeExpectationConfidence(5, [30, 30, 30, 30], 30)).toBe("MODERATE");
+  });
+
+  it("EO-CONF-3: 6+ observations all within 15% tolerance → HIGH", () => {
+    // 15% of 30 = 4.5 days; all within [25.5, 34.5]
+    const tight = [30, 31, 29, 30, 28.5, 31.5];
+    expect(computeExpectationConfidence(7, tight, 30)).toBe("HIGH");
+  });
+
+  it("EO-CONF-4: 6+ observations but some outside 15% tolerance → MODERATE (not HIGH)", () => {
+    // 38 is outside 15% of 30 (34.5 threshold)
+    const wide = [30, 38, 22, 30, 35, 25];
+    expect(computeExpectationConfidence(7, wide, 30)).toBe("MODERATE");
+  });
+
+  it("EO-CONF-5: VERIFIED is NEVER returned from OBSERVED_RECURRING confidence path", () => {
+    const cases: [number, number[], number][] = [
+      [3, [30, 30], 30],
+      [4, [30, 30, 30], 30],
+      [6, [30, 30, 30, 30, 30], 30],
+      [10, [30, 30, 30, 30, 30, 30, 30, 30, 30], 30],
+    ];
+    for (const [count, ivs, med] of cases) {
+      expect(computeExpectationConfidence(count, ivs, med)).not.toBe("VERIFIED");
+    }
+  });
+
+  // ── computeSingleExpectedObligation — null-return cases ────────────────────
+
+  it("EO-SINGLE-1: single payment → null (below minimum threshold)", () => {
+    expect(
+      computeSingleExpectedObligation(ENTITY, "CFE", [pay("CFE", 5)], REF),
+    ).toBeNull();
+  });
+
+  it("EO-SINGLE-2: two payments → null (EO_MIN_OBSERVATION_COUNT = 3)", () => {
+    expect(
+      computeSingleExpectedObligation(ENTITY, "CFE", [pay("CFE", 35), pay("CFE", 5)], REF),
+    ).toBeNull();
+  });
+
+  it("EO-SINGLE-3: irregular intervals → null instead of a fabricated expectation", () => {
+    // Intervals: 30d, 60d, 15d — 60 is 100% off the 30d median → too inconsistent
+    const payments = [
+      pay("CFE", 105),
+      pay("CFE", 75),
+      pay("CFE", 15),
+      pay("CFE", 0),
+    ];
+    expect(
+      computeSingleExpectedObligation(ENTITY, "CFE", payments, REF),
+    ).toBeNull();
+  });
+
+  it("EO-SINGLE-4: all-same-day payments (zero interval) → null (degenerate)", () => {
+    const t = new Date("2024-07-10T10:00:00Z");
+    const payments: BillPaymentObservation[] = [
+      { serviceId: "CFE", serviceName: "CFE", categoria: "utilities", monto: 500, createdAt: t },
+      { serviceId: "CFE", serviceName: "CFE", categoria: "utilities", monto: 500, createdAt: t },
+      { serviceId: "CFE", serviceName: "CFE", categoria: "utilities", monto: 500, createdAt: t },
+    ];
+    expect(
+      computeSingleExpectedObligation(ENTITY, "CFE", payments, REF),
+    ).toBeNull();
+  });
+
+  // ── TC: Monthly recurring — full recognition ───────────────────────────────
+
+  it("EO-MONTHLY-1: monthly recurring bill is recognized with correct cadence and fields", () => {
+    // 3 payments at consistent ~30-day intervals
+    const payments = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+
+    expect(result).not.toBeNull();
+    expect(result!.cadence).toBe("monthly");
+    expect(result!.cadence_interval_days).toBeCloseTo(30, 0);
+    expect(result!.observation_count).toBe(3);
+    expect(result!.expectation_source).toBe("OBSERVED_RECURRING");
+    expect(result!.entity_id).toBe(ENTITY);
+    expect(result!.entity_type).toBe("human");
+    expect(result!.domain).toBe("financial");
+    expect(result!.version).toBe(EXPECTED_OBLIGATION_VERSION);
+    expect(result!.obligation_id).toBe(`eo::${ENTITY}::CFE`);
+  });
+
+  it("EO-MONTHLY-2: payment input order does not affect the result", () => {
+    const forward  = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const reversed = [pay("CFE", 30), pay("CFE", 60), pay("CFE", 90)];
+    const r1 = computeSingleExpectedObligation(ENTITY, "CFE", forward,  REF);
+    const r2 = computeSingleExpectedObligation(ENTITY, "CFE", reversed, REF);
+    expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+  });
+
+  // ── TC: Bimonthly — cadence must NOT be forced to "monthly" ───────────────
+
+  it("EO-BIMONTH-1: bimonthly utility bill gets cadence bimonthly, not monthly", () => {
+    // ~60-day intervals
+    const payments = [
+      pay("GAS", 180, { serviceName: "Gas Natural", categoria: "utilities" }),
+      pay("GAS", 120, { serviceName: "Gas Natural", categoria: "utilities" }),
+      pay("GAS", 60,  { serviceName: "Gas Natural", categoria: "utilities" }),
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "GAS", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.cadence).toBe("bimonthly");
+    expect(result!.cadence_interval_days).toBeCloseTo(60, 0);
+  });
+
+  // ── TC: Cash-only user ────────────────────────────────────────────────────
+
+  it("EO-CASH-1: Expected Obligation computable from bill_payments alone (cash-only user)", () => {
+    // No wallet, no bank, no KYC signals — only bill payment history
+    const payments = [
+      pay("TELMEX", 90, { serviceName: "Telmex", categoria: "telecom" }),
+      pay("TELMEX", 60, { serviceName: "Telmex", categoria: "telecom" }),
+      pay("TELMEX", 30, { serviceName: "Telmex", categoria: "telecom" }),
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "TELMEX", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.expectation_source).toBe("OBSERVED_RECURRING");
+  });
+
+  it("EO-CASH-2: output contains no raw account/reference numbers", () => {
+    const payments = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    const json = JSON.stringify(result);
+    expect(json).not.toContain("service_ref");
+    expect(json).not.toContain("referencia");
+    expect(json).not.toContain("clabe");
+    expect(json).not.toContain("account_number");
+  });
+
+  // ── TC: Amount baseline ────────────────────────────────────────────────────
+
+  it("EO-AMOUNT-1: amount baseline captures mean, min, max correctly", () => {
+    const payments = [
+      { ...pay("CFE", 90), monto: 400 },
+      { ...pay("CFE", 60), monto: 600 },
+      { ...pay("CFE", 30), monto: 500 },
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.amount_baseline.min_mxn).toBe(400);
+    expect(result!.amount_baseline.max_mxn).toBe(600);
+    expect(result!.amount_baseline.mean_mxn).toBeCloseTo(500, 1);
+    expect(result!.amount_baseline.currency).toBe("MXN");
+  });
+
+  it("EO-AMOUNT-2: amount variance is present only as descriptive context (no risk field)", () => {
+    const payments = [
+      { ...pay("CFE", 90), monto: 100 },
+      { ...pay("CFE", 60), monto: 900 },
+      { ...pay("CFE", 30), monto: 500 },
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    const json = JSON.stringify(result);
+    // No risk, score, or flag field derived from amount variance
+    expect(json).not.toContain("risk");
+    expect(json).not.toContain("variance_flag");
+    expect(json).not.toContain("amount_risk");
+  });
+
+  // ── TC: Lifecycle EXPECTED ─────────────────────────────────────────────────
+
+  it("EO-LC-EXPECTED: lifecycle is EXPECTED when next window has not yet opened", () => {
+    // Last payment 5 days ago, median 30d → next window opens at ~(30-9)=21d from now
+    const payments = [pay("CFE", 65), pay("CFE", 35), pay("CFE", 5)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.lifecycle_status).toBe("EXPECTED");
+  });
+
+  // ── TC: Lifecycle DUE_WINDOW ───────────────────────────────────────────────
+
+  it("EO-LC-DUE_WINDOW: lifecycle is DUE_WINDOW when referenceTime falls within expected window", () => {
+    // Last payment 32 days ago, median 30d, tolerance 9d → window [21d, 39d] from last payment
+    // 32d since last payment is within [21, 39] → DUE_WINDOW
+    const payments = [pay("CFE", 92), pay("CFE", 62), pay("CFE", 32)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.lifecycle_status).toBe("DUE_WINDOW");
+  });
+
+  // ── TC: Lifecycle UNRESOLVED — the neutral, factual label ─────────────────
+
+  it("EO-LC-UNRESOLVED: window-closed-no-payment is UNRESOLVED, never MISSED or any risk label", () => {
+    // Last payment 50 days ago, median 30d → window [21d, 39d] closed; 50d > 39d → UNRESOLVED
+    // 50d < 2.5*30=75d → not STALE yet
+    const payments = [pay("CFE", 110), pay("CFE", 80), pay("CFE", 50)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.lifecycle_status).toBe("UNRESOLVED");
+    // Must be the neutral label — never "MISSED"
+    expect(result!.lifecycle_status as string).not.toBe("MISSED");
+    expect(result!.lifecycle_status as string).not.toBe("FAILED");
+    // The word "missed" must not appear anywhere in the serialized output
+    expect(JSON.stringify(result)).not.toContain("missed");
+  });
+
+  // ── TC: Lifecycle STALE ────────────────────────────────────────────────────
+
+  it("EO-LC-STALE: pattern is STALE after ≥ 2.5 cadence cycles without a new observation", () => {
+    // Last payment 80 days ago, median 30d → 80/30 = 2.67 ≥ 2.5 → STALE
+    const payments = [pay("CFE", 140), pay("CFE", 110), pay("CFE", 80)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.lifecycle_status).toBe("STALE");
+  });
+
+  it("EO-LC-STALE-2: obligation in stale state for entire computeExpectedObligations call", () => {
+    const payments = [pay("CFE", 140), pay("CFE", 110), pay("CFE", 80)];
+    const result = computeExpectedObligations(ENTITY, payments, REF);
+    expect(result.obligations).toHaveLength(1);
+    expect(result.obligations[0].lifecycle_status).toBe("STALE");
+  });
+
+  // ── TC: Lifecycle OBSERVED_FULFILLED ──────────────────────────────────────
+
+  it("EO-LC-FULFILLED: OBSERVED_FULFILLED when last payment fell within prior predicted window", () => {
+    // 4 monthly payments; 4th payment at day 2 from REF (within 9d tolerance of day 0)
+    // Prior pattern (pays 1–3) predicts next at day 0 ± 9d → day 2 is fulfilled
+    // referenceTime (day 0) < nextExpectedStart (~day 2+21=23 from REF) → OBSERVED_FULFILLED
+    const payments = [
+      pay("CFE", 92),
+      pay("CFE", 62),
+      pay("CFE", 32),
+      pay("CFE", 2),
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.lifecycle_status).toBe("OBSERVED_FULFILLED");
+    expect(result!.observation_count).toBe(4);
+  });
+
+  // ── TC: HIGH confidence ────────────────────────────────────────────────────
+
+  it("EO-CONF-HIGH: 6+ payments within 15% tolerance → HIGH confidence", () => {
+    // 6 payments at 30d intervals (all exactly 30d → all within 15%)
+    // Last payment 3 days ago, not stale
+    const payments = [
+      pay("CFE", 153),
+      pay("CFE", 123),
+      pay("CFE", 93),
+      pay("CFE", 63),
+      pay("CFE", 33),
+      pay("CFE", 3),
+    ];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.expectation_confidence).toBe("HIGH");
+    expect(result!.observation_count).toBe(6);
+  });
+
+  // ── TC: Expected date range is always a range ──────────────────────────────
+
+  it("EO-DATE-1: expected_date_range is always a range, never a single falsely-precise date", () => {
+    const payments = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const result = computeSingleExpectedObligation(ENTITY, "CFE", payments, REF);
+    expect(result).not.toBeNull();
+    expect(result!.expected_date_range.start).not.toBe(result!.expected_date_range.end);
+    expect(typeof result!.expected_date_range.start).toBe("string");
+    expect(typeof result!.expected_date_range.end).toBe("string");
+    // Dates should be ISO date strings (YYYY-MM-DD)
+    expect(result!.expected_date_range.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(result!.expected_date_range.end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  // ── TC: Determinism ────────────────────────────────────────────────────────
+
+  it("EO-DET-1: identical inputs and referenceTime always produce identical JSON output", () => {
+    const payments: BillPaymentObservation[] = [
+      pay("CFE",    90),
+      pay("CFE",    60),
+      pay("CFE",    30),
+      pay("TELMEX", 90, { serviceName: "Telmex", categoria: "telecom" }),
+      pay("TELMEX", 60, { serviceName: "Telmex", categoria: "telecom" }),
+      pay("TELMEX", 30, { serviceName: "Telmex", categoria: "telecom" }),
+    ];
+    const r1 = computeExpectedObligations(ENTITY, payments, REF);
+    const r2 = computeExpectedObligations(ENTITY, payments, REF);
+    expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+  });
+
+  it("EO-DET-2: different referenceTime produces a different computed_at and may produce different lifecycle", () => {
+    const payments = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const r1 = computeExpectedObligations(ENTITY, payments, REF);
+    const r2 = computeExpectedObligations(ENTITY, payments, new Date(REF.getTime() + 40 * D));
+    expect(r1.computed_at).not.toBe(r2.computed_at);
+  });
+
+  // ── TC: computeExpectedObligations — container structure ──────────────────
+
+  it("EO-STRUCT-1: result container has all required fields", () => {
+    const payments = [pay("CFE", 90), pay("CFE", 60), pay("CFE", 30)];
+    const result = computeExpectedObligations(ENTITY, payments, REF);
+    expect(result.entity_id).toBe(ENTITY);
+    expect(result.entity_type).toBe("human");
+    expect(result.domain).toBe("financial");
+    expect(result.version).toBe(EXPECTED_OBLIGATION_VERSION);
+    expect(result.computed_at).toBe(REF.toISOString());
+    expect(Array.isArray(result.obligations)).toBe(true);
+    expect(result.obligations).toHaveLength(1);
+  });
+
+  // ── TC: Zero payments — no obligations, no negative signal ────────────────
+
+  it("EO-EMPTY-1: zero payments produces zero obligations — not an error, not a negative signal", () => {
+    const result = computeExpectedObligations(ENTITY, [], REF);
+    expect(result.obligations).toHaveLength(0);
+    expect(result.entity_type).toBe("human");
+    expect(result.domain).toBe("financial");
+    const json = JSON.stringify(result);
+    expect(json).not.toContain("missed");
+    expect(json).not.toContain("MISSED");
+    expect(json).not.toContain("risk");
+    expect(json).not.toContain("failed");
+  });
+
+  // ── TC: Period with no payment where nothing was expected ─────────────────
+
+  it("EO-NEG-1: no expected obligations → no negative signal of any kind", () => {
+    // Single payment to each of two services (below threshold) — unknown, not negative
+    const payments: BillPaymentObservation[] = [
+      pay("CFE",    10),
+      pay("TELMEX", 5, { serviceName: "Telmex", categoria: "telecom" }),
+    ];
+    const result = computeExpectedObligations(ENTITY, payments, REF);
+    expect(result.obligations).toHaveLength(0);
+    expect(JSON.stringify(result)).not.toContain("missed");
+    expect(JSON.stringify(result)).not.toContain("risk");
+  });
+
+  // ── TC: Only qualifying services produce obligations ───────────────────────
+
+  it("EO-FILTER-1: sub-threshold or inconsistent services are silently skipped", () => {
+    const payments: BillPaymentObservation[] = [
+      // CFE: 3 consistent monthly → qualifies
+      pay("CFE", 90),
+      pay("CFE", 60),
+      pay("CFE", 30),
+      // GAS: only 1 payment → below threshold
+      pay("GAS", 15, { serviceName: "Gas Natural" }),
+      // OXXO: 3 payments but wildly inconsistent intervals → filtered out
+      pay("OXXO", 100, { serviceName: "OXXO" }),
+      pay("OXXO", 70,  { serviceName: "OXXO" }),
+      pay("OXXO", 10,  { serviceName: "OXXO" }),
+    ];
+    const result = computeExpectedObligations(ENTITY, payments, REF);
+    expect(result.obligations).toHaveLength(1);
+    expect(result.obligations[0].obligation_type).toBe("utilities");
+  });
+
+  // ── TC: Sorting by lifecycle urgency ──────────────────────────────────────
+
+  it("EO-SORT-1: obligations sorted DUE_WINDOW → UNRESOLVED → EXPECTED → STALE", () => {
+    const payments: BillPaymentObservation[] = [
+      // A: EXPECTED (last 5d ago, 30d cycle → window opens in ~21d)
+      pay("SVC_A", 65, { serviceName: "ServiceA" }),
+      pay("SVC_A", 35, { serviceName: "ServiceA" }),
+      pay("SVC_A", 5,  { serviceName: "ServiceA" }),
+      // B: DUE_WINDOW (last 32d ago, 30d cycle → in [21d, 39d] window)
+      pay("SVC_B", 92, { serviceName: "ServiceB" }),
+      pay("SVC_B", 62, { serviceName: "ServiceB" }),
+      pay("SVC_B", 32, { serviceName: "ServiceB" }),
+    ];
+    const result = computeExpectedObligations(ENTITY, payments, REF);
+    expect(result.obligations.length).toBeGreaterThanOrEqual(2);
+    // DUE_WINDOW must appear before EXPECTED
+    const statuses = result.obligations.map((o) => o.lifecycle_status);
+    const dueidx = statuses.indexOf("DUE_WINDOW");
+    const expidx = statuses.indexOf("EXPECTED");
+    expect(dueidx).toBeGreaterThanOrEqual(0);
+    expect(expidx).toBeGreaterThanOrEqual(0);
+    expect(dueidx).toBeLessThan(expidx);
+  });
+
+  // ── TC: Evidence Depth has zero cross-reference ───────────────────────────
+
+  it("EO-ARCH-1: EO version string differs from ED version (independent lineage)", () => {
+    expect(EXPECTED_OBLIGATION_VERSION).not.toBe(EVIDENCE_DEPTH_VERSION);
+  });
+
+  it("EO-ARCH-2: computeExpectationConfidence result is never an EvidenceBand value", () => {
+    // EvidenceBand values: "LOW" | "MODERATE" | "HIGH" | "INSUFFICIENT_DATA"
+    // ExpectationConfidence: "LOW" | "MODERATE" | "HIGH" | "VERIFIED"
+    // INSUFFICIENT_DATA must never appear as an expectation confidence value
+    const conf = computeExpectationConfidence(3, [30, 30], 30);
+    expect(conf as string).not.toBe("INSUFFICIENT_DATA");
+    expect(conf as string).not.toBe("NOT_COMPUTED");
+  });
 });

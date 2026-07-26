@@ -582,6 +582,14 @@ export interface PTIv2Profile {
   dimensions:     PTIv2Dimensions;
   trajectory:     PTIv2Trajectory;
   evidence_depth: EvidenceDepth;
+  /**
+   * Optional Expected Obligations result — populated when the caller
+   * explicitly requests it via buildExpectedObligations().
+   * Not included in the base buildPTIv2Profile() response; exposed
+   * separately via GET /api/pti/v2-expected-obligations.
+   * Future sprint: integrate here once the field is confirmed stable.
+   */
+  expected_obligations?: ExpectedObligationsResult;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1437,4 +1445,587 @@ export async function buildPTIv2Profile(
     trajectory,
     evidence_depth: evidenceDepth,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 12 — EXPECTED OBLIGATION V1
+//
+// An "Expected Obligation" represents a recurring financial commitment that
+// PTI has sufficient verified behavioral evidence to anticipate — such as a
+// utility bill paid consistently every month. It is PURELY DESCRIPTIVE
+// infrastructure with the following hard constraints:
+//
+//   ✗ Must NEVER modify Payment Reliability, any other v5 dimension, or the
+//     aggregate PTI score.
+//   ✗ Must NEVER cause UNRESOLVED or any lifecycle state to be interpreted
+//     as a risk signal, missed payment, or behavioral deterioration.
+//   ✗ Must NEVER influence Evidence Depth, Behavioral Trajectory, readiness
+//     gates, the licensee B2B API, or any Paula messaging.
+//   ✗ Absence of an expected payment is factual (UNRESOLVED), never behavioral.
+//
+//   ✔ Computable from confirmed bill_payments alone — works for cash-only users
+//     with no bank account, no KYC, no SPEI, no card.
+//   ✔ All functions accept an explicit referenceTime for full determinism and
+//     reproducibility. No new Date() call exists inside the pure functions.
+//   ✔ Evidence Depth and Expected Obligation share zero logic and have no
+//     cross-references. Neither calls nor imports the other's computation.
+//
+// EXPECTATION SOURCES — defined for forward compatibility:
+//   OBSERVED_RECURRING  — inferred from repeated verified payment history.
+//                         This is the ONLY source implemented and computed
+//                         from real data in this sprint.
+//   DECLARED            — user explicitly declared a recurring obligation.
+//                         NOT IMPLEMENTED: no UI path exists for this yet.
+//   CONTRACTUAL         — obligation confirmed by an external contract system.
+//                         NOT IMPLEMENTED: no such system is accessible here.
+//   PROVIDER_VERIFIED   — external provider confirms obligation & due date.
+//                         NOT IMPLEMENTED: no provider API is available today.
+//
+// INFERENCE RULE FOR OBSERVED_RECURRING:
+//   An obligation is inferred only when ALL of the following hold:
+//     1. At least EO_MIN_OBSERVATION_COUNT (3) confirmed payments to the same
+//        service_id exist for the same user.
+//     2. All consecutive inter-payment intervals fall within
+//        EO_INTERVAL_TOLERANCE_PCT (30%) of the median interval.
+//   These thresholds are PROVISIONAL starting points, not empirically validated.
+//   Revisit once production payment data accumulates at scale.
+//   Fewer than 3 payments, or inconsistent intervals, produce no obligation —
+//   the system reports "unknown" rather than guessing.
+//
+// LIFECYCLE STATUS:
+//   EXPECTED          — next expected window has not yet opened.
+//   DUE_WINDOW        — referenceTime is within the expected payment window.
+//   OBSERVED_FULFILLED — the most recent payment fell within the prior cycle's
+//                        predicted window (detectable with ≥ 4 observations).
+//   UNRESOLVED        — expected window closed with no matching payment seen yet.
+//                        NEUTRAL, FACTUAL STATE — carries zero behavioral implication.
+//   STALE             — ≥ EO_STALE_MULTIPLIER cycles without a new observation.
+//                        NEUTRAL, FACTUAL STATE — the system stops expecting until
+//                        new evidence arrives.
+//
+//   INTENTIONALLY ABSENT:
+//     MISSED    — absence of a payment NEVER implies a missed obligation.
+//     CANCELLED — no reliable cancellation signal exists today (no user-facing
+//                 biller-removal flow, no provider API). Reserved for a future
+//                 sprint once a real signal exists. Deriving cancellation from
+//                 absence alone is an unjustified inference.
+//
+// DESIGN NOTE (future sprint — do NOT implement now):
+//   Behavioral Trajectory could one day distinguish between:
+//     "no event was observed because nothing was ever expected for this user"
+//   vs.
+//     "no event was observed despite a known expected obligation"
+//   The Expected Obligation layer provides the prerequisite data structure for
+//   that distinction, but the trajectory calculation defined in Section 7–9
+//   must remain COMPLETELY UNCHANGED by this sprint. Do not modify it to
+//   incorporate this distinction until a future, explicitly scoped sprint.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Version string for Expected Obligation computations.
+ *  Independent lineage — distinct from PTI model version, Evidence Depth
+ *  version, and Behavioral Trajectory version. Each layer tracks its own
+ *  version string separately. */
+export const EXPECTED_OBLIGATION_VERSION = "expected-obligation-v1.0-deterministic";
+
+/** Minimum confirmed payments to the same service before inferring a recurring
+ *  obligation. Provisional — revisit once production data accumulates. */
+export const EO_MIN_OBSERVATION_COUNT = 3;
+
+/** Maximum fractional deviation of any observed interval from the median before
+ *  the pattern is considered too inconsistent to form an obligation.
+ *  0.30 = 30%. Provisional — not empirically validated. */
+export const EO_INTERVAL_TOLERANCE_PCT = 0.30;
+
+/** Tighter tolerance applied when evaluating HIGH confidence (6+ observations).
+ *  0.15 = 15%. Provisional — not empirically validated. */
+export const EO_HIGH_CONFIDENCE_TOLERANCE_PCT = 0.15;
+
+/** Cadence-cycle multiplier: how many cycles must pass without a new observation
+ *  before the obligation transitions to STALE. 2.5 = two-and-a-half cycles. */
+export const EO_STALE_MULTIPLIER = 2.5;
+
+/**
+ * Where does the obligation evidence come from?
+ * Only OBSERVED_RECURRING is functional in this sprint.
+ * All others are defined for forward compatibility and are NOT computed.
+ */
+export type ExpectationSource =
+  | "OBSERVED_RECURRING"   // ✔ implemented — inferred from verified payment history
+  | "DECLARED"             // ✗ not implemented — no UI path exists yet
+  | "CONTRACTUAL"          // ✗ not implemented — no external contract system accessible
+  | "PROVIDER_VERIFIED";   // ✗ not implemented — no provider API available
+
+/**
+ * Confidence that this specific obligation is expected.
+ *
+ * Architecturally separate from Evidence Depth:
+ *   Evidence Depth: "how much do we know about this person overall?"
+ *   Expectation Confidence: "how sure are we THIS specific obligation is expected?"
+ *
+ * These are computed by different functions, answer different questions, and
+ * have ZERO cross-references. Neither calls nor imports the other.
+ *
+ * VERIFIED is reserved for PROVIDER_VERIFIED source only.
+ * It is NOT reachable from OBSERVED_RECURRING in this implementation.
+ *
+ * Scale for OBSERVED_RECURRING:
+ *   LOW      — exactly 3 payments, intervals within 30% tolerance
+ *   MODERATE — 4–5 consistent payments
+ *   HIGH     — 6+ payments with all intervals within 15% tolerance
+ *   VERIFIED — RESERVED: only reachable from PROVIDER_VERIFIED (future sprint)
+ */
+export type ExpectationConfidence = "LOW" | "MODERATE" | "HIGH" | "VERIFIED";
+
+/**
+ * Cadence label derived from the median inter-payment interval.
+ * Approximate — based on observed history, not a declared schedule.
+ */
+export type ObligationCadence =
+  | "weekly"      // median interval < 10 days
+  | "biweekly"    // 10–20 days
+  | "monthly"     // 21–40 days
+  | "bimonthly"   // 41–70 days (every two months)
+  | "quarterly"   // 71–120 days
+  | "irregular";  // > 120 days
+
+/**
+ * Factual lifecycle state of the obligation relative to referenceTime.
+ *
+ * UNRESOLVED and STALE are neutral, factual states only. They MUST NOT trigger
+ * any scoring change, intervention, messaging, or behavioral inference.
+ */
+export type ObligationLifecycleStatus =
+  | "EXPECTED"           // next expected window has not yet opened
+  | "DUE_WINDOW"         // referenceTime is within the expected payment window
+  | "OBSERVED_FULFILLED" // most recent payment verified in prior cycle's window
+  | "UNRESOLVED"         // window closed; no matching payment seen yet (NEUTRAL)
+  | "STALE";             // ≥ EO_STALE_MULTIPLIER cycles with no observation (NEUTRAL)
+
+/** Historical amount summary. Descriptive only — NEVER interpreted as risk. */
+export interface ExpectedObligationAmountBaseline {
+  mean_mxn: number;
+  min_mxn:  number;
+  max_mxn:  number;
+  currency: "MXN";
+}
+
+/** Expected date range for the next occurrence (never a single falsely-precise date). */
+export interface ExpectedObligationDateRange {
+  /** ISO date (YYYY-MM-DD) — start of the expected window. */
+  start: string;
+  /** ISO date (YYYY-MM-DD) — end of the expected window. */
+  end: string;
+}
+
+/**
+ * A single Expected Obligation.
+ *
+ * No raw account/reference numbers are included. Only service name and category
+ * are exposed — no CLABE, service_ref, or account identifiers.
+ */
+export interface ExpectedObligation {
+  entity_id:   string;
+  entity_type: "human";
+  domain:      "financial";
+  /**
+   * Deterministic, reproducible identifier — NOT a random UUID.
+   * Same entity_id + service_id always produces the same obligation_id.
+   * Format: "eo::<entity_id>::<service_id>"
+   */
+  obligation_id:   string;
+  /** Category derived from bill_payments.categoria (e.g. "utilities", "telecom"). */
+  obligation_type: string;
+  /** Service display name (e.g. "CFE", "Telmex"). */
+  service_name:    string;
+  /** Predicted date range for the next occurrence. Always a range, never a point. */
+  expected_date_range: ExpectedObligationDateRange;
+  /**
+   * Historical amount summary. Amount variance is purely descriptive context —
+   * it is NEVER interpreted as a risk signal or behavioral indicator.
+   */
+  amount_baseline:      ExpectedObligationAmountBaseline;
+  cadence:              ObligationCadence;
+  cadence_interval_days: number;
+  /** Only OBSERVED_RECURRING is computed from real data in this sprint. */
+  expectation_source:     ExpectationSource;
+  /**
+   * Confidence in this specific obligation. Computed independently from
+   * Evidence Depth — zero shared logic or cross-references between them.
+   */
+  expectation_confidence: ExpectationConfidence;
+  first_observed_at:  string;
+  last_observed_at:   string;
+  observation_count:  number;
+  lifecycle_status:   ObligationLifecycleStatus;
+  version:            string;
+}
+
+/** Result container for all expected obligations for one user. */
+export interface ExpectedObligationsResult {
+  entity_id:   string;
+  entity_type: "human";
+  domain:      "financial";
+  obligations: ExpectedObligation[];
+  computed_at: string;
+  version:     string;
+}
+
+/**
+ * Minimal bill-payment observation consumed by the pure Expected Obligation
+ * computation functions. Does NOT include service_ref, referencia, CLABE, or
+ * any account-number field — only what is needed to detect patterns.
+ */
+export interface BillPaymentObservation {
+  serviceId:   string;
+  serviceName: string;
+  categoria:   string;
+  monto:       number;
+  createdAt:   Date;
+}
+
+// ── Pure helper functions ──────────────────────────────────────────────────
+
+/**
+ * Derives a deterministic, reproducible obligation_id.
+ * The same entity_id + service_id always produces the same result.
+ * Human-readable format to aid debugging. Not security-sensitive.
+ */
+export function deriveObligationId(entityId: string, serviceId: string): string {
+  return `eo::${entityId}::${serviceId}`;
+}
+
+/**
+ * Returns the median of a non-empty numeric array.
+ * Exported for direct unit testing.
+ */
+export function computeMedianValue(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+/**
+ * Computes consecutive inter-payment intervals in days from a sorted payment list.
+ * Exported for direct unit testing.
+ */
+export function computeIntervals(sorted: BillPaymentObservation[]): number[] {
+  const intervals: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const days =
+      (sorted[i].createdAt.getTime() - sorted[i - 1].createdAt.getTime()) /
+      MSEC_PER_DAY;
+    intervals.push(days);
+  }
+  return intervals;
+}
+
+/**
+ * Classifies a median interval (days) into a cadence label.
+ *
+ *   < 10   → weekly
+ *   10–20  → biweekly
+ *   21–40  → monthly
+ *   41–70  → bimonthly
+ *   71–120 → quarterly
+ *   > 120  → irregular
+ */
+export function classifyCadence(medianIntervalDays: number): ObligationCadence {
+  if (medianIntervalDays < 10)   return "weekly";
+  if (medianIntervalDays < 21)   return "biweekly";
+  if (medianIntervalDays <= 40)  return "monthly";
+  if (medianIntervalDays <= 70)  return "bimonthly";
+  if (medianIntervalDays <= 120) return "quarterly";
+  return "irregular";
+}
+
+/**
+ * Computes expectation confidence from observation count and interval spread.
+ *
+ * Architecture note: zero dependency on Evidence Depth computation — they
+ * answer different questions and must remain architecturally separate.
+ *
+ * HIGH     — 6+ observations AND all intervals within 15% of median
+ * MODERATE — 4–5 observations (intervals already within 30% at call site)
+ * LOW      — exactly 3 observations
+ * VERIFIED — NOT reachable from OBSERVED_RECURRING; reserved for
+ *            PROVIDER_VERIFIED source (future sprint)
+ */
+export function computeExpectationConfidence(
+  observationCount: number,
+  intervals:        number[],
+  medianInterval:   number,
+): ExpectationConfidence {
+  if (observationCount >= 6) {
+    const highTol = medianInterval * EO_HIGH_CONFIDENCE_TOLERANCE_PCT;
+    const allHigh = intervals.every((iv) => Math.abs(iv - medianInterval) <= highTol);
+    return allHigh ? "HIGH" : "MODERATE";
+  }
+  if (observationCount >= 4) return "MODERATE";
+  return "LOW";
+}
+
+/**
+ * Determines lifecycle status relative to referenceTime.
+ *
+ * Evaluation order:
+ *   1. STALE       — too many cycles elapsed with no new observation
+ *   2. OBSERVED_FULFILLED — last payment fell within the prior predicted window
+ *                    (requires ≥ 4 payments to estimate prior pattern)
+ *   3. EXPECTED    — upcoming window has not yet opened
+ *   4. DUE_WINDOW  — referenceTime is within [nextStart, nextEnd]
+ *   5. UNRESOLVED  — window closed with no matching payment (neutral/factual)
+ *
+ * Returns the status and the next expected window dates for use in the caller.
+ */
+export function computeLifecycleStatus(
+  sorted:          BillPaymentObservation[],
+  medianInterval:  number,
+  toleranceDays:   number,
+  referenceTime:   Date,
+): {
+  status:            ObligationLifecycleStatus;
+  nextExpectedStart: Date;
+  nextExpectedEnd:   Date;
+} {
+  const lastMs       = sorted[sorted.length - 1].createdAt.getTime();
+  const daysSinceLast = (referenceTime.getTime() - lastMs) / MSEC_PER_DAY;
+
+  const nextCenterMs    = lastMs + medianInterval * MSEC_PER_DAY;
+  const nextExpectedStart = new Date(nextCenterMs - toleranceDays * MSEC_PER_DAY);
+  const nextExpectedEnd   = new Date(nextCenterMs + toleranceDays * MSEC_PER_DAY);
+
+  // 1. STALE: obligation pattern has gone cold
+  if (daysSinceLast >= EO_STALE_MULTIPLIER * medianInterval) {
+    return { status: "STALE", nextExpectedStart, nextExpectedEnd };
+  }
+
+  // 2. OBSERVED_FULFILLED: check if last payment fulfilled the prior cycle's window.
+  //    Requires ≥ 4 payments (3 to form a prior pattern, 1 to verify against it).
+  if (sorted.length >= 4) {
+    const prior        = sorted.slice(0, -1);
+    const priorIvs     = computeIntervals(prior);
+    const priorMedian  = computeMedianValue(priorIvs);
+    const priorTolMs   = priorMedian * EO_INTERVAL_TOLERANCE_PCT * MSEC_PER_DAY;
+    const priorLastMs  = prior[prior.length - 1].createdAt.getTime();
+    const priorCenter  = priorLastMs + priorMedian * MSEC_PER_DAY;
+    const priorStart   = new Date(priorCenter - priorTolMs);
+    const priorEnd     = new Date(priorCenter + priorTolMs);
+    const lastObserved = sorted[sorted.length - 1].createdAt;
+
+    if (lastObserved >= priorStart && lastObserved <= priorEnd) {
+      // Most recent cycle was observed fulfilled; evaluate NEXT window
+      if (referenceTime < nextExpectedStart) {
+        return { status: "OBSERVED_FULFILLED", nextExpectedStart, nextExpectedEnd };
+      }
+      // referenceTime has entered or passed the next window — fall through
+    }
+  }
+
+  // 3–5. Standard window states
+  if (referenceTime < nextExpectedStart)  return { status: "EXPECTED",   nextExpectedStart, nextExpectedEnd };
+  if (referenceTime <= nextExpectedEnd)   return { status: "DUE_WINDOW", nextExpectedStart, nextExpectedEnd };
+  return { status: "UNRESOLVED", nextExpectedStart, nextExpectedEnd };
+}
+
+/**
+ * Pure function. Attempts to build one ExpectedObligation from all confirmed
+ * payments to a single service by a single user.
+ *
+ * Returns null if:
+ *   - Fewer than EO_MIN_OBSERVATION_COUNT payments are provided.
+ *   - Any inter-payment interval is outside EO_INTERVAL_TOLERANCE_PCT of
+ *     the median — the system prefers "unknown" over a fabricated expectation.
+ *
+ * Never reads the database, calls new Date(), or produces random values.
+ * Fully deterministic given identical inputs.
+ *
+ * @param entityId      User identifier (telefono).
+ * @param serviceId     Biller/service identifier (used for obligation_id only,
+ *                      NOT included in the output — no raw account identifiers).
+ * @param payments      All confirmed payments to this service (order-independent).
+ * @param referenceTime Explicit reference timestamp. Never default to new Date()
+ *                      inside pure logic — pass from the call site.
+ */
+export function computeSingleExpectedObligation(
+  entityId:      string,
+  serviceId:     string,
+  payments:      BillPaymentObservation[],
+  referenceTime: Date,
+): ExpectedObligation | null {
+  if (payments.length < EO_MIN_OBSERVATION_COUNT) return null;
+
+  const sorted = [...payments].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  );
+
+  const intervals      = computeIntervals(sorted);
+  const medianInterval = computeMedianValue(intervals);
+
+  // Degenerate: all payments on the same day
+  if (medianInterval <= 0) return null;
+
+  // Consistency gate: all intervals within 30% of median
+  const toleranceDays = medianInterval * EO_INTERVAL_TOLERANCE_PCT;
+  const allConsistent = intervals.every(
+    (iv) => Math.abs(iv - medianInterval) <= toleranceDays,
+  );
+  if (!allConsistent) return null;
+
+  // Amount baseline (descriptive — never interpreted as risk)
+  const amounts    = sorted.map((p) => p.monto);
+  const meanAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+
+  const { status: lifecycleStatus, nextExpectedStart, nextExpectedEnd } =
+    computeLifecycleStatus(sorted, medianInterval, toleranceDays, referenceTime);
+
+  return {
+    entity_id:   entityId,
+    entity_type: "human",
+    domain:      "financial",
+    obligation_id:   deriveObligationId(entityId, serviceId),
+    obligation_type: sorted[sorted.length - 1].categoria,
+    service_name:    sorted[sorted.length - 1].serviceName,
+    expected_date_range: {
+      start: nextExpectedStart.toISOString().split("T")[0],
+      end:   nextExpectedEnd.toISOString().split("T")[0],
+    },
+    amount_baseline: {
+      mean_mxn: Math.round(meanAmount         * 100) / 100,
+      min_mxn:  Math.round(Math.min(...amounts) * 100) / 100,
+      max_mxn:  Math.round(Math.max(...amounts) * 100) / 100,
+      currency: "MXN",
+    },
+    cadence:               classifyCadence(medianInterval),
+    cadence_interval_days: Math.round(medianInterval * 10) / 10,
+    expectation_source:     "OBSERVED_RECURRING",
+    expectation_confidence: computeExpectationConfidence(sorted.length, intervals, medianInterval),
+    first_observed_at:  sorted[0].createdAt.toISOString(),
+    last_observed_at:   sorted[sorted.length - 1].createdAt.toISOString(),
+    observation_count:  sorted.length,
+    lifecycle_status:   lifecycleStatus,
+    version:            EXPECTED_OBLIGATION_VERSION,
+  };
+}
+
+/**
+ * Pure function. Groups all payments by service and calls
+ * computeSingleExpectedObligation for each group.
+ *
+ * Returns an ExpectedObligationsResult with an empty obligations array for
+ * users with no qualifying recurring patterns (insufficient data or inconsistent
+ * intervals) — this is the correct "unknown" result, not an error.
+ *
+ * No payment not having an expected obligation produces NO negative signal.
+ *
+ * Obligations are sorted by urgency:
+ *   DUE_WINDOW → UNRESOLVED → EXPECTED → OBSERVED_FULFILLED → STALE
+ * Then alphabetically by service_name within each tier.
+ *
+ * @param entityId      User identifier (telefono).
+ * @param payments      ALL confirmed bill payments for this user, all services.
+ * @param referenceTime Explicit reference timestamp for deterministic output.
+ */
+export function computeExpectedObligations(
+  entityId:      string,
+  payments:      BillPaymentObservation[],
+  referenceTime: Date,
+): ExpectedObligationsResult {
+  const byService = new Map<string, BillPaymentObservation[]>();
+  for (const p of payments) {
+    const bucket = byService.get(p.serviceId);
+    if (bucket) bucket.push(p);
+    else byService.set(p.serviceId, [p]);
+  }
+
+  const obligations: ExpectedObligation[] = [];
+  for (const [serviceId, pays] of byService) {
+    const ob = computeSingleExpectedObligation(entityId, serviceId, pays, referenceTime);
+    if (ob !== null) obligations.push(ob);
+  }
+
+  const STATUS_ORDER: Record<ObligationLifecycleStatus, number> = {
+    DUE_WINDOW:         0,
+    UNRESOLVED:         1,
+    EXPECTED:           2,
+    OBSERVED_FULFILLED: 3,
+    STALE:              4,
+  };
+  obligations.sort((a, b) => {
+    const d = STATUS_ORDER[a.lifecycle_status] - STATUS_ORDER[b.lifecycle_status];
+    return d !== 0 ? d : a.service_name.localeCompare(b.service_name);
+  });
+
+  return {
+    entity_id:   entityId,
+    entity_type: "human",
+    domain:      "financial",
+    obligations,
+    computed_at: referenceTime.toISOString(),
+    version:     EXPECTED_OBLIGATION_VERSION,
+  };
+}
+
+// ── Database adapter ──────────────────────────────────────────────────────────
+
+/**
+ * Fetches confirmed bill payments for one user as BillPaymentObservation objects.
+ *
+ * PRIVACY: does NOT select service_ref, referencia, or any account-number
+ * column. Only service_id (grouping key, not exposed in output), service_name,
+ * categoria, monto, and created_at are fetched.
+ */
+async function fetchPaymentsForObligation(
+  telefono: string,
+): Promise<BillPaymentObservation[]> {
+  const { db } = await import("@workspace/db");
+  const result = await db.execute(sql`
+    SELECT
+      service_id,
+      service_name,
+      COALESCE(NULLIF(categoria, ''), 'general') AS categoria,
+      monto::numeric                             AS monto,
+      created_at
+    FROM bill_payments
+    WHERE telefono = ${telefono}
+      AND status IN ('completed', 'success', 'completed_ok', 'confirmed')
+    ORDER BY created_at ASC
+  `);
+  return result.rows.map((r: unknown) => {
+    const row = r as Record<string, unknown>;
+    return {
+      serviceId:   String(row.service_id),
+      serviceName: String(row.service_name),
+      categoria:   String(row.categoria),
+      monto:       Number(row.monto),
+      createdAt:   new Date(row.created_at as string),
+    };
+  });
+}
+
+/**
+ * Main async adapter for Expected Obligations.
+ *
+ * Reads confirmed bill_payments, applies pure inference logic, returns result.
+ * Computable from bill_payments alone — works for cash-only users with no bank
+ * account, no KYC, no SPEI, no card.
+ *
+ * This function is a pure read adapter:
+ *   - Writes to no table.
+ *   - Does not alter any scoring column or PTI dimension.
+ *   - Has no cross-reference with Evidence Depth computation.
+ *
+ * @param telefono            User identifier.
+ * @param options.referenceTime  Pass an explicit Date in tests and historical
+ *   reconstruction. Defaults to new Date() only when omitted at the call site.
+ */
+export async function buildExpectedObligations(
+  telefono: string,
+  options?: { referenceTime?: Date },
+): Promise<ExpectedObligationsResult> {
+  const referenceTime = options?.referenceTime ?? new Date();
+  const payments      = await fetchPaymentsForObligation(telefono);
+  return computeExpectedObligations(telefono, payments, referenceTime);
 }

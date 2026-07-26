@@ -9,7 +9,7 @@ import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePTIForUser, getPTITier, type PTIBreakdown } from "../services/pti.js";
-import { buildPTIv2Profile } from "../services/ptiV2.js";
+import { buildPTIv2Profile, buildExpectedObligations } from "../services/ptiV2.js";
 
 const router = Router();
 
@@ -274,6 +274,39 @@ router.get("/v2-profile", async (req: Request, res: Response): Promise<void> => 
   } catch (err) {
     logger.error({ err, telefono }, "pti: GET /v2-profile failed");
     res.status(500).json({ error: "Error building v2 profile" });
+  }
+});
+
+// ── GET /api/pti/v2-expected-obligations?telefono=xxx ────────────────────────
+// Returns the Expected Obligations result for a user — computed on read from
+// confirmed bill_payments, no database writes.
+//
+// This endpoint is additive and purely descriptive:
+//   - Does NOT modify any scoring column, PTI dimension, or user record.
+//   - Does NOT interpret UNRESOLVED/STALE lifecycle states as risk signals.
+//   - Does NOT require bank account, KYC, SPEI, or card data — works for
+//     cash-only users from bill_payments history alone.
+//
+// Authorization: requires ADMIN_TOKEN bearer header.
+router.get("/v2-expected-obligations", async (req: Request, res: Response): Promise<void> => {
+  const token = (req.headers["authorization"] ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!token || token !== process.env.ADMIN_TOKEN) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const telefono = req.query.telefono as string | undefined;
+  if (!telefono) {
+    res.status(400).json({ error: "telefono requerido" });
+    return;
+  }
+
+  try {
+    const result = await buildExpectedObligations(telefono);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err, telefono }, "pti: GET /v2-expected-obligations failed");
+    res.status(500).json({ error: "Error building expected obligations" });
   }
 });
 
