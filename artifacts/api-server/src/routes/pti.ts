@@ -9,6 +9,7 @@ import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePTIForUser, getPTITier, type PTIBreakdown } from "../services/pti.js";
+import { buildPTIv2Profile } from "../services/ptiV2.js";
 
 const router = Router();
 
@@ -237,6 +238,42 @@ router.post("/celebrate", async (req: Request, res: Response): Promise<void> => 
   } catch (err) {
     logger.error({ err, telefono }, "pti: POST /celebrate failed");
     res.status(500).json({ error: "Error" });
+  }
+});
+
+// ── GET /api/pti/v2-profile?telefono=xxx ─────────────────────────────────────
+// Internal/admin-only endpoint. Returns the PTI v2 behavioral profile for a
+// user, built by reading existing v5 state — no recomputation occurs.
+//
+// This endpoint is additive: it does not alter users.pti_score,
+// users.pti_breakdown, pti_score_history, or pti_trend_snapshots.
+//
+// The response is NOT a creditworthiness assessment, probability of default,
+// or validated lending recommendation. It is the existing deterministic PTI
+// behavioral score presented in the v2 vocabulary.
+router.get("/v2-profile", async (req: Request, res: Response): Promise<void> => {
+  const token = (req.headers["authorization"] ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!token || token !== process.env.ADMIN_TOKEN) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const telefono = req.query.telefono as string | undefined;
+  if (!telefono) {
+    res.status(400).json({ error: "telefono requerido" });
+    return;
+  }
+
+  try {
+    const profile = await buildPTIv2Profile(telefono);
+    if (!profile) {
+      res.status(404).json({ error: "No v5 score found for this user" });
+      return;
+    }
+    res.json(profile);
+  } catch (err) {
+    logger.error({ err, telefono }, "pti: GET /v2-profile failed");
+    res.status(500).json({ error: "Error building v2 profile" });
   }
 });
 

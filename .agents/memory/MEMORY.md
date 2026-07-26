@@ -48,3 +48,4 @@
 - [PTI v5.0 Phase E go-live](pti-phase-e-complete.md) — COMPLETE 2026-07-13; v5.0.0-rc1 is prod model; shadow retired; 10/10 recomputed; tripwire=0; coverage=100%; prod routes at /api/admin/ not /api-server/
 - [Phone normalization — HIGH PRIORITY next session](phone-normalization.md) — id 18 (3222304213) is a +52-prefix duplicate of +523222304213; tombstone id 18 first, then enforce E.164 at registration
 - [PTI model-lineage integrity sprint](pti-model-lineage-integrity.md) — trajectory/model_version isolation fix; VARCHAR(10) trap on trajectory cols; pti_export_safe DROP+recreate pattern; ptiSnapshotIntegration parallel-FK race is pre-existing
+- [PTI v2 adapter](pti-v2-adapter.md) — additive presentation layer over v5; cashflow_stability→cash_flow_resilience, behavioral_consistency→behavioral_stability; Evidence Depth shell (NOT_COMPUTED); no scoring changes
