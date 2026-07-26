@@ -668,6 +668,28 @@ export function getPTITier(score: number): { tier: string; color: string; label:
 
 // ─── Compute PTI for a single user ───────────────────────────────────────────
 
+/**
+ * @deprecated For new usage only. Existing callers must NOT be migrated or
+ * removed without explicit review — each call site has been classified
+ * separately (see PTI lineage audit, 2026-07-26).
+ *
+ * **v5.0 (`computePTIv5LiveForUser`) is the current production baseline.**
+ * It is the authoritative scoring function for all nightly and monthly batch
+ * writes to `users.pti_score` and `pti_score_history` as of Phase E
+ * (2026-07-13).
+ *
+ * This function (v4.3, `"v4.3-signal-expansion"`) remains active on:
+ *   - `POST /api/pti/compute-now` (admin on-demand recompute)
+ *   - `computePTIForAllUsers` startup-catchup path in `ptiCron.ts`
+ *   - The external Licensee API (`POST /api/v1/score`) via `computeLicenseeScore`,
+ *     which is version-pinned to v4.3 per partner contract.
+ *
+ * Do not create new dependencies on this function for internal PagoYa
+ * scoring, Paula coaching, or B2B exports. Note that this function still
+ * writes to `pti_score_history` and updates `users.pti_score`, which means
+ * it can introduce cross-model contamination in trajectory calculations
+ * if triggered alongside the v5.0 nightly path.
+ */
 export async function computePTIForUser(telefono: string): Promise<PTIBreakdown> {
   const { db } = await import("@workspace/db");
 
