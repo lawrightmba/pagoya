@@ -393,20 +393,41 @@ export async function evaluateTriggersForUser(
   const ptiScore = ctx.pti_score;
   const ptiDelta = ctx.pti_delta;
 
+  // Fetch the current scoring model version from the user's live PTI breakdown.
+  // Used to enforce model isolation in threshold-crossing checks: a change in
+  // which model produced the score must never, by itself, trigger a PTI coaching
+  // message. Fail-safe: if model version cannot be determined, both helpers
+  // return false rather than risking a false positive.
+  const currentMVRow = await db.execute(sql`
+    SELECT pti_breakdown->>'model_version' AS model_version
+    FROM users WHERE telefono = ${telefono} LIMIT 1
+  `);
+  const currentModelVersion =
+    ((currentMVRow.rows[0] as Record<string, unknown>)?.model_version as string | null) ?? null;
+
   // PTI history helpers (threshold crossing guards)
+  // Model-version aware: only rows produced by the same scoring model as the
+  // current score are eligible for comparison. Historical rows with a different
+  // or null model_version are excluded — not mixed in.
   async function hadScoreBelow(threshold: number): Promise<boolean> {
+    if (!currentModelVersion) return false;
     const r = await db.execute(sql`
       SELECT 1 FROM pti_score_history
-      WHERE telefono = ${telefono} AND pti_score < ${threshold} LIMIT 1
+      WHERE telefono = ${telefono}
+        AND pti_score < ${threshold}
+        AND breakdown->>'model_version' = ${currentModelVersion}
+      LIMIT 1
     `);
     return r.rows.length > 0;
   }
   async function crossedThresholdRecently(threshold: number): Promise<boolean> {
+    if (!currentModelVersion) return false;
     const r = await db.execute(sql`
       SELECT 1 FROM pti_score_history
       WHERE telefono  = ${telefono}
         AND pti_score >= ${threshold}
         AND recorded_at >= NOW() - INTERVAL '30 days'
+        AND breakdown->>'model_version' = ${currentModelVersion}
       LIMIT 1
     `);
     return r.rows.length > 0;

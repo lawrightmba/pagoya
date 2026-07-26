@@ -1291,6 +1291,76 @@ export async function computePTIForAllUsers(): Promise<{ updated: number; errors
   return { updated, errors };
 }
 
+// ─── Trajectory computation — pure function, exported for testing ────────────
+//
+// Computes trend deltas, velocity, and trajectory label from historical
+// pti_trend_snapshots rows. Enforces strict model-version isolation: only
+// snapshots that share the same model_version as the current observation are
+// used. Cross-model comparisons are never performed.
+//
+// Safe fallbacks (ALL return TRAJECTORY_INSUFFICIENT, never mixed data):
+//   • currentModelVersion is null/empty
+//   • fewer than TRAJECTORY_MIN_SNAPS same-model snapshots exist
+//   • a historical row's model_version is null/unknown (excluded, not mixed)
+//
+// Snapshots must be ordered newest-first (DESC by computed_at).
+
+export const TRAJECTORY_INSUFFICIENT = "insufficient_data";
+
+/** Minimum same-model historical snapshots required to produce a trajectory label. */
+const TRAJECTORY_MIN_SNAPS = 3;
+
+export interface TrajectorySnapshot {
+  pti_total: number | string;
+  model_version: string | null;
+}
+
+export interface TrajectoryResult {
+  trend30d: number;
+  trend60d: number;
+  trend90d: number;
+  velocity: number;
+  trajectory: string;
+}
+
+/**
+ * Pure trajectory computation. prevSnaps must be ordered newest-first.
+ * Only same-model-version rows are used. Returns TRAJECTORY_INSUFFICIENT
+ * rather than mixing model outputs or fabricating continuity.
+ */
+export function computeTrajectory(
+  currentScore: number,
+  currentModelVersion: string | null,
+  prevSnaps: TrajectorySnapshot[],
+): TrajectoryResult {
+  const insufficient: TrajectoryResult = {
+    trend30d: 0, trend60d: 0, trend90d: 0, velocity: 0,
+    trajectory: TRAJECTORY_INSUFFICIENT,
+  };
+
+  // Current model version must be known — cannot isolate without it
+  if (!currentModelVersion) return insufficient;
+
+  // Exclude cross-model and null-version rows
+  const sameModel = prevSnaps.filter(
+    s => s.model_version != null && s.model_version === currentModelVersion,
+  );
+
+  // Require minimum history before producing a trajectory label
+  if (sameModel.length < TRAJECTORY_MIN_SNAPS) return insufficient;
+
+  const trend30d = currentScore - Number(sameModel[0].pti_total);
+  const trend60d = currentScore - Number(sameModel[1].pti_total);
+  const trend90d = currentScore - Number(sameModel[2].pti_total);
+  const velocity = Math.round((trend30d / 4) * 100) / 100;
+
+  let trajectory = "stable";
+  if      (trend30d >= 5)  trajectory = "rising";
+  else if (trend30d <= -5) trajectory = "falling";
+
+  return { trend30d, trend60d, trend90d, velocity, trajectory };
+}
+
 // ─── PTI v3.0 — Granular Data Capture + Trend Layer ──────────────────────────
 //
 // Runs nightly (after computePagoScore) for every active user.
@@ -1453,30 +1523,24 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
     const userId   = Number(ur.id);
     const ptiTotal = Number(ur.pti_score ?? 0);
     const ptiBreakdown = ur.pti_breakdown as Record<string, unknown> | null;
+    // Model version comes from the current live breakdown — never inferred from
+    // which cron path is running. NULL if the breakdown is missing/unversioned.
+    const snapshotModelVersion =
+      (ptiBreakdown?.model_version as string | null) ?? null;
 
+    // Fetch more rows than we minimally need so that cross-model rows
+    // interspersed in history don't prevent us from finding 3 same-model ones.
     const prevSnapsRow = await db.execute(sql`
-      SELECT pti_total, computed_at
+      SELECT pti_total, model_version, computed_at
       FROM pti_trend_snapshots
       WHERE user_id = ${userId}
       ORDER BY computed_at DESC
-      LIMIT 3
+      LIMIT 20
     `);
-    const prevSnaps = prevSnapsRow.rows as Array<Record<string, unknown>>;
+    const prevSnaps = prevSnapsRow.rows as TrajectorySnapshot[];
 
-    const snap30 = prevSnaps[0];
-    const snap60 = prevSnaps[1];
-    const snap90 = prevSnaps[2];
-
-    const trend30d = snap30 ? ptiTotal - Number(snap30.pti_total ?? ptiTotal) : 0;
-    const trend60d = snap60 ? ptiTotal - Number(snap60.pti_total ?? ptiTotal) : trend30d;
-    const trend90d = snap90 ? ptiTotal - Number(snap90.pti_total ?? ptiTotal) : trend60d;
-
-    // Velocity = average weekly point change over last ~30 days
-    const velocity = snap30 ? Math.round((trend30d / 4) * 100) / 100 : 0;
-
-    let trajectory = 'stable';
-    if      (trend30d >= 5)  trajectory = 'rising';
-    else if (trend30d <= -5) trajectory = 'falling';
+    const { trend30d, trend60d, trend90d, velocity, trajectory } =
+      computeTrajectory(ptiTotal, snapshotModelVersion, prevSnaps);
 
     // ── 3G: B2B score — ROUND(350 + (pti/100)*500), floor 350, ceiling 850 ─
     const ptiB2bScore = Math.max(350, Math.min(850,
@@ -1618,12 +1682,14 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
       WHERE telefono = ${telefono}
     `);
 
-    // Insert trend snapshot — extract dimension scores from stored breakdown JSON
+    // Insert trend snapshot — model_version is read directly from the current
+    // breakdown (snapshotModelVersion), never inferred from the calling cron path.
     await db.execute(sql`
       INSERT INTO pti_trend_snapshots
         (user_id, computed_at, pti_total,
          payment_reliability, behavioral_consistency, engagement_depth, cash_flow_stability,
-         trend_30d, trend_60d, trend_90d, trajectory, velocity, pti_b2b_score)
+         trend_30d, trend_60d, trend_90d, trajectory, velocity, pti_b2b_score,
+         model_version)
       VALUES (
         ${userId},
         NOW(),
@@ -1637,7 +1703,8 @@ export async function computePTIv3Signals(telefono: string): Promise<void> {
         ${trend90d},
         ${trajectory},
         ${velocity},
-        ${ptiB2bScore}
+        ${ptiB2bScore},
+        ${snapshotModelVersion}
       )
     `).catch(err => logger.warn({ err, telefono }, "pti-v3: trend snapshot insert failed"));
 

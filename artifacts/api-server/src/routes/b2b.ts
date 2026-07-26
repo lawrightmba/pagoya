@@ -620,7 +620,7 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
 
     // ── 3. Load PTI trend snapshot (velocity + 30/60/90d trends) ─────────────
     const trendRow = await db.execute(sql`
-      SELECT velocity, trend_30d, trend_60d, trend_90d, trajectory
+      SELECT velocity, trend_30d, trend_60d, trend_90d, trajectory, model_version
       FROM pti_trend_snapshots pts
       JOIN users u ON u.id = pts.user_id
       WHERE u.telefono = ${telefono}
@@ -764,6 +764,10 @@ router.get("/profile/:hashed_id", async (req: Request, res: Response) => {
         trend_30d:   trend?.trend_30d   ?? null,
         trend_60d:   trend?.trend_60d   ?? null,
         trend_90d:   trend?.trend_90d   ?? null,
+        // Additive field — identifies which scoring model produced the trend
+        // data in this row. Null for rows written before model-lineage tracking
+        // was enabled. Never changes existing fields.
+        trend_model_version: (trend?.model_version as string | null) ?? null,
         components: {
           payment_regularity: pti.pr_score,
           biller_coverage:    pti.bc_score,
