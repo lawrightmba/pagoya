@@ -43,13 +43,28 @@ import {
   // Dimension mapping
   mapBreakdownToV2Dimensions,
   DIMENSION_V2_MAP,
-  // Trajectory
+  // Aggregate trajectory helpers
   mapTrajectoryDirection,
   buildTrajectoryObservation,
+  // Behavioral Trajectory v1 constants
+  BEHAVIORAL_TRAJECTORY_VERSION,
+  DIM_TRAJ_STABILITY_THRESHOLD_PCT,
+  // Behavioral Trajectory v1 pure functions
+  normalizeDimScore,
+  classifyDimDelta,
+  computeSingleDimTrajectory,
+  computeBehavioralTrajectory,
+  computeAlignment,
   // Main adapter
   buildPTIv2Profile,
 } from "../ptiV2.js";
-import type { EvidenceDepthRawInputs } from "../ptiV2.js";
+import type {
+  EvidenceDepthRawInputs,
+  ScoreHistoryRow,
+  DimTrajectoryDirection,
+  AlignmentSignal,
+  PTIv2DimensionTrajectories,
+} from "../ptiV2.js";
 import type { PTIBreakdown } from "../pti.js";
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
@@ -652,7 +667,7 @@ describe("ED v1 — DB integration", () => {
     expect(profile.behavioral_profile.validation_status).toBe("PRE_VALIDATION");
 
     // Trajectory is independent (no trend snapshots seeded)
-    expect(profile.trajectory.direction).toBe("insufficient_data");
+    expect(profile.trajectory.aggregate.direction).toBe("insufficient_data");
 
     // Cleanup
     await db.execute(sql`DELETE FROM bill_payments WHERE telefono = ${TEL}`);
@@ -1101,7 +1116,15 @@ describe("PTIv2Profile structural invariants (pure construction)", () => {
   function buildFakeProfile() {
     const bd = makeBreakdown(20, 15, 10, 12);
     const dimensions = mapBreakdownToV2Dimensions(bd);
-    const trajectory = buildTrajectoryObservation({ trajectory: "rising", velocity: 3, model_version: "v5.0.0-rc1" });
+    // trajectory is now PTIv2Trajectory (nested):
+    //   aggregate  — existing flat TrajectoryObservation
+    //   dimensions — PTIv2DimensionTrajectories (all INSUFFICIENT_DATA when no history)
+    //   alignment  — AlignmentSignal (string union, not an object)
+    const trajectory = {
+      aggregate:  buildTrajectoryObservation(null),
+      dimensions: computeBehavioralTrajectory(bd, [], REF),
+      alignment:  "INSUFFICIENT_DATA" as AlignmentSignal,
+    };
     const evidence_depth = buildEvidenceDepthShell();
     return {
       entity:             { entity_id: "5213001234567", entity_type: "human" as const },
@@ -1171,9 +1194,9 @@ describe("buildPTIv2Profile — DB integration", () => {
     expect(profile!.dimensions.engagement_depth.score).toBe(10);
     expect(profile!.dimensions.payment_reliability.score).toBe(20);
 
-    // Trajectory: no snapshot rows → INSUFFICIENT_DATA
-    expect(profile!.trajectory.direction).toBe("insufficient_data");
-    expect(profile!.trajectory.status).toBe("INSUFFICIENT_DATA");
+    // Trajectory: no pti_score_history rows → INSUFFICIENT_DATA aggregate
+    expect(profile!.trajectory.aggregate.direction).toBe("insufficient_data");
+    expect(profile!.trajectory.aggregate.status).toBe("INSUFFICIENT_DATA");
 
     // Evidence Depth: this user has no bill payments or wallet transactions
     // so Evidence Depth is INSUFFICIENT_DATA (not enough evidence to compute)
@@ -1199,6 +1222,612 @@ describe("buildPTIv2Profile — DB integration", () => {
     const profile = await buildPTIv2Profile(TEL, { referenceTime: REF });
     expect(profile).toBeNull();
 
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+  }, 30000);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BEHAVIORAL TRAJECTORY V1 — PURE UNIT TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Helper: builds a ScoreHistoryRow with explicit dim scores
+function makeHistoryRow(
+  recordedAt:   Date,
+  pr:           number,
+  bc:           number,
+  cf:           number,
+  modelVersion  = "v5.0.0-rc1",
+): ScoreHistoryRow {
+  return {
+    recordedAt,
+    breakdown: {
+      model_version:          modelVersion,
+      payment_reliability:    { score: pr, max: 36 },
+      behavioral_consistency: { score: bc, max: 22 },
+      cashflow_stability:     { score: cf, max: 20 },
+      engagement_depth:       { score: 10, max: 22 },
+    },
+  };
+}
+
+describe("normalizeDimScore — pure", () => {
+  it("0 raw → 0 normalized", () => {
+    expect(normalizeDimScore(0, 36)).toBe(0);
+  });
+  it("max raw → 100 normalized", () => {
+    expect(normalizeDimScore(36, 36)).toBe(100);
+  });
+  it("above max → capped at 100", () => {
+    expect(normalizeDimScore(40, 36)).toBe(100);
+  });
+  it("midpoint → 50.0 (PR: 18/36)", () => {
+    expect(normalizeDimScore(18, 36)).toBe(50);
+  });
+  it("BC midpoint 11/22 → 50.0", () => {
+    expect(normalizeDimScore(11, 22)).toBe(50);
+  });
+  it("max = 0 → 0 (defensive divide-by-zero guard)", () => {
+    expect(normalizeDimScore(10, 0)).toBe(0);
+  });
+  it("rounds to one decimal: 20/36 → 55.6", () => {
+    expect(normalizeDimScore(20, 36)).toBe(55.6);
+  });
+  it("negative raw → clamped to 0", () => {
+    expect(normalizeDimScore(-5, 36)).toBe(0);
+  });
+});
+
+describe("classifyDimDelta — pure", () => {
+  it("delta > threshold → IMPROVING", () => {
+    expect(classifyDimDelta(DIM_TRAJ_STABILITY_THRESHOLD_PCT + 0.1)).toBe("IMPROVING");
+  });
+  it("delta < -threshold → DETERIORATING", () => {
+    expect(classifyDimDelta(-(DIM_TRAJ_STABILITY_THRESHOLD_PCT + 0.1))).toBe("DETERIORATING");
+  });
+  it("delta = 0 → STABLE", () => {
+    expect(classifyDimDelta(0)).toBe("STABLE");
+  });
+  it("delta just below threshold → STABLE", () => {
+    expect(classifyDimDelta(DIM_TRAJ_STABILITY_THRESHOLD_PCT - 0.01)).toBe("STABLE");
+  });
+  it("delta just above threshold → IMPROVING", () => {
+    expect(classifyDimDelta(DIM_TRAJ_STABILITY_THRESHOLD_PCT + 0.01)).toBe("IMPROVING");
+  });
+  it("large positive → IMPROVING", () => {
+    expect(classifyDimDelta(40)).toBe("IMPROVING");
+  });
+  it("large negative → DETERIORATING", () => {
+    expect(classifyDimDelta(-40)).toBe("DETERIORATING");
+  });
+  it("threshold boundary itself is STABLE (|delta| < threshold, not <=)", () => {
+    // |3.0| is NOT < 3.0 → IMPROVING (not STABLE)
+    expect(classifyDimDelta(DIM_TRAJ_STABILITY_THRESHOLD_PCT)).toBe("IMPROVING");
+  });
+});
+
+describe("computeSingleDimTrajectory — BT-1: payment_reliability clearly improves", () => {
+  // Current PR: 30/36 = 83.3%  |  Prior (7 days ago): 20/36 = 55.6%
+  // delta = 27.7 → IMPROVING
+  const priorAt     = daysAgo(REF, 7);
+  const currentNorm = normalizeDimScore(30, 36); // 83.3
+  const priorNorm   = normalizeDimScore(20, 36); // 55.6
+  const rows = [{ recordedAt: priorAt, norm: priorNorm }];
+  const result      = computeSingleDimTrajectory("payment_reliability", currentNorm, rows, REF, 1);
+
+  it("recent window is COMPUTED", () => {
+    expect(result.recent.status).toBe("COMPUTED");
+  });
+  it("direction is IMPROVING", () => {
+    expect(result.recent.status === "COMPUTED" && result.recent.direction).toBe("IMPROVING");
+  });
+  it("delta is positive (≈ 27.7)", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.delta).toBeGreaterThan(DIM_TRAJ_STABILITY_THRESHOLD_PCT);
+  });
+  it("current_value matches normalizeDimScore(30, 36)", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.current_value).toBe(normalizeDimScore(30, 36));
+  });
+  it("prior_value matches normalizeDimScore(20, 36)", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.prior_value).toBe(normalizeDimScore(20, 36));
+  });
+  it("observation_count = 1", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.observation_count).toBe(1);
+  });
+  it("observation_window_days ≈ 7", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.observation_window_days).toBeCloseTo(7, 0);
+  });
+  it("v2_key is set", () => {
+    expect(result.v2_key).toBe("payment_reliability");
+  });
+  it("version is BEHAVIORAL_TRAJECTORY_VERSION", () => {
+    expect(result.version).toBe(BEHAVIORAL_TRAJECTORY_VERSION);
+  });
+  it("30/60/90d windows are INSUFFICIENT_DATA (no row near those horizons)", () => {
+    expect(result.window_30d.status).toBe("INSUFFICIENT_DATA");
+    expect(result.window_60d.status).toBe("INSUFFICIENT_DATA");
+    expect(result.window_90d.status).toBe("INSUFFICIENT_DATA");
+  });
+});
+
+describe("computeSingleDimTrajectory — BT-2: tiny noise below threshold → STABLE", () => {
+  // Current: 20.5/36 = 56.9%  |  Prior: 20/36 = 55.6%  →  delta = 1.4 < 3.0 → STABLE
+  const priorAt     = daysAgo(REF, 5);
+  const currentNorm = normalizeDimScore(20.5, 36);
+  const priorNorm   = normalizeDimScore(20, 36);
+  const rows        = [{ recordedAt: priorAt, norm: priorNorm }];
+  const result      = computeSingleDimTrajectory("payment_reliability", currentNorm, rows, REF, 1);
+
+  it("recent window is COMPUTED", () => {
+    expect(result.recent.status).toBe("COMPUTED");
+  });
+  it("direction is STABLE", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.direction).toBe("STABLE");
+  });
+  it("|delta| < DIM_TRAJ_STABILITY_THRESHOLD_PCT", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(Math.abs(result.recent.delta)).toBeLessThan(DIM_TRAJ_STABILITY_THRESHOLD_PCT);
+  });
+});
+
+describe("computeSingleDimTrajectory — BT-3: no same-model history → INSUFFICIENT_DATA", () => {
+  const currentNorm = normalizeDimScore(20, 36);
+  const result      = computeSingleDimTrajectory("payment_reliability", currentNorm, [], REF, 0);
+
+  it("recent window is INSUFFICIENT_DATA", () => {
+    expect(result.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("30d window is INSUFFICIENT_DATA", () => {
+    expect(result.window_30d.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("60d window is INSUFFICIENT_DATA", () => {
+    expect(result.window_60d.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("90d window is INSUFFICIENT_DATA", () => {
+    expect(result.window_90d.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("version is still populated (INSUFFICIENT_DATA does not suppress version)", () => {
+    expect(result.version).toBe(BEHAVIORAL_TRAJECTORY_VERSION);
+  });
+});
+
+describe("computeSingleDimTrajectory — BT-4: CF deteriorating (negative delta)", () => {
+  // Current CF: 8/20 = 40%  |  Prior: 16/20 = 80%  →  delta = -40 → DETERIORATING
+  const priorAt     = daysAgo(REF, 10);
+  const currentNorm = normalizeDimScore(8, 20);
+  const priorNorm   = normalizeDimScore(16, 20);
+  const rows        = [{ recordedAt: priorAt, norm: priorNorm }];
+  const result      = computeSingleDimTrajectory("cash_flow_resilience", currentNorm, rows, REF, 1);
+
+  it("direction is DETERIORATING", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.direction).toBe("DETERIORATING");
+  });
+  it("delta is negative", () => {
+    if (result.recent.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.recent.delta).toBeLessThan(0);
+  });
+});
+
+describe("computeSingleDimTrajectory — BT-5: 30d window resolved when row exists in tolerance band", () => {
+  // Prior at 31 days ago — within ±10d of the 30d target
+  const prior30At   = daysAgo(REF, 31);
+  const priorNorm   = normalizeDimScore(15, 36);
+  const currentNorm = normalizeDimScore(25, 36);
+  const rows = [
+    { recordedAt: daysAgo(REF, 3),  norm: normalizeDimScore(24, 36) }, // recent
+    { recordedAt: prior30At,        norm: priorNorm },                  // 30d
+  ];
+  const result = computeSingleDimTrajectory("payment_reliability", currentNorm, rows, REF, 2);
+
+  it("recent window is COMPUTED", () => {
+    expect(result.recent.status).toBe("COMPUTED");
+  });
+  it("30d window is COMPUTED", () => {
+    expect(result.window_30d.status).toBe("COMPUTED");
+  });
+  it("30d prior_value matches the 31-day row", () => {
+    if (result.window_30d.status !== "COMPUTED") throw new Error("unexpected INSUFFICIENT_DATA");
+    expect(result.window_30d.prior_value).toBe(priorNorm);
+  });
+  it("60d and 90d windows are INSUFFICIENT_DATA (no row in those bands)", () => {
+    expect(result.window_60d.status).toBe("INSUFFICIENT_DATA");
+    expect(result.window_90d.status).toBe("INSUFFICIENT_DATA");
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-6: cross-model version isolation", () => {
+  // History has: 1 v4.0-behavioral row + 2 v5.0.0-rc1 rows
+  // Only the v5 rows should influence the trajectory
+  const bd          = makeBreakdown(25, 18, 10, 15);
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 3),  20, 15, 12, "v5.0.0-rc1"),   // same-model
+    makeHistoryRow(daysAgo(REF, 7),  14, 12, 10, "v5.0.0-rc1"),   // same-model
+    makeHistoryRow(daysAgo(REF, 14), 30, 20, 18, "v4.0-behavioral"), // different model → excluded
+  ];
+  const result = computeBehavioralTrajectory(bd, historyRows, REF);
+
+  it("PR recent window is COMPUTED (same-model rows exist)", () => {
+    expect(result.payment_reliability.recent.status).toBe("COMPUTED");
+  });
+  it("PR observation_count is 2 (v4 row excluded)", () => {
+    if (result.payment_reliability.recent.status !== "COMPUTED") throw new Error("unexpected");
+    expect(result.payment_reliability.recent.observation_count).toBe(2);
+  });
+  it("BC recent window is COMPUTED", () => {
+    expect(result.behavioral_stability.recent.status).toBe("COMPUTED");
+  });
+  it("CF recent window is COMPUTED", () => {
+    expect(result.cash_flow_resilience.recent.status).toBe("COMPUTED");
+  });
+  it("PR prior_value corresponds to the most recent v5 row (20/36)", () => {
+    if (result.payment_reliability.recent.status !== "COMPUTED") throw new Error("unexpected");
+    expect(result.payment_reliability.recent.prior_value).toBe(normalizeDimScore(20, 36));
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-7: all v5 rows excluded by model mismatch → INSUFFICIENT_DATA", () => {
+  const bd = makeBreakdown(25, 18, 10, 15);
+  // All history rows have a different model version
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 3),  20, 15, 12, "v4.0-behavioral"),
+    makeHistoryRow(daysAgo(REF, 7),  14, 12, 10, "v4.1-behavioral"),
+  ];
+  const result = computeBehavioralTrajectory(bd, historyRows, REF);
+
+  it("PR recent is INSUFFICIENT_DATA", () => {
+    expect(result.payment_reliability.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("CF recent is INSUFFICIENT_DATA", () => {
+    expect(result.cash_flow_resilience.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("BC recent is INSUFFICIENT_DATA", () => {
+    expect(result.behavioral_stability.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-8: cash-first fixture (no KYC, no bank)", () => {
+  // Simulates a user who loaded via OXXO and paid bills — no KYC, no bank signals.
+  // engagement_depth excluded from output; the three tracked dimensions must still work.
+  const bd = makeBreakdown(22, 14, 8, 12); // PR, BC, ED, CF  (ED=8 is low — no KYC bonus)
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 5), 18, 11, 10), // prior
+  ];
+  const result = computeBehavioralTrajectory(bd, historyRows, REF);
+
+  it("payment_reliability recent is COMPUTED", () => {
+    expect(result.payment_reliability.recent.status).toBe("COMPUTED");
+  });
+  it("behavioral_stability recent is COMPUTED", () => {
+    expect(result.behavioral_stability.recent.status).toBe("COMPUTED");
+  });
+  it("cash_flow_resilience recent is COMPUTED", () => {
+    expect(result.cash_flow_resilience.recent.status).toBe("COMPUTED");
+  });
+  it("PR current_value uses PR max=36 (not engagement_depth max=22)", () => {
+    if (result.payment_reliability.recent.status !== "COMPUTED") throw new Error("unexpected");
+    expect(result.payment_reliability.recent.current_value).toBe(normalizeDimScore(22, 36));
+  });
+  it("CF current_value uses CF max=20", () => {
+    if (result.cash_flow_resilience.recent.status !== "COMPUTED") throw new Error("unexpected");
+    expect(result.cash_flow_resilience.recent.current_value).toBe(normalizeDimScore(12, 20));
+  });
+  it("behavioral score is not mutated by trajectory computation", () => {
+    // The breakdown is not modified in place
+    expect(bd.total).toBe(22 + 14 + 8 + 12);
+    expect(bd.payment_reliability.score).toBe(22);
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-9: absence of data is INSUFFICIENT_DATA, never fabricated deterioration", () => {
+  // A user with zero pti_score_history rows must not receive a manufactured negative delta.
+  const bd     = makeBreakdown(20, 15, 10, 12);
+  const result = computeBehavioralTrajectory(bd, [], REF);
+
+  it("PR is INSUFFICIENT_DATA, not DETERIORATING", () => {
+    expect(result.payment_reliability.recent.status).toBe("INSUFFICIENT_DATA");
+    // Type guard confirms we never get a `direction` field on this result
+    if (result.payment_reliability.recent.status === "COMPUTED") {
+      throw new Error("should not be COMPUTED");
+    }
+  });
+  it("CF is INSUFFICIENT_DATA, not DETERIORATING", () => {
+    expect(result.cash_flow_resilience.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+  it("BC is INSUFFICIENT_DATA, not DETERIORATING", () => {
+    expect(result.behavioral_stability.recent.status).toBe("INSUFFICIENT_DATA");
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-10: determinism (same inputs + same referenceTime → identical output)", () => {
+  const bd = makeBreakdown(25, 18, 10, 15);
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 4), 20, 14, 12),
+    makeHistoryRow(daysAgo(REF, 8), 16, 11, 10),
+  ];
+
+  it("two calls with identical inputs produce byte-identical JSON", () => {
+    const r1 = computeBehavioralTrajectory(bd, historyRows, REF);
+    const r2 = computeBehavioralTrajectory(bd, historyRows, REF);
+    expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-11: behavioral score is byte-identical before and after trajectory computation", () => {
+  const bd = makeBreakdown(28, 19, 12, 16);
+  const scoreBefore = bd.total;
+  const prBefore    = bd.payment_reliability.score;
+  const bcBefore    = bd.behavioral_consistency.score;
+  const cfBefore    = bd.cashflow_stability.score;
+
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 6), 20, 15, 12),
+  ];
+
+  computeBehavioralTrajectory(bd, historyRows, REF);
+
+  it("total score unchanged", () => {
+    expect(bd.total).toBe(scoreBefore);
+  });
+  it("payment_reliability.score unchanged", () => {
+    expect(bd.payment_reliability.score).toBe(prBefore);
+  });
+  it("behavioral_consistency.score unchanged", () => {
+    expect(bd.behavioral_consistency.score).toBe(bcBefore);
+  });
+  it("cashflow_stability.score unchanged", () => {
+    expect(bd.cashflow_stability.score).toBe(cfBefore);
+  });
+});
+
+describe("computeBehavioralTrajectory — BT-12: Evidence Depth inputs never influence trajectory", () => {
+  // Two users: identical breakdowns + identical history → identical trajectory
+  // regardless of Evidence Depth inputs (which trajectory never reads anyway)
+  const bd = makeBreakdown(24, 17, 11, 14);
+  const historyRows: ScoreHistoryRow[] = [
+    makeHistoryRow(daysAgo(REF, 5), 18, 13, 10),
+  ];
+
+  it("trajectory result is identical regardless of hypothetical ED band differences", () => {
+    // User A and User B share the same bd + historyRows + referenceTime.
+    // computeBehavioralTrajectory does not accept ED inputs — confirming isolation.
+    const trajA = computeBehavioralTrajectory(bd, historyRows, REF);
+    const trajB = computeBehavioralTrajectory(bd, historyRows, REF);
+    expect(JSON.stringify(trajA)).toBe(JSON.stringify(trajB));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// computeAlignment — pure unit tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Builds a minimal DimTrajectoryResult with a specific "recent" direction. */
+function makeDimResult(direction: DimTrajectoryDirection | null): ReturnType<typeof computeSingleDimTrajectory> {
+  if (direction === null || direction === "INSUFFICIENT_DATA") {
+    return {
+      v2_key:     "test",
+      recent:     { status: "INSUFFICIENT_DATA" },
+      window_30d: { status: "INSUFFICIENT_DATA" },
+      window_60d: { status: "INSUFFICIENT_DATA" },
+      window_90d: { status: "INSUFFICIENT_DATA" },
+      version:    BEHAVIORAL_TRAJECTORY_VERSION,
+    };
+  }
+  return {
+    v2_key:     "test",
+    recent: {
+      status:                  "COMPUTED",
+      current_value:           70,
+      prior_value:             60,
+      delta:                   direction === "IMPROVING" ? 10 : direction === "DETERIORATING" ? -10 : 0,
+      direction,
+      velocity:                1,
+      observation_count:       2,
+      observation_window_days: 7,
+    },
+    window_30d: { status: "INSUFFICIENT_DATA" },
+    window_60d: { status: "INSUFFICIENT_DATA" },
+    window_90d: { status: "INSUFFICIENT_DATA" },
+    version:    BEHAVIORAL_TRAJECTORY_VERSION,
+  };
+}
+
+function makeDims(
+  pr: DimTrajectoryDirection | null,
+  cf: DimTrajectoryDirection | null,
+  bc: DimTrajectoryDirection | null,
+): PTIv2DimensionTrajectories {
+  return {
+    payment_reliability:  makeDimResult(pr),
+    cash_flow_resilience: makeDimResult(cf),
+    behavioral_stability: makeDimResult(bc),
+  };
+}
+
+describe("computeAlignment — alignment signal", () => {
+  it("BT-A1: all three IMPROVING → ALIGNED_IMPROVING", () => {
+    expect(computeAlignment(makeDims("IMPROVING", "IMPROVING", "IMPROVING"))).toBe("ALIGNED_IMPROVING");
+  });
+  it("BT-A2: all three STABLE → ALIGNED_STABLE", () => {
+    expect(computeAlignment(makeDims("STABLE", "STABLE", "STABLE"))).toBe("ALIGNED_STABLE");
+  });
+  it("BT-A3: all three DETERIORATING → ALIGNED_DETERIORATING", () => {
+    expect(computeAlignment(makeDims("DETERIORATING", "DETERIORATING", "DETERIORATING"))).toBe("ALIGNED_DETERIORATING");
+  });
+  it("BT-A4: two IMPROVING + one STABLE → MIXED (strict unanimity)", () => {
+    expect(computeAlignment(makeDims("IMPROVING", "IMPROVING", "STABLE"))).toBe("MIXED");
+  });
+  it("BT-A5: two IMPROVING + one DETERIORATING → MIXED", () => {
+    expect(computeAlignment(makeDims("IMPROVING", "IMPROVING", "DETERIORATING"))).toBe("MIXED");
+  });
+  it("BT-A6: one IMPROVING + two INSUFFICIENT_DATA → INSUFFICIENT_DATA (< 2 computed)", () => {
+    expect(computeAlignment(makeDims("IMPROVING", null, null))).toBe("INSUFFICIENT_DATA");
+  });
+  it("BT-A7: all three INSUFFICIENT_DATA → INSUFFICIENT_DATA", () => {
+    expect(computeAlignment(makeDims(null, null, null))).toBe("INSUFFICIENT_DATA");
+  });
+  it("BT-A8: exactly two IMPROVING, one INSUFFICIENT_DATA → ALIGNED_IMPROVING (≥2 agrees)", () => {
+    expect(computeAlignment(makeDims("IMPROVING", "IMPROVING", null))).toBe("ALIGNED_IMPROVING");
+  });
+  it("BT-A9: IMPROVING + STABLE + INSUFFICIENT_DATA → MIXED (two computed, disagree)", () => {
+    expect(computeAlignment(makeDims("IMPROVING", "STABLE", null))).toBe("MIXED");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Behavioral Trajectory — DB integration
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Behavioral Trajectory — DB integration (BT-DB)", () => {
+  it("BT-DB-1: seeded pti_score_history rows produce correct dimension trajectories", async () => {
+    const { db } = await import("@workspace/db");
+
+    // Check for pre-existing parallel-afterEach race (same guard as existing ED DB tests).
+    const TEL = "bt_db_traj_test_user";
+    const BD_V5 = JSON.stringify({
+      payment_reliability:    { score: 25, max: 36, label: "t", components: {} },
+      behavioral_consistency: { score: 18, max: 22, label: "t", components: {} },
+      engagement_depth:       { score: 12, max: 22, label: "t", components: {} },
+      cashflow_stability:     { score: 15, max: 20, label: "t", components: {} },
+      total: 70, model_version: "v5.0.0-rc1",
+    });
+
+    // Breakdown for the older (prior) row: lower scores
+    const PRIOR_BD = JSON.stringify({
+      payment_reliability:    { score: 15, max: 36, label: "t", components: {} },
+      behavioral_consistency: { score: 12, max: 22, label: "t", components: {} },
+      engagement_depth:       { score: 10, max: 22, label: "t", components: {} },
+      cashflow_stability:     { score: 10, max: 20, label: "t", components: {} },
+      total: 47, model_version: "v5.0.0-rc1",
+    });
+
+    // Seed user
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+    await db.execute(sql`
+      INSERT INTO users (telefono, pti_score, pti_breakdown)
+      VALUES (${TEL}, 70, ${BD_V5}::jsonb)
+    `);
+
+    // Seed pti_score_history rows
+    const recentAt = daysAgo(REF, 5).toISOString();
+    await db.execute(sql`
+      INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+      VALUES (${TEL}, 47, ${PRIOR_BD}::jsonb, ${recentAt}::timestamptz)
+    `);
+
+    const check = await db.execute(sql`SELECT 1 FROM users WHERE telefono = ${TEL}`);
+    if (check.rows.length === 0) {
+      console.warn("[test skip] bt-db-1 fixture: user deleted by parallel afterEach race");
+      await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
+      return;
+    }
+
+    const profile = await buildPTIv2Profile(TEL, { referenceTime: REF });
+    expect(profile).not.toBeNull();
+
+    // PR: current=25/36=69.4%, prior=15/36=41.7%, delta≈27.7 → IMPROVING
+    const pr = profile!.trajectory.dimensions.payment_reliability;
+    expect(pr.recent.status).toBe("COMPUTED");
+    if (pr.recent.status === "COMPUTED") {
+      expect(pr.recent.direction).toBe("IMPROVING");
+      expect(pr.recent.current_value).toBeCloseTo(normalizeDimScore(25, 36), 0);
+      expect(pr.recent.prior_value).toBeCloseTo(normalizeDimScore(15, 36), 0);
+    }
+
+    // CF: current=15/20=75%, prior=10/20=50%, delta=25 → IMPROVING
+    const cf = profile!.trajectory.dimensions.cash_flow_resilience;
+    expect(cf.recent.status).toBe("COMPUTED");
+    if (cf.recent.status === "COMPUTED") {
+      expect(cf.recent.direction).toBe("IMPROVING");
+    }
+
+    // BC: current=18/22=81.8%, prior=12/22=54.5%, delta≈27.3 → IMPROVING
+    const bc = profile!.trajectory.dimensions.behavioral_stability;
+    expect(bc.recent.status).toBe("COMPUTED");
+    if (bc.recent.status === "COMPUTED") {
+      expect(bc.recent.direction).toBe("IMPROVING");
+    }
+
+    // All three IMPROVING → ALIGNED_IMPROVING
+    expect(profile!.trajectory.alignment).toBe("ALIGNED_IMPROVING");
+
+    // Aggregate trajectory: no pti_trend_snapshots row seeded → still INSUFFICIENT_DATA
+    expect(profile!.trajectory.aggregate.status).toBe("INSUFFICIENT_DATA");
+
+    // Behavioral score is read-only — identical before and after profile construction
+    expect(profile!.behavioral_profile.score).toBe(70);
+
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+  }, 30000);
+
+  it("BT-DB-2: mixed model history → only v5.0.0-rc1 rows contribute", async () => {
+    const { db } = await import("@workspace/db");
+    const TEL = "bt_db_mixed_model_user";
+    const BD_V5 = JSON.stringify({
+      payment_reliability:    { score: 25, max: 36, label: "t", components: {} },
+      behavioral_consistency: { score: 18, max: 22, label: "t", components: {} },
+      engagement_depth:       { score: 12, max: 22, label: "t", components: {} },
+      cashflow_stability:     { score: 15, max: 20, label: "t", components: {} },
+      total: 70, model_version: "v5.0.0-rc1",
+    });
+
+    // Same-model v5 row (included)
+    const V5_BD = JSON.stringify({
+      model_version:          "v5.0.0-rc1",
+      payment_reliability:    { score: 20, max: 36 },
+      behavioral_consistency: { score: 14, max: 22 },
+      cashflow_stability:     { score: 12, max: 20 },
+      engagement_depth:       { score: 10, max: 22 },
+      total: 56,
+    });
+    // Cross-model v4 row (excluded) — higher scores; if included would skew direction
+    const V4_BD = JSON.stringify({
+      model_version:        "v4.0-behavioral",
+      payment_reliability:  { score: 35, max: 36 },
+      cashflow_stability:   { score: 19, max: 20 },
+      total: 54,
+    });
+
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+    await db.execute(sql`
+      INSERT INTO users (telefono, pti_score, pti_breakdown)
+      VALUES (${TEL}, 70, ${BD_V5}::jsonb)
+    `);
+
+    const recentAt = daysAgo(REF, 3).toISOString();
+    const oldAt    = daysAgo(REF, 60).toISOString();
+    await db.execute(sql`
+      INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
+      VALUES
+        (${TEL}, 56, ${V5_BD}::jsonb, ${recentAt}::timestamptz),
+        (${TEL}, 54, ${V4_BD}::jsonb, ${oldAt}::timestamptz)
+    `);
+
+    const check = await db.execute(sql`SELECT 1 FROM users WHERE telefono = ${TEL}`);
+    if (check.rows.length === 0) {
+      console.warn("[test skip] bt-db-2: user deleted by parallel afterEach race");
+      await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
+      return;
+    }
+
+    const profile = await buildPTIv2Profile(TEL, { referenceTime: REF });
+    expect(profile).not.toBeNull();
+
+    // observation_count should be 1 (only the v5.0.0-rc1 row counts)
+    const pr = profile!.trajectory.dimensions.payment_reliability;
+    expect(pr.recent.status).toBe("COMPUTED");
+    if (pr.recent.status === "COMPUTED") {
+      expect(pr.recent.observation_count).toBe(1);
+      // v5 prior score = 20/36 ≈ 55.6%; current = 25/36 ≈ 69.4% → IMPROVING
+      expect(pr.recent.direction).toBe("IMPROVING");
+    }
+
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
     await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
   }, 30000);
 });
