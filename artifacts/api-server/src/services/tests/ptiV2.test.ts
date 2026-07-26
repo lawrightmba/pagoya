@@ -18,7 +18,28 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
+import {
+  // Shadow Behavioral Profile — constants
+  PTI_V2_SHADOW_MODEL_ID,
+  PTI_V2_SHADOW_VALIDATION_STATUS,
+  PTI_V2_SHADOW_DEPLOYMENT_STATUS,
+  SHADOW_WEIGHT_PAYMENT_RELIABILITY,
+  SHADOW_WEIGHT_CASH_FLOW_RESILIENCE,
+  SHADOW_WEIGHT_BEHAVIORAL_STABILITY,
+  PR_V2_RAW_MAX,
+  CFR_V2_RAW_MAX,
+  BS_V2_RAW_MAX,
+  // Shadow Behavioral Profile — pure functions
+  computeShadowPaymentReliability,
+  computeShadowCashFlowResilience,
+  computeShadowBehavioralStability,
+  computeShadowAggregate,
+  computeShadowBehavioralProfile,
+} from "../ptiV2Shadow.js";
+import type { ShadowDimensionResult } from "../ptiV2Shadow.js";
 import {
   // Evidence Depth constants
   EVIDENCE_DEPTH_VERSION,
@@ -84,7 +105,9 @@ import type {
   ExpectedObligationsResult,
   ObligationLifecycleStatus,
 } from "../ptiV2.js";
-import type { PTIBreakdown } from "../pti.js";
+import type { PTIBreakdown, PTIDataSnapshot } from "../pti.js";
+import { DERIVED_FEATURE_DEFAULTS } from "../ptiDerivedFeatures.js";
+import { computePTIv5 } from "../ptiV5.js";
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
@@ -2456,5 +2479,525 @@ describe("Expected Obligation V1 — pure functions", () => {
     const conf = computeExpectationConfidence(3, [30, 30], 30);
     expect(conf as string).not.toBe("INSUFFICIENT_DATA");
     expect(conf as string).not.toBe("NOT_COMPUTED");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PTI v2 SHADOW BEHAVIORAL PROFILE — PURE FUNCTION TESTS
+// Model: pti-v2-shadow-1.0 | Status: PRE_VALIDATION / SHADOW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds a zero-activity PTIDataSnapshot (brand-new user, nothing has happened).
+ * Mirrors the baseSnapshot() helper used in ptiV5.test.ts.
+ */
+function shadowBaseSnap(overrides: Partial<PTIDataSnapshot> = {}): PTIDataSnapshot {
+  return {
+    streakMonths: 0, payCount: 0, domStddev: 99, dominantDay: 1,
+    advanceDays: 0, selfRatio: 0,
+    loginDays30: 0, hourStd: 99, scratchPlays: 0, spinPlays: 0, missionsDone: 0,
+    loadCount30: 0, loadDayStd: 99, paulaInteractions: 0, confirmed2fa: 0, declined2fa: 0,
+    pushOpens: 0, curiosityIndex: 0,
+    billerCount: 0, kycVerified: false, kycTier: "simplified",
+    utilityRatio: 0, intentClicks: 0, hoursToFirst: NaN, deviceScore: 0,
+    currentBalance: 0, totalLoads: 0, totalSpend: 0, amountCV: 1,
+    p2pSendCount: 0, p2pRecipientCount: 0, daysOld: 0,
+    daysToFirstSpei: NaN, oxxoLoadCount: 0, speiLoadCount: 0, cardLoadCount: 0,
+    lateRecoveryRatio: NaN, latePaymentCount: 0, paulaResponseLatencyMinutes: NaN,
+    ...DERIVED_FEATURE_DEFAULTS,
+    ...overrides,
+  };
+}
+
+/**
+ * Cash-first fixture: 4 months of consistent recurring bill payments,
+ * no bank account, no SPEI, no KYC, loads via OXXO only.
+ * Represents a user whose only observable financial behavior is recurring cash bill payments.
+ */
+const CASH_FIRST_SNAP: PTIDataSnapshot = shadowBaseSnap({
+  // Payment behavior — solid recurring history
+  streakMonths:      4,
+  payCount:          8,
+  domStddev:         3,     // pays consistently around same day of month
+  dominantDay:       15,
+  advanceDays:       3,     // pays ~3 days before due
+  selfRatio:         0.9,   // mostly self-initiated
+  latePaymentCount:  0,     // never late
+  lateRecoveryRatio: NaN,   // N/A (never late)
+  // App sessions — moderate
+  loginDays30:   12,
+  hourStd:        4,
+  loadCount30:    4,
+  loadDayStd:     2,
+  // Wallet — OXXO cash loads only, positive balance retained
+  currentBalance: 200,
+  totalLoads:    1500,
+  totalSpend:    1200,
+  amountCV:      0.08,  // very consistent payment amounts
+  // Cash-only: no SPEI, no card
+  daysToFirstSpei: NaN,
+  oxxoLoadCount:   12,
+  speiLoadCount:    0,
+  cardLoadCount:    0,
+  // No KYC
+  kycVerified: false,
+  kycTier:     "simplified",
+  // Other fields (not used by shadow)
+  billerCount:    4,
+  utilityRatio:   0.7,
+  daysOld:       100,
+});
+
+/**
+ * Banked equivalent: same payment behavior as CASH_FIRST_SNAP but loads via SPEI,
+ * has KYC, and has bancarization data. Shadow score must be identical to CASH_FIRST_SNAP
+ * because the shadow model excludes daysToFirstSpei, load method counts, wallet_balance,
+ * bancarization_speed, funding_channel_mix, and KYC fields.
+ */
+const BANKED_EQUIVALENT_SNAP: PTIDataSnapshot = {
+  ...CASH_FIRST_SNAP,
+  // Banked differences — all excluded by the shadow model
+  daysToFirstSpei: 3,
+  oxxoLoadCount:   2,
+  speiLoadCount:   10,
+  cardLoadCount:   0,
+  kycVerified:     true,
+  kycTier:         "full",
+};
+
+const SHADOW_REF = new Date("2026-07-26T12:00:00.000Z");
+
+describe("PTI v2 Shadow Behavioral Profile — constants and metadata", () => {
+  it("SHDW-META-1: model identity constants have the correct values", () => {
+    expect(PTI_V2_SHADOW_MODEL_ID).toBe("pti-v2-shadow-1.0");
+    expect(PTI_V2_SHADOW_VALIDATION_STATUS).toBe("PRE_VALIDATION");
+    expect(PTI_V2_SHADOW_DEPLOYMENT_STATUS).toBe("SHADOW");
+  });
+
+  it("SHDW-META-2: provisional weights sum to 1.0", () => {
+    const total = SHADOW_WEIGHT_PAYMENT_RELIABILITY
+                + SHADOW_WEIGHT_CASH_FLOW_RESILIENCE
+                + SHADOW_WEIGHT_BEHAVIORAL_STABILITY;
+    expect(total).toBeCloseTo(1.0, 10);
+  });
+
+  it("SHDW-META-3: raw-point ceilings match the documented sub-component sum", () => {
+    // PR: streak(16) + payDay(5) + advance(8) + selfInit(7) + recovery(2) = 38
+    expect(PR_V2_RAW_MAX).toBe(38);
+    // CFR: loadSpend(4) + bufferRetention(3) = 7
+    expect(CFR_V2_RAW_MAX).toBe(7);
+    // BS: sessionCadence(2) + routineScore(2) + loadRhythm(4) + amountVolatility(7) = 15
+    expect(BS_V2_RAW_MAX).toBe(15);
+  });
+
+  it("SHDW-META-4: shadow model metadata always appears in every output case (COMPUTED and INSUFFICIENT_DATA)", () => {
+    const fullProfile = computeShadowBehavioralProfile(CASH_FIRST_SNAP, SHADOW_REF);
+    expect(fullProfile.model_id).toBe("pti-v2-shadow-1.0");
+    expect(fullProfile.validation_status).toBe("PRE_VALIDATION");
+    expect(fullProfile.deployment_status).toBe("SHADOW");
+
+    const emptyProfile = computeShadowBehavioralProfile(shadowBaseSnap(), SHADOW_REF);
+    expect(emptyProfile.model_id).toBe("pti-v2-shadow-1.0");
+    expect(emptyProfile.validation_status).toBe("PRE_VALIDATION");
+    expect(emptyProfile.deployment_status).toBe("SHADOW");
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — no write path and isolation guards", () => {
+  it("SHDW-ISO-1: ptiV2Shadow.ts source contains no INSERT, UPDATE, or DELETE SQL statement", () => {
+    const thisFileUrl = import.meta.url;
+    const shadowPath  = fileURLToPath(new URL("../ptiV2Shadow.ts", thisFileUrl));
+    const source      = readFileSync(shadowPath, "utf-8");
+    // The async wrapper calls buildPTISnapshotFromDb (read-only) but must never write.
+    expect(source).not.toMatch(/\bINSERT\s+INTO\b/i);
+    expect(source).not.toMatch(/\bUPDATE\s+\w/i);
+    expect(source).not.toMatch(/\bDELETE\s+FROM\b/i);
+  });
+
+  it("SHDW-ISO-2: ptiV2Shadow.ts source never invokes or imports Evidence Depth functions", () => {
+    const thisFileUrl = import.meta.url;
+    const shadowPath  = fileURLToPath(new URL("../ptiV2Shadow.ts", thisFileUrl));
+    const source      = readFileSync(shadowPath, "utf-8");
+    // Check for actual invocations (trailing '(') — not mere mentions in comments.
+    expect(source).not.toMatch(/computeEvidenceDepthFromInputs\s*\(/);
+    expect(source).not.toMatch(/fetchEvidenceDepthInputs\s*\(/);
+    expect(source).not.toMatch(/scoreDuration\s*\(|scoreDensity\s*\(|scoreBreadth\s*\(|scoreContinuity\s*\(|scoreRecency\s*\(|assignBand\s*\(/);
+    // Check that the file does not import anything from ptiV2.ts (where ED lives)
+    expect(source).not.toMatch(/from ["']\.\/ptiV2\.js["']/);
+    expect(source).not.toMatch(/import.*ptiV2/);
+  });
+
+  it("SHDW-ISO-3: ptiV2Shadow.ts source never invokes or imports Behavioral Trajectory functions", () => {
+    const thisFileUrl = import.meta.url;
+    const shadowPath  = fileURLToPath(new URL("../ptiV2Shadow.ts", thisFileUrl));
+    const source      = readFileSync(shadowPath, "utf-8");
+    // Check for actual invocations (trailing '(') — not mere mentions in comments.
+    expect(source).not.toMatch(/computeBehavioralTrajectory\s*\(/);
+    expect(source).not.toMatch(/buildTrajectoryObservation\s*\(/);
+    expect(source).not.toMatch(/computeAlignment\s*\(/);
+    // Confirm the file does not import from ptiV2.ts (where Trajectory functions live)
+    expect(source).not.toMatch(/from ["']\.\/ptiV2\.js["']/);
+  });
+
+  it("SHDW-ISO-4: Engagement Depth does not exist as a dimension key in the shadow output", () => {
+    const profile = computeShadowBehavioralProfile(CASH_FIRST_SNAP, SHADOW_REF);
+    const dimKeys = Object.keys(profile.dimensions);
+    expect(dimKeys).not.toContain("engagement_depth");
+    expect(dimKeys).toEqual(
+      expect.arrayContaining(["payment_reliability", "cash_flow_resilience", "behavioral_stability"]),
+    );
+    expect(dimKeys).toHaveLength(3);
+  });
+
+  it("SHDW-ISO-5: v5 computePTIv5 output is byte-identical before and after importing ptiV2Shadow", () => {
+    // This test verifies that ptiV2Shadow.ts has zero side effects on computePTIv5.
+    const snap = shadowBaseSnap({ streakMonths: 4, payCount: 6, billerCount: 3, daysOld: 90 });
+    const v5Before = computePTIv5(snap);
+    // Import shadow (already imported at top of file) — its presence must not affect v5.
+    const v5After  = computePTIv5(snap);
+    expect(JSON.stringify(v5After.breakdown)).toBe(JSON.stringify(v5Before.breakdown));
+    expect(JSON.stringify(v5After.confidence)).toBe(JSON.stringify(v5Before.confidence));
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — KYC and load-method fairness", () => {
+  it("SHDW-FAIR-1: KYC status creates no bonus — two users identical except kycVerified get same shadow score", () => {
+    const noKyc  = shadowBaseSnap({ ...CASH_FIRST_SNAP, kycVerified: false, kycTier: "simplified" });
+    const hasKyc = shadowBaseSnap({ ...CASH_FIRST_SNAP, kycVerified: true,  kycTier: "full"       });
+    const prNoKyc  = computeShadowPaymentReliability(noKyc);
+    const prHasKyc = computeShadowPaymentReliability(hasKyc);
+    const cfrNoKyc  = computeShadowCashFlowResilience(noKyc);
+    const cfrHasKyc = computeShadowCashFlowResilience(hasKyc);
+    const bsNoKyc  = computeShadowBehavioralStability(noKyc);
+    const bsHasKyc = computeShadowBehavioralStability(hasKyc);
+    expect(prNoKyc.normalized_score).toBe(prHasKyc.normalized_score);
+    expect(cfrNoKyc.normalized_score).toBe(cfrHasKyc.normalized_score);
+    expect(bsNoKyc.normalized_score).toBe(bsHasKyc.normalized_score);
+  });
+
+  it("SHDW-FAIR-2: cash-first (OXXO only) and banked (SPEI) users with identical payment behavior get equivalent shadow scores", () => {
+    const cashProfile   = computeShadowBehavioralProfile(CASH_FIRST_SNAP,       SHADOW_REF);
+    const bankedProfile = computeShadowBehavioralProfile(BANKED_EQUIVALENT_SNAP, SHADOW_REF);
+    // All three dimensions must be identical
+    expect(cashProfile.dimensions.payment_reliability.normalized_score)
+      .toBe(bankedProfile.dimensions.payment_reliability.normalized_score);
+    expect(cashProfile.dimensions.cash_flow_resilience.normalized_score)
+      .toBe(bankedProfile.dimensions.cash_flow_resilience.normalized_score);
+    expect(cashProfile.dimensions.behavioral_stability.normalized_score)
+      .toBe(bankedProfile.dimensions.behavioral_stability.normalized_score);
+    // Aggregate must also be identical
+    expect(cashProfile.aggregate.score).toBe(bankedProfile.aggregate.score);
+  });
+
+  it("SHDW-FAIR-3: cash-first fixture produces a COMPUTED (not INSUFFICIENT_DATA) profile with non-null scores", () => {
+    const profile = computeShadowBehavioralProfile(CASH_FIRST_SNAP, SHADOW_REF);
+    expect(profile.dimensions.payment_reliability.status).toBe("COMPUTED");
+    expect(profile.dimensions.cash_flow_resilience.status).toBe("COMPUTED");
+    expect(profile.dimensions.behavioral_stability.status).toBe("COMPUTED");
+    expect(profile.dimensions.payment_reliability.normalized_score).not.toBeNull();
+    expect(profile.dimensions.cash_flow_resilience.normalized_score).not.toBeNull();
+    expect(profile.dimensions.behavioral_stability.normalized_score).not.toBeNull();
+    expect(profile.aggregate.status).toBe("COMPUTED");
+    expect(profile.aggregate.score).not.toBeNull();
+    expect(profile.aggregate.score).toBeGreaterThan(0);
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — INSUFFICIENT_DATA handling", () => {
+  it("SHDW-INSUF-1: Payment Reliability is INSUFFICIENT_DATA when payCount < 1 (no confirmed payments)", () => {
+    const snap = shadowBaseSnap({ payCount: 0, streakMonths: 0 });
+    const pr = computeShadowPaymentReliability(snap);
+    expect(pr.status).toBe("INSUFFICIENT_DATA");
+    expect(pr.normalized_score).toBeNull();
+    expect(pr.raw_points).toBeNull();
+    expect(pr.raw_max).toBe(PR_V2_RAW_MAX);
+  });
+
+  it("SHDW-INSUF-2: Cash Flow Resilience is INSUFFICIENT_DATA when totalLoads=0 AND totalSpend=0 AND currentBalance=0", () => {
+    const snap = shadowBaseSnap({ totalLoads: 0, totalSpend: 0, currentBalance: 0 });
+    const cfr = computeShadowCashFlowResilience(snap);
+    expect(cfr.status).toBe("INSUFFICIENT_DATA");
+    expect(cfr.normalized_score).toBeNull();
+    expect(cfr.raw_points).toBeNull();
+  });
+
+  it("SHDW-INSUF-3: Behavioral Stability is INSUFFICIENT_DATA when loginDays30<1 AND loadCount30<3 AND payCount<2", () => {
+    const snap = shadowBaseSnap({ loginDays30: 0, loadCount30: 0, payCount: 0 });
+    const bs = computeShadowBehavioralStability(snap);
+    expect(bs.status).toBe("INSUFFICIENT_DATA");
+    expect(bs.normalized_score).toBeNull();
+    expect(bs.raw_points).toBeNull();
+  });
+
+  it("SHDW-INSUF-4: INSUFFICIENT_DATA at dimension level produces null normalized_score, never numeric 0", () => {
+    // Confirm that 0 and null are distinguished — 0 is a score, null means no evidence.
+    const noPaySnap = shadowBaseSnap({ payCount: 0 });
+    const pr = computeShadowPaymentReliability(noPaySnap);
+    expect(pr.normalized_score).toBeNull();
+    expect(pr.normalized_score).not.toBe(0);
+  });
+
+  it("SHDW-INSUF-5: all 3 dimensions INSUFFICIENT_DATA → aggregate is INSUFFICIENT_DATA with null score", () => {
+    // Brand-new account: no payments, no wallet activity, no logins
+    const snap = shadowBaseSnap();  // all zeros/NaN
+    const profile = computeShadowBehavioralProfile(snap, SHADOW_REF);
+    expect(profile.dimensions.payment_reliability.status).toBe("INSUFFICIENT_DATA");
+    expect(profile.dimensions.cash_flow_resilience.status).toBe("INSUFFICIENT_DATA");
+    expect(profile.dimensions.behavioral_stability.status).toBe("INSUFFICIENT_DATA");
+    expect(profile.aggregate.status).toBe("INSUFFICIENT_DATA");
+    expect(profile.aggregate.score).toBeNull();
+    expect(profile.aggregate.weights_applied).toBeNull();
+    // Metadata must still be correct even in this case
+    expect(profile.validation_status).toBe("PRE_VALIDATION");
+    expect(profile.deployment_status).toBe("SHADOW");
+  });
+
+  it("SHDW-INSUF-6: exactly 1 dimension INSUFFICIENT_DATA → aggregate is still COMPUTED with redistributed weights", () => {
+    // A user with wallet activity and app sessions but zero payments.
+    // PR → INSUFFICIENT_DATA; CFR and BS → COMPUTED (they have wallet/login data).
+    const snap = shadowBaseSnap({
+      payCount:      0,  // PR → INSUFFICIENT_DATA
+      totalLoads:  800,
+      totalSpend:  600,
+      currentBalance: 200,
+      loginDays30: 15,
+      loadCount30:  4,
+      loadDayStd:   2,
+      hourStd:      4,
+      domStddev:    5,
+    });
+    const pr  = computeShadowPaymentReliability(snap);
+    const cfr = computeShadowCashFlowResilience(snap);
+    const bs  = computeShadowBehavioralStability(snap);
+    expect(pr.status).toBe("INSUFFICIENT_DATA");
+    expect(cfr.status).toBe("COMPUTED");
+    expect(bs.status).toBe("COMPUTED");
+
+    const agg = computeShadowAggregate(pr, cfr, bs);
+    expect(agg.status).toBe("COMPUTED");
+    expect(agg.score).not.toBeNull();
+    expect(agg.excluded_dimensions).toContain("payment_reliability");
+    expect(agg.excluded_dimensions).toHaveLength(1);
+    // Redistributed weights must sum to 1.0
+    const w = agg.weights_applied!;
+    const wSum = w.payment_reliability + w.cash_flow_resilience + w.behavioral_stability;
+    expect(wSum).toBeCloseTo(1.0, 4);
+    expect(w.payment_reliability).toBe(0);
+  });
+
+  it("SHDW-INSUF-7: exactly 2 dimensions INSUFFICIENT_DATA → aggregate is INSUFFICIENT_DATA (never single-dim aggregate)", () => {
+    // Only BS is COMPUTED (has logins), PR and CFR are INSUFFICIENT_DATA.
+    const snap = shadowBaseSnap({
+      payCount:      0,
+      totalLoads:    0,
+      totalSpend:    0,
+      currentBalance: 0,
+      loginDays30:  15,
+      loadCount30:   2,  // below threshold for wallet_load_rhythm
+    });
+    const pr  = computeShadowPaymentReliability(snap);
+    const cfr = computeShadowCashFlowResilience(snap);
+    const bs  = computeShadowBehavioralStability(snap);
+    expect(pr.status).toBe("INSUFFICIENT_DATA");
+    expect(cfr.status).toBe("INSUFFICIENT_DATA");
+
+    const agg = computeShadowAggregate(pr, cfr, bs);
+    expect(agg.status).toBe("INSUFFICIENT_DATA");
+    expect(agg.score).toBeNull();
+    expect(agg.weights_applied).toBeNull();
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — Payment Reliability dimension", () => {
+  it("SHDW-PR-1: payment_streak formula matches verbatim ptiV5 formula (fully respecified)", () => {
+    // V5: max(0, min(16, (streakMonths - 2) * 4))
+    const cases = [
+      { streakMonths: 0, payCount: 5, expected: 0  },
+      { streakMonths: 2, payCount: 5, expected: 0  },
+      { streakMonths: 3, payCount: 5, expected: 4  },
+      { streakMonths: 4, payCount: 5, expected: 8  },
+      { streakMonths: 5, payCount: 5, expected: 12 },
+      { streakMonths: 6, payCount: 5, expected: 16 },
+      { streakMonths: 9, payCount: 5, expected: 16 }, // capped
+    ];
+    for (const { streakMonths, payCount, expected } of cases) {
+      const pr = computeShadowPaymentReliability(shadowBaseSnap({ streakMonths, payCount }));
+      expect(pr.components.payment_streak.score).toBe(expected);
+    }
+  });
+
+  it("SHDW-PR-2: recovery_after_miss is present in PR (moved from v5 behavioral_consistency)", () => {
+    const pr = computeShadowPaymentReliability(CASH_FIRST_SNAP);
+    expect("recovery_after_miss" in pr.components).toBe(true);
+    // CASH_FIRST_SNAP has latePaymentCount=0, payCount=8 → recovery score should be 2
+    expect(pr.components.recovery_after_miss.score).toBe(2);
+    expect(pr.components.recovery_after_miss.max).toBe(2);
+  });
+
+  it("SHDW-PR-3: PR raw_max is 38 (streak16+payDay5+advance8+selfInit7+recovery2)", () => {
+    const pr = computeShadowPaymentReliability(CASH_FIRST_SNAP);
+    expect(pr.raw_max).toBe(38);
+  });
+
+  it("SHDW-PR-4: PR normalized_score is raw_points/38 × 100", () => {
+    const pr = computeShadowPaymentReliability(CASH_FIRST_SNAP);
+    expect(pr.status).toBe("COMPUTED");
+    const expected = Math.round((pr.raw_points! / 38) * 100 * 10) / 10;
+    expect(pr.normalized_score).toBeCloseTo(expected, 5);
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — Cash Flow Resilience dimension", () => {
+  it("SHDW-CFR-1: load_spend_ratio formula matches verbatim ptiV5 formula", () => {
+    // totalLoads/totalSpend >= 1.0 → 4; >= 0.7 → 2; >= 0.4 → 1; else 0
+    const snap14 = shadowBaseSnap({ totalLoads: 1000, totalSpend: 1000, currentBalance: 0 });
+    expect(computeShadowCashFlowResilience(snap14).components.load_spend_ratio.score).toBe(4);
+    const snap12 = shadowBaseSnap({ totalLoads: 700,  totalSpend: 1000, currentBalance: 0 });
+    expect(computeShadowCashFlowResilience(snap12).components.load_spend_ratio.score).toBe(2);
+    const snap11 = shadowBaseSnap({ totalLoads: 400,  totalSpend: 1000, currentBalance: 0 });
+    expect(computeShadowCashFlowResilience(snap11).components.load_spend_ratio.score).toBe(1);
+    const snap10 = shadowBaseSnap({ totalLoads: 300,  totalSpend: 1000, currentBalance: 0 });
+    expect(computeShadowCashFlowResilience(snap10).components.load_spend_ratio.score).toBe(0);
+  });
+
+  it("SHDW-CFR-2: buffer_retention formula matches verbatim ptiV5 formula", () => {
+    // ratio = currentBalance/totalLoads; >= 0.30 → 3; >= 0.15 → 2; >= 0.05 → 1
+    const snap3 = shadowBaseSnap({ totalLoads: 1000, totalSpend: 500, currentBalance: 350 });
+    expect(computeShadowCashFlowResilience(snap3).components.buffer_retention.score).toBe(3);
+    const snap2 = shadowBaseSnap({ totalLoads: 1000, totalSpend: 500, currentBalance: 150 });
+    expect(computeShadowCashFlowResilience(snap2).components.buffer_retention.score).toBe(2);
+  });
+
+  it("SHDW-CFR-3: CFR raw_max is 7 (loadSpend4+bufferRetention3)", () => {
+    const cfr = computeShadowCashFlowResilience(CASH_FIRST_SNAP);
+    expect(cfr.raw_max).toBe(7);
+  });
+
+  it("SHDW-CFR-4: CFR excludes account_age, p2p_network_activity, and load-method fields (no such component keys)", () => {
+    const cfr = computeShadowCashFlowResilience(CASH_FIRST_SNAP);
+    const keys = Object.keys(cfr.components);
+    expect(keys).not.toContain("account_age");
+    expect(keys).not.toContain("p2p_network_activity");
+    expect(keys).not.toContain("wallet_balance");
+    expect(keys).not.toContain("bancarization_speed");
+    expect(keys).not.toContain("funding_channel_mix");
+    expect(keys).toEqual(["load_spend_ratio", "buffer_retention"]);
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — Behavioral Stability dimension", () => {
+  it("SHDW-BS-1: payment_amount_volatility is present in BS (moved from v5 cashflow_stability)", () => {
+    const snap = shadowBaseSnap({
+      ...CASH_FIRST_SNAP,
+      amountCV: 0.05,   // very consistent → should score 7
+    });
+    const bs = computeShadowBehavioralStability(snap);
+    expect("payment_amount_volatility" in bs.components).toBe(true);
+    expect(bs.components.payment_amount_volatility.score).toBe(7);
+    expect(bs.components.payment_amount_volatility.max).toBe(7);
+  });
+
+  it("SHDW-BS-2: BS excludes game_engagement, paula_*, push_*, curiosity (no such component keys)", () => {
+    const bs = computeShadowBehavioralStability(CASH_FIRST_SNAP);
+    const keys = Object.keys(bs.components);
+    expect(keys).not.toContain("game_engagement");
+    expect(keys).not.toContain("paula_interaction_depth");
+    expect(keys).not.toContain("push_notification_engagement");
+    expect(keys).not.toContain("financial_curiosity_index");
+    expect(keys).not.toContain("paula_response_latency");
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "session_cadence", "routine_score", "wallet_load_rhythm", "payment_amount_volatility",
+      ]),
+    );
+    expect(keys).toHaveLength(4);
+  });
+
+  it("SHDW-BS-3: BS raw_max is 15 (sessionCadence2+routineScore2+loadRhythm4+amountVolatility7)", () => {
+    const bs = computeShadowBehavioralStability(CASH_FIRST_SNAP);
+    expect(bs.raw_max).toBe(15);
+  });
+
+  it("SHDW-BS-4: session_cadence and routine_score formulas match verbatim ptiV5 formulas", () => {
+    const highLogin = shadowBaseSnap({
+      loginDays30: 22, hourStd: 2, domStddev: 3,
+      loadCount30: 0, payCount: 0,  // keep other dims out of INSUF check
+    });
+    const bs = computeShadowBehavioralStability(highLogin);
+    // loginDays30=22 → sessionCadenceScore=2 (verbatim from v5)
+    expect(bs.components.session_cadence.score).toBe(2);
+    // hourNorm=max(0,1-2/12)=0.833; domNorm=max(0,1-3/15)=0.8; routineRaw=0.817 ≥ 0.70 → 2
+    expect(bs.components.routine_score.score).toBe(2);
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — aggregate and weight redistribution", () => {
+  it("SHDW-AGG-1: all 3 COMPUTED → declared prior weights used verbatim", () => {
+    const profile = computeShadowBehavioralProfile(CASH_FIRST_SNAP, SHADOW_REF);
+    expect(profile.aggregate.status).toBe("COMPUTED");
+    const w = profile.aggregate.weights_applied!;
+    expect(w.payment_reliability).toBeCloseTo(SHADOW_WEIGHT_PAYMENT_RELIABILITY, 10);
+    expect(w.cash_flow_resilience).toBeCloseTo(SHADOW_WEIGHT_CASH_FLOW_RESILIENCE, 10);
+    expect(w.behavioral_stability).toBeCloseTo(SHADOW_WEIGHT_BEHAVIORAL_STABILITY, 10);
+    expect(profile.aggregate.excluded_dimensions).toHaveLength(0);
+  });
+
+  it("SHDW-AGG-2: aggregate score = weighted sum of normalized dimension scores", () => {
+    const profile = computeShadowBehavioralProfile(CASH_FIRST_SNAP, SHADOW_REF);
+    const { payment_reliability: pr, cash_flow_resilience: cfr, behavioral_stability: bs } =
+      profile.dimensions;
+    const w = profile.aggregate.weights_applied!;
+    const expected = Math.round(
+      (pr.normalized_score! * w.payment_reliability
+       + cfr.normalized_score! * w.cash_flow_resilience
+       + bs.normalized_score!  * w.behavioral_stability)
+      * 10,
+    ) / 10;
+    expect(profile.aggregate.score).toBeCloseTo(expected, 5);
+  });
+
+  it("SHDW-AGG-3: 1 INSUFFICIENT_DATA → surviving weights sum to 1.0 (proportional redistribution)", () => {
+    const prResult:  ShadowDimensionResult = {
+      status: "INSUFFICIENT_DATA", normalized_score: null,
+      raw_points: null, raw_max: PR_V2_RAW_MAX, components: {},
+    };
+    const cfrResult: ShadowDimensionResult = {
+      status: "COMPUTED", normalized_score: 60,
+      raw_points: 4, raw_max: CFR_V2_RAW_MAX, components: {},
+    };
+    const bsResult:  ShadowDimensionResult = {
+      status: "COMPUTED", normalized_score: 40,
+      raw_points: 6, raw_max: BS_V2_RAW_MAX, components: {},
+    };
+    const agg = computeShadowAggregate(prResult, cfrResult, bsResult);
+    expect(agg.status).toBe("COMPUTED");
+    const w = agg.weights_applied!;
+    const wSum = w.payment_reliability + w.cash_flow_resilience + w.behavioral_stability;
+    expect(wSum).toBeCloseTo(1.0, 4);
+    expect(w.payment_reliability).toBe(0);
+    // CFR base weight = 0.35, BS base weight = 0.20, total = 0.55
+    // CFR rescaled = 0.35/0.55 ≈ 0.6364; BS rescaled = 0.20/0.55 ≈ 0.3636
+    expect(w.cash_flow_resilience).toBeCloseTo(0.35 / 0.55, 3);
+    expect(w.behavioral_stability).toBeCloseTo(0.20 / 0.55, 3);
+  });
+});
+
+describe("PTI v2 Shadow Behavioral Profile — determinism", () => {
+  it("SHDW-DET-1: identical snapshot + identical referenceTime → byte-identical JSON output", () => {
+    const snap = { ...CASH_FIRST_SNAP };
+    const r1 = computeShadowBehavioralProfile(snap, SHADOW_REF);
+    const r2 = computeShadowBehavioralProfile(snap, SHADOW_REF);
+    expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+  });
+
+  it("SHDW-DET-2: different referenceTime → different computed_at but same scores", () => {
+    const t1 = new Date("2026-07-26T12:00:00.000Z");
+    const t2 = new Date("2026-07-27T08:30:00.000Z");
+    const r1 = computeShadowBehavioralProfile(CASH_FIRST_SNAP, t1);
+    const r2 = computeShadowBehavioralProfile(CASH_FIRST_SNAP, t2);
+    expect(r1.computed_at).not.toBe(r2.computed_at);
+    expect(r1.aggregate.score).toBe(r2.aggregate.score);
+    expect(r1.dimensions.payment_reliability.normalized_score)
+      .toBe(r2.dimensions.payment_reliability.normalized_score);
   });
 });

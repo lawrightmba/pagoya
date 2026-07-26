@@ -68,6 +68,13 @@
 
 import { sql } from "drizzle-orm";
 import type { PTIBreakdown, PTIDimension } from "./pti.js";
+import {
+  computeShadowBehavioralProfile,
+} from "./ptiV2Shadow.js";
+import type {
+  ShadowBehavioralProfile,
+  ShadowVsV5Comparison,
+} from "./ptiV2Shadow.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1 — DIMENSION MAPPING LAYER (unchanged from v2 initial sprint)
@@ -590,6 +597,44 @@ export interface PTIv2Profile {
    * Future sprint: integrate here once the field is confirmed stable.
    */
   expected_obligations?: ExpectedObligationsResult;
+
+  /**
+   * Mirror of behavioral_profile — identical data, added so downstream consumers
+   * can explicitly reference the production v5 score under a self-documenting
+   * name alongside the shadow profile. behavioral_profile remains unchanged for
+   * full backward compatibility.
+   */
+  production_behavioral_profile?: {
+    score:             number;
+    model_version:     string;
+    validation_status: "PRE_VALIDATION";
+  };
+
+  /**
+   * Shadow behavioral profile (pti-v2-shadow-1.0).
+   * Three-dimension restructuring of v5 sub-formulas for research purposes.
+   *
+   * Hard constraints (see ptiV2Shadow.ts for full documentation):
+   *   ✗ SHADOW status — must never gate any production decision.
+   *   ✗ PRE_VALIDATION — weights are priors only, not empirically calibrated.
+   *   ✗ No probability of default, creditworthiness, or lending claim anywhere.
+   *   ✗ Never written to any production table.
+   *   ✗ Evidence Depth has zero influence on shadow_behavioral_profile.
+   *   ✗ Behavioral Trajectory has zero influence on shadow_behavioral_profile.
+   */
+  shadow_behavioral_profile?: ShadowBehavioralProfile;
+
+  /**
+   * Side-by-side comparison of the production v5 score and the shadow aggregate.
+   *
+   * ╔══════════════════════════════════════════════════════════════════════════╗
+   * ║ numeric_delta is a METHODOLOGICAL COMPARISON only — never a trend or   ║
+   * ║ improvement signal. v5 and shadow use different sub-component sets,     ║
+   * ║ different normalizations, and different weight distributions. A delta   ║
+   * ║ in either direction has no behavioral interpretation.                   ║
+   * ╚══════════════════════════════════════════════════════════════════════════╝
+   */
+  shadow_comparison?: ShadowVsV5Comparison | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1378,8 +1423,11 @@ export async function buildPTIv2Profile(
   const breakdown    = ur.pti_breakdown as PTIBreakdown;
   const modelVersion = (breakdown.model_version as string | undefined) ?? "unknown";
 
-  // ── 2. Fetch Evidence Depth inputs and history rows in parallel ───────────
-  const [edInputs, trendRow, historyRows] = await Promise.all([
+  // ── 2. Fetch Evidence Depth inputs, history rows, and PTI snapshot in parallel ─
+  // buildPTISnapshotFromDb is imported dynamically (consistent with the existing
+  // pattern in this file) to avoid top-level circular-import concerns.
+  const { buildPTISnapshotFromDb } = await import("./pti.js");
+  const [edInputs, trendRow, historyRows, ptiSnapshot] = await Promise.all([
     fetchEvidenceDepthInputs(telefono),
     // Aggregate trajectory: read from pti_trend_snapshots (lineage-safe, existing)
     db.execute(sql`
@@ -1392,6 +1440,9 @@ export async function buildPTIv2Profile(
     `),
     // Dimension trajectory: read from pti_score_history (works in both dev and prod)
     fetchScoreHistoryRows(telefono),
+    // PTI snapshot: the same raw behavioral inputs used by computePTIv5.
+    // Read-only — used here only for the shadow behavioral profile computation.
+    buildPTISnapshotFromDb(telefono),
   ]);
 
   // ── 3. Compute Evidence Depth v1 (read-only, no writes) ───────────────────
@@ -1429,7 +1480,41 @@ export async function buildPTIv2Profile(
     observation_model_version: aggregateTrajectory.observation_model_version,
   };
 
-  // ── 9. Assemble v2 profile ────────────────────────────────────────────────
+  // ── 9. Compute shadow behavioral profile (read-only, never writes) ───────────
+  // computeShadowBehavioralProfile is a pure function — no DB calls, no side
+  // effects. Evidence Depth and Behavioral Trajectory have zero influence on it.
+  const shadowProfile = computeShadowBehavioralProfile(ptiSnapshot, referenceTime);
+
+  // ── 10. Build shadow vs v5 comparison object ───────────────────────────────
+  // numeric_delta is a methodological comparison only — never a trend signal.
+  // v5 and shadow use different sub-component sets, normalizations, and weights.
+  const shadowAggScore = shadowProfile.aggregate.score;
+  const shadowComparison: ShadowVsV5Comparison = {
+    v5_score:              score,
+    shadow_aggregate_score: shadowAggScore,
+    numeric_delta:         shadowAggScore !== null
+      ? Math.round((score - shadowAggScore) * 10) / 10
+      : null,
+    dimension_mapping: {
+      payment_reliability: {
+        v5_score:          breakdown.payment_reliability.score,
+        shadow_normalized: shadowProfile.dimensions.payment_reliability.normalized_score,
+      },
+      cash_flow_resilience: {
+        v5_score:          breakdown.cashflow_stability.score,
+        shadow_normalized: shadowProfile.dimensions.cash_flow_resilience.normalized_score,
+      },
+      behavioral_stability: {
+        v5_score:          breakdown.behavioral_consistency.score,
+        shadow_normalized: shadowProfile.dimensions.behavioral_stability.normalized_score,
+      },
+    },
+  };
+
+  // ── 11. Assemble v2 profile ───────────────────────────────────────────────
+  // behavioral_profile is UNCHANGED for full backward compatibility.
+  // production_behavioral_profile mirrors it under a self-documenting name.
+  // shadow_behavioral_profile and shadow_comparison are additive new fields.
   return {
     entity: {
       entity_id:   telefono,
@@ -1441,9 +1526,16 @@ export async function buildPTIv2Profile(
       model_version:     modelVersion,
       validation_status: "PRE_VALIDATION",
     },
+    production_behavioral_profile: {
+      score,
+      model_version:     modelVersion,
+      validation_status: "PRE_VALIDATION",
+    },
     dimensions,
     trajectory,
-    evidence_depth: evidenceDepth,
+    evidence_depth:            evidenceDepth,
+    shadow_behavioral_profile: shadowProfile,
+    shadow_comparison:         shadowComparison,
   };
 }
 
