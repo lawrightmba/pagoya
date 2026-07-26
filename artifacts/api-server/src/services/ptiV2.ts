@@ -417,13 +417,25 @@ export interface PTIv2DimensionTrajectories {
  * - alignment:  single signal describing whether the three dimensions agree.
  *              Purely descriptive. No prediction, no risk score, no recommendation.
  *
- * BACKWARD COMPATIBILITY: code reading profile.trajectory.direction must be
- * updated to profile.trajectory.aggregate.direction.
+ * TOP-LEVEL ALIASES (backward-compatible mirrors of aggregate.*):
+ * direction, status, velocity, observation_model_version are present at the
+ * top level of this object as well as inside aggregate, with identical values.
+ * They exist so that consumers reading the raw JSON output are not broken if
+ * they were accessing the previous flat shape. New code should prefer the
+ * aggregate sub-object for clarity.
  */
 export interface PTIv2Trajectory {
   aggregate:  TrajectoryObservation;
   dimensions: PTIv2DimensionTrajectories;
   alignment:  AlignmentSignal;
+  /** Mirror of aggregate.direction. Kept for backward-compatible JSON consumers. */
+  direction:                 TrajectoryDirection;
+  /** Mirror of aggregate.status. Kept for backward-compatible JSON consumers. */
+  status:                    TrajectoryStatus;
+  /** Mirror of aggregate.velocity. Kept for backward-compatible JSON consumers. */
+  velocity:                  number | null;
+  /** Mirror of aggregate.observation_model_version. Kept for backward-compatible JSON consumers. */
+  observation_model_version: string | null;
 }
 
 /**
@@ -1396,10 +1408,17 @@ export async function buildPTIv2Profile(
   const alignment = computeAlignment(dimTrajectories);
 
   // ── 8. Assemble trajectory (aggregate + dimensions + alignment) ────────────
+  // Top-level alias fields mirror aggregate.* exactly so that JSON consumers
+  // reading the previous flat shape are not broken. New code should prefer
+  // the aggregate sub-object. Values are identical — no transformation applied.
   const trajectory: PTIv2Trajectory = {
     aggregate:  aggregateTrajectory,
     dimensions: dimTrajectories,
     alignment,
+    direction:                 aggregateTrajectory.direction,
+    status:                    aggregateTrajectory.status,
+    velocity:                  aggregateTrajectory.velocity,
+    observation_model_version: aggregateTrajectory.observation_model_version,
   };
 
   // ── 9. Assemble v2 profile ────────────────────────────────────────────────

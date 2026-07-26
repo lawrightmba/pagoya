@@ -1120,10 +1120,16 @@ describe("PTIv2Profile structural invariants (pure construction)", () => {
     //   aggregate  — existing flat TrajectoryObservation
     //   dimensions — PTIv2DimensionTrajectories (all INSUFFICIENT_DATA when no history)
     //   alignment  — AlignmentSignal (string union, not an object)
+    //   top-level direction/status/velocity/observation_model_version — aliases of aggregate.*
+    const agg = buildTrajectoryObservation(null);
     const trajectory = {
-      aggregate:  buildTrajectoryObservation(null),
-      dimensions: computeBehavioralTrajectory(bd, [], REF),
-      alignment:  "INSUFFICIENT_DATA" as AlignmentSignal,
+      aggregate:                 agg,
+      dimensions:                computeBehavioralTrajectory(bd, [], REF),
+      alignment:                 "INSUFFICIENT_DATA" as AlignmentSignal,
+      direction:                 agg.direction,
+      status:                    agg.status,
+      velocity:                  agg.velocity,
+      observation_model_version: agg.observation_model_version,
     };
     const evidence_depth = buildEvidenceDepthShell();
     return {
@@ -1828,6 +1834,92 @@ describe("Behavioral Trajectory — DB integration (BT-DB)", () => {
     }
 
     await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+  }, 30000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward-compatible top-level alias tests
+// Confirm that direction/status/velocity/observation_model_version at the top
+// level of PTIv2Profile.trajectory are identical in value to
+// trajectory.aggregate.direction / .status / .velocity / .observation_model_version.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("PTIv2Trajectory — top-level aliases mirror aggregate values (pure)", () => {
+  // Build a trajectory object that matches what buildPTIv2Profile assembles,
+  // using a non-null aggregate so all four alias values are non-trivial.
+  const agg = buildTrajectoryObservation({ trajectory: "rising", velocity: 4, model_version: "v5.0.0-rc1" });
+  const bd  = makeBreakdown(20, 15, 10, 12);
+  const traj = {
+    aggregate:                 agg,
+    dimensions:                computeBehavioralTrajectory(bd, [], REF),
+    alignment:                 "INSUFFICIENT_DATA" as AlignmentSignal,
+    direction:                 agg.direction,
+    status:                    agg.status,
+    velocity:                  agg.velocity,
+    observation_model_version: agg.observation_model_version,
+  };
+
+  it("top-level direction === aggregate.direction", () => {
+    expect(traj.direction).toBe(traj.aggregate.direction);
+  });
+  it("top-level status === aggregate.status", () => {
+    expect(traj.status).toBe(traj.aggregate.status);
+  });
+  it("top-level velocity === aggregate.velocity", () => {
+    expect(traj.velocity).toBe(traj.aggregate.velocity);
+  });
+  it("top-level observation_model_version === aggregate.observation_model_version", () => {
+    expect(traj.observation_model_version).toBe(traj.aggregate.observation_model_version);
+  });
+  it("top-level direction has the correct mapped value ('improving' for 'rising' input)", () => {
+    expect(traj.direction).toBe("improving");
+  });
+  it("top-level status is 'COMPUTED' (non-null aggregate)", () => {
+    expect(traj.status).toBe("COMPUTED");
+  });
+  it("INSUFFICIENT_DATA case: top-level direction is 'insufficient_data'", () => {
+    const nullAgg = buildTrajectoryObservation(null);
+    expect(nullAgg.direction).toBe("insufficient_data");
+    // confirm alias would match
+    expect(nullAgg.direction).toBe(nullAgg.direction);
+  });
+});
+
+describe("PTIv2Trajectory — top-level aliases verified via buildPTIv2Profile DB integration", () => {
+  it("profile.trajectory top-level aliases match profile.trajectory.aggregate values", async () => {
+    const { db } = await import("@workspace/db");
+    const TEL = "alias_verify_user";
+    const BD_V5 = JSON.stringify({
+      payment_reliability:    { score: 20, max: 36, label: "t", components: {} },
+      behavioral_consistency: { score: 15, max: 22, label: "t", components: {} },
+      engagement_depth:       { score: 10, max: 22, label: "t", components: {} },
+      cashflow_stability:     { score: 12, max: 20, label: "t", components: {} },
+      total: 57, model_version: "v5.0.0-rc1",
+    });
+
+    await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
+    await db.execute(sql`
+      INSERT INTO users (telefono, pti_score, pti_breakdown)
+      VALUES (${TEL}, 57, ${BD_V5}::jsonb)
+    `);
+
+    const profile = await buildPTIv2Profile(TEL, { referenceTime: REF });
+    expect(profile).not.toBeNull();
+
+    const t = profile!.trajectory;
+    // Every alias must exactly equal its aggregate counterpart
+    expect(t.direction).toBe(t.aggregate.direction);
+    expect(t.status).toBe(t.aggregate.status);
+    expect(t.velocity).toBe(t.aggregate.velocity);
+    expect(t.observation_model_version).toBe(t.aggregate.observation_model_version);
+
+    // No pti_trend_snapshots row → aggregate is INSUFFICIENT_DATA → aliases reflect that
+    expect(t.direction).toBe("insufficient_data");
+    expect(t.status).toBe("INSUFFICIENT_DATA");
+    expect(t.velocity).toBeNull();
+    expect(t.observation_model_version).toBeNull();
+
     await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
   }, 30000);
 });
