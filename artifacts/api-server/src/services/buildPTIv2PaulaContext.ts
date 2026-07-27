@@ -18,6 +18,9 @@
  *   ✗ No raw scores, weights, thresholds, or internal feature names in output.
  */
 
+import { db, billPaymentsTable } from "@workspace/db";
+import { eq, desc, and } from "drizzle-orm";
+import { logger } from "../lib/logger.js";
 import type { ShadowDimensionResult } from "./ptiV2Shadow.js";
 import type { EvidenceBand, ExpectedObligationsResult } from "./ptiV2.js";
 
@@ -279,6 +282,43 @@ PROHIBICIONES ABSOLUTAS — este contexto no debe generar:
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 5.5 — STALENESS GUARD (pure helper + provisional threshold)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Provisional staleness threshold — 90 days.
+ *
+ * A user whose most recent confirmed bill payment is older than this many days
+ * receives no PTI v2 coaching context — their behavioral profile is considered
+ * too stale to produce actionable coaching guidance.
+ *
+ * PROVISIONAL: this value was chosen conservatively and requires a data-driven
+ * calibration sprint before being treated as permanent.  Do not increase above
+ * 180 without a separate technical review.  Do not lower below 60 without
+ * checking the impact on re-engagement cohorts.
+ */
+export const STALENESS_THRESHOLD_DAYS = 90;
+
+/**
+ * Pure staleness predicate.  Returns true when lastPaymentAt is null (no
+ * confirmed payments) or more than STALENESS_THRESHOLD_DAYS before referenceNow.
+ * Boundary is inclusive: exactly STALENESS_THRESHOLD_DAYS old → NOT stale.
+ *
+ * @param lastPaymentAt  Timestamp of the most recent confirmed bill payment,
+ *                       or null if the user has no confirmed payments on record.
+ * @param referenceNow   Reference "now" (defaults to new Date(); injectable for
+ *                       deterministic unit testing without real clock dependency).
+ */
+export function isDataStale(
+  lastPaymentAt: Date | null,
+  referenceNow: Date = new Date(),
+): boolean {
+  if (!lastPaymentAt) return true;
+  const msThreshold = STALENESS_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
+  return (referenceNow.getTime() - lastPaymentAt.getTime()) > msThreshold;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 6 — ASYNC DB ADAPTER (read-only)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -319,6 +359,31 @@ export async function buildPTIv2PaulaContext(
 
     // Require at least 2 computable shadow dimensions
     if (shadow.aggregate.status === "INSUFFICIENT_DATA") {
+      return { available: false };
+    }
+
+    // ── Part B: staleness guard ───────────────────────────────────────────────
+    // If the user's most recent confirmed bill payment is absent or older than
+    // STALENESS_THRESHOLD_DAYS, the behavioral profile is too stale to produce
+    // actionable coaching guidance — return unavailable rather than mislead.
+    const [lastPaymentRow] = await db
+      .select({ createdAt: billPaymentsTable.createdAt })
+      .from(billPaymentsTable)
+      .where(
+        and(
+          eq(billPaymentsTable.telefono, telefono),
+          eq(billPaymentsTable.status, "confirmed"),
+        ),
+      )
+      .orderBy(desc(billPaymentsTable.createdAt))
+      .limit(1);
+
+    const rawCreatedAt  = lastPaymentRow?.createdAt;
+    const lastPaymentAt = rawCreatedAt != null
+      ? new Date(rawCreatedAt as string | Date)
+      : null;
+
+    if (isDataStale(lastPaymentAt)) {
       return { available: false };
     }
 
@@ -366,7 +431,17 @@ export async function buildPTIv2PaulaContext(
 
       expected_obligations: buildEOSummaryStr(eo),
     };
-  } catch {
+  } catch (err: unknown) {
+    // Part C: masked error logging — never re-throw; Paula falls back gracefully.
+    // Only the last 4 digits of the phone number are logged to avoid PII leakage
+    // in log aggregation systems.
+    const errorClass = err instanceof Error ? err.constructor.name : "UnknownError";
+    logger.warn({
+      errorClass,
+      component: "buildPTIv2PaulaContext",
+      maskedTel: telefono.slice(-4),
+      ts: new Date().toISOString(),
+    });
     return { available: false };
   }
 }

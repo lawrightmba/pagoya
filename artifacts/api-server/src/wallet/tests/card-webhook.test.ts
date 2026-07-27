@@ -1,7 +1,18 @@
+// FIXTURE IDENTIFIERS OWNED BY THIS FILE — do not reuse in other test files:
+//   TEST_PHONE = "+52000000cardwhtest01"
+//   order IDs: "ord_wh_card_paid_001", "ord_wh_card_paid_002",
+//              "ord_wh_card_failed_001", "ord_wh_card_unknown_001"
+// See src/billpay/tests/setup.ts for the teardown registry.
+
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import request from "supertest";
 import { db, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import {
+  waitForWalletBalance,
+  waitForTxStatus,
+  settleMs,
+} from "../../billpay/tests/testUtils.js";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies — vi.mock is hoisted above imports by vitest
@@ -79,11 +90,8 @@ function cardWebhookPayload(type: string, orderId: string, meta?: Record<string,
   };
 }
 
-// Drains the setImmediate queue so DB side-effects from the webhook handler
-// are visible before assertions run.
-async function drainSetImmediate(): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
-}
+// waitForWalletBalance / waitForTxStatus / settleMs imported from testUtils.js
+// (replaces the former fixed-sleep drainSetImmediate; see testUtils.ts for rationale)
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -111,9 +119,9 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
 
-    await drainSetImmediate();
+    // Poll until wallet is credited — replaces fixed-sleep drainSetImmediate
+    await waitForWalletBalance(testWalletId, 300);
 
-    // Wallet balance should be credited
     const [wallet] = await db
       .select({ balanceMxn: walletsTable.balanceMxn })
       .from(walletsTable)
@@ -121,7 +129,8 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
       .limit(1);
     expect(parseFloat(wallet.balanceMxn ?? "0")).toBeCloseTo(300, 2);
 
-    // Transaction should be confirmed
+    // Poll until tx confirmed
+    await waitForTxStatus(orderId, "confirmed");
     const [tx] = await db
       .select()
       .from(walletTransactionsTable)
@@ -137,21 +146,22 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
 
     const payload = JSON.stringify(cardWebhookPayload("charge.paid", orderId));
 
-    // First delivery
+    // First delivery — poll until credited
     const res1 = await request(app)
       .post(CARD_WEBHOOK_URL)
       .set("Content-Type", "application/json")
       .send(payload);
     expect(res1.status).toBe(200);
-    await drainSetImmediate();
+    await waitForWalletBalance(testWalletId, 500);
 
-    // Second delivery (duplicate)
+    // Second delivery (duplicate) — settle briefly; balance must NOT double
     const res2 = await request(app)
       .post(CARD_WEBHOOK_URL)
       .set("Content-Type", "application/json")
       .send(payload);
     expect(res2.status).toBe(200);
-    await drainSetImmediate();
+    // Short settle for "no-change" case (polling for absence would always time out)
+    await settleMs();
 
     // Balance should only be 500, not 1000
     const [wallet] = await db
@@ -174,9 +184,9 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
 
-    await drainSetImmediate();
+    // Poll until tx status transitions to failed, then assert no credit
+    await waitForTxStatus(orderId, "failed");
 
-    // Balance should remain zero — no credit
     const [wallet] = await db
       .select({ balanceMxn: walletsTable.balanceMxn })
       .from(walletsTable)
@@ -184,7 +194,6 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
       .limit(1);
     expect(parseFloat(wallet.balanceMxn ?? "0")).toBeCloseTo(0, 2);
 
-    // Transaction should be marked failed
     const [tx] = await db
       .select()
       .from(walletTransactionsTable)
@@ -206,9 +215,10 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
 
-    await drainSetImmediate();
+    // Short settle for "no-change" assertion (status stays pending; polling for
+    // absence would always wait the full timeout before the assertion can run)
+    await settleMs();
 
-    // Balance should remain zero
     const [wallet] = await db
       .select({ balanceMxn: walletsTable.balanceMxn })
       .from(walletsTable)
@@ -216,7 +226,6 @@ describe("POST /api/wallet/webhook/conekta-card", () => {
       .limit(1);
     expect(parseFloat(wallet.balanceMxn ?? "0")).toBeCloseTo(0, 2);
 
-    // Transaction should still be pending
     const [tx] = await db
       .select()
       .from(walletTransactionsTable)

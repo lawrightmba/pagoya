@@ -1,7 +1,15 @@
+// FIXTURE IDENTIFIERS OWNED BY THIS FILE — do not reuse in other test files:
+//   TEST_PHONE = "+52000000cardtest01"
+//   rep: "rep_card_commission_test_01" / code "CARDTEST01"
+//   order IDs: "ord_card_test_paid_001", "ord_card_test_pending_001",
+//              "ord_card_rep_commission_001"
+// See src/billpay/tests/setup.ts for the teardown registry.
+
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import request from "supertest";
 import { db, walletsTable, walletTransactionsTable, usersTable, repsTable, repCommissionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { waitForCommission } from "../../billpay/tests/testUtils.js";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies — vi.mock is hoisted above imports by vitest
@@ -192,8 +200,8 @@ describe("POST /api/wallet/load/card", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
-    // Commission insert is non-blocking — wait for it to complete
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    // Commission insert is non-blocking — poll until it appears (replaces fixed-sleep)
+    await waitForCommission(TEST_REP_ID);
 
     const [commission] = await db
       .select()
