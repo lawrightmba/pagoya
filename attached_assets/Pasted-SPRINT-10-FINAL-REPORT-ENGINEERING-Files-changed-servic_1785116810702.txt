@@ -1,0 +1,36 @@
+SPRINT 10 — FINAL REPORT
+
+ENGINEERING
+
+Files changed: services/tests/setup.ts, vitest.config.ts, services/tests/testUtils.ts (new), two wallet test files, services/tests/paulaPromptSmokeTest.test.ts (new), services/buildPTIv2PaulaContext.ts, services/backtestingScaffold.ts (new). pti.ts, ptiV5.ts, readinessGate.ts, licenseeApi.ts confirmed untouched; agentChat.ts read-only (its buildSystemPrompt was called, not edited).
+
+Test-flakiness root cause: no parallelism control in vitest.config.ts plus a global, unfiltered full-table afterEach wipe in setup.ts — concurrent test files raced, one file's teardown silently deleting another's just-seeded rows mid-test.
+
+Fix: targeted teardown scoped to 12 known per-file fixture phone numbers in FK-safe order, plus a DB-polling helper (waitForCondition + three domain pollers) replacing brittle fixed timeouts, plus fileParallelism: false as a documented interim measure (true per-test transaction isolation would need a larger DB-handle refactor, noted as future work — not the sole fix; the targeted teardown is what makes re-enabling parallelism safe later).
+
+Three repeated full-suite runs — identical each time: 17 files passing / 2 failing, 736 tests passing / 8 failing / 0 skipped. The 8 are pre-existing and named (7 billpay rate-limiter state leakage, 1 pre-existing BT-DB-2 model-history case) — a major improvement over prior sprints' fluctuating 23–51 failures.
+
+Paula smoke test: 30 new tests assembling real system prompts for two archetypes (strong payer, weak-behavior/high-engagement). Confirmed absent from coaching framing: all internal construct names, version strings, raw score fractions, and lending/default-probability or deficiency language. All pass.
+
+Staleness guard: STALENESS_THRESHOLD_DAYS = 90 (provisional, documented bounds 60–180 for future adjustment). Past that, or with zero confirmed payments, context returns unavailable and Paula's prompt is byte-identical to her pre-PTI-v2 baseline.
+
+Masked logging: logs error class, component name, last-4-digits phone, timestamp only — never raw payloads, scores, or stack traces; never re-throws.
+
+VALIDATION
+
+Recommended first outcome: 30+ DPD in a fixed 60–90 day post-origination window — not 90+ DPD, which assumes U.S./Basel-style tenors that many Mexican short-tenor products won't reach before maturing. Full outcome-candidate table, partner data spec (REQUIRED/NICE TO HAVE/FUTURE ENRICHMENT across five categories), cohort structure, temporal-integrity rules, baseline comparisons A–E, feature-set experiments Models A–F, evaluation metrics, Cash Flow Resilience enrichment candidates, and all four hypotheses (trajectory, early-warning design-only, Evidence Depth's four candidate roles, Expected Obligation) are written out in full in §17 of PTI_V2_MAPPING.md.
+
+DELIVERABLES
+
+PTI_V2_Partner_Validation_Brief.md (business-readable, partner-facing) and PTI_V2_Model_Card.md (internal technical reference, includes the architecture-freeze declaration) — both new. PTI_V2_MAPPING.md §17 updated with the full engineering and validation-framework record. Backtest scaffold shipped as code (services/backtestingScaffold.ts), interfaces and stubs only.
+
+STATUS
+
+No engineering blockers remain — all five Part A items shipped and are test-verified. Institutional validation itself is blocked only on real payment volume, elapsed time, and an actual partner agreement, none of which this sprint could manufacture. Production remains pre-launch: a small number of users, zero confirmed bill payments, a handful of wallet-only transactions.
+
+PTI v2 is now declared FOUNDATION COMPLETE — PRE_VALIDATION. Recommended next phase: start real payment-volume ingestion, open a partner conversation using the new brief, and separately clean up the 8 remaining named pre-existing test failures.
+
+C:\Users\lawri\AppData\Roaming\Claude\local-agent-mode-sessions\24a7d1c1-1844-45e7-9d81-9caa2c641ccc\21ab4098-bf19-41a7-a177-8c902309dc62\local_616ca552-f1cb-43d9-8f6d-4107ffa25716\outputs\PTI_V2_MAPPING.md
+Document 
+
+
