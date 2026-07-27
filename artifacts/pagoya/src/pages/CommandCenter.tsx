@@ -4,6 +4,15 @@ const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
 type TimeWindow = "7d" | "30d" | "all";
 
+interface UserRow {
+  telefono: string;
+  name: string | null;
+  registered_at: string;
+  how_registered: string;
+  wallet_balance_mxn: number;
+  payment_count: number;
+}
+
 interface PagoYaStats {
   as_of: string;
   users: { total: number; new_7d: number; new_30d: number; by_source: { whatsapp_organic: number; web_organic: number; rep_referral: number } };
@@ -74,6 +83,7 @@ export default function CommandCenter() {
 
   const [py, setPy] = useState<PagoYaStats | null>(null);
   const [ps, setPs] = useState<PageSeguroStats | null>(null);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [pyErr, setPyErr] = useState("");
   const [psErr, setPsErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -98,6 +108,17 @@ export default function CommandCenter() {
     } catch (e: unknown) {
       setPyErr(e instanceof Error ? e.message : "Error");
     }
+
+    // PagoYa user list
+    try {
+      const r = await fetch(`${BASE_URL}/api/admin/user-list`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setUsers(data.users ?? []);
+      }
+    } catch { /* non-fatal */ }
 
     // PageSeguro — proxied through PagoYa API to avoid CORS
     if (psUrl && psKey) {
@@ -353,6 +374,53 @@ export default function CommandCenter() {
           </div>
         )}
 
+
+        {/* User roster table */}
+        {users.length > 0 && (
+          <div style={{ marginTop: "36px" }}>
+            <SectionHeader>PagoYa — All Users ({users.length})</SectionHeader>
+            <div style={{ ...CARD, padding: 0, overflow: "hidden" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                      {["Phone", "Name", "Registered", "Channel", "Wallet", "Payments"].map(h => (
+                        <th key={h} style={{ color: "#64748B", fontWeight: 700, fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", padding: "12px 16px", textAlign: "left", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u, i) => (
+                      <tr key={u.telefono} style={{ borderBottom: i < users.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
+                        <td style={{ padding: "10px 16px", color: "#94A3B8", fontFamily: "monospace", fontSize: "12px", whiteSpace: "nowrap" }}>{u.telefono}</td>
+                        <td style={{ padding: "10px 16px", color: u.name ? "white" : "#475569", whiteSpace: "nowrap" }}>{u.name || "—"}</td>
+                        <td style={{ padding: "10px 16px", color: "#94A3B8", whiteSpace: "nowrap" }}>{new Date(u.registered_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                        <td style={{ padding: "10px 16px", whiteSpace: "nowrap" }}>
+                          <span style={{
+                            background: u.how_registered.includes("WhatsApp") ? "#16A34A22" : u.how_registered.includes("Web") ? "#3B82F622" : u.how_registered.includes("Rep") ? "#F59E0B22" : "#64748B22",
+                            color:      u.how_registered.includes("WhatsApp") ? "#4ADE80"  : u.how_registered.includes("Web") ? "#60A5FA"  : u.how_registered.includes("Rep") ? "#FBBF24"  : "#94A3B8",
+                            border: `1px solid ${u.how_registered.includes("WhatsApp") ? "#16A34A44" : u.how_registered.includes("Web") ? "#3B82F644" : u.how_registered.includes("Rep") ? "#F59E0B44" : "#64748B44"}`,
+                            borderRadius: "999px", padding: "2px 10px", fontSize: "11px", fontWeight: 700,
+                          }}>
+                            {u.how_registered.includes("WhatsApp") ? "WhatsApp" : u.how_registered.includes("Rep") ? u.how_registered : u.how_registered.includes("Web") ? "Web" : "Legacy"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 16px", color: u.wallet_balance_mxn > 0 ? "#4ADE80" : "#475569", fontWeight: u.wallet_balance_mxn > 0 ? 700 : 400, whiteSpace: "nowrap" }}>
+                          ${u.wallet_balance_mxn.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: "10px 16px", whiteSpace: "nowrap" }}>
+                          {u.payment_count > 0
+                            ? <span style={{ color: "#4ADE80", fontWeight: 700 }}>{u.payment_count}</span>
+                            : <span style={{ color: "#475569" }}>0</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {py?.as_of && (
           <p style={{ color: "#334155", fontSize: "11px", textAlign: "center", marginTop: "24px" }}>

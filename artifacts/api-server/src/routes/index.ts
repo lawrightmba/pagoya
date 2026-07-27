@@ -1416,6 +1416,54 @@ router.get("/admin/investor-stats", async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/user-list — full user roster for Command Center table
+router.get("/admin/user-list", adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(drizzleSql`
+      SELECT
+        u.telefono,
+        COALESCE(u.kyc_full_name, '') AS name,
+        u.created_at AT TIME ZONE 'America/Mexico_City' AS registered_at,
+        CASE
+          WHEN u.signup_source = 'rep_referral'     THEN 'Rep referral (' || COALESCE(u.referred_by_rep_id, '?') || ')'
+          WHEN u.signup_source = 'web_organic'      THEN 'Web organic'
+          WHEN u.signup_source = 'whatsapp_organic' THEN 'WhatsApp organic'
+          WHEN u.signup_source IS NULL               THEN 'Legacy / unknown'
+          ELSE u.signup_source
+        END AS how_registered,
+        COALESCE(w.balance_mxn::numeric, 0)::float AS wallet_balance_mxn,
+        COALESCE(
+          (SELECT COUNT(*)::int FROM bill_payments bp
+           WHERE bp.telefono = u.telefono
+             AND bp.status IN ('confirmed','completed','confirmado','success')),
+          0
+        ) AS payment_count
+      FROM users u
+      LEFT JOIN wallets w ON w.user_id = u.telefono
+      WHERE u.is_test_account IS NOT TRUE
+      ORDER BY u.created_at DESC
+    `);
+    res.set("Cache-Control", "no-store");
+    res.json({
+      as_of: new Date().toISOString(),
+      users: result.rows.map((r) => {
+        const row = r as Record<string, unknown>;
+        return {
+          telefono:          row.telefono,
+          name:              row.name || null,
+          registered_at:     row.registered_at,
+          how_registered:    row.how_registered,
+          wallet_balance_mxn: row.wallet_balance_mxn,
+          payment_count:     row.payment_count,
+        };
+      }),
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/user-list: failed");
+    res.status(500).json({ error: "Error al obtener lista de usuarios." });
+  }
+});
+
 // GET /api/admin/compliance-summary — live compliance dashboard for institutional review
 router.get("/admin/compliance-summary", async (_req: Request, res: Response) => {
   try {
