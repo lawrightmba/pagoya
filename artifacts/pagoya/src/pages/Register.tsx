@@ -13,19 +13,83 @@ function getQueryParam(key: string): string | null {
   }
 }
 
-const CITIES = ["Puerto Vallarta", "Guadalajara"];
-
-const COLONIAS = [
-  "Emiliano Zapata",
-  "Versalles",
-  "5 de Diciembre",
-  "Pitillal",
-  "Fluvial Vallarta",
-  "Las Juntas / La Mojonera",
-  "Zona Romántica",
-  "Marina Vallarta",
-  "Otra / Other",
+const CITIES = [
+  // Jalisco
+  "Puerto Vallarta",
+  "Guadalajara",
+  // Nayarit
+  "Bahía de Banderas",
+  "Bucerías",
+  "La Cruz de Huanacaxtle",
+  "Sayulita",
+  "Nuevo Vallarta",
+  "Tepic",
+  // Other
+  "Otra ciudad / Other city",
 ];
+
+const COLONIAS: Record<string, string[]> = {
+  "Puerto Vallarta": [
+    "Emiliano Zapata",
+    "Versalles",
+    "5 de Diciembre",
+    "Pitillal",
+    "Fluvial Vallarta",
+    "Las Juntas / La Mojonera",
+    "Zona Romántica",
+    "Marina Vallarta",
+    "Otra / Other",
+  ],
+  "Guadalajara": [
+    "Zapopan",
+    "Tlaquepaque",
+    "Tonalá",
+    "Tlajomulco",
+    "Centro Histórico",
+    "Providencia",
+    "Chapalita",
+    "Otra / Other",
+  ],
+  "Bahía de Banderas": [
+    "Mezcales",
+    "Valle de Banderas",
+    "San José del Valle",
+    "Las Jarretaderas",
+    "Higuera Blanca",
+    "Otra / Other",
+  ],
+  "Bucerías": [
+    "Bucerias Centro",
+    "El Pitillal (Nayarit)",
+    "La Lotería",
+    "Otra / Other",
+  ],
+  "La Cruz de Huanacaxtle": [
+    "La Cruz Centro",
+    "El Monteon",
+    "Otra / Other",
+  ],
+  "Sayulita": [
+    "Sayulita Centro",
+    "Otra / Other",
+  ],
+  "Nuevo Vallarta": [
+    "Flamingos",
+    "Paradise Village",
+    "Nuevo Vallarta Centro",
+    "Otra / Other",
+  ],
+  "Tepic": [
+    "Centro Tepic",
+    "Ciudad del Valle",
+    "Las Flores",
+    "Moctezuma",
+    "Otra / Other",
+  ],
+  "Otra ciudad / Other city": [
+    "Otra / Other",
+  ],
+};
 
 const COUNTRY_CODES = [
   { code: "+52",  flag: "🇲🇽", label: "México" },
@@ -73,6 +137,10 @@ function validateCity(val: string): string {
 function validateColonia(val: string): string {
   if (!val) return "Por favor ingresa tu colonia";
   return "";
+}
+
+function coloniasForCity(cityVal: string): string[] {
+  return COLONIAS[cityVal] ?? ["Otra / Other"];
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -953,7 +1021,7 @@ export default function Register() {
             <div style={{ position: "relative" }}>
               <select
                 value={city}
-                onChange={(e) => { setCity(e.target.value); setFieldError("city", ""); }}
+                onChange={(e) => { setCity(e.target.value); setColonia(""); setFieldError("city", ""); setFieldError("colonia", ""); }}
                 required
                 style={{
                   ...inputStyle,
@@ -1008,7 +1076,7 @@ export default function Register() {
                 <option value="" disabled style={{ background: "#0A2540", color: "rgba(255,255,255,0.4)" }}>
                   Selecciona tu colonia
                 </option>
-                {COLONIAS.map((c) => (
+                {coloniasForCity(city).map((c) => (
                   <option key={c} value={c} style={{ background: "#0A2540", color: "#FFFFFF" }}>{c}</option>
                 ))}
               </select>
