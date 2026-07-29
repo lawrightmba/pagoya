@@ -9,6 +9,7 @@ import { resolveRepAttribution } from "../services/repAttribution.js";
 import { issueWelcomeTokens } from "../services/loyalty.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
+import { alertSignup } from "../lib/alertService.js";
 
 const router = Router();
 
@@ -355,6 +356,14 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
 
     // ── 9. Clear session ──────────────────────────────────────────────────
     delete req.session.pending_bonus_registration;
+
+    // ── 9b. Admin signup alert (fire-and-forget) ──────────────────────────
+    alertSignup({
+      telefono: pending.phone,
+      source: verifyAttribution.source,
+      isTest: false,
+      timestamp: new Date(),
+    }).catch(() => {});
 
     // ── 10. WhatsApp confirmation ──────────────────────────────────────────
     try {

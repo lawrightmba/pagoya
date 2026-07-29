@@ -285,7 +285,7 @@ export default function Register() {
   const [bonusCredited, setBonusCredited] = useState(false);
   const [bonusAmount, setBonusAmount] = useState(0);
   const [waNumber, setWaNumber] = useState<string | null>(null);
-  const [whatsappConsent, setWhatsappConsent] = useState(false);
+  const [whatsappConsent, setWhatsappConsent] = useState(true);
 
   useEffect(() => {
     setRepId(getQueryParam("rep"));
