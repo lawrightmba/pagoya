@@ -401,3 +401,10 @@ id = "EImlh68cy1B3t3SdpoYMK"
 uri = "file://pagoya-qr-general.png"
 type = "image"
 title = "PagoYa — General Registration QR"
+
+[[outputs]]
+id = "A52fAnFcswOIsVC0M1KtP"
+uri = "file://attached_assets/PagoYa_Street_Team_Onboarding_EN_v4.pdf"
+type = "pdf"
+title = "PagoYa Street Team Onboarding Guide v4"
+description = "Revised August 2026 — fee corrected to $25 MXN, $150 bonus added, Paula section, Nayarit territory + water limitation notes, pay structure, Regional Lead role."
