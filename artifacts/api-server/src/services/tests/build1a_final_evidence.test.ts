@@ -54,9 +54,14 @@ const PROOF_TC_PHONE = "b1a_proof_tc_v1";       // tool-call proof (Part 2)
 const CANARY_PHONE   = "b1a_canary_2026_final"; // isolated canary (Parts 3/4/5)
 
 // ── Canary state shared across Parts 3/4/5 ────────────────────────────────────
+// canaryRunStart / canaryRunEnd are ISO timestamps captured around the 12
+// scoring iterations in Part 3.  Every history/snapshot/replayability query in
+// Parts 3/4/5 filters to this window so the assertions prove exactly the rows
+// written in THIS run — not an ever-growing cumulative total.  This makes the
+// tests rerun-safe without deleting any retained evidence.
 const CANARY_RUN_COUNT = 12;
-let canaryRunStart = "";   // set by Part 3, read by Part 4 report
-let canaryRunEnd   = "";   // set by Part 3, read by Part 4 report
+let canaryRunStart = "";   // set in Part 3 before loop; read by Parts 3/4/5
+let canaryRunEnd   = "";   // set in Part 3 after settlement; read by Parts 3/4/5
 
 // ── Reset mock state between tests ────────────────────────────────────────────
 beforeEach(() => {
@@ -385,24 +390,31 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
     await new Promise<void>((r) => setTimeout(r, 600));
     canaryRunEnd = new Date().toISOString();
 
-    // ── Verify pti_score_history rows ────────────────────────────────────────
+    // ── Verify pti_score_history rows — scoped to this run's window ─────────
+    // canaryRunStart / canaryRunEnd bracket the 12 iterations + settlement.
+    // Filtering to this window makes the assertion rerun-safe: accumulated rows
+    // from prior runs fall outside the window and are not counted.
     const histRes = await db.execute(sql`
       SELECT COUNT(*)::int AS cnt
       FROM pti_score_history
       WHERE telefono = ${CANARY_PHONE}
+        AND recorded_at >= ${canaryRunStart}::timestamptz
+        AND recorded_at <= ${canaryRunEnd}::timestamptz
     `);
     const historyCnt = (histRes.rows[0] as { cnt: number }).cnt;
     expect(historyCnt).toBe(CANARY_RUN_COUNT);
 
-    // ── Verify pti_score_input_snapshots rows ────────────────────────────────
+    // ── Verify pti_score_input_snapshots rows — scoped to this run's window ─
     const snapRes = await db.execute(sql`
       SELECT COUNT(*)::int AS total_cnt,
              COUNT(*) FILTER (WHERE persistence_status = 'persisted')::int AS persisted_cnt
       FROM pti_score_input_snapshots
       WHERE telefono = ${CANARY_PHONE}
+        AND captured_at >= ${canaryRunStart}::timestamptz
+        AND captured_at <= ${canaryRunEnd}::timestamptz
     `);
     const sr = snapRes.rows[0] as { total_cnt: number; persisted_cnt: number };
-    expect(sr.total_cnt).toBe(CANARY_RUN_COUNT);      // all rows present
+    expect(sr.total_cnt).toBe(CANARY_RUN_COUNT);      // all rows present in window
     expect(sr.persisted_cnt).toBe(CANARY_RUN_COUNT);  // all persisted (no invalid_snapshot)
 
     // Rows are RETAINED — not deleted here.
@@ -410,7 +422,13 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
 
   // ── PART 4 ─────────────────────────────────────────────────────────────────
   it("Part 4: every canary row is classified 'replayable'; all 12 runs reproduce stored score and breakdown exactly", async () => {
-    // ── Fetch pti_history_replayability for all canary rows ───────────────────
+    // Guard: Part 3 must have run first and set the window timestamps.
+    expect(canaryRunStart, "canaryRunStart must be set by Part 3").not.toBe("");
+    expect(canaryRunEnd,   "canaryRunEnd must be set by Part 3").not.toBe("");
+
+    // ── Fetch pti_history_replayability — scoped to this run's window ─────────
+    // Window filter ensures we prove exactly the 12 rows from THIS run are
+    // replayable, not any subset of a larger accumulated total.
     const viewRes = await db.execute(sql`
       SELECT
         telefono,
@@ -421,6 +439,8 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
         classification_reason
       FROM pti_history_replayability
       WHERE telefono = ${CANARY_PHONE}
+        AND recorded_at >= ${canaryRunStart}::timestamptz
+        AND recorded_at <= ${canaryRunEnd}::timestamptz
       ORDER BY recorded_at ASC
     `);
     const viewRows = viewRes.rows as Array<{
@@ -443,7 +463,7 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
     const historical = viewRows.filter((r) => r.classification === "historical_output_only");
     expect(historical).toHaveLength(0);
 
-    // ── Fetch pti_score_history rows (for stored score + breakdown) ───────────
+    // ── Fetch pti_score_history rows — scoped to this run's window ───────────
     const histRes = await db.execute(sql`
       SELECT
         pti_score::float8 AS pti_score,
@@ -451,6 +471,8 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
         recorded_at::text AS recorded_at
       FROM pti_score_history
       WHERE telefono = ${CANARY_PHONE}
+        AND recorded_at >= ${canaryRunStart}::timestamptz
+        AND recorded_at <= ${canaryRunEnd}::timestamptz
       ORDER BY recorded_at ASC
     `);
     const histRows = histRes.rows as Array<{
@@ -578,6 +600,10 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
 
   // ── PART 5 ─────────────────────────────────────────────────────────────────
   it("Part 5: BT-DB-2 cleanup and build1a teardown cannot remove canary, success-proof, or tool-proof rows", async () => {
+    // Guard: Part 3 must have run first and set the window timestamps.
+    expect(canaryRunStart, "canaryRunStart must be set by Part 3").not.toBe("");
+    expect(canaryRunEnd,   "canaryRunEnd must be set by Part 3").not.toBe("");
+
     // ── Run the exact query that wiped the prior canary (incident re-enactment)
     await db.execute(sql`
       DELETE FROM pti_score_history WHERE telefono = 'bt_db_mixed_model_user'
@@ -593,16 +619,25 @@ describe("Parts 3/4/5 — Isolated snapshot canary, replay verification, cleanup
       WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
     `);
 
-    // ── Canary pti_score_history rows must survive ────────────────────────────
+    // ── Canary pti_score_history rows from THIS run must survive ─────────────
+    // Scoped to the window set by Part 3: proves the specific 12 rows written
+    // in this run survive the simulated cleanup — not just that some historical
+    // total remains.
     const histRes = await db.execute(sql`
-      SELECT COUNT(*)::int AS cnt FROM pti_score_history WHERE telefono = ${CANARY_PHONE}
+      SELECT COUNT(*)::int AS cnt FROM pti_score_history
+      WHERE telefono = ${CANARY_PHONE}
+        AND recorded_at >= ${canaryRunStart}::timestamptz
+        AND recorded_at <= ${canaryRunEnd}::timestamptz
     `);
     expect((histRes.rows[0] as { cnt: number }).cnt).toBe(CANARY_RUN_COUNT);
 
-    // ── Canary pti_score_input_snapshots rows must survive ───────────────────
+    // ── Canary pti_score_input_snapshots rows from THIS run must survive ─────
     const snapRes = await db.execute(sql`
       SELECT COUNT(*)::int AS cnt
-      FROM pti_score_input_snapshots WHERE telefono = ${CANARY_PHONE}
+      FROM pti_score_input_snapshots
+      WHERE telefono = ${CANARY_PHONE}
+        AND captured_at >= ${canaryRunStart}::timestamptz
+        AND captured_at <= ${canaryRunEnd}::timestamptz
     `);
     expect((snapRes.rows[0] as { cnt: number }).cnt).toBe(CANARY_RUN_COUNT);
 
