@@ -283,5 +283,91 @@ export async function ensureBuild1aTables(): Promise<void> {
     logger.warn({ err }, "[Build1A] model_version backfill skipped — pti_score_history unavailable");
   }
 
+  // ── C2: pti_history_replayability — per-row classification view ───────────
+  // LEFT JOINs every pti_score_history row against pti_score_input_snapshots
+  // so ALL history rows are individually classified, not just those that
+  // already have a snapshot. Classification values:
+  //   replayable             — exactly one linked snapshot with status='persisted'
+  //   historical_output_only — no matching snapshot (pre-Build-1A scores)
+  //   input_snapshot_unavailable — exactly one linked snapshot but status!='persisted'
+  //   snapshot_unlinked      — a snapshot exists for this (telefono,recorded_at)
+  //                            but the history row itself has no snapshot link
+  //   ambiguous_linkage      — more than one snapshot matches this history row
+  //
+  // Linkage is via (h.telefono, h.recorded_at) = (s.score_history_telefono,
+  // s.score_history_recorded_at). With C1's fix, both sides share the same
+  // capturedAt ISO timestamp, making this an exact match. Pre-C1 snapshots
+  // (if any) may have millisecond skew and will appear as historical_output_only.
+  //
+  // Telefono is included for audit identity but MUST be masked to last-4 in
+  // every admin API response and export — see build1aAdmin.ts GET /history-replayability.
+  await db.execute(sql`
+    CREATE OR REPLACE VIEW pti_history_replayability AS
+    WITH snapshot_counts AS (
+      SELECT
+        score_history_telefono          AS telefono,
+        score_history_recorded_at       AS recorded_at,
+        COUNT(*)                        AS match_count,
+        MIN(id::text)                   AS first_snapshot_id,
+        COUNT(*) FILTER (WHERE persistence_status = 'persisted') AS persisted_count
+      FROM pti_score_input_snapshots
+      WHERE score_history_recorded_at IS NOT NULL
+        AND score_history_telefono IS NOT NULL
+      GROUP BY score_history_telefono, score_history_recorded_at
+    )
+    SELECT
+      h.telefono,
+      h.recorded_at,
+      h.pti_score,
+      COALESCE(h.breakdown->>'model_version', '(unknown)') AS model_version,
+      sc.first_snapshot_id                                  AS snapshot_id,
+      CASE
+        WHEN sc.match_count IS NULL                              THEN 'historical_output_only'
+        WHEN sc.match_count > 1                                  THEN 'ambiguous_linkage'
+        WHEN sc.match_count = 1 AND sc.persisted_count = 1      THEN 'replayable'
+        WHEN sc.match_count = 1 AND sc.persisted_count = 0      THEN 'input_snapshot_unavailable'
+        ELSE                                                          'ambiguous_linkage'
+      END AS classification,
+      CASE
+        WHEN sc.match_count IS NULL
+          THEN 'No matching snapshot. Score predates Build 1A or snapshot persistence was disabled.'
+        WHEN sc.match_count > 1
+          THEN FORMAT('Multiple snapshots (%s) match this (telefono, recorded_at) pair — linkage is ambiguous.', sc.match_count)
+        WHEN sc.match_count = 1 AND sc.persisted_count = 1
+          THEN 'Exactly one linked snapshot with persistence_status=persisted. Replayable.'
+        WHEN sc.match_count = 1 AND sc.persisted_count = 0
+          THEN 'Exactly one linked snapshot found but persistence_status != persisted (e.g. invalid_snapshot).'
+        ELSE 'Unexpected state.'
+      END AS classification_reason
+    FROM pti_score_history h
+    LEFT JOIN snapshot_counts sc
+      ON  sc.telefono   = h.telefono
+      AND sc.recorded_at = h.recorded_at
+  `);
+
+  // ── C4: Indexes — CREATE INDEX IF NOT EXISTS (idempotent) ─────────────────
+  // All indexes listed below are additive; no existing index is removed.
+  // agent_tasks indexes
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_created ON agent_tasks (agent_id, created_at)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_tasks_telefono_created ON agent_tasks (telefono, created_at)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks (status)`);
+  // agent_tool_calls
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_tool_calls_task ON agent_tool_calls (task_id)`);
+  // agent_task_outcomes
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_task_outcomes_task ON agent_task_outcomes (task_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_task_outcomes_status ON agent_task_outcomes (outcome_status)`);
+  // agent_predictions
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_predictions_task ON agent_predictions (task_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_predictions_type ON agent_predictions (prediction_type)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_predictions_at ON agent_predictions (predicted_at)`);
+  // agent_prediction_resolutions
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_pred_resolutions_pred ON agent_prediction_resolutions (prediction_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_pred_resolutions_outcome ON agent_prediction_resolutions (task_outcome_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_agent_pred_resolutions_status ON agent_prediction_resolutions (resolution_status)`);
+  // pti_validation_runs
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pti_validation_runs_type_started ON pti_validation_runs (run_type, started_at)`);
+  // pti_score_input_snapshots — for the C2 LEFT JOIN
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pti_snapshots_link ON pti_score_input_snapshots (score_history_telefono, score_history_recorded_at)`);
+
   logger.info("[Build1A] Schema migrations complete.");
 }

@@ -44,6 +44,64 @@ const adminAuth = (req: Request, res: Response, next: NextFunction): void => {
 
 router.use(adminAuth);
 
+// ── GET /history-replayability (C2) ───────────────────────────────────────────
+// Per-row replayability classification for every pti_score_history record.
+// Uses the pti_history_replayability view which LEFT JOINs pti_score_history
+// (all rows, including pre-Build-1A) against pti_score_input_snapshots.
+//
+// Query params:
+//   ?limit=<n>   — max rows per page (default 50, max 200)
+//   ?offset=<n>  — row offset for pagination (default 0)
+//   ?classification=<c> — filter to one classification value
+//
+// Privacy: telefono is masked to last-4 in all responses.
+router.get("/history-replayability", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const classFilter = req.query.classification as string | undefined;
+
+    const rows = await db.execute(sql`
+      SELECT
+        '***' || RIGHT(telefono, 4)   AS telefono_masked,
+        recorded_at,
+        pti_score,
+        model_version,
+        snapshot_id,
+        classification,
+        classification_reason
+      FROM pti_history_replayability
+      WHERE (${classFilter ?? null}::text IS NULL OR classification = ${classFilter ?? null})
+      ORDER BY recorded_at DESC
+      LIMIT  ${limit}
+      OFFSET ${offset}
+    `);
+
+    const summary = await db.execute(sql`
+      SELECT classification, COUNT(*)::int AS count
+      FROM pti_history_replayability
+      WHERE (${classFilter ?? null}::text IS NULL OR classification = ${classFilter ?? null})
+      GROUP BY classification
+      ORDER BY count DESC
+    `);
+
+    const total = (summary.rows as Array<{ count: number }>)
+      .reduce((s, r) => s + Number(r.count), 0);
+
+    res.json({
+      total_rows: total,
+      limit,
+      offset,
+      classification_filter: classFilter ?? null,
+      summary_by_classification: summary.rows,
+      rows: rows.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build1A] GET /history-replayability failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
 // ── GET /validation-runs ───────────────────────────────────────────────────────
 router.get("/validation-runs", async (_req: Request, res: Response): Promise<void> => {
   try {

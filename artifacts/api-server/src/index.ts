@@ -6,6 +6,7 @@ import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 import { logRailModes } from "./services/railModeCheck.js";
 import { ensureBuild1aTables } from "./services/build1a/migrations.js";
+import { setBuild1aReady, setBuild1aFailed } from "./services/build1a/build1aReadiness.js";
 
 const rawPort = process.env["PORT"];
 
@@ -45,10 +46,15 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  // Build 1A: create new tables and seed reference data (idempotent, additive only)
-  ensureBuild1aTables().catch((err) =>
-    logger.error({ err }, "[Build1A] Schema migration failed — app continues"),
-  );
+  // Build 1A: create new tables and seed reference data (idempotent, additive only).
+  // C5: Track readiness so Build 1A routes return a controlled 503 while pending/failed.
+  // Primary PagoYa app is NEVER affected by Build 1A migration state.
+  ensureBuild1aTables()
+    .then(() => setBuild1aReady())
+    .catch((err) => {
+      setBuild1aFailed(err);
+      logger.error({ err }, "[Build1A] Schema migration failed — Build 1A routes will return 503, app continues");
+    });
   // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
   logRailModes().catch((err) => logger.error({ err }, "[rail-mode] probe failed"));
   siprelBalanceCheck.start();

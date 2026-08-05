@@ -379,17 +379,36 @@ export async function computePTIv5LiveForUser(telefono: string): Promise<PTIBrea
     WHERE telefono = ${telefono}
   `);
 
-  await db.execute(sql`
+  // C1 — Parallel dispatch: generate a shared timestamp before dispatching either
+  // the history write or the snapshot persistence. Both fire-and-forget operations
+  // share capturedAt so the soft-link in pti_score_input_snapshots.score_history_recorded_at
+  // matches pti_score_history.recorded_at exactly.
+  //
+  // LIMITATION: pti_score_history has no stable unique key, so a correlation ID
+  // cannot be added there without modifying its schema (frozen). The soft-link via
+  // (telefono, recorded_at) is used instead. Because both operations are independent
+  // fire-and-forget dispatches, two inconsistency directions are possible:
+  //   (a) History row exists but no snapshot row — snapshot dispatch failed after the
+  //       history write succeeded, or ENABLE_PTI_SNAPSHOT_PERSISTENCE was disabled.
+  //       Classified 'historical_output_only' by the pti_history_replayability view.
+  //   (b) Snapshot row exists but no matching history row — the history insert was
+  //       caught and swallowed after the snapshot dispatch was already in flight.
+  //       Classified 'snapshot_unlinked' by the pti_history_replayability view.
+  // Neither direction blocks scoring. Both are detected and reported by the C2 view.
+  const capturedAt = new Date().toISOString();
+
+  // Dispatch history write fire-and-forget (does not block return of breakdown).
+  // Uses capturedAt instead of NOW() so the timestamp matches the snapshot's
+  // score_history_recorded_at exactly, making the soft-link unambiguous.
+  db.execute(sql`
     INSERT INTO pti_score_history (telefono, pti_score, breakdown, recorded_at)
-    VALUES (${telefono}, ${breakdown.total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
+    VALUES (${telefono}, ${breakdown.total}, ${JSON.stringify(breakdown)}::jsonb, ${capturedAt}::timestamptz)
   `).catch(err => logger.warn({ err, telefono }, "ptiV5Live: history log failed — continuing"));
 
-  // Build 1A: feature-flagged snapshot persistence (non-blocking, fire-and-forget).
-  // Stores the raw PTIDataSnapshot input so future scoring runs can be replayed.
-  // Enabled via ENABLE_PTI_SNAPSHOT_PERSISTENCE=true. Never blocks scoring.
-  // On failure: logs a warning, scoring output is unaffected.
+  // Build 1A: feature-flagged snapshot persistence, dispatched in PARALLEL with
+  // the history write (not chained after it). Enabled via ENABLE_PTI_SNAPSHOT_PERSISTENCE=true.
+  // Uses the same capturedAt for exact soft-link alignment. Never blocks scoring.
   if (process.env.ENABLE_PTI_SNAPSHOT_PERSISTENCE === "true") {
-    const capturedAt = new Date().toISOString();
     import("./build1a/ptiSnapshotPersist.js")
       .then(({ persistPtiInputSnapshot }) =>
         persistPtiInputSnapshot(snapshot, breakdown.model_version, telefono, capturedAt),

@@ -45,6 +45,7 @@ import licenseeApiRouter from "./licenseeApi.js";
 import landlordRouter from "./landlords.js";
 import complaintRouter from "./complaints.js";
 import build1aAdminRouter from "./build1aAdmin.js";
+import { build1aNotReadyMiddleware } from "../services/build1a/build1aReadiness.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -80,7 +81,10 @@ router.use("/stp", stpRouter);
 router.use("/agent/chat", agentChatRouter);
 router.use("/command-center/chat", commandCenterAgentRouter);
 // Build 1A: admin-only instrumentation + readiness dashboard
-router.use("/admin/build1a", adminAuth, build1aAdminRouter);
+// C5: build1aNotReadyMiddleware returns 503 while migration is pending/failed.
+// It runs before adminAuth so the startup window never surfaces raw DB errors.
+// The primary PagoYa app is completely unaffected.
+router.use("/admin/build1a", build1aNotReadyMiddleware, adminAuth, build1aAdminRouter);
 router.use("/whatsapp-agent", whatsappAgentRouter);
 router.use("/kyc", kycRouter);
 router.use("/push", pushRouter);

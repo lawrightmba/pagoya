@@ -42,6 +42,7 @@
 - [CFR archetype analysis](cfr-archetype-analysis.md) — CFR 35% weight is structurally sound across 10 archetypes; GIG-FAIR + FAIR-BANK + WALLET-ONLY all pass; do not change aggregation weight
 - [Paula module → PTI v2 mapping](paula-module-pti-v2-mapping.md) — M1→PR, M2→PR+CFR, M3→ED+BS, M4→all, M5→EO+CFR; Paula uses user-facing labels only (Pago de Servicios / Flujo de Fondos / Rutina Financiera)
 - [buildPTIv2PaulaContext service](paula-pti-v2-context.md) — Sprint 9 Part B; read-only; 5 stances; renderPTIv2PromptSection pure; agentChat.ts 11th param; computeBehavioralTrajectory takes (currentBreakdown, historyRows, ref) NOT (historyRows, ref)
+- [Build 1A snapshot NaN sentinel](build1a-nan-sentinel.md) — null CANNOT substitute NaN in PTIDataSnapshot: isNaN(null)===false makes paulaLatency/daysToFirstSpei score wrong on replay; use NAN_SENTINEL="__NaN__" + deserializePtiSnapshot before replay
 - [PTI zero-weight field integration pattern](pti-zero-weight-fields.md) — how to add new derived/event features to PTI without touching scoring: DERIVED_FEATURE_DEFAULTS spread + explicit script destructuring even when generator never sets them
 - [PTI v4.3 weight allocation decision](pti-v4-3-disposition.md) — all 15 derived fields ship at zero weight; 5 permanent_non_scoring vs 10 provisional_zero_weight; disposition registry in ptiV4_3Disposition.ts
 - [Landing-page + rep attribution](landing-page-attribution.md) — onConflictDoNothing swallows attribution on pre-existing rows; every attribution column needs a guarded conflict-branch backfill UPDATE

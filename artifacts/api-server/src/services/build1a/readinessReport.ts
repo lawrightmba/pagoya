@@ -105,6 +105,8 @@ export async function buildReadinessReport(): Promise<ReadinessReport> {
 
   return {
     generated_at: new Date().toISOString(),
+    // Classification summary sourced from pti_history_replayability view
+    // (the view covers every pti_score_history row, not just snapshots).
     scoring_event_distribution:
       eventDist.status === "fulfilled"
         ? eventDist.value
@@ -343,10 +345,21 @@ function buildKnownIssues(): KnownIssue[] {
         "Historical PTI score inputs were not persisted before Build 1A. " +
         "pti_score_history rows created before this build have no stored input snapshot " +
         "and cannot be replayed. Re-fetching current signals would not reproduce " +
-        "the original historical input.",
+        "the original historical input. " +
+        "Two inconsistency directions exist because history and snapshot are independent " +
+        "fire-and-forget dispatches sharing capturedAt as a soft link (pti_score_history " +
+        "schema is frozen — no FK can be added): " +
+        "(a) History row exists but no snapshot row: snapshot dispatch failed after " +
+        "the history write succeeded, or persistence was disabled. Classified " +
+        "'historical_output_only' by pti_history_replayability. " +
+        "(b) Snapshot row exists but no matching history row: history insert was caught " +
+        "and swallowed after the snapshot was already in flight. The snapshot has a " +
+        "score_history_recorded_at timestamp but no pti_score_history row to match it. " +
+        "Classified 'snapshot_unlinked' by pti_history_replayability.",
       action:
         "Enable ENABLE_PTI_SNAPSHOT_PERSISTENCE=true to begin capturing snapshots " +
-        "for future scoring runs. Historical gap is permanent and expected.",
+        "for future scoring runs. Historical gap is permanent. Use GET /admin/build1a/history-replayability " +
+        "to inspect per-row classifications including both inconsistency directions.",
     },
     {
       id: "ISSUE-2",
