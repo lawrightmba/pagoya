@@ -35,6 +35,16 @@ export function getBuild1aReadiness(): { state: Build1aState; failureMessage: st
 }
 
 /**
+ * TEST-ONLY: Reset state back to 'pending'.
+ * Never call from production code. Used only in startup-gating integration tests
+ * to simulate the pre-migration window without restarting the process.
+ */
+export function _resetToPendingForTesting(): void {
+  _state = "pending";
+  _failureMessage = null;
+}
+
+/**
  * Express middleware. Mount this BEFORE adminAuth on every Build 1A route.
  *
  * - pending → 503 { error: "Build 1A initialization pending" }

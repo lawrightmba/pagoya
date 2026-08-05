@@ -851,8 +851,11 @@ router.post("/", async (req: Request, res: Response) => {
 
     let escalated = false;
     let finalReply = "";
-    // Build 1A: start task record (fire-and-forget DB insert, returns UUID immediately)
-    _b1aTaskId = startAgentTask("paula", "whatsapp_inbound", telefono ?? null);
+    // Build 1A: await the task INSERT before the Anthropic call.
+    // startAgentTask is now truly async — awaiting guarantees the agent_tasks row
+    // exists before recordTaskOutcome attempts its FK INSERT into agent_task_outcomes.
+    // The ~3ms INSERT cost is negligible vs. 500ms+ Anthropic latency.
+    _b1aTaskId = await startAgentTask("paula", "whatsapp_inbound", telefono ?? null);
     let stagedPayment: PendingPaymentStage | undefined;
     let stagedWithdrawal: PendingWithdrawalStage | undefined;
     let stagedP2P: { senderTelefono: string; recipientTelefono: string; recipientName: string; amountMXN: number; walletBalance: number; memo?: string } | undefined;
@@ -908,15 +911,19 @@ router.post("/", async (req: Request, res: Response) => {
       finalReply = "Lo sentimos, ocurrió un error. Intenta de nuevo.";
     }
 
+    // Build 1A: await outcome BEFORE sending response — guarantees durability.
+    // recordTaskOutcome is now async; awaiting here adds ≤5 ms (UPDATE + INSERT)
+    // on a path that already spent >500 ms on the Anthropic call. Previously this
+    // was fire-and-forget, which left tasks in_progress permanently on error paths
+    // because unowned promises can be GC'd after res.json() returns.
+    await recordTaskOutcome(_b1aTaskId, "resolved", { escalated, has_staged_action: !!stagedPayment || !!stagedWithdrawal || !!stagedP2P });
     logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment, hasStagedWithdrawal: !!stagedWithdrawal, hasStagedP2P: !!stagedP2P }, "agentChat: success");
     res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null, pendingWithdrawal: stagedWithdrawal ?? null, pendingP2P: stagedP2P ?? null });
-    // Build 1A: record outcome (fire-and-forget, after response is sent)
-    recordTaskOutcome(_b1aTaskId, "resolved", { escalated, has_staged_action: !!stagedPayment || !!stagedWithdrawal || !!stagedP2P });
   } catch (err) {
     logger.error({ err }, "agentChat: error");
+    // Build 1A: await outcome before sending error response (guaranteed on all paths).
+    await recordTaskOutcome(_b1aTaskId, "resolved", null, "technical");
     res.json({ reply: "Lo sentimos, ocurrió un error. Intenta de nuevo.", escalated: false, pendingPayment: null });
-    // Build 1A: record technical failure outcome (fire-and-forget)
-    recordTaskOutcome(_b1aTaskId, "resolved", null, "technical");
   }
 });
 

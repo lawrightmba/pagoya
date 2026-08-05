@@ -1841,6 +1841,9 @@ describe("Behavioral Trajectory — DB integration (BT-DB)", () => {
       total: 54,
     });
 
+    // Pre-clean both tables so this test is isolated regardless of DB state
+    // (e.g. canary runs or parallel test fixtures that share this phone)
+    await db.execute(sql`DELETE FROM pti_score_history WHERE telefono = ${TEL}`);
     await db.execute(sql`DELETE FROM users WHERE telefono = ${TEL}`);
     await db.execute(sql`
       INSERT INTO users (telefono, pti_score, pti_breakdown)

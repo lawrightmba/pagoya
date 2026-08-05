@@ -35,7 +35,9 @@ const MISSIONS_PHONES = ["missionstest1", "missionstest2"];
 // Owner: src/services/tests/build1a.test.ts
 export const BUILD1A_PHONE_A = "build1atest01";
 export const BUILD1A_PHONE_B = "build1atest02";
-const BUILD1A_PHONES = [BUILD1A_PHONE_A, BUILD1A_PHONE_B];
+// Owner: src/services/tests/build1a_corrections.test.ts (Correction A instrumentation tests)
+export const INSTR_PHONE_A = "instr_test01";
+const BUILD1A_PHONES = [BUILD1A_PHONE_A, BUILD1A_PHONE_B, INSTR_PHONE_A];
 
 const ALL_FIXTURE_PHONES = [
   ...BILLPAY_PHONES,
@@ -116,7 +118,7 @@ afterEach(async () => {
       WHERE prediction_id IN (
         SELECT ap.id FROM agent_predictions ap
         JOIN agent_tasks at2 ON ap.task_id = at2.id
-        WHERE at2.telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+        WHERE at2.telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
       )
     `);
     // 2. agent_predictions
@@ -124,7 +126,7 @@ afterEach(async () => {
       DELETE FROM agent_predictions
       WHERE task_id IN (
         SELECT id FROM agent_tasks
-        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
       )
     `);
     // 3. agent_task_outcomes
@@ -132,7 +134,7 @@ afterEach(async () => {
       DELETE FROM agent_task_outcomes
       WHERE task_id IN (
         SELECT id FROM agent_tasks
-        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
       )
     `);
     // 4. agent_tool_calls
@@ -140,18 +142,18 @@ afterEach(async () => {
       DELETE FROM agent_tool_calls
       WHERE task_id IN (
         SELECT id FROM agent_tasks
-        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+        WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
       )
     `);
     // 5. agent_tasks
     await db.execute(sql`
       DELETE FROM agent_tasks
-      WHERE telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+      WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
     `);
     // 6. pti_score_input_snapshots
     await db.execute(sql`
       DELETE FROM pti_score_input_snapshots
-      WHERE telefono = ANY(ARRAY['build1atest01','build1atest02']::text[])
+      WHERE telefono = ANY(ARRAY['build1atest01','build1atest02','instr_test01']::text[])
     `);
     // 7. pti_validation_runs seeded by tests (identified by triggered_by prefix)
     await db.execute(sql`

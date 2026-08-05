@@ -474,24 +474,21 @@ describe("cost telemetry — unavailable invariants", () => {
     const origEnv = process.env.ENABLE_AGENT_INSTRUMENTATION;
     process.env.ENABLE_AGENT_INSTRUMENTATION = "true";
 
-    const taskId = startAgentTask("paula", "whatsapp_inbound", BUILD1A_PHONE_A);
+    // startAgentTask is now async — await it so the INSERT is confirmed before we query.
+    const taskId = await startAgentTask("paula", "whatsapp_inbound", BUILD1A_PHONE_A);
     expect(taskId).toBeTruthy();
 
-    // Allow the fire-and-forget insert to complete
-    await new Promise(r => setTimeout(r, 200));
-
     if (taskId) {
+      // No setTimeout needed — await above guarantees the row exists in DB
       const rows = await db.execute(sql`
         SELECT cost_status, cost_cents, cost_source
         FROM agent_tasks WHERE id = ${taskId}::uuid
       `);
-      if ((rows.rows as unknown[]).length > 0) {
-        const r = rows.rows[0] as { cost_status: string; cost_cents: null; cost_source: null };
-        expect(r.cost_status).toBe("unavailable");
-        expect(r.cost_cents).toBeNull();
-        expect(r.cost_source).toBeNull();
-      }
-      // Whether or not the row landed (timing), the taskId is non-null and uuid-shaped
+      expect((rows.rows as unknown[]).length).toBe(1);
+      const r = rows.rows[0] as { cost_status: string; cost_cents: null; cost_source: null };
+      expect(r.cost_status).toBe("unavailable");
+      expect(r.cost_cents).toBeNull();
+      expect(r.cost_source).toBeNull();
       expect(taskId).toMatch(/^[0-9a-f-]{36}$/);
     }
 

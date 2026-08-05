@@ -136,44 +136,51 @@ function redactOutput(result: unknown): Record<string, unknown> {
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Generate a task UUID synchronously (pre-seeded). The DB INSERT is fire-and-forget.
- * Returns the UUID so callers can reference it for tool calls and outcomes.
- * Returns null if instrumentation is disabled.
+ * Insert an agent_tasks row and return its UUID.
+ *
+ * Previously this was a synchronous function that fired a background IIFE.
+ * That caused a race: when the Anthropic call failed fast (<100ms), the
+ * agent_task row hadn't landed before recordTaskOutcome attempted to FK-
+ * insert into agent_task_outcomes, producing a silently-absorbed FK violation
+ * and leaving every task permanently `in_progress`.
+ *
+ * Fix: fully async — caller must `await startAgentTask(...)` before calling
+ * the Anthropic API. The INSERT takes ~3ms and is completely dominated by the
+ * 500ms+ Anthropic call; the latency cost is negligible.
+ *
+ * Returns null if instrumentation is disabled or the INSERT fails.
  */
-export function startAgentTask(
+export async function startAgentTask(
   agentSlug: string,
   taskClass: string,
   telefono?: string | null,
   correlationId?: string | null,
-): string | null {
+): Promise<string | null> {
   if (!isAgentInstrumentationEnabled()) return null;
 
   const taskId = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  // Fire-and-forget — never awaited
-  (async () => {
-    try {
-      const agentId = await getAgentId(agentSlug);
-      if (agentId === null) return; // agents not yet seeded (fresh boot race)
-      const { db } = await import("@workspace/db");
-      await db.execute(sql`
-        INSERT INTO agent_tasks
-          (id, agent_id, telefono, task_class, correlation_id,
-           status, created_at, started_at,
-           cost_cents, cost_source, cost_status)
-        VALUES
-          (${taskId}::uuid, ${agentId}, ${telefono ?? null},
-           ${taskClass}, ${correlationId ?? null},
-           'in_progress', ${now}::timestamptz, ${now}::timestamptz,
-           null, null, 'unavailable')
-      `);
-    } catch (err) {
-      logger.debug({ err, taskId, agentSlug }, "[Build1A] startAgentTask insert failed");
-    }
-  })();
-
-  return taskId;
+  try {
+    const agentId = await getAgentId(agentSlug);
+    if (agentId === null) return null; // agents not yet seeded (fresh boot race)
+    const { db } = await import("@workspace/db");
+    await db.execute(sql`
+      INSERT INTO agent_tasks
+        (id, agent_id, telefono, task_class, correlation_id,
+         status, created_at, started_at,
+         cost_cents, cost_source, cost_status)
+      VALUES
+        (${taskId}::uuid, ${agentId}, ${telefono ?? null},
+         ${taskClass}, ${correlationId ?? null},
+         'in_progress', ${now}::timestamptz, ${now}::timestamptz,
+         null, null, 'unavailable')
+    `);
+    return taskId;
+  } catch (err) {
+    logger.warn({ err, taskId, agentSlug }, "[Build1A] startAgentTask insert failed — instrumentation will be absent for this task");
+    return null;
+  }
 }
 
 /**
@@ -211,43 +218,55 @@ export function recordToolCall(
 }
 
 /**
- * Record the objective outcome of a task. Fire-and-forget.
+ * Record the objective outcome of a task.
+ *
+ * IMPORTANT — async by design (not fire-and-forget):
+ * Returns a Promise<void> so callers can await it. The caller (agentChat.ts)
+ * MUST await this before calling res.json(), ensuring the UPDATE + INSERT
+ * complete before the HTTP response exits. A detached fire-and-forget IIFE
+ * (the prior implementation) was unreliable: Node.js GC can collect an
+ * unowned promise, and the implicit "await void" in agentChat.ts resolved
+ * immediately without waiting for the DB writes. Evidence: agent_tasks rows
+ * stayed 'in_progress' forever after real Paula errors.
+ *
+ * Error handling: all DB errors are caught internally and logged at WARN.
+ * This function NEVER throws, even if both DB writes fail.
+ *
  * Must be called for every task — even those with zero predictions attached.
  */
-export function recordTaskOutcome(
+export async function recordTaskOutcome(
   taskId: string | null,
   outcomeStatus: "resolved" | "unresolved" | "disputed" | "delayed",
   resolvedValue?: Record<string, unknown> | null,
   failureClass?: "technical" | "agent_behavior" | null,
-): void {
+): Promise<void> {
   if (!isAgentInstrumentationEnabled() || !taskId) return;
 
   const now = new Date().toISOString();
 
-  (async () => {
-    try {
-      const { db } = await import("@workspace/db");
-      // Complete the task row first
-      await db.execute(sql`
-        UPDATE agent_tasks
-        SET status = ${outcomeStatus === "resolved" ? "completed" : "failed"},
-            completed_at = ${now}::timestamptz
-        WHERE id = ${taskId}::uuid
-      `);
-      // Insert outcome row
-      await db.execute(sql`
-        INSERT INTO agent_task_outcomes
-          (task_id, outcome_status, resolved_value, failure_class,
-           source_attribution, resolved_at)
-        VALUES
-          (${taskId}::uuid, ${outcomeStatus},
-           ${resolvedValue ? JSON.stringify(resolvedValue) : null}::jsonb,
-           ${failureClass ?? null},
-           'automatic',
-           ${now}::timestamptz)
-      `);
-    } catch (err) {
-      logger.debug({ err, taskId }, "[Build1A] recordTaskOutcome insert failed");
-    }
-  })();
+  try {
+    const { db } = await import("@workspace/db");
+    // Complete the task row first
+    await db.execute(sql`
+      UPDATE agent_tasks
+      SET status = ${outcomeStatus === "resolved" ? "completed" : "failed"},
+          completed_at = ${now}::timestamptz
+      WHERE id = ${taskId}::uuid
+    `);
+    // Insert outcome row
+    await db.execute(sql`
+      INSERT INTO agent_task_outcomes
+        (task_id, outcome_status, resolved_value, failure_class,
+         source_attribution, resolved_at)
+      VALUES
+        (${taskId}::uuid, ${outcomeStatus},
+         ${resolvedValue ? JSON.stringify(resolvedValue) : null}::jsonb,
+         ${failureClass ?? null},
+         'automatic',
+         ${now}::timestamptz)
+    `);
+  } catch (err) {
+    // Promoted from debug to warn: outcome failures must be visible in production logs.
+    logger.warn({ err, taskId }, "[Build1A] recordTaskOutcome failed — task will stay in_progress");
+  }
 }
