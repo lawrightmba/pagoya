@@ -757,6 +757,10 @@ router.post("/", async (req: Request, res: Response) => {
     let ptiBreakdown: Record<string, Record<string, number>> | null = null;
     let consecutivePaymentMonths: number | null = null;
     let ptiTrend: string | null = null;
+    // Declared before if(telefono) so they remain in scope at buildSystemPrompt call (line ~870)
+    let financialLiteracyScore: number | null = null;
+    let modulesUnlocked: string[] | null = null;
+    let coachingResponsiveness: string | null = null;
     if (telefono) {
       try {
         const ptiRow = await db.execute(
@@ -799,9 +803,6 @@ router.post("/", async (req: Request, res: Response) => {
       } catch { /* trend unavailable — degrades gracefully */ }
 
       // Fetch financial literacy progress (Sprint 4)
-      let financialLiteracyScore: number | null = null;
-      let modulesUnlocked: string[] | null = null;
-      let coachingResponsiveness: string | null = null;
       try {
         const tel10 = telefono.replace(/\D/g, "").slice(-10);
         const literacyCountRow = await db.execute(sql`

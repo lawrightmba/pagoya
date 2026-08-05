@@ -49,6 +49,19 @@ const ALL_FIXTURE_PHONES = [
   ...BUILD1A_PHONES,
 ];
 
+// ─── RETAINED AUDIT EVIDENCE — DO NOT ADD TO ANY CLEANUP LIST ────────────────
+// The identifiers below are permanently retained as database evidence for PTI
+// Build 1A audit verification. Adding them to ALL_FIXTURE_PHONES, BUILD1A_PHONES,
+// or the Build 1A afterEach SQL scope would silently destroy rows required for
+// independent replay verification. Their absence from all cleanup scopes is
+// enforced at test time in build1a_final_evidence.test.ts (Part 5).
+//
+//   "b1a_proof_sc_v1"       — success-path proof, Part 1
+//   "b1a_proof_tc_v1"       — tool-call proof, Part 2
+//   "b1a_canary_2026_final" — PTI snapshot canary, Parts 3/4/5
+//
+// Do not delete these rows without explicit Build 1A audit sign-off.
+
 // ─── GLOBAL TEARDOWN ─────────────────────────────────────────────────────────
 // Targeted teardown: delete ONLY rows belonging to known test-fixture phone
 // numbers. This is safe to run even if file-level parallelism is re-enabled
