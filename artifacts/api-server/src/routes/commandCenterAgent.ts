@@ -5,6 +5,12 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { logger } from "../lib/logger.js";
 import { siprelProvider } from "../billpay/services/router.js";
+// Build 1A: agent instrumentation (fire-and-forget, no latency impact)
+import {
+  startAgentTask,
+  recordToolCall,
+  recordTaskOutcome,
+} from "../services/build1a/agentInstrumentation.js";
 
 const router = Router();
 
@@ -372,6 +378,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   }));
 
   let finalText = "";
+  // Build 1A: declared before try{} so catch{} can reference it
+  let _b1aTaskId: string | null = null;
+  _b1aTaskId = startAgentTask("tony", "command_center_query");
 
   try {
     for (let i = 0; i < 6; i++) {
@@ -392,6 +401,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
         const results = await Promise.all(
           toolBlocks.map(async tb => {
             const result = await executeTool(tb.name, tb.input);
+            // Build 1A: record tool call (fire-and-forget)
+            recordToolCall(_b1aTaskId, tb.name, tb.input as Record<string, unknown>, result);
             return { id: tb.id, result };
           })
         );
@@ -418,15 +429,18 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0]) as unknown;
+        recordTaskOutcome(_b1aTaskId, "resolved", { response_type: "json" });
         res.json(parsed);
         return;
       } catch {
         // fall through to raw text
       }
     }
+    recordTaskOutcome(_b1aTaskId, "resolved", { response_type: "text" });
     res.json({ message: stripped || finalText || "No response generated.", cards: [] });
   } catch (err) {
     logger.error("Command center agent error:", err);
+    recordTaskOutcome(_b1aTaskId, "resolved", null, "technical");
     res.status(500).json({ error: "Agent error", details: String(err) });
   }
 });

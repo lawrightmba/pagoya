@@ -44,6 +44,7 @@ import ptiRouter from "./pti.js";
 import licenseeApiRouter from "./licenseeApi.js";
 import landlordRouter from "./landlords.js";
 import complaintRouter from "./complaints.js";
+import build1aAdminRouter from "./build1aAdmin.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -78,6 +79,8 @@ router.use("/cards", savedCardsRouter);
 router.use("/stp", stpRouter);
 router.use("/agent/chat", agentChatRouter);
 router.use("/command-center/chat", commandCenterAgentRouter);
+// Build 1A: admin-only instrumentation + readiness dashboard
+router.use("/admin/build1a", adminAuth, build1aAdminRouter);
 router.use("/whatsapp-agent", whatsappAgentRouter);
 router.use("/kyc", kycRouter);
 router.use("/push", pushRouter);

@@ -5,6 +5,7 @@ import { startNudgePollCron } from "./services/nudgeService.js";
 import { startEnrichmentCrons } from "./services/enrichmentCron.js";
 import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 import { logRailModes } from "./services/railModeCheck.js";
+import { ensureBuild1aTables } from "./services/build1a/migrations.js";
 
 const rawPort = process.env["PORT"];
 
@@ -44,6 +45,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  // Build 1A: create new tables and seed reference data (idempotent, additive only)
+  ensureBuild1aTables().catch((err) =>
+    logger.error({ err }, "[Build1A] Schema migration failed — app continues"),
+  );
   // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
   logRailModes().catch((err) => logger.error({ err }, "[rail-mode] probe failed"));
   siprelBalanceCheck.start();

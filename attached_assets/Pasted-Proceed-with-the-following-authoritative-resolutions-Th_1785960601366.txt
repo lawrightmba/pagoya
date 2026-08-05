@@ -1,0 +1,139 @@
+Proceed with the following authoritative resolutions. These replace the conflicting portions of the Build 1A specification.
+
+## Conflict 1 — Historical score table and model versions
+
+Use the actual table `pti_score_history` everywhere the specification previously referred to `pti_scores`.
+
+Use its real columns:
+
+* `telefono`
+* `pti_score`
+* `breakdown`
+* `recorded_at`
+
+Historical model versions must be read from:
+
+`pti_score_history.breakdown->>'model_version'`
+
+Treat the previously documented `pti_scores.model_version varchar(10)` defect as a null finding. That column does not exist, JSONB text does not have that truncation limit, and `pti_trend_snapshots.model_version` has already been widened to `TEXT`.
+
+Remove that defect from the readiness report.
+
+Remove `legacy_short_code` from `model_version_registry`. It was intended to join against a nonexistent standalone version column.
+
+The revised registry is:
+
+* `id`
+* `component`
+* `version_label`
+* `released_at`
+* `config_hash`
+* `notes`
+* `is_active`
+
+Backfill distinct real PTI versions discovered through:
+
+```sql
+SELECT DISTINCT breakdown->>'model_version'
+FROM pti_score_history
+WHERE breakdown->>'model_version' IS NOT NULL
+  AND breakdown->>'model_version' <> '';
+```
+
+Do not assume only one model version exists if the live database contains others.
+
+## Conflict 2 — Raw PTI snapshots
+
+Proceed with Option A as narrowly scoped additive instrumentation.
+
+Create a new append-only table named:
+
+`pti_score_input_snapshots`
+
+Its purpose is to persist the exact `PTISnapshot` input already produced by `buildPTISnapshotFromDb()` for future scoring runs.
+
+Do not modify:
+
+* `computePTIv5()`;
+* current scoring weights;
+* signal definitions;
+* normalization;
+* `buildPTISnapshotFromDb()` logic;
+* returned scores;
+* existing user-facing behavior.
+
+The scoring orchestration should persist the already-created snapshot before or alongside the existing score-history write.
+
+Suggested minimum fields:
+
+* `id uuid primary key`
+* `telefono text not null`
+* `snapshot jsonb not null`
+* `model_version text not null`
+* `captured_at timestamptz not null`
+* `score_history_recorded_at timestamptz nullable`
+* `score_history_telefono text nullable`
+* `persistence_status text not null`
+* `created_at timestamptz not null`
+
+Before finalizing linkage fields, verify whether `telefono + recorded_at` uniquely and reliably identifies a `pti_score_history` row. Do not create a hard foreign key if the existing table lacks a stable key or timestamp precision makes the relationship unsafe.
+
+If reliable linkage requires a generated scoring-run correlation ID, add it only to the new instrumentation path. Do not alter the existing `pti_score_history` schema unless separately authorized.
+
+Snapshot persistence must be:
+
+* append-only;
+* feature-flagged;
+* redacted of secrets or unnecessary sensitive content;
+* non-blocking to the existing score calculation.
+
+If snapshot persistence fails:
+
+* log the failure;
+* continue the existing scoring process;
+* do not fabricate or reconstruct the snapshot later.
+
+Historical scores created before Build 1A must be classified as:
+
+* `historical_output_only`
+* `input_snapshot_unavailable`
+* `not_replayable`
+
+Do not reconstruct an old score by fetching current signals. Current data is not the original historical input.
+
+Replay testing applies only to new scoring runs created after snapshot persistence is deployed.
+
+For those new runs, verify that the stored snapshot passed through the unchanged `computePTIv5()` produces the same stored `pti_score` and breakdown, subject only to explicitly documented serialization or numeric precision rules.
+
+## Conflict 3 — `loan_outcomes`
+
+Proceed with aggregate readiness queries only.
+
+Do not add a foreign key from new tables to `loan_outcomes`.
+
+Do not join it to `users`.
+
+Do not expose or attempt to reverse `telefono_hashed`.
+
+Use aggregate counts and date-window reporting based on the real fields:
+
+* `loan_outcome_status`
+* `loan_outcome_reported_at`
+* `loan_originated_at`
+* `outcome_partner_id`
+* other confirmed aggregate-safe fields
+
+## Revised known issues for the readiness report
+
+Document:
+
+1. Historical PTI score inputs were not persisted before Build 1A, so earlier scores cannot be replayed.
+2. `LIKE 'load_%'` excludes `spei_in`, understating Balance/Cash-Flow signal coverage.
+3. `users.id` versus `users.telefono` and duplicate phone formatting remain unresolved.
+4. Any additional real integrity findings discovered during implementation.
+
+Remove the nonexistent `varchar(10)` defect.
+
+Update the implementation specification and proceed only within these resolutions.
+
+All other stop conditions and non-goals remain active. If another live-code conflict appears, stop again rather than choosing an architecture independently.

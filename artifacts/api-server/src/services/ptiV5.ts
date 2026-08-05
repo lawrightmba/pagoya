@@ -384,6 +384,21 @@ export async function computePTIv5LiveForUser(telefono: string): Promise<PTIBrea
     VALUES (${telefono}, ${breakdown.total}, ${JSON.stringify(breakdown)}::jsonb, NOW())
   `).catch(err => logger.warn({ err, telefono }, "ptiV5Live: history log failed — continuing"));
 
+  // Build 1A: feature-flagged snapshot persistence (non-blocking, fire-and-forget).
+  // Stores the raw PTIDataSnapshot input so future scoring runs can be replayed.
+  // Enabled via ENABLE_PTI_SNAPSHOT_PERSISTENCE=true. Never blocks scoring.
+  // On failure: logs a warning, scoring output is unaffected.
+  if (process.env.ENABLE_PTI_SNAPSHOT_PERSISTENCE === "true") {
+    const capturedAt = new Date().toISOString();
+    import("./build1a/ptiSnapshotPersist.js")
+      .then(({ persistPtiInputSnapshot }) =>
+        persistPtiInputSnapshot(snapshot, breakdown.model_version, telefono, capturedAt),
+      )
+      .catch(err =>
+        logger.warn({ err, telefono }, "ptiV5Live: snapshot persist failed — continuing"),
+      );
+  }
+
   return breakdown;
 }
 

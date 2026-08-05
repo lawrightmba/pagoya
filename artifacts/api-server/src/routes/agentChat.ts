@@ -10,6 +10,12 @@ import {
   renderPTIv2PromptSection,
   type PTIv2PaulaContextResult,
 } from "../services/buildPTIv2PaulaContext.js";
+// Build 1A: agent instrumentation (fire-and-forget, no latency impact)
+import {
+  startAgentTask,
+  recordToolCall,
+  recordTaskOutcome,
+} from "../services/build1a/agentInstrumentation.js";
 
 const router = Router();
 
@@ -741,6 +747,9 @@ router.post("/", async (req: Request, res: Response) => {
     return;
   }
 
+  // Build 1A: declared before try{} so catch{} can reference it
+  let _b1aTaskId: string | null = null;
+
   try {
     // Fetch PTI for tone personalization — non-blocking, degrades gracefully
     let ptiTier: string | null = null;
@@ -842,6 +851,8 @@ router.post("/", async (req: Request, res: Response) => {
 
     let escalated = false;
     let finalReply = "";
+    // Build 1A: start task record (fire-and-forget DB insert, returns UUID immediately)
+    _b1aTaskId = startAgentTask("paula", "whatsapp_inbound", telefono ?? null);
     let stagedPayment: PendingPaymentStage | undefined;
     let stagedWithdrawal: PendingWithdrawalStage | undefined;
     let stagedP2P: { senderTelefono: string; recipientTelefono: string; recipientName: string; amountMXN: number; walletBalance: number; memo?: string } | undefined;
@@ -872,6 +883,8 @@ router.post("/", async (req: Request, res: Response) => {
             if (pendingPayment) stagedPayment = pendingPayment;
             if (pendingWithdrawal) stagedWithdrawal = pendingWithdrawal;
             if (pendingP2P) stagedP2P = pendingP2P;
+            // Build 1A: record tool call (fire-and-forget)
+            recordToolCall(_b1aTaskId, tb.name, tb.input, result);
             return { id: tb.id, result };
           }),
         );
@@ -897,9 +910,13 @@ router.post("/", async (req: Request, res: Response) => {
 
     logger.info({ escalated, msgLen: message.length, hasStagedPayment: !!stagedPayment, hasStagedWithdrawal: !!stagedWithdrawal, hasStagedP2P: !!stagedP2P }, "agentChat: success");
     res.json({ reply: finalReply, escalated, pendingPayment: stagedPayment ?? null, pendingWithdrawal: stagedWithdrawal ?? null, pendingP2P: stagedP2P ?? null });
+    // Build 1A: record outcome (fire-and-forget, after response is sent)
+    recordTaskOutcome(_b1aTaskId, "resolved", { escalated, has_staged_action: !!stagedPayment || !!stagedWithdrawal || !!stagedP2P });
   } catch (err) {
     logger.error({ err }, "agentChat: error");
     res.json({ reply: "Lo sentimos, ocurrió un error. Intenta de nuevo.", escalated: false, pendingPayment: null });
+    // Build 1A: record technical failure outcome (fire-and-forget)
+    recordTaskOutcome(_b1aTaskId, "resolved", null, "technical");
   }
 });
 
