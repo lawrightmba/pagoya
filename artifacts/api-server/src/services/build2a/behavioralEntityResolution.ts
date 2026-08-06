@@ -10,6 +10,9 @@
  *   - Human Tony (entity_type='human_user') and autonomous-agent Tony
  *     (entity_type='autonomous_agent') CANNOT collide — different entity_type.
  *   - Display labels (e.g. "Paula", "Tony") are NEVER used as identity keys.
+ *   - A changed display_label on a second resolution attempt does NOT create
+ *     a new entity row and does NOT update the stored label. The existing row
+ *     is returned unchanged with a non-sensitive debug log.
  *   - Native IDs for human_user entities are NEVER exposed unmasked in admin responses.
  *   - Native reference is preserved without duplicating domain data.
  *
@@ -36,6 +39,7 @@ export type BehavioralEntity = {
   entity_type: ApprovedEntityType;
   native_system: string;
   native_id: string;
+  display_label: string | null;
   created_at: string;
 };
 
@@ -55,16 +59,25 @@ const APPROVED_ENTITY_TYPES = new Set<string>([
  *
  * On first call: creates a new row and returns it with was_created=true.
  * On subsequent calls: returns the existing row with was_created=false.
+ *
+ * display_label is an optional admin-facing label stored ONLY at insert time.
+ * It is never used for identity resolution or deduplication. If a caller
+ * provides a different displayLabel on a subsequent resolution, the call
+ * still returns the existing entity unchanged (a non-sensitive debug log
+ * notes the mismatch; no exception is raised).
+ *
  * No domain data (payment history, PTI score, etc.) is copied into behavioral_entities.
  *
  * @param entityType   - one of the approved entity types
  * @param nativeSystem - identifies which system owns the native_id (e.g. 'pagoya_core')
  * @param nativeId     - the entity's ID in the native system (opaque string; NOT telefono for humans)
+ * @param displayLabel - optional admin-facing label; stored only if entity is new; never updates
  */
 export async function resolveOrCreateEntity(
   entityType: string,
   nativeSystem: string,
   nativeId: string,
+  displayLabel?: string,
 ): Promise<EntityResolutionResult> {
   if (!APPROVED_ENTITY_TYPES.has(entityType)) {
     return {
@@ -87,9 +100,9 @@ export async function resolveOrCreateEntity(
 
   // Attempt to find an existing row first (avoid INSERT race on concurrent calls)
   const existing = await db.execute(sql`
-    SELECT id, entity_type, native_system, native_id, created_at
+    SELECT id, entity_type, native_system, native_id, display_label, created_at
     FROM behavioral_entities
-    WHERE entity_type  = ${entityType}
+    WHERE entity_type   = ${entityType}
       AND native_system = ${nativeSystem}
       AND native_id     = ${nativeId}
     LIMIT 1
@@ -97,24 +110,43 @@ export async function resolveOrCreateEntity(
 
   if (existing.rows.length > 0) {
     const row = existing.rows[0] as BehavioralEntity;
-    logger.debug(
-      { entityId: row.id, entityType, nativeSystem },
-      "[Build2A/behavioralEntityResolution] existing entity resolved",
-    );
+
+    // Non-sensitive mismatch log — never exposes native_id
+    if (displayLabel !== undefined && displayLabel !== row.display_label) {
+      logger.debug(
+        { entityId: row.id, entityType, nativeSystem, hasMismatch: true },
+        "[Build2A/behavioralEntityResolution] display_label mismatch — returning existing entity unchanged",
+      );
+    } else {
+      logger.debug(
+        { entityId: row.id, entityType, nativeSystem },
+        "[Build2A/behavioralEntityResolution] existing entity resolved",
+      );
+    }
+
     return { resolved: true, entity: row, was_created: false };
   }
 
-  // Insert via ON CONFLICT DO NOTHING + re-fetch to handle concurrent inserts safely
-  await db.execute(sql`
-    INSERT INTO behavioral_entities (entity_type, native_system, native_id)
-    VALUES (${entityType}, ${nativeSystem}, ${nativeId})
-    ON CONFLICT (entity_type, native_system, native_id) DO NOTHING
-  `);
+  // Insert via ON CONFLICT DO NOTHING + re-fetch to handle concurrent inserts safely.
+  // display_label is included only at creation; it is never updated thereafter.
+  if (displayLabel !== undefined) {
+    await db.execute(sql`
+      INSERT INTO behavioral_entities (entity_type, native_system, native_id, display_label)
+      VALUES (${entityType}, ${nativeSystem}, ${nativeId}, ${displayLabel})
+      ON CONFLICT (entity_type, native_system, native_id) DO NOTHING
+    `);
+  } else {
+    await db.execute(sql`
+      INSERT INTO behavioral_entities (entity_type, native_system, native_id)
+      VALUES (${entityType}, ${nativeSystem}, ${nativeId})
+      ON CONFLICT (entity_type, native_system, native_id) DO NOTHING
+    `);
+  }
 
   const fetched = await db.execute(sql`
-    SELECT id, entity_type, native_system, native_id, created_at
+    SELECT id, entity_type, native_system, native_id, display_label, created_at
     FROM behavioral_entities
-    WHERE entity_type  = ${entityType}
+    WHERE entity_type   = ${entityType}
       AND native_system = ${nativeSystem}
       AND native_id     = ${nativeId}
     LIMIT 1
@@ -148,7 +180,7 @@ export async function resolveOrCreateEntity(
 export async function getEntityById(entityId: string): Promise<BehavioralEntity | null> {
   const { db } = await import("@workspace/db");
   const result = await db.execute(sql`
-    SELECT id, entity_type, native_system, native_id, created_at
+    SELECT id, entity_type, native_system, native_id, display_label, created_at
     FROM behavioral_entities
     WHERE id = ${entityId}::uuid
     LIMIT 1

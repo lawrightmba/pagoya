@@ -202,6 +202,11 @@ export async function ensureBuild2aTables(): Promise<void> {
   // Never update old row. Constraints enforced by CHECK:
   //   provisional_unknown → value IS NULL, sufficiency_status != 'sufficient'
   //   all other source_types → value IS NOT NULL, value IN [0,1]
+  //
+  // canonical_seed_key: deterministic string set ONLY on migration-seeded rows.
+  // Format: 'b2a_seed_v1|{scope}|{source_type}|{derivation_method}'
+  // Operational rows leave this NULL. A partial unique index enforces one
+  // canonical row per seed identity while leaving operational rows unconstrained.
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS base_rate_records (
       id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -215,6 +220,7 @@ export async function ensureBuild2aTables(): Promise<void> {
       effective_to        TIMESTAMPTZ,
       supersedes          UUID        REFERENCES base_rate_records(id),
       notes               TEXT        NOT NULL DEFAULT '',
+      canonical_seed_key  TEXT,
       created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CHECK (source_type IN ('empirical', 'domain_expert', 'documented_neutral', 'provisional_unknown')),
       CHECK (sufficiency_status IN ('sufficient', 'insufficient', 'provisional')),
@@ -230,13 +236,19 @@ export async function ensureBuild2aTables(): Promise<void> {
   // Tier 1: fully immutable. Stable identity by (entity_type, native_system, native_id).
   // Human Tony and autonomous-agent Tony CANNOT collide because entity_type differs.
   // native_id for human_user is the user's internal ID (never raw telefono).
+  //
+  // display_label: optional admin-facing label set ONLY at insert time.
+  // NEVER used for identity, joins, resolution, or deduplication.
+  // A changed label does not create a new entity row.
+  // Must not contain raw sensitive PII.
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS behavioral_entities (
-      id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-      entity_type  TEXT        NOT NULL,
-      native_system TEXT       NOT NULL,
-      native_id    TEXT        NOT NULL,
-      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      entity_type   TEXT        NOT NULL,
+      native_system TEXT        NOT NULL,
+      native_id     TEXT        NOT NULL,
+      display_label TEXT,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (entity_type, native_system, native_id),
       CHECK (entity_type IN ('human_user', 'autonomous_agent', 'financial_instrument', 'merchant'))
     )
@@ -300,6 +312,12 @@ export async function ensureBuild2aTables(): Promise<void> {
       UNIQUE (claim_id)
     )
   `);
+
+  // ── Additive column migrations (ADD COLUMN IF NOT EXISTS) ─────────────────
+  // For databases created before these columns were added to CREATE TABLE.
+  // DDL is not blocked by DML triggers — safe to run unconditionally.
+  await db.execute(sql`ALTER TABLE base_rate_records   ADD COLUMN IF NOT EXISTS canonical_seed_key TEXT`);
+  await db.execute(sql`ALTER TABLE behavioral_entities ADD COLUMN IF NOT EXISTS display_label TEXT`);
 
   // ── Trigger functions ──────────────────────────────────────────────────────
 
@@ -384,6 +402,102 @@ export async function ensureBuild2aTables(): Promise<void> {
       RETURN NEW;
     END;
     $$
+  `);
+
+  // ── Idempotency cleanup: remove duplicate base_rate_records seed rows ───────
+  // Prior schema versions had no ON CONFLICT guard on base_rate_records fixture
+  // rows, so duplicate rows accumulated across test runs. This section:
+  //   1. Identifies the oldest row per (scope, source_type, derivation_method)
+  //      identity that has no canonical peer yet, and stamps it with a
+  //      canonical_seed_key.
+  //   2. Clears supersedes FK on rows that will be deleted (FK safety).
+  //   3. Deletes duplicate rows — those without a canonical_seed_key whose
+  //      seed identity already has a canonical row.
+  //
+  // The Tier 1 triggers must be absent during UPDATE and DELETE; they are
+  // reinstated by the trigger loop immediately below. This section is
+  // rerun-safe: once all canonical rows are stamped and duplicates removed,
+  // subsequent runs find nothing to change.
+  await db.execute(sql.raw(`DROP TRIGGER IF EXISTS build2a_no_update_base_rate_records ON base_rate_records`));
+  await db.execute(sql.raw(`DROP TRIGGER IF EXISTS build2a_no_delete_base_rate_records ON base_rate_records`));
+
+  // Step 0: Clear phantom canonical_seed_keys that were incorrectly assigned by
+  // an earlier version of this migration (prior to the seed-triple restriction in step 1).
+  // Any canonical_seed_key not in the 7 known seed keys is a phantom and is cleared.
+  // This is rerun-safe: on a clean DB all 7 canonical keys are valid and nothing is cleared.
+  await db.execute(sql`
+    UPDATE base_rate_records
+    SET canonical_seed_key = NULL
+    WHERE canonical_seed_key IS NOT NULL
+      AND canonical_seed_key NOT IN (
+        'b2a_seed_v1|b2atest_scope_global|provisional_unknown|no_data_available',
+        'b2a_seed_v1|b2atest_scope_mx_unbanked|empirical|sample_of_n_gt_1000',
+        'b2a_seed_v1|b2atest_scope_immutable|empirical|b2atest_method',
+        'b2a_seed_v1|b2atest_scope_supersession|domain_expert|expert_estimate_2024',
+        'b2a_seed_v1|b2atest_scope_supersession|empirical|sample_2025',
+        'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate',
+        'b2a_seed_v1|b2atest_scope_view_tip|empirical|new_estimate'
+      )
+  `);
+
+  // Step 1: Stamp the oldest row per identity that has no canonical peer yet.
+  // Restricted to the 7 known seed triples — other rows with novel identities
+  // are never stamped, even if they happen to have canonical_seed_key IS NULL.
+  await db.execute(sql`
+    UPDATE base_rate_records brr
+    SET canonical_seed_key = 'b2a_seed_v1|' || brr.scope || '|' || brr.source_type || '|' || brr.derivation_method
+    FROM (
+      SELECT DISTINCT ON (r.scope, r.source_type, r.derivation_method) r.id
+      FROM base_rate_records r
+      WHERE r.canonical_seed_key IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM base_rate_records c
+          WHERE c.canonical_seed_key IS NOT NULL
+            AND c.scope             = r.scope
+            AND c.source_type       = r.source_type
+            AND c.derivation_method = r.derivation_method
+        )
+        AND (r.scope, r.source_type, r.derivation_method) IN (
+          VALUES
+            ('b2atest_scope_global',       'provisional_unknown', 'no_data_available'),
+            ('b2atest_scope_mx_unbanked',  'empirical',           'sample_of_n_gt_1000'),
+            ('b2atest_scope_immutable',    'empirical',           'b2atest_method'),
+            ('b2atest_scope_supersession', 'domain_expert',       'expert_estimate_2024'),
+            ('b2atest_scope_supersession', 'empirical',           'sample_2025'),
+            ('b2atest_scope_view_tip',     'domain_expert',       'old_estimate'),
+            ('b2atest_scope_view_tip',     'empirical',           'new_estimate')
+        )
+      ORDER BY r.scope, r.source_type, r.derivation_method, r.created_at ASC
+    ) canonical
+    WHERE brr.id = canonical.id
+      AND brr.canonical_seed_key IS NULL
+  `);
+
+  // Step 2: Clear supersedes on duplicate rows to satisfy FK before deletion.
+  await db.execute(sql`
+    UPDATE base_rate_records
+    SET supersedes = NULL
+    WHERE canonical_seed_key IS NULL
+      AND EXISTS (
+        SELECT 1 FROM base_rate_records c
+        WHERE c.canonical_seed_key IS NOT NULL
+          AND c.scope             = base_rate_records.scope
+          AND c.source_type       = base_rate_records.source_type
+          AND c.derivation_method = base_rate_records.derivation_method
+      )
+  `);
+
+  // Step 3: Delete duplicate rows.
+  await db.execute(sql`
+    DELETE FROM base_rate_records
+    WHERE canonical_seed_key IS NULL
+      AND EXISTS (
+        SELECT 1 FROM base_rate_records c
+        WHERE c.canonical_seed_key IS NOT NULL
+          AND c.scope             = base_rate_records.scope
+          AND c.source_type       = base_rate_records.source_type
+          AND c.derivation_method = base_rate_records.derivation_method
+      )
   `);
 
   // ── Apply triggers — Tier 1 tables ────────────────────────────────────────
@@ -491,6 +605,14 @@ export async function ensureBuild2aTables(): Promise<void> {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_dse_source ON domain_source_eligibility (evidence_source_registry_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_esr_source_key ON evidence_source_registry (source_key)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_esr_approval_status ON evidence_source_registry (approval_status)`);
+
+  // Partial unique index: enforces one canonical seed row per canonical_seed_key value.
+  // NULL values (operational rows) are unconstrained — they may coexist freely.
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_base_rate_canonical_seed_key
+      ON base_rate_records (canonical_seed_key)
+      WHERE canonical_seed_key IS NOT NULL
+  `);
 
   // ── Seeds ──────────────────────────────────────────────────────────────────
 
@@ -675,6 +797,110 @@ export async function ensureBuild2aTables(): Promise<void> {
       '{"description": "Binomial projection: P is the projected probability, b is the base rate, a is the adjustment coefficient, u is the uncertainty factor. Requires a non-null base rate record.", "inputs": ["base_rate_b", "adjustment_a", "uncertainty_u"], "output": "projected_probability_P"}'::jsonb
     )
     ON CONFLICT (implementation_key) DO NOTHING
+  `);
+
+  // Seed 7 canonical base_rate_records fixture rows for Package 2A-1 validation.
+  // These are the only pre-approved base rates for test/validation context.
+  // Idempotent: ON CONFLICT DO NOTHING catches the canonical_seed_key partial unique index.
+  //
+  // Rows 1-3 and 4, 6 have no supersession dependency — insert first.
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, notes, canonical_seed_key)
+    VALUES
+      ('provisional_unknown', 'b2atest_scope_global', NULL, 'insufficient',
+       'build2a_package1', 'no_data_available',
+       NOW() - INTERVAL '90 days',
+       'Placeholder for global base rate — no validated population data available yet.',
+       'b2a_seed_v1|b2atest_scope_global|provisional_unknown|no_data_available')
+    ON CONFLICT DO NOTHING
+  `);
+
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, notes, canonical_seed_key)
+    VALUES
+      ('empirical', 'b2atest_scope_mx_unbanked', 0.73, 'sufficient',
+       'build2a_package1', 'sample_of_n_gt_1000',
+       NOW() - INTERVAL '60 days',
+       'Empirical estimate from MX unbanked population cohort (n>1000).',
+       'b2a_seed_v1|b2atest_scope_mx_unbanked|empirical|sample_of_n_gt_1000')
+    ON CONFLICT DO NOTHING
+  `);
+
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, notes, canonical_seed_key)
+    VALUES
+      ('empirical', 'b2atest_scope_immutable', 0.65, 'sufficient',
+       'build2a_package1', 'b2atest_method',
+       NOW() - INTERVAL '10 days',
+       'Test fixture for Tier 1 immutability verification.',
+       'b2a_seed_v1|b2atest_scope_immutable|empirical|b2atest_method')
+    ON CONFLICT DO NOTHING
+  `);
+
+  // Supersession chain: old row first, new row references it.
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, effective_to, notes, canonical_seed_key)
+    VALUES
+      ('domain_expert', 'b2atest_scope_supersession', 0.60, 'insufficient',
+       'build2a_package1', 'expert_estimate_2024',
+       NOW() - INTERVAL '180 days', NOW() - INTERVAL '1 day',
+       'Supersession test fixture — domain expert estimate (superseded by sample_2025).',
+       'b2a_seed_v1|b2atest_scope_supersession|domain_expert|expert_estimate_2024')
+    ON CONFLICT DO NOTHING
+  `);
+
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, supersedes, notes, canonical_seed_key)
+    VALUES
+      ('empirical', 'b2atest_scope_supersession', 0.72, 'sufficient',
+       'build2a_package1', 'sample_2025',
+       NOW() - INTERVAL '1 day',
+       (SELECT id FROM base_rate_records
+        WHERE canonical_seed_key = 'b2a_seed_v1|b2atest_scope_supersession|domain_expert|expert_estimate_2024'
+        LIMIT 1),
+       'Supersession test fixture — empirical 2025 sample superseding expert_estimate_2024.',
+       'b2a_seed_v1|b2atest_scope_supersession|empirical|sample_2025')
+    ON CONFLICT DO NOTHING
+  `);
+
+  // View-tip chain: old row first, new row references it.
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, effective_to, notes, canonical_seed_key)
+    VALUES
+      ('domain_expert', 'b2atest_scope_view_tip', 0.55, 'insufficient',
+       'build2a_package1', 'old_estimate',
+       NOW() - INTERVAL '365 days', NOW() - INTERVAL '30 days',
+       'View-tip test fixture — older estimate (superseded by new_estimate).',
+       'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate')
+    ON CONFLICT DO NOTHING
+  `);
+
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, supersedes, notes, canonical_seed_key)
+    VALUES
+      ('empirical', 'b2atest_scope_view_tip', 0.70, 'sufficient',
+       'build2a_package1', 'new_estimate',
+       NOW() - INTERVAL '30 days',
+       (SELECT id FROM base_rate_records
+        WHERE canonical_seed_key = 'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate'
+        LIMIT 1),
+       'View-tip test fixture — empirical new estimate (chain tip, not superseded).',
+       'b2a_seed_v1|b2atest_scope_view_tip|empirical|new_estimate')
+    ON CONFLICT DO NOTHING
   `);
 
   logger.info("[Build2A] Package 2A-1 schema migrations complete.");

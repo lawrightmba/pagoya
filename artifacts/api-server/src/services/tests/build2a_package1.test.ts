@@ -152,10 +152,12 @@ describe("Migration idempotency", () => {
     const { ensureBuild2aTables } = await import("../build2a/migrations.js");
     const before = await db.execute(sql`
       SELECT
-        (SELECT COUNT(*)::int FROM behavioral_primitives)   AS primitives,
-        (SELECT COUNT(*)::int FROM domain_modules)          AS modules,
-        (SELECT COUNT(*)::int FROM evidence_source_registry) AS sources,
-        (SELECT COUNT(*)::int FROM projection_function_versions) AS proj_versions
+        (SELECT COUNT(*)::int FROM behavioral_primitives)        AS primitives,
+        (SELECT COUNT(*)::int FROM domain_modules)               AS modules,
+        (SELECT COUNT(*)::int FROM evidence_source_registry)     AS sources,
+        (SELECT COUNT(*)::int FROM projection_function_versions) AS proj_versions,
+        (SELECT COUNT(*)::int FROM base_rate_records
+         WHERE canonical_seed_key IS NOT NULL)                   AS base_rate_canonical
     `);
     const b = before.rows[0] as Record<string, number>;
 
@@ -164,10 +166,12 @@ describe("Migration idempotency", () => {
 
     const after = await db.execute(sql`
       SELECT
-        (SELECT COUNT(*)::int FROM behavioral_primitives)   AS primitives,
-        (SELECT COUNT(*)::int FROM domain_modules)          AS modules,
-        (SELECT COUNT(*)::int FROM evidence_source_registry) AS sources,
-        (SELECT COUNT(*)::int FROM projection_function_versions) AS proj_versions
+        (SELECT COUNT(*)::int FROM behavioral_primitives)        AS primitives,
+        (SELECT COUNT(*)::int FROM domain_modules)               AS modules,
+        (SELECT COUNT(*)::int FROM evidence_source_registry)     AS sources,
+        (SELECT COUNT(*)::int FROM projection_function_versions) AS proj_versions,
+        (SELECT COUNT(*)::int FROM base_rate_records
+         WHERE canonical_seed_key IS NOT NULL)                   AS base_rate_canonical
     `);
     const a = after.rows[0] as Record<string, number>;
 
@@ -175,6 +179,33 @@ describe("Migration idempotency", () => {
     expect(Number(a.modules)).toBe(Number(b.modules));
     expect(Number(a.sources)).toBe(Number(b.sources));
     expect(Number(a.proj_versions)).toBe(Number(b.proj_versions));
+    expect(Number(a.base_rate_canonical)).toBe(Number(b.base_rate_canonical));
+    expect(Number(a.base_rate_canonical)).toBe(7);
+  });
+
+  it("exactly 7 canonical base_rate_records seed rows exist after migration", async () => {
+    const r = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM base_rate_records WHERE canonical_seed_key IS NOT NULL
+    `);
+    expect(Number((r.rows[0] as { n: number }).n)).toBe(7);
+  });
+
+  it("each canonical base_rate_records seed key appears exactly once", async () => {
+    const expectedKeys = [
+      'b2a_seed_v1|b2atest_scope_global|provisional_unknown|no_data_available',
+      'b2a_seed_v1|b2atest_scope_mx_unbanked|empirical|sample_of_n_gt_1000',
+      'b2a_seed_v1|b2atest_scope_immutable|empirical|b2atest_method',
+      'b2a_seed_v1|b2atest_scope_supersession|domain_expert|expert_estimate_2024',
+      'b2a_seed_v1|b2atest_scope_supersession|empirical|sample_2025',
+      'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate',
+      'b2a_seed_v1|b2atest_scope_view_tip|empirical|new_estimate',
+    ];
+    for (const key of expectedKeys) {
+      const r = await db.execute(sql`
+        SELECT COUNT(*)::int AS n FROM base_rate_records WHERE canonical_seed_key = ${key}
+      `);
+      expect(Number((r.rows[0] as { n: number }).n), `Expected exactly 1 row for key '${key}'`).toBe(1);
+    }
   });
 
   it("exactly 12 behavioral primitives are seeded", async () => {
@@ -280,15 +311,59 @@ describe("Behavioral Entity identity", () => {
 
   it("display-label changes cannot create identity collision", async () => {
     // Both should resolve to same row regardless of what display label someone might use
-    const byKey1 = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "paula");
-    const byKey2 = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "paula");
+    const byKey1 = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "paula", "Paula");
+    const byKey2 = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "paula", "Paula — User Coaching Agent");
     expect(byKey1.resolved && byKey2.resolved).toBe(true);
     if (!byKey1.resolved || !byKey2.resolved) return;
+    // Same identity → same row, even though displayLabel differs on second call
     expect(byKey1.entity.id).toBe(byKey2.entity.id);
-    // No other entity with different native_id matches 'paula'
-    const byDifferentLabel = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "Paula — User Coaching Agent");
-    if (!byDifferentLabel.resolved) return;
-    expect(byDifferentLabel.entity.id).not.toBe(byKey1.entity.id);
+    // display_label on second call must NOT update the stored value
+    expect(byKey2.entity.display_label).toBe(byKey1.entity.display_label);
+    // A genuinely different native_id resolves to a different row
+    const byDifferentId = await resolveOrCreateEntity("autonomous_agent", "build1a_agent_system", "Paula — User Coaching Agent");
+    if (!byDifferentId.resolved) return;
+    expect(byDifferentId.entity.id).not.toBe(byKey1.entity.id);
+  });
+
+  it("display_label is stored on entity creation and returned on subsequent resolution", async () => {
+    const label = "B2A Test Agent — display label fixture";
+    const created = await resolveOrCreateEntity(
+      "autonomous_agent", "build1a_agent_system", "b2atest_label_agent_001", label,
+    );
+    expect(created.resolved).toBe(true);
+    if (!created.resolved) return;
+    expect(created.entity.display_label).toBe(label);
+
+    // Second resolution — same label → entity unchanged
+    const refetched = await resolveOrCreateEntity(
+      "autonomous_agent", "build1a_agent_system", "b2atest_label_agent_001", label,
+    );
+    expect(refetched.resolved).toBe(true);
+    if (!refetched.resolved) return;
+    expect(refetched.entity.id).toBe(created.entity.id);
+    expect(refetched.entity.display_label).toBe(label);
+    expect(refetched.was_created).toBe(false);
+  });
+
+  it("display_label mismatch on re-resolution returns existing entity unchanged (no update)", async () => {
+    const originalLabel = "Original Label";
+    const first = await resolveOrCreateEntity(
+      "merchant", "pagoya_core", "b2atest_label_mismatch_merchant_001", originalLabel,
+    );
+    expect(first.resolved).toBe(true);
+    if (!first.resolved) return;
+    expect(first.entity.display_label).toBe(originalLabel);
+
+    // Different label on second call — must NOT update the stored label
+    const second = await resolveOrCreateEntity(
+      "merchant", "pagoya_core", "b2atest_label_mismatch_merchant_001", "Changed Label",
+    );
+    expect(second.resolved).toBe(true);
+    if (!second.resolved) return;
+    expect(second.entity.id).toBe(first.entity.id);
+    // Stored label is still the original — mismatch does not trigger an update
+    expect(second.entity.display_label).toBe(originalLabel);
+    expect(second.was_created).toBe(false);
   });
 
   it("unapproved entity_type is refused", async () => {
@@ -590,21 +665,15 @@ describe("Claim lineage and retirement", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe("Base-rate constraints", () => {
   it("provisional_unknown requires NULL value and cannot have sufficiency=sufficient", async () => {
-    // Valid provisional_unknown
-    const validId = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from)
-      VALUES
-        (${validId}::uuid, 'provisional_unknown', 'b2atest_scope_global',
-         NULL, 'insufficient',
-         'test_suite', 'no_data_available', NOW() - INTERVAL '30 days')
+    // Canonical seed row for this identity is created by the migration — fetch it.
+    const seedRow = await db.execute(sql`
+      SELECT id, value, sufficiency_status FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_seed_v1|b2atest_scope_global|provisional_unknown|no_data_available'
+      LIMIT 1
     `);
-
-    // Verify it was inserted
-    const r = await db.execute(sql`SELECT value, sufficiency_status FROM base_rate_records WHERE id = ${validId}::uuid`);
-    expect((r.rows[0] as { value: null }).value).toBeNull();
+    expect(seedRow.rows.length).toBe(1);
+    expect((seedRow.rows[0] as { value: null }).value).toBeNull();
+    expect((seedRow.rows[0] as { sufficiency_status: string }).sufficiency_status).toBe('insufficient');
 
     // provisional_unknown with non-null value must fail
     await expect(
@@ -632,17 +701,14 @@ describe("Base-rate constraints", () => {
   });
 
   it("empirical/domain_expert/documented_neutral values must be non-null and in [0,1]", async () => {
-    // Valid empirical row
-    const validId = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from)
-      VALUES
-        (${validId}::uuid, 'empirical', 'b2atest_scope_mx_unbanked',
-         0.73, 'sufficient',
-         'test_suite', 'sample_of_n_gt_1000', NOW() - INTERVAL '60 days')
+    // Canonical seed row for this identity is created by the migration — fetch it.
+    const seedRow = await db.execute(sql`
+      SELECT id, value, sufficiency_status FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_seed_v1|b2atest_scope_mx_unbanked|empirical|sample_of_n_gt_1000'
+      LIMIT 1
     `);
+    expect(seedRow.rows.length).toBe(1);
+    expect(Number((seedRow.rows[0] as { value: string }).value)).toBeCloseTo(0.73);
 
     // NULL value for non-provisional must fail
     await expect(
@@ -676,15 +742,15 @@ describe("Base-rate constraints", () => {
   });
 
   it("base_rate_records cannot be updated or deleted (Tier 1)", async () => {
-    const brId = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from)
-      VALUES
-        (${brId}::uuid, 'empirical', 'b2atest_scope_immutable',
-         0.65, 'sufficient', 'test_suite', 'b2atest_method', NOW() - INTERVAL '10 days')
+    // Use the canonical seed row — avoids creating another accumulating test row.
+    const seedRow = await db.execute(sql`
+      SELECT id, value FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_seed_v1|b2atest_scope_immutable|empirical|b2atest_method'
+      LIMIT 1
     `);
+    expect(seedRow.rows.length).toBe(1);
+    const brId = (seedRow.rows[0] as { id: string }).id;
+    const originalValue = Number((seedRow.rows[0] as { value: string }).value);
 
     // Drizzle 0.45.2: PG RAISE EXCEPTION text is in error.cause.message, not error.message.
     // Assert any rejection (trigger fired) + verify data integrity.
@@ -692,9 +758,9 @@ describe("Base-rate constraints", () => {
       db.execute(sql`UPDATE base_rate_records SET value = 0.99 WHERE id = ${brId}::uuid`)
     ).rejects.toThrow();
 
-    // Data integrity: value must still be 0.65 (not 0.99)
+    // Data integrity: value must still be original (not 0.99)
     const afterUpdate = await db.execute(sql`SELECT value FROM base_rate_records WHERE id = ${brId}::uuid`);
-    expect(Number((afterUpdate.rows[0] as { value: string }).value)).toBeCloseTo(0.65);
+    expect(Number((afterUpdate.rows[0] as { value: string }).value)).toBeCloseTo(originalValue);
 
     await expect(
       db.execute(sql`DELETE FROM base_rate_records WHERE id = ${brId}::uuid`)
@@ -706,68 +772,126 @@ describe("Base-rate constraints", () => {
   });
 
   it("supersession uses backward lineage: new.supersedes = old.id; old row unchanged", async () => {
-    const oldId = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from, effective_to)
-      VALUES
-        (${oldId}::uuid, 'domain_expert', 'b2atest_scope_supersession',
-         0.60, 'insufficient', 'test_suite', 'expert_estimate_2024',
-         NOW() - INTERVAL '180 days', NOW() - INTERVAL '1 day')
-    `);
+    // Use the canonical seed pair for this scope — no new rows inserted.
+    const rows = await db.execute(sql.raw(`
+      SELECT id, value, supersedes, canonical_seed_key FROM base_rate_records
+      WHERE canonical_seed_key IN (
+        'b2a_seed_v1|b2atest_scope_supersession|domain_expert|expert_estimate_2024',
+        'b2a_seed_v1|b2atest_scope_supersession|empirical|sample_2025'
+      )
+    `));
+    const allRows = rows.rows as Array<{ id: string; value: string; supersedes: string | null; canonical_seed_key: string }>;
+    const oldRow = allRows.find(r => r.canonical_seed_key.endsWith('expert_estimate_2024'))!;
+    const newRow = allRows.find(r => r.canonical_seed_key.endsWith('sample_2025'))!;
 
-    const newId = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from, supersedes)
-      VALUES
-        (${newId}::uuid, 'empirical', 'b2atest_scope_supersession',
-         0.72, 'sufficient', 'test_suite', 'sample_2025',
-         NOW() - INTERVAL '1 day', ${oldId}::uuid)
-    `);
+    expect(oldRow).toBeDefined();
+    expect(newRow).toBeDefined();
 
     // Old row unchanged
-    const oldCheck = await db.execute(sql`SELECT value FROM base_rate_records WHERE id = ${oldId}::uuid`);
-    expect(Number((oldCheck.rows[0] as { value: string }).value)).toBeCloseTo(0.60);
+    expect(Number(oldRow.value)).toBeCloseTo(0.60);
 
     // New row points to old
-    const newCheck = await db.execute(sql`SELECT supersedes FROM base_rate_records WHERE id = ${newId}::uuid`);
-    expect((newCheck.rows[0] as { supersedes: string }).supersedes).toBe(oldId);
+    expect(newRow.supersedes).toBe(oldRow.id);
   });
 
   it("latest_base_rate_record_v selects the chain tip (new, not old)", async () => {
-    const oldId = crypto.randomUUID();
-    const newId = crypto.randomUUID();
+    // Use the canonical seed pair for the view-tip scope — no new rows inserted.
+    const rows = await db.execute(sql.raw(`
+      SELECT id, canonical_seed_key FROM base_rate_records
+      WHERE canonical_seed_key IN (
+        'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate',
+        'b2a_seed_v1|b2atest_scope_view_tip|empirical|new_estimate'
+      )
+    `));
+    const allRows = rows.rows as Array<{ id: string; canonical_seed_key: string }>;
+    const oldRow = allRows.find(r => r.canonical_seed_key.endsWith('old_estimate'))!;
+    const newRow = allRows.find(r => r.canonical_seed_key.endsWith('new_estimate'))!;
 
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from, effective_to)
-      VALUES
-        (${oldId}::uuid, 'domain_expert', 'b2atest_scope_view_tip',
-         0.55, 'insufficient', 'test_suite', 'old_estimate',
-         NOW() - INTERVAL '365 days', NOW() - INTERVAL '30 days')
-    `);
+    expect(oldRow).toBeDefined();
+    expect(newRow).toBeDefined();
 
-    await db.execute(sql`
-      INSERT INTO base_rate_records
-        (id, source_type, scope, value, sufficiency_status,
-         approval_authority, derivation_method, effective_from, supersedes)
-      VALUES
-        (${newId}::uuid, 'empirical', 'b2atest_scope_view_tip',
-         0.70, 'sufficient', 'test_suite', 'new_estimate',
-         NOW() - INTERVAL '30 days', ${oldId}::uuid)
-    `);
-
-    const viewResult = await db.execute(sql`
+    const viewResult = await db.execute(sql.raw(`
       SELECT id FROM latest_base_rate_record_v
-      WHERE id IN (${oldId}::uuid, ${newId}::uuid)
-    `);
+      WHERE id IN (
+        SELECT id FROM base_rate_records WHERE canonical_seed_key IN (
+          'b2a_seed_v1|b2atest_scope_view_tip|domain_expert|old_estimate',
+          'b2a_seed_v1|b2atest_scope_view_tip|empirical|new_estimate'
+        )
+      )
+    `));
     const ids = (viewResult.rows as Array<{ id: string }>).map(r => r.id);
-    expect(ids).toContain(newId);      // new is the tip
-    expect(ids).not.toContain(oldId); // old is superseded
+    expect(ids).toContain(newRow.id);       // new is the chain tip
+    expect(ids).not.toContain(oldRow.id);  // old is superseded
+  });
+
+  it("cleanup idempotency: running ensureBuild2aTables() again does not increase the canonical seed count", async () => {
+    const { ensureBuild2aTables } = await import("../build2a/migrations.js");
+    const before = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM base_rate_records WHERE canonical_seed_key IS NOT NULL
+    `);
+    const countBefore = Number((before.rows[0] as { n: number }).n);
+
+    await ensureBuild2aTables();
+
+    const after = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM base_rate_records WHERE canonical_seed_key IS NOT NULL
+    `);
+    const countAfter = Number((after.rows[0] as { n: number }).n);
+
+    expect(countAfter).toBe(countBefore);
+    expect(countAfter).toBe(7);
+  });
+
+  it("cleanup does not delete a Base Rate Record with a novel derivation_method (not a seed identity)", async () => {
+    // This row has a derivation_method that does NOT match any canonical seed identity.
+    // The cleanup (in ensureBuild2aTables) must leave it untouched.
+    const novelId = crypto.randomUUID();
+    await db.execute(sql`
+      INSERT INTO base_rate_records
+        (id, source_type, scope, value, sufficiency_status,
+         approval_authority, derivation_method, effective_from)
+      VALUES
+        (${novelId}::uuid, 'empirical', 'b2atest_scope_mx_unbanked',
+         0.76, 'sufficient', 'test_suite', 'sample_2026_novel_cohort',
+         NOW() - INTERVAL '7 days')
+    `);
+
+    const { ensureBuild2aTables } = await import("../build2a/migrations.js");
+    await ensureBuild2aTables();
+
+    // Novel derivation_method does not match any canonical seed → must survive cleanup
+    const check = await db.execute(sql`
+      SELECT id FROM base_rate_records WHERE id = ${novelId}::uuid
+    `);
+    expect(check.rows.length).toBe(1);
+  });
+
+  it("cleanup does not delete a legitimately approved new base rate version (non-test authority)", async () => {
+    // An operationally-approved row with a different approval_authority has no seed identity
+    // and uses a unique derivation_method — must not be touched by cleanup.
+    const opId = crypto.randomUUID();
+    await db.execute(sql`
+      INSERT INTO base_rate_records
+        (id, source_type, scope, value, sufficiency_status,
+         approval_authority, derivation_method, effective_from)
+      VALUES
+        (${opId}::uuid, 'empirical', 'b2atest_scope_mx_unbanked',
+         0.78, 'sufficient', 'data_science_team', 'sample_2027_cohort',
+         NOW() - INTERVAL '3 days')
+    `);
+
+    const { ensureBuild2aTables } = await import("../build2a/migrations.js");
+    await ensureBuild2aTables();
+
+    // Canonical seed count must remain 7
+    const countRow = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM base_rate_records WHERE canonical_seed_key IS NOT NULL
+    `);
+    expect(Number((countRow.rows[0] as { n: number }).n)).toBe(7);
+
+    // Operationally-approved row must survive
+    const opCheck = await db.execute(sql`SELECT id FROM base_rate_records WHERE id = ${opId}::uuid`);
+    expect(opCheck.rows.length).toBe(1);
   });
 
   it("no default 0.5 row exists unless deliberately seeded by an approved fixture", async () => {
