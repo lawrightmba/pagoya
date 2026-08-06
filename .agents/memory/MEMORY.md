@@ -54,3 +54,4 @@
 - [Phone normalization — HIGH PRIORITY next session](phone-normalization.md) — id 18 (3222304213) is a +52-prefix duplicate of +523222304213; tombstone id 18 first, then enforce E.164 at registration
 - [PTI model-lineage integrity sprint](pti-model-lineage-integrity.md) — trajectory/model_version isolation fix; VARCHAR(10) trap on trajectory cols; pti_export_safe DROP+recreate pattern; ptiSnapshotIntegration parallel-FK race is pre-existing
 - [PTI v2 adapter + Behavioral Trajectory v1](pti-v2-adapter.md) — Sprint 3 complete; trajectory is PTIv2Trajectory (nested); callers must use .trajectory.aggregate.direction not .trajectory.direction; 165 tests pass
+- [Build 2A Package 2A-1](build2a-package1.md) — Evidence Engine foundation; 15 tables + 2 views + 6 services; 62/62 tests pass; 3 sharp edges: Drizzle ANY(), trigger .cause.message, to_jsonb lifecycle guard

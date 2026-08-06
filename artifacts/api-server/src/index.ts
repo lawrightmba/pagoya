@@ -7,6 +7,8 @@ import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 import { logRailModes } from "./services/railModeCheck.js";
 import { ensureBuild1aTables } from "./services/build1a/migrations.js";
 import { setBuild1aReady, setBuild1aFailed } from "./services/build1a/build1aReadiness.js";
+import { ensureBuild2aTables } from "./services/build2a/migrations.js";
+import { setBuild2aReady, setBuild2aFailed } from "./services/build2a/build2aReadiness.js";
 
 const rawPort = process.env["PORT"];
 
@@ -54,6 +56,15 @@ app.listen(port, (err) => {
     .catch((err) => {
       setBuild1aFailed(err);
       logger.error({ err }, "[Build1A] Schema migration failed — Build 1A routes will return 503, app continues");
+    });
+  // Build 2A: create Package 2A-1 registry, version, and governance tables (idempotent, additive only).
+  // Primary PagoYa app and Build 1A are NEVER affected by Build 2A migration state.
+  // ENABLE_EVIDENCE_ENGINE flag gates runtime processing but NOT schema initialization.
+  ensureBuild2aTables()
+    .then(() => setBuild2aReady())
+    .catch((err) => {
+      setBuild2aFailed(err);
+      logger.error({ err }, "[Build2A] Schema migration failed — Build 2A routes will return 503, app continues");
     });
   // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
   logRailModes().catch((err) => logger.error({ err }, "[rail-mode] probe failed"));
