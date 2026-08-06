@@ -434,4 +434,285 @@ router.get("/validation", async (_req: Request, res: Response): Promise<void> =>
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Package 2A-2 Routes — Interpretation Foundation
+// All routes below are additive; no 2A-1 route is modified.
+// All routes are gated on 2A-2 readiness.
+// No raw PII is returned — all entity identifiers are masked.
+// ═══════════════════════════════════════════════════════════════════════════════
+import { isBuild2a2Ready } from "../services/build2a/build2aReadiness.js";
+
+function require2a2Ready(req: Request, res: Response, next: NextFunction): void {
+  if (!isBuild2a2Ready()) {
+    res.status(503).json({
+      error: "Package 2A-2 (Interpretation Foundation) is not yet ready. Try again shortly.",
+      package: "2A-2",
+    });
+    return;
+  }
+  next();
+}
+
+// ── GET /ledger ─────────────────────────────────────────────────────────────
+// Returns paginated source_processing_ledger rows, newest first.
+// Masks native entity identifiers; shows only ledger-internal UUIDs.
+router.get("/ledger", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query["limit"] ?? 50), 200);
+    const status = req.query["status"] as string | undefined;
+
+    const rows = await db.execute(sql`
+      SELECT
+        id,
+        evidence_source_registry_id,
+        source_record_key,
+        interpretation_rule_version_id,
+        status,
+        attempts,
+        first_seen_at,
+        last_attempted_at,
+        completed_at,
+        -- mask resulting_atom_id and resulting_refusal_id behind stable UUIDs (no PII)
+        resulting_atom_id,
+        resulting_refusal_id,
+        -- omit errors column from list view (may contain raw exception messages)
+        jsonb_array_length(COALESCE(errors, '[]'::jsonb)) AS error_count
+      FROM source_processing_ledger
+      WHERE (${status ?? null} IS NULL OR status = ${status ?? null})
+      ORDER BY first_seen_at DESC
+      LIMIT ${limit}
+    `);
+
+    res.json({ ledger: rows.rows, count: rows.rows.length });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /ledger failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /ledger/:id ─────────────────────────────────────────────────────────
+router.get("/ledger/:id", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const rows = await db.execute(sql`
+      SELECT
+        id,
+        evidence_source_registry_id,
+        source_record_key,
+        interpretation_rule_version_id,
+        status,
+        attempts,
+        first_seen_at,
+        last_attempted_at,
+        completed_at,
+        resulting_atom_id,
+        resulting_refusal_id,
+        errors
+      FROM source_processing_ledger
+      WHERE id = ${id}::uuid
+      LIMIT 1
+    `);
+
+    if (rows.rows.length === 0) {
+      res.status(404).json({ error: "Ledger row not found" });
+      return;
+    }
+    res.json({ ledger_row: rows.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /ledger/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /cluster-assembly/:id ────────────────────────────────────────────────
+router.get("/cluster-assembly/:id", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const [clusterRows, linkRows] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          id,
+          claim_id,
+          interpretation_rule_version_id,
+          assembly_state,
+          expected_observation_count,
+          abandon_timeout_seconds,
+          cluster_hash,
+          assembled_at,
+          sealed_at,
+          abandoned_at
+        FROM cluster_assembly
+        WHERE id = ${id}::uuid
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT
+          id,
+          cluster_assembly_id,
+          evidence_source_registry_id,
+          source_record_key,
+          sequence_position,
+          created_at
+        FROM evidence_atom_observation_links
+        WHERE cluster_assembly_id = ${id}::uuid
+        ORDER BY sequence_position ASC
+      `),
+    ]);
+
+    if (clusterRows.rows.length === 0) {
+      res.status(404).json({ error: "Cluster not found" });
+      return;
+    }
+    res.json({ cluster: clusterRows.rows[0], observation_links: linkRows.rows });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /cluster-assembly/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /atoms/:id ───────────────────────────────────────────────────────────
+router.get("/atoms/:id", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const rows = await db.execute(sql`
+      SELECT
+        id,
+        claim_id,
+        cluster_assembly_id,
+        interpretation_rule_version_id,
+        disposition,
+        dependence_declaration,
+        effective_at,
+        supersedes,
+        environment_context,
+        created_at
+      FROM interpreted_evidence_atoms
+      WHERE id = ${id}::uuid
+      LIMIT 1
+    `);
+
+    if (rows.rows.length === 0) {
+      res.status(404).json({ error: "Atom not found" });
+      return;
+    }
+    res.json({ atom: rows.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /atoms/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /atoms/:id/observations ──────────────────────────────────────────────
+router.get("/atoms/:id/observations", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const rows = await db.execute(sql`
+      SELECT
+        eaol.id,
+        eaol.cluster_assembly_id,
+        eaol.evidence_source_registry_id,
+        eaol.source_record_key,
+        eaol.sequence_position,
+        eaol.created_at,
+        esr.source_key,
+        esr.source_description
+      FROM evidence_atom_observation_links eaol
+      JOIN evidence_source_registry esr ON esr.id = eaol.evidence_source_registry_id
+      WHERE eaol.atom_id = ${id}::uuid
+      ORDER BY eaol.sequence_position ASC
+    `);
+
+    res.json({ atom_id: id, observations: rows.rows, count: rows.rows.length });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /atoms/:id/observations failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /refusals ─────────────────────────────────────────────────────────────
+router.get("/refusals", require2a2Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query["limit"] ?? 50), 200);
+    const stage = req.query["stage"] as string | undefined;
+
+    const rows = await db.execute(sql`
+      SELECT
+        id,
+        refusal_stage,
+        reason_code,
+        claim_id,
+        cluster_assembly_id,
+        source_observation_key,
+        evidence_source_registry_id,
+        interpretation_rule_version_id,
+        detail,
+        created_at AS refused_at
+      FROM refusal_records
+      WHERE (${stage ?? null} IS NULL OR refusal_stage = ${stage ?? null})
+      ORDER BY refused_at DESC
+      LIMIT ${limit}
+    `);
+
+    res.json({ refusals: rows.rows, count: rows.rows.length });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /refusals failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /2a2-validation ───────────────────────────────────────────────────────
+// Package 2A-2 schema health check (additive, does not replace 2A-1 /validation).
+router.get("/2a2-validation", require2a2Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [tables2a2, triggers2a2, dupLedger] = await Promise.all([
+      db.execute(sql`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN (
+            'source_processing_ledger',
+            'cluster_assembly',
+            'interpreted_evidence_atoms',
+            'evidence_atom_observation_links',
+            'refusal_records'
+          )
+        ORDER BY table_name
+      `),
+      db.execute(sql`
+        SELECT trigger_name, event_object_table
+        FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND trigger_name LIKE 'build2a2_%'
+        ORDER BY event_object_table, trigger_name
+      `),
+      db.execute(sql`
+        SELECT evidence_source_registry_id, source_record_key, interpretation_rule_version_id, COUNT(*) AS n
+        FROM source_processing_ledger
+        GROUP BY evidence_source_registry_id, source_record_key, interpretation_rule_version_id
+        HAVING COUNT(*) > 1
+      `),
+    ]);
+
+    const expected2a2Tables = 5;
+    const found = tables2a2.rows.length;
+
+    res.json({
+      as_of: new Date().toISOString(),
+      package: "2A-2",
+      tables: {
+        expected: expected2a2Tables,
+        found,
+        all_present: found === expected2a2Tables,
+        names: (tables2a2.rows as Array<{ table_name: string }>).map(r => r.table_name),
+      },
+      triggers: { found: triggers2a2.rows.length, by_table: triggers2a2.rows },
+      duplicate_ledger_rows: { count: dupLedger.rows.length, violations: dupLedger.rows },
+      schema_valid: found === expected2a2Tables && dupLedger.rows.length === 0,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/2A-2] GET /2a2-validation failed");
+    res.status(500).json({ error: "Validation query failed" });
+  }
+});
+
 export default router;

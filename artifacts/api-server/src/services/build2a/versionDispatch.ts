@@ -285,6 +285,13 @@ export async function listImplementationKeys(
 }
 
 /**
+ * The approved Package 2A-2 registered keys.
+ */
+export const PACKAGE_2A2_REQUIRED_KEYS: Record<string, VersionTableName> = {
+  task_completion_v1: "interpretation_rule_versions",
+} as const;
+
+/**
  * Validates that all Package 2A-1 required keys are registered and in a healthy state.
  * Called at startup after ensureBuild2aTables() to detect seed failures.
  * Returns a list of validation errors (empty = healthy).
@@ -295,6 +302,22 @@ export async function validatePackage2a1Keys(): Promise<string[]> {
     const result = await resolveImplementationKey(key, table);
     if (!result.found) {
       errors.push(`Required key '${key}' is missing from ${table}.`);
+    }
+  }
+  return errors;
+}
+
+/**
+ * Validates that all Package 2A-2 required keys are registered and in a healthy state.
+ * Called at startup after ensureBuild2a2Tables() to detect seed failures.
+ * Returns a list of validation errors (empty = healthy).
+ */
+export async function validatePackage2a2Keys(): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [key, table] of Object.entries(PACKAGE_2A2_REQUIRED_KEYS)) {
+    const result = await resolveImplementationKey(key, table);
+    if (!result.found) {
+      errors.push(`[2A-2] Required key '${key}' is missing from ${table}.`);
     }
   }
   return errors;
