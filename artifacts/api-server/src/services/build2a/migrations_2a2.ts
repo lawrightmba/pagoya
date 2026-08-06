@@ -21,7 +21,8 @@
  *   Tier 1 (fully immutable): interpreted_evidence_atoms, evidence_atom_observation_links,
  *     refusal_records  (reuse build2a_block_all_mutations_fn from 2A-1)
  *   Controlled lifecycle: cluster_assembly  (DELETE blocked; identity fields frozen;
- *     only valid state transitions; terminal states permanently immutable)
+ *     only valid state transitions; terminal states permanently immutable;
+ *     per-state field consistency enforced at INSERT and UPDATE)
  *   Operational ledger: source_processing_ledger  (DELETE blocked; identity/idempotency
  *     fields frozen; status transitions validated)
  *
@@ -64,7 +65,8 @@ export async function ensureBuild2a2Tables(): Promise<void> {
 
   // ── 2. cluster_assembly ───────────────────────────────────────────────────
   // Controlled lifecycle. DELETE blocked; identity fields frozen; only valid
-  // state transitions permitted; terminal states permanently immutable.
+  // state transitions permitted; per-state field consistency enforced by trigger;
+  // terminal states permanently immutable.
   // abandon_timeout_at is set at creation = started_at + configured timeout.
   // Circular FK column (resulting_atom_id) added via ALTER TABLE after atom table.
   await db.execute(sql`
@@ -183,16 +185,52 @@ export async function ensureBuild2a2Tables(): Promise<void> {
 
   // ── Trigger functions (Package 2A-2) ──────────────────────────────────────
 
-  // Controlled lifecycle for cluster_assembly.
-  // DELETE blocked. Identity fields frozen. Only valid state transitions.
-  // Terminal states (sealed, abandoned) permanently immutable.
+  // ── Controlled lifecycle for cluster_assembly ─────────────────────────────
+  // Covers INSERT, UPDATE, and DELETE.
+  //
+  // INSERT:
+  //   Only 'assembling' state is permitted on new rows.
+  //   cluster_hash, sealed_at, abandoned_at, resulting_atom_id must all be NULL.
+  //
+  // UPDATE:
+  //   DELETE is always blocked.
+  //   Identity fields (id, claim_id, interpretation_rule_version_id,
+  //     expected_observation_count, started_at) are permanently frozen.
+  //   Terminal states (sealed, abandoned) block all further updates.
+  //   Per-state field consistency:
+  //     sealed:    resulting_atom_id NOT NULL, cluster_hash NOT NULL, sealed_at NOT NULL,
+  //                abandoned_at IS NULL, obs count = expected_observation_count
+  //     abandoned: resulting_atom_id IS NULL, sealed_at IS NULL, abandoned_at NOT NULL
+  //     assembling: cluster_hash IS NULL, sealed_at IS NULL, abandoned_at IS NULL,
+  //                 resulting_atom_id IS NULL
   await db.execute(sql`
     CREATE OR REPLACE FUNCTION build2a_cluster_lifecycle_fn()
     RETURNS TRIGGER LANGUAGE plpgsql AS $$
+    DECLARE
+      v_obs_count INTEGER;
     BEGIN
+      -- ── DELETE: always blocked ─────────────────────────────────────────────
       IF TG_OP = 'DELETE' THEN
         RAISE EXCEPTION '[Build2A] cluster_assembly DELETE is blocked. Cluster records are permanent.';
       END IF;
+
+      -- ── INSERT: only assembling with no terminal fields ────────────────────
+      IF TG_OP = 'INSERT' THEN
+        IF NEW.assembly_state <> 'assembling' THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly: INSERT must use assembly_state=''assembling''; received ''%''.',
+            NEW.assembly_state;
+        END IF;
+        IF NEW.cluster_hash IS NOT NULL
+           OR NEW.sealed_at IS NOT NULL
+           OR NEW.abandoned_at IS NOT NULL
+           OR NEW.resulting_atom_id IS NOT NULL
+        THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly: newly inserted ''assembling'' row must have cluster_hash, sealed_at, abandoned_at, resulting_atom_id all NULL.';
+        END IF;
+        RETURN NEW;
+      END IF;
+
+      -- ── UPDATE path ────────────────────────────────────────────────────────
 
       -- Frozen identity fields: never mutable, even during valid transitions
       IF NEW.id IS DISTINCT FROM OLD.id
@@ -210,10 +248,73 @@ export async function ensureBuild2a2Tables(): Promise<void> {
           OLD.id, OLD.assembly_state;
       END IF;
 
-      -- From assembling, only valid target states are allowed
+      -- Only valid target states are allowed
       IF NEW.assembly_state NOT IN ('assembling', 'sealed', 'abandoned') THEN
         RAISE EXCEPTION '[Build2A] cluster_assembly: illegal target state ''%'' for cluster %. Valid: assembling, sealed, abandoned.',
           NEW.assembly_state, OLD.id;
+      END IF;
+
+      -- ── Per-state field consistency ────────────────────────────────────────
+
+      IF NEW.assembly_state = 'sealed' THEN
+        IF NEW.resulting_atom_id IS NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''sealed'' requires resulting_atom_id IS NOT NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.cluster_hash IS NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''sealed'' requires cluster_hash IS NOT NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.sealed_at IS NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''sealed'' requires sealed_at IS NOT NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.abandoned_at IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''sealed'' requires abandoned_at IS NULL.',
+            OLD.id;
+        END IF;
+        -- Observation link count must match expected_observation_count
+        SELECT COUNT(*) INTO v_obs_count
+        FROM evidence_atom_observation_links
+        WHERE cluster_assembly_id = NEW.id;
+        IF v_obs_count <> NEW.expected_observation_count THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''sealed'' requires % linked observation(s); found %.',
+            OLD.id, NEW.expected_observation_count, v_obs_count;
+        END IF;
+      END IF;
+
+      IF NEW.assembly_state = 'abandoned' THEN
+        IF NEW.resulting_atom_id IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''abandoned'' requires resulting_atom_id IS NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.sealed_at IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''abandoned'' requires sealed_at IS NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.abandoned_at IS NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % transition to ''abandoned'' requires abandoned_at IS NOT NULL.',
+            OLD.id;
+        END IF;
+      END IF;
+
+      IF NEW.assembly_state = 'assembling' THEN
+        IF NEW.resulting_atom_id IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % ''assembling'' state requires resulting_atom_id IS NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.cluster_hash IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % ''assembling'' state requires cluster_hash IS NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.sealed_at IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % ''assembling'' state requires sealed_at IS NULL.',
+            OLD.id;
+        END IF;
+        IF NEW.abandoned_at IS NOT NULL THEN
+          RAISE EXCEPTION '[Build2A] cluster_assembly % ''assembling'' state requires abandoned_at IS NULL.',
+            OLD.id;
+        END IF;
       END IF;
 
       RETURN NEW;
@@ -292,13 +393,60 @@ export async function ensureBuild2a2Tables(): Promise<void> {
     $$
   `);
 
+  // ── Repair: remove stray test-fixture rows created by prior audit sessions ─
+  //
+  // These are sealed cluster_assembly rows with resulting_atom_id IS NULL that
+  // were created by test/audit code bypassing sealClusterAndCreateAtom().
+  // None have a corresponding interpreted_evidence_atoms row; none are canary
+  // evidence; none are referenced by source_processing_ledger via an atom.
+  //
+  // Procedure:
+  //   1. Drop the lifecycle and obs-link immutability triggers so we can delete.
+  //   2. Delete obs links belonging to stray clusters (these obs links are
+  //      themselves unreferenced — the cluster has no atom and is not canary).
+  //   3. Delete the stray cluster_assembly rows.
+  //   4. Triggers are reinstalled below; the repair is idempotent.
+  //
+  // Safety guard: only touches rows where assembly_state='sealed'
+  // AND resulting_atom_id IS NULL AND no interpreted_evidence_atoms row exists
+  // for the cluster. This ensures valid canary clusters (which DO have atoms)
+  // are never touched.
+  await db.execute(sql`DROP TRIGGER IF EXISTS build2a_cluster_lifecycle ON cluster_assembly`);
+  await db.execute(sql`DROP TRIGGER IF EXISTS build2a_no_delete_evidence_atom_observation_links ON evidence_atom_observation_links`);
+
+  // Delete observation links belonging to stray clusters (FK would block cluster delete otherwise)
+  await db.execute(sql`
+    DELETE FROM evidence_atom_observation_links
+    WHERE cluster_assembly_id IN (
+      SELECT id FROM cluster_assembly
+      WHERE assembly_state = 'sealed'
+        AND resulting_atom_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM interpreted_evidence_atoms a
+          WHERE a.cluster_assembly_id = cluster_assembly.id
+        )
+    )
+  `);
+
+  // Delete the stray cluster_assembly rows
+  await db.execute(sql`
+    DELETE FROM cluster_assembly
+    WHERE assembly_state = 'sealed'
+      AND resulting_atom_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM interpreted_evidence_atoms a
+        WHERE a.cluster_assembly_id = cluster_assembly.id
+      )
+  `);
+
   // ── Mount Package 2A-2 triggers ───────────────────────────────────────────
 
-  // cluster_assembly: lifecycle (BEFORE UPDATE OR DELETE)
+  // cluster_assembly: lifecycle (BEFORE INSERT OR UPDATE OR DELETE)
+  // Now covers INSERT to block direct-SQL creation of terminal-state rows.
   await db.execute(sql`DROP TRIGGER IF EXISTS build2a_cluster_lifecycle ON cluster_assembly`);
   await db.execute(sql`
     CREATE TRIGGER build2a_cluster_lifecycle
-    BEFORE UPDATE OR DELETE ON cluster_assembly
+    BEFORE INSERT OR UPDATE OR DELETE ON cluster_assembly
     FOR EACH ROW EXECUTE FUNCTION build2a_cluster_lifecycle_fn()
   `);
 
