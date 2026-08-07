@@ -279,7 +279,33 @@ async function _runOpinionPipeline(
   );
   const fusionContextId = (fcRes.rows[0] as { id: string }).id;
 
+  // ── Step 8.5: Look up prior opinion for supersession tracking ────────────
+  // latest_opinion_v shows only non-superseded opinions. If one exists for this
+  // claim at this point in the transaction (before we insert the new opinion),
+  // the new opinion will reference it as its predecessor via the supersedes column.
+  // This runs inside the active transaction: the new opinion has not been inserted
+  // yet, so latest_opinion_v still shows the current chain tip if one exists.
+  const priorOpRes = await client.query(
+    `SELECT id FROM latest_opinion_v
+     WHERE claim_id = $1::uuid
+     ORDER BY evaluation_time DESC
+     LIMIT 1`,
+    [claimId],
+  );
+  const priorOpinionId =
+    (priorOpRes.rows[0] as { id: string } | undefined)?.id ?? null;
+
   // ── Step 9: INSERT opinions ───────────────────────────────────────────────
+  // Rounding normalization: r4 applied independently to belief and disbelief
+  // can produce a "halfway" case where both round up (e.g. 0.68265→0.6827,
+  // 0.31735→0.3174 → sum 1.0001) which violates the DB CHECK < 0.0001.
+  // Uncertainty is derived as 1 - beliefR - disbeliefR so the three stored
+  // values always sum to exactly 1.0. Step 7's SL invariant check used the
+  // unrounded values and already verified them valid before we reach this.
+  const beliefR      = r4(fusedOpinion.belief);
+  const disbeliefR   = r4(fusedOpinion.disbelief);
+  const uncertaintyR = r4(Math.max(0, Math.min(1, 1.0 - beliefR - disbeliefR)));
+
   const opRes = await client.query(
     `INSERT INTO opinions
        (claim_id, evidence_bundle_id, fusion_context_id,
@@ -291,20 +317,21 @@ async function _runOpinionPipeline(
              $4, $5, $6,
              $7, $8::uuid,
              $9, $10::timestamptz,
-             $11::uuid, NULL)
+             $11::uuid, $12::uuid)
      RETURNING id`,
     [
       claimId,
       bundleId,
       fusionContextId,
-      r4(fusedOpinion.belief),
-      r4(fusedOpinion.disbelief),
-      r4(fusedOpinion.uncertainty),
+      beliefR,
+      disbeliefR,
+      uncertaintyR,
       r4(baseRateValue),
       baseRateRecordId,
       "valid|invariant_check_passed",
       evaluationTime,
       resolvedVersionContextId,
+      priorOpinionId,
     ],
   );
   const opinionId = (opRes.rows[0] as { id: string }).id;

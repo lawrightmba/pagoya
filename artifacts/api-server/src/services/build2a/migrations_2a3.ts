@@ -226,7 +226,12 @@ export async function ensureBuild2a3Tables(): Promise<void> {
           'invalid_integrity_score', 'invalid_quality_component',
           'invalid_or_unavailable_weighting_version', 'unsupported_weighting_rule',
           'source_integrity_unresolved', 'quality_inputs_incomplete',
-          'weighting_computation_failed'
+          'weighting_computation_failed',
+          -- Package 2A-4 opinion-formation codes (included here so the migration
+          -- remains idempotent even when the DB already contains 2A-4 rows; 2A-4
+          -- migration reinstalls the same full set, which is a no-op):
+          'missing_base_rate', 'missing_conflict_threshold_governance',
+          'bundle_construction_failed', 'invalid_opinion_computed'
         ));
     END;
     $$

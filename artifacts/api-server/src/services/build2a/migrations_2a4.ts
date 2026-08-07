@@ -111,7 +111,7 @@ export async function ensureBuild2a4Tables(): Promise<void> {
 
   // ── 4. fusion_governance_contexts ─────────────────────────────────────────
   // Tier 1: fully immutable. THE critical object — supplies conflict_threshold
-  // and conflict_metric_definition from an explicitly approved authority.
+  // and conflict_metric_definition from an explicitly governed authority.
   //
   // Resolution at fusion time:
   //   1. Look for a claim-level row (scope_type='behavioral_claim', claim_id matches).
@@ -685,6 +685,99 @@ export async function ensureBuild2a4Tables(): Promise<void> {
     END;
     $$
   `);
+
+  // ── 15. Governance Correction: Properly-provenance-tracked records ───────────
+  //
+  // The original base_rate_records and fusion_governance_contexts seeds were
+  // authored by the implementation layer without explicit provenance tracking.
+  // These addendum records supersede the originals with complete provenance:
+  //   - explicit "experimental/canary-only" status in approval_authority + notes
+  //   - effective_until set so they cannot silently become permanent globals
+  //   - derivation_method explicitly states: NOT empirically calibrated, NOT for
+  //     production; authorized by founder/architecture review only
+  //
+  // The original rows are retained in the DB as audit trail (Tier 1 immutable).
+  // The new governed base_rate_records row is preferred by _resolveBaseRate
+  // because it has a newer effective_from (2026-08-07 > 2026-01-01).
+  // The new governed fusion_governance_contexts row supersedes the old one so
+  // latest_fusion_governance_context_v returns only the governed row.
+
+  // Governed base_rate_records: proper provenance for agent_instrumentation canary.
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, effective_to, notes, canonical_seed_key)
+    SELECT
+      'domain_expert',
+      '2a4_agent_instrumentation',
+      0.50,
+      'sufficient',
+      'founder_architecture_review_build2a_2a4',
+      'Documented neutral computational prior used to validate Build 2A-4 Opinion formation pipeline. This is NOT an empirical population estimate and is NOT validated as a production behavioral base rate. Knowledge qualification in later packages must remain capable of quarantining or overriding opinions that rely on this provisional prior. Authorized by founder/architecture review 2026-08-07.',
+      '2026-08-07 00:00:00+00',
+      '2027-08-07 00:00:00+00',
+      'EXPERIMENTAL/CANARY-ONLY: 50% neutral prior provisionally authorized for Build 2A-4 Opinion Formation pipeline validation. Scope: agent_instrumentation domain module, Build 2A-4 canary only. Status: experimental. Not empirically calibrated. Not validated for production behavioral inference. Supersedes canonical_seed_key b2a_seed_v1|2a4_agent_instrumentation|domain_expert|build2a_2a4_spec (which remains for audit trail). Governed row preferred by _resolveBaseRate due to later effective_from.',
+      'b2a_governed_v1|2a4_agent_instrumentation|experimental|founder_review_2026-08-07'
+    WHERE NOT EXISTS (
+      SELECT 1 FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_governed_v1|2a4_agent_instrumentation|experimental|founder_review_2026-08-07'
+    )
+  `);
+
+  // Governed fusion_governance_contexts: supersede the original row with proper provenance.
+  // fusion_governance_contexts is Tier 1 immutable — the original row cannot be updated.
+  // Inserting a new row with supersedes = old_id causes latest_fusion_governance_context_v
+  // to return ONLY the new governed row (the view excludes rows that are referenced by
+  // a newer row's supersedes column).
+  await db.execute(sql.raw(`
+    DO $$
+    DECLARE
+      v_domain_id UUID;
+      v_fov_id    UUID;
+      v_old_id    UUID;
+    BEGIN
+      SELECT id INTO v_domain_id FROM domain_modules WHERE slug = 'agent_instrumentation' LIMIT 1;
+      SELECT id INTO v_fov_id   FROM fusion_operator_versions WHERE implementation_key = 'sl_opinion_formation_v1' LIMIT 1;
+
+      -- Find the original (un-governed) domain-level row to supersede (version='v1.0').
+      -- If the un-governed row does not exist (e.g., already cleaned up), skip.
+      SELECT id INTO v_old_id FROM fusion_governance_contexts
+        WHERE scope_type = 'domain_module'
+          AND domain_module_id = v_domain_id
+          AND version = 'v1.0'
+        ORDER BY created_at ASC
+        LIMIT 1;
+
+      -- Insert governed row only if it does not already exist.
+      IF NOT EXISTS (
+        SELECT 1 FROM fusion_governance_contexts
+        WHERE scope_type = 'domain_module'
+          AND domain_module_id = v_domain_id
+          AND version = 'v1.1-governed-experimental'
+      ) THEN
+        INSERT INTO fusion_governance_contexts
+          (scope_type, domain_module_id, claim_id, conflict_threshold,
+           conflict_metric_definition, fusion_operator_version_id,
+           approval_authority, derivation_method,
+           effective_from, effective_until, version, supersedes)
+        VALUES (
+          'domain_module',
+          v_domain_id,
+          NULL,
+          0.30,
+          'Pairwise conflict C(ω1,ω2) = b1*d2 + d1*b2 where b,d are the SL belief and disbelief masses of each atom''s opinion before fusion. Aggregate conflict = max(C) over all consecutive ordered pairs in the bundle (evaluated left-to-right by sequence_number). Threshold 0.30 triggers rerouting to consensus_compromise operator. Scope: agent_instrumentation domain, Build 2A-4 canary only.',
+          v_fov_id,
+          'founder_architecture_review_build2a_2a4',
+          'Temporary Build 2A-4 experimental governance threshold (0.30) selected to validate conflict-routing behavior in the opinion formation pipeline. This threshold is NOT empirically calibrated and is NOT validated for production decision use. Scope is strictly limited to the agent_instrumentation domain module during Build 2A-4 canary validation. Authorized by founder/architecture review 2026-08-07. Supersedes version v1.0 which lacked explicit governance provenance.',
+          '2026-08-07 00:00:00+00',
+          '2027-08-07 00:00:00+00',
+          'v1.1-governed-experimental',
+          v_old_id
+        );
+      END IF;
+    END;
+    $$
+  `));
 
   logger.info("[Build2A] Package 2A-4 schema migrations complete.");
 }

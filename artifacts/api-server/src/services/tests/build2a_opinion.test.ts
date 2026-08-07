@@ -523,6 +523,61 @@ describe("Package 2A-4 seed data validation", () => {
     expect(row.conflict_metric_definition).toContain("b1*d2");
   });
 
+  it("governed base_rate_records row exists with correct provenance (founder_architecture_review_build2a_2a4)", async () => {
+    // This row was inserted by the governance-correction addendum in migrations_2a4.ts.
+    // It supersedes the original un-governed seed (b2a_seed_v1|...) which remains as audit trail.
+    // The governed row has newer effective_from (2026-08-07) so _resolveBaseRate prefers it.
+    const result = await db.execute(sql`
+      SELECT id, value, sufficiency_status, approval_authority, effective_to, notes
+      FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_governed_v1|2a4_agent_instrumentation|experimental|founder_review_2026-08-07'
+      LIMIT 1
+    `);
+    expect(result.rows.length).toBe(1);
+    const row = result.rows[0] as {
+      value: string;
+      sufficiency_status: string;
+      approval_authority: string;
+      effective_to: string | null;
+      notes: string;
+    };
+    expect(parseFloat(row.value)).toBeCloseTo(0.50, 3);
+    expect(row.sufficiency_status).toBe("sufficient");
+    expect(row.approval_authority).toBe("founder_architecture_review_build2a_2a4");
+    expect(row.effective_to).not.toBeNull(); // must have bounded effective period
+    expect(row.notes).toContain("EXPERIMENTAL");
+    expect(row.notes).toContain("CANARY-ONLY");
+  });
+
+  it("governed fusion_governance_contexts row is current in latest_fusion_governance_context_v (v1.1-governed-experimental)", async () => {
+    // The governance-correction addendum inserted a governed row superseding the original.
+    // latest_fusion_governance_context_v must show ONLY the governed row for agent_instrumentation.
+    const result = await db.execute(sql`
+      SELECT fgc.id, fgc.scope_type, fgc.conflict_threshold,
+             fgc.version, fgc.approval_authority, fgc.effective_until,
+             fgc.supersedes
+      FROM latest_fusion_governance_context_v fgc
+      JOIN domain_modules dm ON dm.id = fgc.domain_module_id
+      WHERE fgc.scope_type = 'domain_module' AND dm.slug = 'agent_instrumentation'
+      LIMIT 1
+    `);
+    expect(result.rows.length).toBe(1);
+    const row = result.rows[0] as {
+      scope_type: string;
+      conflict_threshold: string;
+      version: string;
+      approval_authority: string;
+      effective_until: string | null;
+      supersedes: string | null;
+    };
+    expect(row.scope_type).toBe("domain_module");
+    expect(parseFloat(row.conflict_threshold)).toBeCloseTo(0.30, 3);
+    expect(row.version).toBe("v1.1-governed-experimental");
+    expect(row.approval_authority).toBe("founder_architecture_review_build2a_2a4");
+    expect(row.effective_until).not.toBeNull();  // bounded — cannot silently become permanent
+    expect(row.supersedes).not.toBeNull();       // explicitly supersedes the un-governed v1.0 row
+  });
+
   it("version_context_2a4_v1 is seeded in version_contexts", async () => {
     const result = await db.execute(sql`
       SELECT id, label, fusion_operator_version_id, base_rate_record_id, projection_function_version_id
