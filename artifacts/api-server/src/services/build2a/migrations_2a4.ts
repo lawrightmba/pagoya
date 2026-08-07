@@ -295,7 +295,8 @@ export async function ensureBuild2a4Tables(): Promise<void> {
           'invalid_or_unavailable_weighting_version', 'unsupported_weighting_rule',
           'source_integrity_unresolved', 'quality_inputs_incomplete',
           'weighting_computation_failed',
-          'missing_base_rate', 'missing_conflict_threshold_governance',
+          'missing_base_rate', 'ambiguous_base_rate_governance',
+          'missing_conflict_threshold_governance',
           'bundle_construction_failed', 'invalid_opinion_computed'
         ));
     END;
@@ -690,15 +691,17 @@ export async function ensureBuild2a4Tables(): Promise<void> {
   //
   // The original base_rate_records and fusion_governance_contexts seeds were
   // authored by the implementation layer without explicit provenance tracking.
-  // These addendum records supersede the originals with complete provenance:
+  // These addendum records add explicit governance provenance:
   //   - explicit "experimental/canary-only" status in approval_authority + notes
   //   - effective_until set so they cannot silently become permanent globals
   //   - derivation_method explicitly states: NOT empirically calibrated, NOT for
   //     production; authorized by founder/architecture review only
   //
-  // The original rows are retained in the DB as audit trail (Tier 1 immutable).
-  // The new governed base_rate_records row is preferred by _resolveBaseRate
-  // because it has a newer effective_from (2026-08-07 > 2026-01-01).
+  // The original rows are retained in the DB as Tier 1 immutable audit trail.
+  // NOTE: This BRR row uses sufficiency_status='sufficient', which does not
+  // correctly reflect its nature as an unvalidated computational prior. Section 16
+  // creates the correct canonical provisional row (sufficiency_status='provisional').
+  // This Section 15 row is immutable and remains as a historical artifact.
   // The new governed fusion_governance_contexts row supersedes the old one so
   // latest_fusion_governance_context_v returns only the governed row.
 
@@ -778,6 +781,142 @@ export async function ensureBuild2a4Tables(): Promise<void> {
     END;
     $$
   `));
+
+  // ── 16. Canonical provisional base_rate_records (machine-readable status) ────
+  //
+  // Correction: the Section 15 governed row used sufficiency_status='sufficient',
+  // which incorrectly implies empirical validation. This section creates the
+  // canonical row with machine-readable sufficiency_status='provisional'.
+  //
+  // Key properties:
+  //   sufficiency_status='provisional' — machine-readable; Package 2A-5 Knowledge
+  //     qualification MUST detect this and refuse production inference that cites it
+  //   supersedes = canonical_seed_original — backward lineage per 2A-1 §11; removes
+  //     the original domain_expert seed from latest_base_rate_record_v (it is no
+  //     longer a chain tip once this row exists)
+  //   source_type='documented_neutral' — appropriate for a known-neutral prior
+  //
+  // IMPORTANT: The Section 15 row ('b2a_governed_v1|...|sufficient') is immutable
+  // and remains as a historical artifact. Because both it and this new row are
+  // chain tips in latest_base_rate_record_v for scope '2a4_agent_instrumentation'
+  // (and so are the immutable orphan rows from earlier canary runs), the scope-based
+  // resolver will CORRECTLY refuse with ambiguous_base_rate_governance. This is the
+  // expected and correct behavior. All opinion formation for this scope MUST use
+  // explicit version_context pinning (see version_context_2a4_v2_provisional below).
+  await db.execute(sql`
+    INSERT INTO base_rate_records
+      (source_type, scope, value, sufficiency_status, approval_authority,
+       derivation_method, effective_from, effective_to, supersedes, notes, canonical_seed_key)
+    SELECT
+      'documented_neutral',
+      '2a4_agent_instrumentation',
+      0.50,
+      'provisional',
+      'founder_architecture_review_build2a_2a4',
+      'Documented neutral 50/50 computational prior for Build 2A-4 Opinion Formation pipeline validation only. NOT an empirical population base rate. Package 2A-5 Knowledge qualification must refuse or quarantine opinions that cite this provisional prior for production decisions.',
+      '2026-08-07 00:00:00+00',
+      '2027-08-07 00:00:00+00',
+      (SELECT id FROM base_rate_records
+       WHERE canonical_seed_key = 'b2a_seed_v1|2a4_agent_instrumentation|domain_expert|build2a_2a4_spec'
+       LIMIT 1),
+      'PROVISIONAL/CANARY-ONLY. sufficiency_status=provisional is the machine-readable signal: downstream Knowledge qualification (Package 2A-5+) MUST distinguish this from empirically sufficient base rates and MUST NOT use this record for production inference. Supersedes the canonical domain_expert seed by backward lineage, removing it from latest_base_rate_record_v. This record may ONLY be referenced via explicit version_context pinning (version_context_2a4_v2_provisional). Scope-based resolution correctly refuses with ambiguous_base_rate_governance due to immutable orphan tips from prior canary runs.',
+      'b2a_provisional_v1|2a4_agent_instrumentation|provisional|canary_validation_2a4'
+    WHERE NOT EXISTS (
+      SELECT 1 FROM base_rate_records
+      WHERE canonical_seed_key = 'b2a_provisional_v1|2a4_agent_instrumentation|provisional|canary_validation_2a4'
+    )
+  `);
+
+  // ── 16b. version_context_2a4_v2_provisional ──────────────────────────────────
+  //
+  // version_context_2a4_v1 (Section 14) pinned the original domain_expert seed
+  // (b2a_seed_v1|...) which is now superseded by Section 16 above. Since
+  // version_contexts is Tier 1 immutable, a new version context is required.
+  // This context pins the canonical provisional BRR and is the REQUIRED entrypoint
+  // for all Build 2A-4 canary opinion-formation calls on agent_instrumentation.
+  await db.execute(sql`
+    DO $$
+    DECLARE
+      v_irv_id  UUID;
+      v_qrv_id  UUID;
+      v_irrv_id UUID;
+      v_fov_id  UUID;
+      v_pfv_id  UUID;
+      v_brr_id  UUID;
+    BEGIN
+      SELECT id INTO v_irv_id  FROM interpretation_rule_versions  WHERE implementation_key = 'task_completion_v1'        AND is_active = true LIMIT 1;
+      SELECT id INTO v_qrv_id  FROM quality_rule_versions          WHERE implementation_key = 'quality_weighting_v1'      AND is_active = true LIMIT 1;
+      SELECT id INTO v_irrv_id FROM integrity_rule_versions         WHERE implementation_key = 'integrity_discount_v1'     AND is_active = true LIMIT 1;
+      SELECT id INTO v_fov_id  FROM fusion_operator_versions        WHERE implementation_key = 'sl_opinion_formation_v1'   AND is_active = true LIMIT 1;
+      SELECT id INTO v_pfv_id  FROM projection_function_versions    WHERE implementation_key = 'sl_binomial_projection_v1' AND is_active = true LIMIT 1;
+      SELECT id INTO v_brr_id  FROM base_rate_records
+        WHERE canonical_seed_key = 'b2a_provisional_v1|2a4_agent_instrumentation|provisional|canary_validation_2a4'
+        LIMIT 1;
+
+      IF v_brr_id IS NULL THEN
+        RAISE EXCEPTION '[Build2A/4] Section 16 provisional BRR not found — Section 16 must execute before 16b';
+      END IF;
+
+      IF NOT EXISTS (SELECT 1 FROM version_contexts WHERE label = 'version_context_2a4_v2_provisional') THEN
+        INSERT INTO version_contexts
+          (label, interpretation_rule_version_id, quality_rule_version_id,
+           integrity_rule_version_id, fusion_operator_version_id,
+           projection_function_version_id, base_rate_record_id,
+           evidence_source_registry_snapshot_hash, domain_module_version_map)
+        VALUES (
+          'version_context_2a4_v2_provisional',
+          v_irv_id, v_qrv_id, v_irrv_id, v_fov_id, v_pfv_id, v_brr_id,
+          'snapshot_2a4_provisional_brr_2026_08_07',
+          '{"agent_instrumentation": "v1.0-provisional"}'::jsonb
+        );
+      END IF;
+    END;
+    $$
+  `);
+
+  // ── 17. opinion_formation_ledger — Formal Architectural Ratification ──────────
+  //
+  // The opinion_formation_ledger is a Tier 1 OPERATIONAL object (not a pure audit
+  // log) that drives the opinion-formation work queue. This block is the Package
+  // 2A-4 specification-of-record for the ledger. Any future change to ledger
+  // semantics requires a new Package-level spec section to supersede this block.
+  //
+  // ── Object definition ─────────────────────────────────────────────────────────
+  //   Table:  opinion_formation_ledger
+  //   Tier:   Tier 1 — Operational Processing Ledger
+  //   Scope:  Package 2A-4 Opinion Formation Stage
+  //
+  // ── Architectural rationale ───────────────────────────────────────────────────
+  //   The ledger serves three non-overlapping purposes:
+  //     1. Work-queue idempotency — ensures formOpinion is called exactly once per
+  //        (claim_id, fusion_operator_version_id) pair across server restarts.
+  //        Without this, the poller could re-trigger formation for already-complete
+  //        claims, producing duplicate opinion rows that violate the one-current-
+  //        opinion-per-claim invariant.
+  //     2. Failure isolation — records resulting_refusal_id and processing_errors
+  //        for claims that could not form an opinion, enabling retry logic without
+  //        silently dropping failures.
+  //     3. Lifecycle auditability — the status machine
+  //        (pending → processing → succeeded | failed | refused) produces an
+  //        observable record of every formation attempt, including those that
+  //        refused before any Opinion row was written.
+  //
+  // ── Permitted mutations ───────────────────────────────────────────────────────
+  //   INSERT: permitted (new rows created by poller or direct call)
+  //   UPDATE: permitted for lifecycle status advances only (trigger-enforced):
+  //           pending → processing → succeeded | failed | refused
+  //           Identity columns (claim_id, fusion_operator_version_id) are frozen.
+  //   DELETE: BLOCKED unconditionally by build2a_no_delete_opinion_formation_ledger
+  //
+  // ── Why UPDATE is permitted (unlike pure Tier 1 audit tables) ────────────────
+  //   A state machine controller must advance its own state. The ledger's identity
+  //   is frozen by the unique key (claim_id, fusion_operator_version_id); only
+  //   lifecycle and output columns may change, and only in the forward direction
+  //   enforced by the build2a_ledger_lifecycle_fn trigger. This is structurally
+  //   equivalent to a state-machine transition record: each advance is observable
+  //   and irreversible. The Opinion row (the primary output) remains fully immutable
+  //   because the ledger is a controller, not a record of the opinion itself.
+  //   The opinion's complete immutable record lives in opinions + reasoning_traces.
 
   logger.info("[Build2A] Package 2A-4 schema migrations complete.");
 }

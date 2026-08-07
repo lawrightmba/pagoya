@@ -230,7 +230,8 @@ export async function ensureBuild2a3Tables(): Promise<void> {
           -- Package 2A-4 opinion-formation codes (included here so the migration
           -- remains idempotent even when the DB already contains 2A-4 rows; 2A-4
           -- migration reinstalls the same full set, which is a no-op):
-          'missing_base_rate', 'missing_conflict_threshold_governance',
+          'missing_base_rate', 'ambiguous_base_rate_governance',
+          'missing_conflict_threshold_governance',
           'bundle_construction_failed', 'invalid_opinion_computed'
         ));
     END;

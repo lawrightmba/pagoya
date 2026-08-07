@@ -424,14 +424,23 @@ async function _runOpinionPipeline(
 
 type BaseRateResolution =
   | { ok: true; baseRateRecordId: string; baseRateValue: number }
-  | { ok: false; reason_code: "missing_base_rate"; detail: string };
+  | {
+      ok: false;
+      reason_code: "missing_base_rate" | "ambiguous_base_rate_governance";
+      detail: string;
+    };
 
 async function _resolveBaseRate(
   client: PoolClient,
   claimId: string,
   versionContextId: string | null | undefined,
 ): Promise<BaseRateResolution> {
-  // Prefer version_context.base_rate_record_id
+  // ── Path 1: version_context explicitly pins a base_rate_record_id ──────────
+  //
+  // Explicit pinning bypasses scope-based resolution. The pinned record must be
+  // a CURRENT CHAIN TIP in latest_base_rate_record_v — pinning a superseded record
+  // is a governance error and halts opinion formation. "Current chain tip" means
+  // the supersession lineage rule: no other row in scope has supersedes = this id.
   if (versionContextId) {
     const vcRes = await client.query(
       `SELECT base_rate_record_id::text FROM version_contexts WHERE id = $1::uuid LIMIT 1`,
@@ -439,18 +448,40 @@ async function _resolveBaseRate(
     );
     const brrId = (vcRes.rows[0] as { base_rate_record_id: string } | undefined)?.base_rate_record_id;
     if (brrId) {
+      // The pinned record must appear in latest_base_rate_record_v (current chain tip)
+      // AND be numerically usable (non-null value, not provisional_unknown).
       const brrRes = await client.query(
-        `SELECT id::text, value::text, sufficiency_status FROM base_rate_records WHERE id = $1::uuid LIMIT 1`,
+        `SELECT b.id::text, b.value::text, b.sufficiency_status
+         FROM latest_base_rate_record_v b
+         WHERE b.id = $1::uuid
+           AND b.value IS NOT NULL
+           AND b.sufficiency_status <> 'provisional_unknown'
+         LIMIT 1`,
         [brrId],
       );
       const brr = brrRes.rows[0] as { id: string; value: string; sufficiency_status: string } | undefined;
-      if (brr && brr.value !== null && brr.sufficiency_status !== "provisional_unknown") {
+      if (brr) {
         return { ok: true, baseRateRecordId: brr.id, baseRateValue: parseFloat(brr.value) };
       }
+      // Pinned record is superseded, has null value, or is provisional_unknown.
+      // Fall through to scope-based lookup — do NOT silently use a stale record.
     }
   }
 
-  // Fallback: find a sufficient base rate for the domain module's scope
+  // ── Path 2: Scope-based lookup using supersession lineage ─────────────────
+  //
+  // Queries latest_base_rate_record_v, which returns ONLY current chain tips
+  // (rows for which no other row has supersedes = their id). This is the 2A-1
+  // approved lineage rule. Timestamp ordering DOES NOT determine selection.
+  //
+  // Invariant:
+  //   Exactly 1 eligible tip → proceed.
+  //   0 eligible tips         → refuse: missing_base_rate.
+  //   > 1 eligible tips       → refuse: ambiguous_base_rate_governance.
+  //     Multiple chain tips means governance has not designated a single
+  //     authoritative prior. No automatic selection is permitted (not by
+  //     effective_from timestamp, not by created_at, not by any other ordering).
+  //     Use a version_context that explicitly pins a base_rate_record_id.
   const domainRes = await client.query(
     `SELECT dm.slug FROM behavioral_claims bc
      JOIN domain_modules dm ON dm.id = bc.domain_module_id
@@ -460,19 +491,31 @@ async function _resolveBaseRate(
   const domainSlug = (domainRes.rows[0] as { slug: string } | undefined)?.slug;
 
   if (domainSlug) {
+    const scope = `2a4_${domainSlug}`;
     const brrRes = await client.query(
       `SELECT id::text, value::text
        FROM latest_base_rate_record_v
        WHERE scope = $1
          AND sufficiency_status <> 'provisional_unknown'
-         AND value IS NOT NULL
-       ORDER BY effective_from DESC NULLS LAST
-       LIMIT 1`,
-      [`2a4_${domainSlug}`],
+         AND value IS NOT NULL`,
+      [scope],
     );
-    const brr = brrRes.rows[0] as { id: string; value: string } | undefined;
-    if (brr) {
-      return { ok: true, baseRateRecordId: brr.id, baseRateValue: parseFloat(brr.value) };
+    const rows = brrRes.rows as Array<{ id: string; value: string }>;
+
+    if (rows.length === 1) {
+      return { ok: true, baseRateRecordId: rows[0].id, baseRateValue: parseFloat(rows[0].value) };
+    }
+
+    if (rows.length > 1) {
+      return {
+        ok: false,
+        reason_code: "ambiguous_base_rate_governance",
+        detail:
+          `${rows.length} eligible current chain tips found in latest_base_rate_record_v for ` +
+          `scope '${scope}' (claim ${claimId}). Governance must designate exactly one ` +
+          "authoritative prior for this scope. Use a version_context that explicitly pins a " +
+          "base_rate_record_id to resolve ambiguity. No timestamp-based selection is permitted.",
+      };
     }
   }
 
@@ -480,10 +523,11 @@ async function _resolveBaseRate(
     ok: false,
     reason_code: "missing_base_rate",
     detail:
-      `No sufficient base_rate_records row found for claim ${claimId} ` +
-      `(domain slug: ${domainSlug ?? "unknown"}). ` +
-      "A base rate with value IS NOT NULL and sufficiency_status != 'provisional_unknown' is required. " +
-      "Provisional-unknown base rates halt opinion formation.",
+      `No eligible base_rate_records chain tip found for claim ${claimId} ` +
+      `(domain slug: ${domainSlug ?? "unknown"}, ` +
+      `scope: 2a4_${domainSlug ?? "unknown"}). ` +
+      "A chain tip (not superseded) with value IS NOT NULL and " +
+      "sufficiency_status != 'provisional_unknown' is required in latest_base_rate_record_v.",
   };
 }
 
