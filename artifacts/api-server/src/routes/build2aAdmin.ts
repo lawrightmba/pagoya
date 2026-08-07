@@ -22,7 +22,7 @@
  *   GET  /validation       — validation queries proving Package 2A-1 schema health
  */
 
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "../lib/logger.js";
@@ -440,7 +440,18 @@ router.get("/validation", async (_req: Request, res: Response): Promise<void> =>
 // All routes are gated on 2A-2 readiness.
 // No raw PII is returned — all entity identifiers are masked.
 // ═══════════════════════════════════════════════════════════════════════════════
-import { isBuild2a2Ready, isBuild2a3Ready } from "../services/build2a/build2aReadiness.js";
+import { isBuild2a2Ready, isBuild2a3Ready, isBuild2a4Ready } from "../services/build2a/build2aReadiness.js";
+
+function require2a4Ready(req: Request, res: Response, next: NextFunction): void {
+  if (!isBuild2a4Ready()) {
+    res.status(503).json({
+      error: "Build 2A Package 2A-4 (Opinion Formation) initialization pending or failed",
+      hint: "ensureBuild2a4Tables() has not completed. Retry in a moment.",
+    });
+    return;
+  }
+  next();
+}
 
 function require2a3Ready(req: Request, res: Response, next: NextFunction): void {
   if (!isBuild2a3Ready()) {
@@ -884,6 +895,232 @@ router.get("/weighting-health", require2a3Ready, async (_req: Request, res: Resp
   } catch (err) {
     logger.error({ err }, "[Build2A/3] GET /weighting-health failed");
     res.status(500).json({ error: "Weighting health query failed" });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Package 2A-4: Opinion Formation — Read-only admin routes
+// All routes gated by require2a4Ready.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── GET /bundles/:id ──────────────────────────────────────────────────────────
+router.get("/bundles/:id", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT eb.*, fov.implementation_key AS operator_implementation_key
+      FROM evidence_bundles eb
+      JOIN fusion_operator_versions fov ON fov.id = eb.fusion_operator_version_id
+      WHERE eb.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Bundle not found" }); return; }
+    res.json({ bundle: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /bundles/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /bundles/:id/members ──────────────────────────────────────────────────
+router.get("/bundles/:id/members", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT ebm.*, wec.final_effective_weight, iea.disposition, iea.dependence_declaration,
+             iea.claim_id
+      FROM evidence_bundle_members ebm
+      JOIN weighted_evidence_contributions wec ON wec.id = ebm.weighted_contribution_id
+      JOIN interpreted_evidence_atoms iea ON iea.id = wec.atom_id
+      WHERE ebm.bundle_id = ${id}::uuid
+      ORDER BY ebm.sequence_number ASC
+    `);
+    res.json({ bundle_id: id, member_count: result.rows.length, members: result.rows });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /bundles/:id/members failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /fusion-contexts/:id ──────────────────────────────────────────────────
+router.get("/fusion-contexts/:id", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT fc.*, fov.implementation_key AS selection_rule_key,
+             fgc.scope_type AS governance_scope_type,
+             fgc.conflict_threshold AS governance_threshold
+      FROM fusion_contexts fc
+      JOIN fusion_operator_versions fov ON fov.id = fc.selection_rule_version_id
+      JOIN fusion_governance_contexts fgc ON fgc.id = fc.governance_context_id
+      WHERE fc.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Fusion context not found" }); return; }
+    res.json({ fusion_context: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /fusion-contexts/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /fusion-governance-contexts ──────────────────────────────────────────
+router.get("/fusion-governance-contexts", require2a4Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await db.execute(sql`
+      SELECT fgc.*, fov.implementation_key AS operator_implementation_key,
+             dm.slug AS domain_module_slug,
+             bc.id::text AS claim_label
+      FROM latest_fusion_governance_context_v fgc
+      JOIN fusion_operator_versions fov ON fov.id = fgc.fusion_operator_version_id
+      LEFT JOIN domain_modules dm ON dm.id = fgc.domain_module_id
+      LEFT JOIN behavioral_claims bc ON bc.id = fgc.claim_id
+      ORDER BY fgc.scope_type ASC, fgc.created_at DESC
+    `);
+    res.json({
+      as_of: new Date().toISOString(),
+      governance_context_count: result.rows.length,
+      governance_contexts: result.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /fusion-governance-contexts failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /opinions/:id ─────────────────────────────────────────────────────────
+router.get("/opinions/:id", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT o.*, brr.scope AS base_rate_scope, brr.value AS base_rate_stored_value,
+             fc.selected_operator, fc.rerouted_to_consensus_compromise
+      FROM opinions o
+      JOIN base_rate_records brr ON brr.id = o.base_rate_record_id
+      JOIN fusion_contexts fc ON fc.id = o.fusion_context_id
+      WHERE o.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Opinion not found" }); return; }
+    res.json({ opinion: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /opinions/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /opinions/:id/projection ──────────────────────────────────────────────
+router.get("/opinions/:id/projection", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT * FROM sl_binomial_projection_v1 WHERE opinion_id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Opinion not found in projection view" }); return; }
+    res.json({ projection: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /opinions/:id/projection failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /opinions/:id/reasoning-trace ─────────────────────────────────────────
+router.get("/opinions/:id/reasoning-trace", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT rt.*, o.claim_id, o.belief, o.disbelief, o.uncertainty, o.evaluation_time
+      FROM reasoning_traces rt
+      JOIN opinions o ON o.id = rt.opinion_id
+      WHERE rt.opinion_id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Reasoning trace not found" }); return; }
+    res.json({ reasoning_trace: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /opinions/:id/reasoning-trace failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /claims/:id/latest-opinion ───────────────────────────────────────────
+router.get("/claims/:id/latest-opinion", require2a4Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT o.*,
+             proj.projected_probability,
+             proj.implementation_key AS projection_key
+      FROM latest_opinion_v o
+      JOIN sl_binomial_projection_v1 proj ON proj.opinion_id = o.id
+      WHERE o.claim_id = ${id}::uuid
+      ORDER BY o.evaluation_time DESC
+      LIMIT 1
+    `);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "No opinion found for this claim" }); return;
+    }
+    res.json({ claim_id: id, latest_opinion: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /claims/:id/latest-opinion failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /opinion-health ───────────────────────────────────────────────────────
+router.get("/opinion-health", require2a4Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [tables2a4, triggers2a4, ledgerStatus, refusalCodes, opinionCount] = await Promise.all([
+      db.execute(sql`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN (
+            'evidence_bundles', 'evidence_bundle_members',
+            'fusion_governance_contexts', 'fusion_contexts',
+            'opinions', 'reasoning_traces', 'opinion_formation_ledger'
+          )
+        ORDER BY table_name
+      `),
+      db.execute(sql`
+        SELECT trigger_name, event_object_table
+        FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND trigger_name LIKE 'build2a_no_%evidence_bundle%'
+             OR trigger_name LIKE 'build2a_no_%fusion_%'
+             OR trigger_name LIKE 'build2a_no_%opinion%'
+             OR trigger_name LIKE 'build2a_no_%reasoning%'
+             OR trigger_name LIKE 'build2a_opinion_ledger%'
+        ORDER BY event_object_table, trigger_name
+      `),
+      db.execute(sql`
+        SELECT status, COUNT(*)::int AS count
+        FROM opinion_formation_ledger GROUP BY status ORDER BY status
+      `),
+      db.execute(sql`
+        SELECT reason_code, COUNT(*)::int AS count
+        FROM refusal_records WHERE refusal_stage = 'fusion'
+        GROUP BY reason_code ORDER BY count DESC
+      `),
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM opinions`),
+    ]);
+
+    const expectedTables = 7;
+    const found = tables2a4.rows.length;
+
+    res.json({
+      as_of: new Date().toISOString(),
+      package: "2A-4",
+      tables: {
+        expected: expectedTables,
+        found,
+        all_present: found === expectedTables,
+        names: (tables2a4.rows as Array<{ table_name: string }>).map(r => r.table_name),
+      },
+      triggers: { found: triggers2a4.rows.length, by_table: triggers2a4.rows },
+      opinion_formation_ledger_by_status: ledgerStatus.rows,
+      fusion_refusals_by_code: refusalCodes.rows,
+      total_opinions: (opinionCount.rows[0] as { count: number }).count,
+      schema_valid: found === expectedTables,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/4] GET /opinion-health failed");
+    res.status(500).json({ error: "Opinion health query failed" });
   }
 });
 

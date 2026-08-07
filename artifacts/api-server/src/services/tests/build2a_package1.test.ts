@@ -245,11 +245,14 @@ describe("Migration idempotency", () => {
   });
 
   it("no Package 2A-2 or later tables are created", async () => {
-    // These are names that belong to future packages — must NOT exist yet
+    // These are names that belong to future packages (2A-5+) — must NOT exist yet.
+    // Note: 2A-2 (source_processing_ledger etc.), 2A-3 (weighting_ledger etc.), and
+    // 2A-4 (evidence_bundles, fusion_contexts, opinions etc.) tables are intentionally
+    // delivered and may exist; they are tested in their respective test files.
     const futureTables = [
-      "evidence_atoms", "evidence_bundles", "weighted_contributions",
-      "fusion_contexts", "opinions", "knowledge_records",
-      "replay_results", "observations",
+      "evidence_atoms", "weighted_contributions",
+      "knowledge_records", "replay_results", "observations",
+      "opinion_aggregations", "pti_evidence_opinions",
     ];
     const r = await db.execute(sql.raw(`
       SELECT table_name FROM information_schema.tables
