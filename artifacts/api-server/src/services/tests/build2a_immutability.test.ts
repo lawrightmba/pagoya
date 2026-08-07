@@ -1,5 +1,5 @@
 /**
- * Build 2A — Package 2A-2 Immutability Tests
+ * Build 2A — Package 2A-2 + 2A-5 Immutability Tests
  *
  * Covers:
  *   - Cluster lifecycle: valid transitions (assembling→sealed, assembling→abandoned)
@@ -14,9 +14,11 @@
  *   - Identity field freeze on cluster_assembly (claim_id, rule_version_id are immutable once set)
  *   - Atomicity: transaction rollback leaves no orphaned atom and no stray sealed cluster
  *   - Invariant integrity: no sealed cluster with null atom; no atom referencing unsealed cluster
+ *   - Package 2A-5 Tier 1: UPDATE+DELETE blocked on knowledge_qualification_runs,
+ *     knowledge_qualification_factor_results, knowledge_records, and knowledge_qualification_ledger
  *
  * All test identifiers are prefixed with b2a_immut_ or use RUN_ID for isolation.
- * Triggers must be in place (ensureBuild2a2Tables() called) for these tests to pass.
+ * Triggers must be in place (ensureBuild2a2Tables() + ensureBuild2a5Tables() called) for tests to pass.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -24,7 +26,11 @@ import { sql } from "drizzle-orm";
 import { db, pool } from "@workspace/db";
 import { createCluster, addObservationLink } from "../build2a/clusterAssembly.js";
 import { sealClusterAndCreateAtom } from "../build2a/atomConstruction.js";
-import { setBuild2a2Ready, _reset2a2ToPendingForTesting } from "../build2a/build2aReadiness.js";
+import {
+  setBuild2a2Ready, _reset2a2ToPendingForTesting,
+  setBuild2a5Ready, _reset2a5ToPendingForTesting,
+} from "../build2a/build2aReadiness.js";
+import { ensureBuild2a5Tables } from "../build2a/migrations_2a5.js";
 
 const RUN_ID = `immut_${Date.now()}`;
 
@@ -120,10 +126,13 @@ async function makeSeededSealedCluster(suffix: string): Promise<{
 
 beforeAll(async () => {
   setBuild2a2Ready();
-});
+  await ensureBuild2a5Tables();
+  setBuild2a5Ready();
+}, 60_000);
 
 afterAll(async () => {
   _reset2a2ToPendingForTesting();
+  _reset2a5ToPendingForTesting();
   // Entities/claims created during tests can stay — they don't affect production paths
 });
 
@@ -596,5 +605,126 @@ describe("Invariant integrity checks", () => {
       WHERE assembly_state = 'sealed' AND resulting_atom_id IS NULL
     `);
     expect((result.rows[0] as { n: number }).n).toBe(0);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Package 2A-5 Tier 1 Immutability
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("Package 2A-5 Tier 1 — knowledge_qualification_runs immutable", () => {
+  it("UPDATE on knowledge_qualification_runs is blocked by trigger", async () => {
+    // Find any row, or skip if none
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_runs LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_runs rows to UPDATE");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`UPDATE knowledge_qualification_runs SET outcome = 'knowledge' WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+
+  it("DELETE on knowledge_qualification_runs is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_runs LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_runs rows to DELETE");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`DELETE FROM knowledge_qualification_runs WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+});
+
+describe("Package 2A-5 Tier 1 — knowledge_qualification_factor_results immutable", () => {
+  it("UPDATE on knowledge_qualification_factor_results is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_factor_results LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_factor_results rows");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`UPDATE knowledge_qualification_factor_results SET factor_result = 'pass' WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+
+  it("DELETE on knowledge_qualification_factor_results is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_factor_results LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_factor_results rows");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`DELETE FROM knowledge_qualification_factor_results WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+});
+
+describe("Package 2A-5 Tier 1 — knowledge_records immutable", () => {
+  it("UPDATE on knowledge_records is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_records LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_records rows (Path F not yet eligible)");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`UPDATE knowledge_records SET knowledge_at = NOW() WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+
+  it("DELETE on knowledge_records is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_records LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_records rows (Path F not yet eligible)");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`DELETE FROM knowledge_records WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+});
+
+describe("Package 2A-5 Tier 1 — knowledge_qualification_ledger DELETE + identity freeze", () => {
+  it("DELETE on knowledge_qualification_ledger is blocked by trigger", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_ledger LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_ledger rows");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`DELETE FROM knowledge_qualification_ledger WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+
+  it("opinion_id UPDATE on knowledge_qualification_ledger is blocked (identity freeze)", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_ledger LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_ledger rows");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`UPDATE knowledge_qualification_ledger SET opinion_id = gen_random_uuid() WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
+  });
+
+  it("predicate_version_id UPDATE on knowledge_qualification_ledger is blocked (identity freeze)", async () => {
+    const rows = await db.execute(sql`SELECT id FROM knowledge_qualification_ledger LIMIT 1`);
+    if (rows.rows.length === 0) {
+      console.log("  [skip] no knowledge_qualification_ledger rows");
+      return;
+    }
+    const rowId = (rows.rows[0] as { id: string }).id;
+    await expect(
+      pool.query(`UPDATE knowledge_qualification_ledger SET predicate_version_id = gen_random_uuid() WHERE id = '${rowId}'`)
+    ).rejects.toThrow();
   });
 });

@@ -440,7 +440,7 @@ router.get("/validation", async (_req: Request, res: Response): Promise<void> =>
 // All routes are gated on 2A-2 readiness.
 // No raw PII is returned — all entity identifiers are masked.
 // ═══════════════════════════════════════════════════════════════════════════════
-import { isBuild2a2Ready, isBuild2a3Ready, isBuild2a4Ready } from "../services/build2a/build2aReadiness.js";
+import { isBuild2a2Ready, isBuild2a3Ready, isBuild2a4Ready, isBuild2a5Ready } from "../services/build2a/build2aReadiness.js";
 
 function require2a4Ready(req: Request, res: Response, next: NextFunction): void {
   if (!isBuild2a4Ready()) {
@@ -1121,6 +1121,237 @@ router.get("/opinion-health", require2a4Ready, async (_req: Request, res: Respon
   } catch (err) {
     logger.error({ err }, "[Build2A/4] GET /opinion-health failed");
     res.status(500).json({ error: "Opinion health query failed" });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Package 2A-5: Knowledge Qualification — Read-only admin routes
+// All routes gated by require2a5Ready.
+// ════════════════════════════════════════════════════════════════════════════
+
+function require2a5Ready(_req: Request, res: Response, next: NextFunction): void {
+  if (!isBuild2a5Ready()) {
+    res.status(503).json({
+      error: "Build 2A Package 2A-5 (Knowledge Qualification) initialization pending or failed",
+      hint: "ensureBuild2a5Tables() has not completed. Retry in a moment.",
+    });
+    return;
+  }
+  next();
+}
+
+// ── GET /knowledge-governance ─────────────────────────────────────────────────
+// Returns all chain-tip knowledge qualification governance contexts.
+router.get("/knowledge-governance", require2a5Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await db.execute(sql`
+      SELECT kqgc.*,
+             kspv.implementation_key AS predicate_implementation_key,
+             kspv.version_label      AS predicate_version_label,
+             dm.slug                 AS domain_module_slug,
+             bc.id::text             AS claim_label
+      FROM latest_knowledge_qualification_governance_context_v kqgc
+      JOIN knowledge_sufficiency_predicate_versions kspv
+        ON kspv.id = kqgc.knowledge_sufficiency_predicate_version_id
+      LEFT JOIN domain_modules dm ON dm.id = kqgc.domain_module_id
+      LEFT JOIN behavioral_claims bc ON bc.id = kqgc.claim_id
+      ORDER BY kqgc.scope_type ASC, kqgc.created_at DESC
+    `);
+    res.json({
+      as_of: new Date().toISOString(),
+      governance_context_count: result.rows.length,
+      governance_contexts: result.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /knowledge-governance failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /qualification-runs/:id ───────────────────────────────────────────────
+router.get("/qualification-runs/:id", require2a5Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT kqr.*,
+             kspv.implementation_key AS predicate_key,
+             kspv.version_label      AS predicate_version,
+             o.claim_id, o.belief, o.disbelief, o.uncertainty,
+             brr.sufficiency_status  AS base_rate_sufficiency
+      FROM knowledge_qualification_runs kqr
+      JOIN knowledge_sufficiency_predicate_versions kspv ON kspv.id = kqr.predicate_version_id
+      JOIN opinions o ON o.id = kqr.opinion_id
+      JOIN base_rate_records brr ON brr.id = o.base_rate_record_id
+      WHERE kqr.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Qualification run not found" }); return; }
+    res.json({ qualification_run: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /qualification-runs/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /qualification-runs/:id/factors ───────────────────────────────────────
+router.get("/qualification-runs/:id/factors", require2a5Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    // Verify run exists
+    const runCheck = await db.execute(sql`SELECT id, outcome FROM knowledge_qualification_runs WHERE id = ${id}::uuid`);
+    if (runCheck.rows.length === 0) { res.status(404).json({ error: "Qualification run not found" }); return; }
+    const run = runCheck.rows[0] as { id: string; outcome: string };
+    const result = await db.execute(sql`
+      SELECT factor_name, factor_result, threshold_value, observed_value, factor_detail, created_at
+      FROM knowledge_qualification_factor_results
+      WHERE run_id = ${id}::uuid
+      ORDER BY created_at ASC
+    `);
+    res.json({
+      run_id: id,
+      outcome: run.outcome,
+      factor_count: result.rows.length,
+      factors: result.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /qualification-runs/:id/factors failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /knowledge/:id ────────────────────────────────────────────────────────
+router.get("/knowledge/:id", require2a5Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT kr.*,
+             kspv.implementation_key AS predicate_key,
+             kspv.version_label      AS predicate_version,
+             o.belief, o.disbelief, o.uncertainty
+      FROM knowledge_records kr
+      JOIN knowledge_sufficiency_predicate_versions kspv ON kspv.id = kr.predicate_version_id
+      JOIN opinions o ON o.id = kr.opinion_id
+      WHERE kr.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Knowledge record not found" }); return; }
+    res.json({ knowledge_record: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /knowledge/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /claims/:id/latest-knowledge ─────────────────────────────────────────
+router.get("/claims/:id/latest-knowledge", require2a5Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT kr.*,
+             kspv.implementation_key AS predicate_key,
+             o.belief, o.disbelief, o.uncertainty,
+             kqr.outcome, kqr.evaluation_timestamp, kqr.replay_checksum
+      FROM latest_knowledge_record_v kr
+      JOIN knowledge_qualification_runs kqr ON kqr.id = kr.run_id
+      JOIN knowledge_sufficiency_predicate_versions kspv ON kspv.id = kr.predicate_version_id
+      JOIN opinions o ON o.id = kr.opinion_id
+      WHERE kr.claim_id = ${id}::uuid
+      ORDER BY kr.knowledge_at DESC
+      LIMIT 1
+    `);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "No knowledge record found for this claim" }); return;
+    }
+    res.json({ claim_id: id, latest_knowledge: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /claims/:id/latest-knowledge failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /opinions/:id/qualification ──────────────────────────────────────────
+router.get("/opinions/:id/qualification", require2a5Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    // All qualification runs for this opinion
+    const runs = await db.execute(sql`
+      SELECT kqr.id, kqr.outcome, kqr.evaluation_timestamp, kqr.replay_checksum,
+             kspv.implementation_key AS predicate_key, kspv.version_label AS predicate_version,
+             kr.id AS knowledge_record_id
+      FROM knowledge_qualification_runs kqr
+      JOIN knowledge_sufficiency_predicate_versions kspv ON kspv.id = kqr.predicate_version_id
+      LEFT JOIN knowledge_records kr ON kr.run_id = kqr.id
+      WHERE kqr.opinion_id = ${id}::uuid
+      ORDER BY kqr.evaluation_timestamp DESC
+    `);
+    // Ledger status
+    const ledger = await db.execute(sql`
+      SELECT kql.status, kql.attempts, kql.last_attempted_at
+      FROM knowledge_qualification_ledger kql
+      WHERE kql.opinion_id = ${id}::uuid
+    `);
+    res.json({
+      opinion_id: id,
+      run_count: runs.rows.length,
+      qualification_runs: runs.rows,
+      ledger_entries: ledger.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /opinions/:id/qualification failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /knowledge-health ─────────────────────────────────────────────────────
+router.get("/knowledge-health", require2a5Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [tables2a5, triggers2a5, ledgerStatus, knowledgeCount] = await Promise.all([
+      db.execute(sql`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN (
+            'knowledge_qualification_governance_contexts',
+            'knowledge_qualification_runs',
+            'knowledge_qualification_factor_results',
+            'knowledge_records',
+            'knowledge_qualification_ledger'
+          )
+        ORDER BY table_name
+      `),
+      db.execute(sql`
+        SELECT trigger_name, event_object_table
+        FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND (trigger_name LIKE 'build2a_no_%kq%'
+            OR trigger_name LIKE 'build2a_no_%knowledge%'
+            OR trigger_name LIKE 'build2a_kq_ledger%')
+        ORDER BY event_object_table, trigger_name
+      `),
+      db.execute(sql`
+        SELECT status, COUNT(*)::int AS count
+        FROM knowledge_qualification_ledger GROUP BY status ORDER BY status
+      `),
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM knowledge_records`),
+    ]);
+
+    const expectedTables = 5;
+    const found = tables2a5.rows.length;
+
+    res.json({
+      as_of: new Date().toISOString(),
+      package: "2A-5",
+      tables: {
+        expected: expectedTables,
+        found,
+        all_present: found === expectedTables,
+        names: (tables2a5.rows as Array<{ table_name: string }>).map(r => r.table_name),
+      },
+      triggers: { found: triggers2a5.rows.length, by_table: triggers2a5.rows },
+      knowledge_qualification_ledger_by_status: ledgerStatus.rows,
+      total_knowledge_records: (knowledgeCount.rows[0] as { count: number }).count,
+      schema_valid: found === expectedTables,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/5] GET /knowledge-health failed");
+    res.status(500).json({ error: "Knowledge health query failed" });
   }
 });
 

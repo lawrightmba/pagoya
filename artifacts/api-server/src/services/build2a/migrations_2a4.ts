@@ -270,13 +270,20 @@ export async function ensureBuild2a4Tables(): Promise<void> {
     DO $$
     DECLARE
       v_constraint_name text;
+      v_constraint_def  text;
     BEGIN
-      SELECT conname INTO v_constraint_name
+      SELECT conname, pg_get_constraintdef(oid) INTO v_constraint_name, v_constraint_def
       FROM pg_constraint
       WHERE conrelid = 'refusal_records'::regclass
         AND contype = 'c'
         AND pg_get_constraintdef(oid) LIKE '%reason_code%'
       LIMIT 1;
+
+      -- SENTINEL GUARD: if the constraint already contains a Package 2A-5 code,
+      -- it has been extended by a later migration and must not be narrowed here.
+      IF v_constraint_def IS NOT NULL AND v_constraint_def LIKE '%missing_knowledge_governance%' THEN
+        RETURN; -- already at 2A-5+ level; skip to avoid narrowing
+      END IF;
 
       IF v_constraint_name IS NOT NULL THEN
         EXECUTE 'ALTER TABLE refusal_records DROP CONSTRAINT ' || quote_ident(v_constraint_name);

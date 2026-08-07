@@ -11,6 +11,7 @@ import { ensureBuild2aTables } from "./services/build2a/migrations.js";
 import { ensureBuild2a2Tables } from "./services/build2a/migrations_2a2.js";
 import { ensureBuild2a3Tables } from "./services/build2a/migrations_2a3.js";
 import { ensureBuild2a4Tables } from "./services/build2a/migrations_2a4.js";
+import { ensureBuild2a5Tables } from "./services/build2a/migrations_2a5.js";
 import {
   setBuild2aReady,
   setBuild2aFailed,
@@ -22,10 +23,13 @@ import {
   setBuild2a3Failed,
   setBuild2a4Ready,
   setBuild2a4Failed,
+  setBuild2a5Ready,
+  setBuild2a5Failed,
 } from "./services/build2a/build2aReadiness.js";
 import { startEvidencePoller } from "./services/build2a/sourceIngestionPoller.js";
 import { startWeightingPoller } from "./services/build2a/weightingPoller.js";
 import { startOpinionPoller } from "./services/build2a/opinionPoller.js";
+import { startKnowledgeQualificationPoller } from "./services/build2a/knowledgeQualificationLedger.js";
 
 const rawPort = process.env["PORT"];
 
@@ -102,6 +106,13 @@ app.listen(port, (err) => {
       setBuild2a4Ready();
       // Start the Opinion Formation poller only when ENABLE_EVIDENCE_ENGINE=true
       startOpinionPoller();
+      // Chain Package 2A-5 only after 2A-4 succeeds
+      return ensureBuild2a5Tables();
+    })
+    .then(() => {
+      setBuild2a5Ready();
+      // Start the Knowledge Qualification poller only when ENABLE_EVIDENCE_ENGINE=true
+      startKnowledgeQualificationPoller();
     })
     .catch((err) => {
       // Determine which package failed by checking readiness states in order
@@ -114,15 +125,19 @@ app.listen(port, (err) => {
         setBuild2a2Failed(err);
         logger.error({ err }, "[Build2A] Package 2A-2 schema migration failed — 2A-2 routes will return 503, app continues");
       } else if (state2a1 === "ready" && state2a2 === "ready") {
-        // Either 2A-3 or 2A-4 failed; check 2A-3 readiness
-        import("./services/build2a/build2aReadiness.js").then(({ getBuild2a3Readiness }) => {
+        // Either 2A-3, 2A-4, or 2A-5 failed; check 2A-3/2A-4 readiness
+        import("./services/build2a/build2aReadiness.js").then(({ getBuild2a3Readiness, getBuild2a4Readiness }) => {
           const { state: state2a3 } = getBuild2a3Readiness();
+          const { state: state2a4 } = getBuild2a4Readiness();
           if (state2a3 !== "ready") {
             setBuild2a3Failed(err);
             logger.error({ err }, "[Build2A] Package 2A-3 schema migration failed — 2A-3 routes will return 503, app continues");
-          } else {
+          } else if (state2a4 !== "ready") {
             setBuild2a4Failed(err);
             logger.error({ err }, "[Build2A] Package 2A-4 schema migration failed — 2A-4 routes will return 503, app continues");
+          } else {
+            setBuild2a5Failed(err);
+            logger.error({ err }, "[Build2A] Package 2A-5 schema migration failed — 2A-5 routes will return 503, app continues");
           }
         }).catch(() => {
           setBuild2a3Failed(err);

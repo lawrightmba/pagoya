@@ -24,23 +24,27 @@ import {
   setBuild2a2Ready, _reset2a2ToPendingForTesting,
   setBuild2a3Ready, _reset2a3ToPendingForTesting,
   setBuild2a4Ready, _reset2a4ToPendingForTesting,
+  setBuild2a5Ready, _reset2a5ToPendingForTesting,
 } from "../build2a/build2aReadiness.js";
 import {
   PACKAGE_2A1_REQUIRED_KEYS, PACKAGE_2A2_REQUIRED_KEYS,
   PACKAGE_2A3_REQUIRED_KEYS, validatePackage2a3Keys,
   PACKAGE_2A4_REQUIRED_KEYS, validatePackage2a4Keys,
+  PACKAGE_2A5_REQUIRED_KEYS, validatePackage2a5Keys,
 } from "../build2a/versionDispatch.js";
 
 beforeAll(() => {
   setBuild2a2Ready();
   setBuild2a3Ready();
   setBuild2a4Ready();
+  setBuild2a5Ready();
 });
 
 afterAll(() => {
   _reset2a2ToPendingForTesting();
   _reset2a3ToPendingForTesting();
   _reset2a4ToPendingForTesting();
+  _reset2a5ToPendingForTesting();
 });
 
 // ── Package 2A-1 structural integrity ─────────────────────────────────────────
@@ -370,18 +374,50 @@ describe("Package 2A-4 objects DO exist in the schema", () => {
   });
 });
 
-// ── Package 2A-5 sentinel boundary (must NOT exist yet) ───────────────────────
+// ── Package 2A-5 objects DO exist (post-condition) ───────────────────────────
 
-describe("Package 2A-5 objects must NOT yet exist", () => {
-  it("no Package 2A-5 sentinel tables exist in the schema", async () => {
-    // These names represent hypothetical Package 2A-5 objects.
-    // If any appear, something was added prematurely.
-    const sentinel2a5Names = [
-      "opinion_aggregations",
-      "pti_evidence_opinions",
-      "pti_reasoning_bridge",
+describe("Package 2A-5 objects must exist (post-condition)", () => {
+  it("all 5 Package 2A-5 tables are present", async () => {
+    const tables2a5 = [
+      "knowledge_qualification_governance_contexts",
+      "knowledge_qualification_runs",
+      "knowledge_qualification_factor_results",
+      "knowledge_records",
+      "knowledge_qualification_ledger",
     ];
-    for (const name of sentinel2a5Names) {
+    const result = await db.execute(sql`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name = ANY(ARRAY[
+          'knowledge_qualification_governance_contexts',
+          'knowledge_qualification_runs',
+          'knowledge_qualification_factor_results',
+          'knowledge_records',
+          'knowledge_qualification_ledger'
+        ])
+      ORDER BY table_name
+    `);
+    const found = (result.rows as Array<{ table_name: string }>).map(r => r.table_name).sort();
+    expect(found).toEqual(tables2a5.sort());
+  });
+
+  it("Package 2A-5 required key is registered", async () => {
+    const errors = await validatePackage2a5Keys();
+    expect(errors).toEqual([]);
+  });
+});
+
+// ── Package 2A-6 sentinel boundary (must NOT exist yet) ───────────────────────
+
+describe("Package 2A-6 objects must NOT yet exist", () => {
+  it("no Package 2A-6 sentinel tables exist in the schema", async () => {
+    const sentinel2a6Names = [
+      "knowledge_aggregations",
+      "pti_knowledge_bridge",
+      "authority_decisions",
+      "behavioral_authority_records",
+    ];
+    for (const name of sentinel2a6Names) {
       const result = await db.execute(sql`
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = ${name}

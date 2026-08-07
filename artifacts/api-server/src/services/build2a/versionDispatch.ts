@@ -377,3 +377,30 @@ export async function validatePackage2a4Keys(): Promise<string[]> {
   }
   return errors;
 }
+
+/**
+ * The approved Package 2A-5 registered keys.
+ * agent_task_completion_sufficiency_v1 defines the 10-factor knowledge
+ * sufficiency predicate. Seeded by migrations_2a5.ts.
+ */
+export const PACKAGE_2A5_REQUIRED_KEYS: Record<string, VersionTableName> = {
+  agent_task_completion_sufficiency_v1: "knowledge_sufficiency_predicate_versions",
+} as const;
+
+/**
+ * Validates that all Package 2A-5 required keys are registered and in a healthy state.
+ * Called at startup after ensureBuild2a5Tables() to detect seed failures.
+ * Returns a list of validation errors (empty = healthy).
+ */
+export async function validatePackage2a5Keys(): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [key, table] of Object.entries(PACKAGE_2A5_REQUIRED_KEYS)) {
+    const result = await resolveImplementationKey(key, table);
+    if (!result.found) {
+      errors.push(`[2A-5] Required key '${key}' is missing from ${table}.`);
+    } else if (!result.usable_for_new_computation) {
+      errors.push(`[2A-5] Required key '${key}' in ${table} is not usable for new computation (${result.resolution_note}).`);
+    }
+  }
+  return errors;
+}
