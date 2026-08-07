@@ -1239,20 +1239,41 @@ describe("Decision separation — 2A-5 files must not contain decision-layer wor
 // Suite 22: Package 2A-6 sentinel
 // ════════════════════════════════════════════════════════════════════════════
 
-describe("Package 2A-6 sentinel — no 2A-6 objects exist", () => {
-  it("no Package 2A-6 sentinel tables exist in the schema", async () => {
-    const sentinel2a6Names = [
-      "knowledge_aggregations",
-      "pti_knowledge_bridge",
-      "authority_decisions",
-      "behavioral_authority_records",
+describe("Package 2A-6 regression — actual 2A-6 tables present; Build 3+ deferred", () => {
+  it("actual 2A-6 tables now exist (forward regression guard from 2A-5 perspective)", async () => {
+    // 2A-6 is implemented. These tables must exist and 2A-5 must not have broken them.
+    const actual2a6Tables = [
+      "behavioral_predictions",
+      "behavioral_prediction_outcomes",
+      "behavioral_prediction_resolutions",
+      "calibration_runs",
+      "calibration_metrics",
+      "prediction_governance_contexts",
+      "calibration_governance_contexts",
     ];
-    for (const name of sentinel2a6Names) {
+    for (const name of actual2a6Tables) {
       const result = await db.execute(sql`
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = ${name}
       `);
-      expect(result.rows.length).toBe(0);
+      expect(result.rows.length, `2A-6 table ${name} missing after 2A-5 migration`).toBe(1);
+    }
+  });
+
+  it("Build 3+ tables do NOT yet exist (trajectory/state deferred)", async () => {
+    const build3Tables = [
+      "behavioral_trajectories",
+      "trajectory_segments",
+      "trajectory_governance_contexts",
+      "state_records",
+      "state_governance_contexts",
+    ];
+    for (const name of build3Tables) {
+      const result = await db.execute(sql`
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = ${name}
+      `);
+      expect(result.rows.length, `Build 3+ table ${name} exists but Build 3 not yet implemented`).toBe(0);
     }
   });
 });

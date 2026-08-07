@@ -32,7 +32,10 @@ export type VersionTableName =
   | "quality_rule_versions"
   | "integrity_rule_versions"
   | "fusion_operator_versions"
-  | "knowledge_sufficiency_predicate_versions";
+  | "knowledge_sufficiency_predicate_versions"
+  | "prediction_formation_rule_versions"
+  | "prediction_classification_rule_versions"
+  | "calibration_metric_set_versions";
 
 export type DispatchKeyState =
   | "KNOWN_ACTIVE"
@@ -400,6 +403,32 @@ export async function validatePackage2a5Keys(): Promise<string[]> {
       errors.push(`[2A-5] Required key '${key}' is missing from ${table}.`);
     } else if (!result.usable_for_new_computation) {
       errors.push(`[2A-5] Required key '${key}' in ${table} is not usable for new computation (${result.resolution_note}).`);
+    }
+  }
+  return errors;
+}
+
+// ── Package 2A-6: Prediction, Resolution & Calibration Foundation ─────────────
+
+export const PACKAGE_2A6_REQUIRED_KEYS: Record<string, VersionTableName> = {
+  knowledge_persistence_forecast_v1: "prediction_formation_rule_versions",
+  binary_more_likely_than_not_v1:    "prediction_classification_rule_versions",
+  brier_score_v1:                    "calibration_metric_set_versions",
+} as const;
+
+/**
+ * Validates that all Package 2A-6 required keys are registered and in a healthy state.
+ * Called at startup after ensureBuild2a6Tables() to detect seed failures.
+ * Returns a list of validation errors (empty = healthy).
+ */
+export async function validatePackage2a6Keys(): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [key, table] of Object.entries(PACKAGE_2A6_REQUIRED_KEYS)) {
+    const result = await resolveImplementationKey(key, table);
+    if (!result.found) {
+      errors.push(`[2A-6] Required key '${key}' is missing from ${table}.`);
+    } else if (!result.usable_for_new_computation) {
+      errors.push(`[2A-6] Required key '${key}' in ${table} is not usable for new computation (${result.resolution_note}).`);
     }
   }
   return errors;

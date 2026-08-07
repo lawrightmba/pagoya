@@ -279,10 +279,40 @@ export async function ensureBuild2a4Tables(): Promise<void> {
         AND pg_get_constraintdef(oid) LIKE '%reason_code%'
       LIMIT 1;
 
-      -- SENTINEL GUARD: if the constraint already contains a Package 2A-5 code,
+      -- SENTINEL GUARD A: if the constraint already contains a Package 2A-5+ code,
       -- it has been extended by a later migration and must not be narrowed here.
-      IF v_constraint_def IS NOT NULL AND v_constraint_def LIKE '%missing_knowledge_governance%' THEN
+      IF v_constraint_def IS NOT NULL AND (
+        v_constraint_def LIKE '%missing_knowledge_governance%'
+        OR v_constraint_def LIKE '%missing_prediction_governance%'
+      ) THEN
         RETURN; -- already at 2A-5+ level; skip to avoid narrowing
+      END IF;
+
+      -- SENTINEL GUARD B: no constraint (dropped by later migration gone wrong).
+      -- If rows exist with codes outside this package's set, skip — the 2A-6
+      -- migration will reinstall the full cumulative constraint.
+      IF v_constraint_def IS NULL THEN
+        IF EXISTS (
+          SELECT 1 FROM refusal_records
+          WHERE reason_code NOT IN (
+            'no_matching_claim', 'unregistered_source', 'source_not_eligible',
+            'revoked_source_eligibility', 'primitive_mismatch',
+            'incomplete_bounded_cluster', 'ambiguous_interpretation',
+            'prohibited_inference', 'invalid_or_unavailable_version',
+            'source_attribution_failed', 'processing_failure',
+            'missing_integrity_context', 'missing_quality_context',
+            'invalid_integrity_score', 'invalid_quality_component',
+            'invalid_or_unavailable_weighting_version', 'unsupported_weighting_rule',
+            'source_integrity_unresolved', 'quality_inputs_incomplete',
+            'weighting_computation_failed',
+            'missing_base_rate', 'ambiguous_base_rate_governance',
+            'missing_conflict_threshold_governance',
+            'bundle_construction_failed', 'invalid_opinion_computed'
+          )
+          LIMIT 1
+        ) THEN
+          RETURN; -- rows with later-package codes exist; skip narrowing
+        END IF;
       END IF;
 
       IF v_constraint_name IS NOT NULL THEN

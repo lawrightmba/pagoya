@@ -1355,4 +1355,194 @@ router.get("/knowledge-health", require2a5Ready, async (_req: Request, res: Resp
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Package 2A-6: Prediction, Resolution & Calibration Foundation
+// All routes gated by require2a6Ready.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import { isBuild2a6Ready } from "../services/build2a/build2aReadiness.js";
+
+function require2a6Ready(_req: Request, res: Response, next: NextFunction): void {
+  if (!isBuild2a6Ready()) {
+    res.status(503).json({
+      error: "Build 2A Package 2A-6 not ready",
+      hint: "ensureBuild2a6Tables() has not completed. Retry in a moment.",
+    });
+    return;
+  }
+  next();
+}
+
+// GET /api/admin/build2a/predictions/:id
+router.get("/predictions/:id", require2a6Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT bp.*,
+             pgc.version AS governance_version,
+             pfrv.implementation_key AS formation_rule_key,
+             pcrv.implementation_key AS classification_rule_key
+      FROM behavioral_predictions bp
+      LEFT JOIN prediction_governance_contexts pgc ON pgc.id = bp.prediction_governance_context_id
+      LEFT JOIN prediction_formation_rule_versions pfrv ON pfrv.id = bp.prediction_formation_rule_version_id
+      LEFT JOIN prediction_classification_rule_versions pcrv ON pcrv.id = bp.prediction_classification_rule_version_id
+      WHERE bp.id = ${id}::uuid LIMIT 1
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "Prediction not found" }); return; }
+    res.json({ prediction: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /predictions/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// GET /api/admin/build2a/predictions/:id/resolution
+router.get("/predictions/:id/resolution", require2a6Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT bpr.*, bpo.outcome_value, bpo.is_synthetic_canary_only
+      FROM behavioral_prediction_resolutions bpr
+      LEFT JOIN behavioral_prediction_outcomes bpo ON bpo.id = bpr.outcome_id
+      WHERE bpr.prediction_id = ${id}::uuid
+      ORDER BY bpr.resolved_at DESC LIMIT 1
+    `);
+    if (result.rows.length === 0) { res.status(404).json({ error: "No resolution found for prediction" }); return; }
+    res.json({ resolution: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /predictions/:id/resolution failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// GET /api/admin/build2a/calibration-runs/:id
+router.get("/calibration-runs/:id", require2a6Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const { id } = req.params;
+    const [run, metrics] = await Promise.all([
+      db.execute(sql`SELECT * FROM calibration_runs WHERE id = ${id}::uuid LIMIT 1`),
+      db.execute(sql`SELECT * FROM calibration_metrics WHERE calibration_run_id = ${id}::uuid ORDER BY metric_name`),
+    ]);
+    if (run.rows.length === 0) { res.status(404).json({ error: "Calibration run not found" }); return; }
+    res.json({ calibration_run: run.rows[0], metrics: metrics.rows });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /calibration-runs/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// GET /api/admin/build2a/prediction-governance
+router.get("/prediction-governance", require2a6Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const result = await db.execute(sql`
+      SELECT pgc.*,
+             pfrv.implementation_key AS formation_rule_key,
+             pfrv.version_label AS formation_rule_version,
+             pcrv.implementation_key AS classification_rule_key,
+             pcrv.version_label AS classification_rule_version
+      FROM prediction_governance_contexts pgc
+      LEFT JOIN prediction_formation_rule_versions pfrv ON pfrv.id = pgc.prediction_formation_rule_version_id
+      LEFT JOIN prediction_classification_rule_versions pcrv ON pcrv.id = pgc.prediction_classification_rule_version_id
+      ORDER BY pgc.created_at DESC
+    `);
+    res.json({ prediction_governance_contexts: result.rows, count: result.rows.length });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /prediction-governance failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// GET /api/admin/build2a/calibration-governance
+router.get("/calibration-governance", require2a6Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const result = await db.execute(sql`
+      SELECT cgc.*,
+             cmsv.implementation_key AS metric_set_key,
+             cmsv.version_label AS metric_set_version
+      FROM calibration_governance_contexts cgc
+      LEFT JOIN calibration_metric_set_versions cmsv ON cmsv.id = cgc.calibration_metric_set_version_id
+      ORDER BY cgc.created_at DESC
+    `);
+    res.json({ calibration_governance_contexts: result.rows, count: result.rows.length });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /calibration-governance failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// GET /api/admin/build2a/prediction-health
+router.get("/prediction-health", require2a6Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+
+    const expectedTables = [
+      "prediction_formation_rule_versions",
+      "prediction_classification_rule_versions",
+      "calibration_metric_set_versions",
+      "prediction_governance_contexts",
+      "calibration_governance_contexts",
+      "behavioral_predictions",
+      "behavioral_prediction_outcomes",
+      "behavioral_prediction_resolutions",
+      "calibration_runs",
+      "calibration_metrics",
+      "prediction_formation_ledger",
+      "prediction_resolution_ledger",
+      "calibration_ledger",
+    ];
+
+    const [tables2a6, triggers2a6, formationLedger, resolutionLedger, predictionCount, calibrationCount] = await Promise.all([
+      db.execute(sql`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = ANY(${sql.raw(`ARRAY['${expectedTables.join("','")}']`)})
+        ORDER BY table_name
+      `),
+      db.execute(sql`
+        SELECT trigger_name, event_object_table FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND (trigger_name LIKE 'build2a_no_%prediction%'
+            OR trigger_name LIKE 'build2a_no_%calibration%'
+            OR trigger_name LIKE 'build2a_pred%ledger%')
+        ORDER BY trigger_name
+      `),
+      db.execute(sql`SELECT status, COUNT(*) FROM prediction_formation_ledger GROUP BY status`),
+      db.execute(sql`SELECT status, COUNT(*) FROM prediction_resolution_ledger GROUP BY status`),
+      db.execute(sql`SELECT COUNT(*) AS count FROM behavioral_predictions`),
+      db.execute(sql`SELECT COUNT(*) AS count FROM calibration_runs`),
+    ]);
+
+    const found = tables2a6.rows.length;
+    res.json({
+      package: "2A-6",
+      tables: {
+        expected: expectedTables.length,
+        found,
+        all_present: found === expectedTables.length,
+        names: (tables2a6.rows as Array<{ table_name: string }>).map(r => r.table_name),
+      },
+      triggers: { found: triggers2a6.rows.length, by_table: triggers2a6.rows },
+      prediction_formation_ledger_by_status: formationLedger.rows,
+      prediction_resolution_ledger_by_status: resolutionLedger.rows,
+      total_behavioral_predictions: (predictionCount.rows[0] as { count: number }).count,
+      total_calibration_runs: (calibrationCount.rows[0] as { count: number }).count,
+      schema_valid: found === expectedTables.length,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/6] GET /prediction-health failed");
+    res.status(500).json({ error: "Prediction health query failed" });
+  }
+});
+
 export default router;
