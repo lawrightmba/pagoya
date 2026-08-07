@@ -322,3 +322,31 @@ export async function validatePackage2a2Keys(): Promise<string[]> {
   }
   return errors;
 }
+
+/**
+ * The approved Package 2A-3 registered keys.
+ * Seeded by migrations_2a3.ts. Both keys must be present, active, and
+ * replayable_for_history before any weighting operation is permitted.
+ */
+export const PACKAGE_2A3_REQUIRED_KEYS: Record<string, VersionTableName> = {
+  integrity_discount_v1: "integrity_rule_versions",
+  quality_weighting_v1:  "quality_rule_versions",
+} as const;
+
+/**
+ * Validates that all Package 2A-3 required keys are registered and in a healthy state.
+ * Called at startup after ensureBuild2a3Tables() to detect seed failures.
+ * Returns a list of validation errors (empty = healthy).
+ */
+export async function validatePackage2a3Keys(): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [key, table] of Object.entries(PACKAGE_2A3_REQUIRED_KEYS)) {
+    const result = await resolveImplementationKey(key, table);
+    if (!result.found) {
+      errors.push(`[2A-3] Required key '${key}' is missing from ${table}.`);
+    } else if (!result.usable_for_new_computation) {
+      errors.push(`[2A-3] Required key '${key}' in ${table} is not usable for new computation (${result.resolution_note}).`);
+    }
+  }
+  return errors;
+}

@@ -90,6 +90,40 @@ export function _reset2a2ToPendingForTesting(): void {
   _failureMessage2a2 = null;
 }
 
+// ── Package 2A-3 readiness (separate from 2A-1 and 2A-2) ─────────────────────
+// 2A-2 must succeed before 2A-3 is attempted; 2A-3 failure does NOT affect 2A-1 or 2A-2.
+
+let _state2a3: Build2aState = "pending";
+let _failureMessage2a3: string | null = null;
+
+export function setBuild2a3Ready(): void {
+  _state2a3 = "ready";
+  _failureMessage2a3 = null;
+}
+
+export function setBuild2a3Failed(err: unknown): void {
+  _state2a3 = "failed";
+  _failureMessage2a3 = err instanceof Error ? err.message : String(err);
+}
+
+export function getBuild2a3Readiness(): { state: Build2aState; failureMessage: string | null } {
+  return { state: _state2a3, failureMessage: _failureMessage2a3 };
+}
+
+/** Returns true only when Package 2A-3 migrations are confirmed complete. */
+export function isBuild2a3Ready(): boolean {
+  return _state2a3 === "ready";
+}
+
+/**
+ * TEST-ONLY: Reset Package 2A-3 state back to 'pending'.
+ * Never call from production code.
+ */
+export function _reset2a3ToPendingForTesting(): void {
+  _state2a3 = "pending";
+  _failureMessage2a3 = null;
+}
+
 export function build2aNotReadyMiddleware(
   _req: Request,
   res: Response,

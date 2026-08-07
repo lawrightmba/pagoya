@@ -440,7 +440,18 @@ router.get("/validation", async (_req: Request, res: Response): Promise<void> =>
 // All routes are gated on 2A-2 readiness.
 // No raw PII is returned — all entity identifiers are masked.
 // ═══════════════════════════════════════════════════════════════════════════════
-import { isBuild2a2Ready } from "../services/build2a/build2aReadiness.js";
+import { isBuild2a2Ready, isBuild2a3Ready } from "../services/build2a/build2aReadiness.js";
+
+function require2a3Ready(req: Request, res: Response, next: NextFunction): void {
+  if (!isBuild2a3Ready()) {
+    res.status(503).json({
+      error: "Package 2A-3 initialization pending or failed",
+      hint: "ensureBuild2a3Tables() has not completed. Retry in a moment.",
+    });
+    return;
+  }
+  next();
+}
 
 function require2a2Ready(req: Request, res: Response, next: NextFunction): void {
   if (!isBuild2a2Ready()) {
@@ -712,6 +723,167 @@ router.get("/2a2-validation", require2a2Ready, async (_req: Request, res: Respon
   } catch (err) {
     logger.error({ err }, "[Build2A/2A-2] GET /2a2-validation failed");
     res.status(500).json({ error: "Validation query failed" });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Package 2A-3 — Weighting Foundation routes
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /integrity-contexts/:id ───────────────────────────────────────────────
+router.get("/integrity-contexts/:id", require2a3Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT ic.*,
+             irv.version_label AS integrity_rule_label,
+             irv.implementation_key AS rule_key
+      FROM integrity_contexts ic
+      JOIN integrity_rule_versions irv ON irv.id = ic.integrity_rule_version_id
+      WHERE ic.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Integrity context not found" });
+      return;
+    }
+    res.json({ integrity_context: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/3] GET /integrity-contexts/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /quality-contexts/:id ─────────────────────────────────────────────────
+router.get("/quality-contexts/:id", require2a3Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT qc.*,
+             qrv.version_label AS quality_rule_label,
+             qrv.implementation_key AS rule_key
+      FROM quality_contexts qc
+      JOIN quality_rule_versions qrv ON qrv.id = qc.quality_rule_version_id
+      WHERE qc.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Quality context not found" });
+      return;
+    }
+    res.json({ quality_context: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/3] GET /quality-contexts/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /contributions/:id ────────────────────────────────────────────────────
+router.get("/contributions/:id", require2a3Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT wec.*,
+             ic.reliability_score,
+             ic.source_classification,
+             ic.integrity_flags,
+             qc.evaluation_timestamp AS quality_eval_ts,
+             iea.disposition AS atom_disposition
+      FROM weighted_evidence_contributions wec
+      JOIN integrity_contexts ic ON ic.id = wec.integrity_context_id
+      JOIN quality_contexts qc ON qc.id = wec.quality_context_id
+      JOIN interpreted_evidence_atoms iea ON iea.id = wec.atom_id
+      WHERE wec.id = ${id}::uuid
+    `);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Weighted contribution not found" });
+      return;
+    }
+    res.json({ contribution: result.rows[0] });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/3] GET /contributions/:id failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /atoms/:id/contributions ──────────────────────────────────────────────
+// Returns all contributions for an atom (chain history + tip indicator).
+router.get("/atoms/:id/contributions", require2a3Ready, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await db.execute(sql`
+      SELECT wec.*,
+             CASE WHEN wec.id IN (SELECT id FROM latest_weighted_contribution_v WHERE atom_id = ${id}::uuid)
+                  THEN true ELSE false END AS is_chain_tip
+      FROM weighted_evidence_contributions wec
+      WHERE wec.atom_id = ${id}::uuid
+      ORDER BY wec.computed_at ASC
+    `);
+    res.json({
+      atom_id: id,
+      contribution_count: result.rows.length,
+      contributions: result.rows,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/3] GET /atoms/:id/contributions failed");
+    res.status(500).json({ error: "Query failed" });
+  }
+});
+
+// ── GET /weighting-health ─────────────────────────────────────────────────────
+// Package 2A-3 schema health check (mirrors /2a2-validation for 2A-3).
+router.get("/weighting-health", require2a3Ready, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [tables2a3, triggers2a3, pendingLedger, refusalCodes] = await Promise.all([
+      db.execute(sql`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN (
+            'weighting_ledger', 'integrity_contexts',
+            'quality_contexts', 'weighted_evidence_contributions'
+          )
+        ORDER BY table_name
+      `),
+      db.execute(sql`
+        SELECT trigger_name, event_object_table
+        FROM information_schema.triggers
+        WHERE trigger_schema = 'public'
+          AND trigger_name LIKE 'build2a_weighting_%'
+             OR trigger_name LIKE 'build2a_no_%integrity_contexts%'
+             OR trigger_name LIKE 'build2a_no_%quality_contexts%'
+             OR trigger_name LIKE 'build2a_no_%weighted_evidence_contributions%'
+        ORDER BY event_object_table, trigger_name
+      `),
+      db.execute(sql`
+        SELECT status, COUNT(*)::int AS count
+        FROM weighting_ledger GROUP BY status ORDER BY status
+      `),
+      db.execute(sql`
+        SELECT reason_code, COUNT(*)::int AS count
+        FROM refusal_records WHERE refusal_stage = 'weighting'
+        GROUP BY reason_code ORDER BY count DESC
+      `),
+    ]);
+
+    const expectedTables = 4;
+    const found = tables2a3.rows.length;
+
+    res.json({
+      as_of: new Date().toISOString(),
+      package: "2A-3",
+      tables: {
+        expected: expectedTables,
+        found,
+        all_present: found === expectedTables,
+        names: (tables2a3.rows as Array<{ table_name: string }>).map(r => r.table_name),
+      },
+      triggers: { found: triggers2a3.rows.length, by_table: triggers2a3.rows },
+      weighting_ledger_by_status: pendingLedger.rows,
+      weighting_refusals_by_code: refusalCodes.rows,
+      schema_valid: found === expectedTables,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Build2A/3] GET /weighting-health failed");
+    res.status(500).json({ error: "Weighting health query failed" });
   }
 });
 

@@ -1,31 +1,42 @@
 /**
- * Build 2A — Package 2A-2 Regression Tests
+ * Build 2A — Package 2A-2 + 2A-3 Regression Tests
  *
- * Verifies that Package 2A-2 does not break any existing systems:
+ * Verifies that Packages 2A-2 and 2A-3 do not break any existing systems:
  *   - Package 2A-1 still passes all 69 tests (enforced via import of 2A-1 registry state)
- *   - Build 1A tables are unchanged by Package 2A-2 migrations
- *   - PTI scores are not touched by Package 2A-2
- *   - No request-path file changes (verified by checking that Package 2A-2 tables exist
+ *   - Build 1A tables are unchanged by Package 2A-2/2A-3 migrations
+ *   - PTI scores are not touched by any Build 2A package
+ *   - No request-path file changes (verified by checking that Package 2A-2/3 tables exist
  *     but the primary app's route files are not modified)
- *   - Package 2A-3 objects do NOT yet exist in the schema
+ *   - Package 2A-3 objects DO exist in the schema (updated from pre-condition to post-condition)
+ *   - Package 2A-4 objects do NOT yet exist (sentinel boundary)
  *
  * This file contains structural/schema-level regression checks only.
  * The actual 2A-1 unit tests are in build2a_registry.test.ts and build2a_governance.test.ts
  * (already passing at 69/69 from Build 2A Package 1 delivery).
+ * Package 2A-3 weighting tests are in build2a_weighting.test.ts.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { getBuild2aReadiness, getBuild2a2Readiness, setBuild2a2Ready, _reset2a2ToPendingForTesting } from "../build2a/build2aReadiness.js";
-import { PACKAGE_2A1_REQUIRED_KEYS, PACKAGE_2A2_REQUIRED_KEYS } from "../build2a/versionDispatch.js";
+import {
+  getBuild2aReadiness, getBuild2a2Readiness,
+  setBuild2a2Ready, _reset2a2ToPendingForTesting,
+  setBuild2a3Ready, _reset2a3ToPendingForTesting,
+} from "../build2a/build2aReadiness.js";
+import {
+  PACKAGE_2A1_REQUIRED_KEYS, PACKAGE_2A2_REQUIRED_KEYS,
+  PACKAGE_2A3_REQUIRED_KEYS, validatePackage2a3Keys,
+} from "../build2a/versionDispatch.js";
 
 beforeAll(() => {
   setBuild2a2Ready();
+  setBuild2a3Ready();
 });
 
 afterAll(() => {
   _reset2a2ToPendingForTesting();
+  _reset2a3ToPendingForTesting();
 });
 
 // ── Package 2A-1 structural integrity ─────────────────────────────────────────
@@ -193,40 +204,99 @@ describe("PTI scoring table integrity (not touched by 2A-2)", () => {
   });
 });
 
-// ── Package 2A-3 pre-condition (must NOT exist yet) ───────────────────────────
+// ── Package 2A-3 post-condition (objects DO exist) ────────────────────────────
 
-describe("Package 2A-3 objects must NOT yet exist", () => {
-  const PACKAGE_2A3_SENTINEL_TABLES = [
-    // These are hypothetical 2A-3 table names based on the Build 2A specification.
-    // If any of these exist, something was added prematurely.
-    "evidence_fusion_results",
-    "evidence_quality_assessments",
-    "behavioral_knowledge_sufficiency",
-    "evidence_projection_outputs",
+describe("Package 2A-3 objects DO exist in the schema", () => {
+  const PACKAGE_2A3_TABLES = [
+    "weighting_ledger",
+    "integrity_contexts",
+    "quality_contexts",
+    "weighted_evidence_contributions",
   ];
 
-  it("no Package 2A-3 tables exist in the schema", async () => {
+  it("all 4 Package 2A-3 tables exist in the schema", async () => {
     const result = await db.execute(sql`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public'
         AND table_name = ANY(ARRAY[
-          'evidence_fusion_results',
-          'evidence_quality_assessments',
-          'behavioral_knowledge_sufficiency',
-          'evidence_projection_outputs'
+          'weighting_ledger',
+          'integrity_contexts',
+          'quality_contexts',
+          'weighted_evidence_contributions'
         ])
+      ORDER BY table_name
     `);
-    expect(result.rows.length).toBe(0);
+    const found = (result.rows as Array<{ table_name: string }>).map(r => r.table_name).sort();
+    expect(found).toEqual(PACKAGE_2A3_TABLES.slice().sort());
   });
 
-  it("no Package 2A-3 implementation keys are registered", async () => {
-    // 2A-3 would use fusion_operator_versions and quality_rule_versions
-    // Verify none of the expected 2A-3 keys exist yet
+  it("latest_weighted_contribution_v view exists", async () => {
     const result = await db.execute(sql`
-      SELECT implementation_key FROM fusion_operator_versions
-      WHERE implementation_key LIKE '%2a3%' OR implementation_key LIKE '%fusion_v1%'
+      SELECT table_name FROM information_schema.views
+      WHERE table_schema = 'public' AND table_name = 'latest_weighted_contribution_v'
     `);
-    expect(result.rows.length).toBe(0);
+    expect(result.rows.length).toBe(1);
+  });
+
+  it("PACKAGE_2A3_REQUIRED_KEYS contains the approved keys", () => {
+    expect(Object.keys(PACKAGE_2A3_REQUIRED_KEYS).sort()).toContain("integrity_discount_v1");
+    expect(Object.keys(PACKAGE_2A3_REQUIRED_KEYS).sort()).toContain("quality_weighting_v1");
+  });
+
+  it("integrity_discount_v1 is registered and active", async () => {
+    const result = await db.execute(sql`
+      SELECT id, is_active, replayable_for_history
+      FROM integrity_rule_versions
+      WHERE implementation_key = 'integrity_discount_v1' LIMIT 1
+    `);
+    expect(result.rows.length).toBe(1);
+    const row = result.rows[0] as { is_active: boolean; replayable_for_history: boolean };
+    expect(row.is_active).toBe(true);
+    expect(row.replayable_for_history).toBe(true);
+  });
+
+  it("quality_weighting_v1 is registered and active", async () => {
+    const result = await db.execute(sql`
+      SELECT id, is_active, replayable_for_history
+      FROM quality_rule_versions
+      WHERE implementation_key = 'quality_weighting_v1' LIMIT 1
+    `);
+    expect(result.rows.length).toBe(1);
+    const row = result.rows[0] as { is_active: boolean; replayable_for_history: boolean };
+    expect(row.is_active).toBe(true);
+    expect(row.replayable_for_history).toBe(true);
+  });
+
+  it("validatePackage2a3Keys() returns no errors", async () => {
+    const errors = await validatePackage2a3Keys();
+    expect(errors).toEqual([]);
+  });
+
+  it("refusal_records CHECK constraint now accepts 2A-3 weighting-stage reason codes", async () => {
+    const testCode = "weighting_computation_failed";
+    const res = await db.execute(sql`
+      INSERT INTO refusal_records (refusal_stage, reason_code, detail)
+      VALUES ('weighting', ${testCode}, '2A-3 regression test coverage')
+      RETURNING id
+    `);
+    expect(res.rows.length).toBe(1);
+  });
+});
+
+// ── Package 2A-4 sentinel boundary (must NOT exist yet) ───────────────────────
+
+describe("Package 2A-4 objects must NOT yet exist", () => {
+  it("no Package 2A-4 sentinel tables exist in the schema", async () => {
+    // Sentinel names represent hypothetical 2A-4 objects. If any of these appear,
+    // something was added prematurely before 2A-3 is delivered and reviewed.
+    const sentinel2a4Names = ["evidence_aggregations", "scoring_contexts", "pti_evidence_bridge"];
+    for (const name of sentinel2a4Names) {
+      const result = await db.execute(sql`
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = ${name}
+      `);
+      expect(result.rows.length).toBe(0);
+    }
   });
 });
 

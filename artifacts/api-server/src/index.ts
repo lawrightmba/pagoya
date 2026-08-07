@@ -9,14 +9,19 @@ import { ensureBuild1aTables } from "./services/build1a/migrations.js";
 import { setBuild1aReady, setBuild1aFailed } from "./services/build1a/build1aReadiness.js";
 import { ensureBuild2aTables } from "./services/build2a/migrations.js";
 import { ensureBuild2a2Tables } from "./services/build2a/migrations_2a2.js";
+import { ensureBuild2a3Tables } from "./services/build2a/migrations_2a3.js";
 import {
   setBuild2aReady,
   setBuild2aFailed,
   getBuild2aReadiness,
   setBuild2a2Ready,
   setBuild2a2Failed,
+  getBuild2a2Readiness,
+  setBuild2a3Ready,
+  setBuild2a3Failed,
 } from "./services/build2a/build2aReadiness.js";
 import { startEvidencePoller } from "./services/build2a/sourceIngestionPoller.js";
+import { startWeightingPoller } from "./services/build2a/weightingPoller.js";
 
 const rawPort = process.env["PORT"];
 
@@ -77,18 +82,29 @@ app.listen(port, (err) => {
     })
     .then(() => {
       setBuild2a2Ready();
-      // Start the Evidence Engine poller only when ENABLE_EVIDENCE_ENGINE=true
+      // Start the Evidence Engine ingestion poller only when ENABLE_EVIDENCE_ENGINE=true
       startEvidencePoller();
+      // Chain Package 2A-3 only after 2A-2 succeeds
+      return ensureBuild2a3Tables();
+    })
+    .then(() => {
+      setBuild2a3Ready();
+      // Start the Weighting poller only when ENABLE_EVIDENCE_ENGINE=true
+      startWeightingPoller();
     })
     .catch((err) => {
-      // Determine which package failed by checking 2A-1 state (already imported)
-      const { state } = getBuild2aReadiness();
-      if (state !== "ready") {
+      // Determine which package failed by checking readiness states in order
+      const { state: state2a1 } = getBuild2aReadiness();
+      const { state: state2a2 } = getBuild2a2Readiness();
+      if (state2a1 !== "ready") {
         setBuild2aFailed(err);
         logger.error({ err }, "[Build2A] Package 2A-1 schema migration failed — Build 2A routes will return 503, app continues");
-      } else {
+      } else if (state2a2 !== "ready") {
         setBuild2a2Failed(err);
         logger.error({ err }, "[Build2A] Package 2A-2 schema migration failed — 2A-2 routes will return 503, app continues");
+      } else {
+        setBuild2a3Failed(err);
+        logger.error({ err }, "[Build2A] Package 2A-3 schema migration failed — 2A-3 routes will return 503, app continues");
       }
     });
   // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
