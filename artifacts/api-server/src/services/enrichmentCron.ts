@@ -492,20 +492,22 @@ export async function linkPaulaResponseMetrics(): Promise<void> {
   logger.info("[enrichment] linkPaulaResponseMetrics start");
   try {
     const unlinked = await db.execute(sql`
-      SELECT ptl.id, ptl.telefono, ptl.trigger_type, ptl.sent_at
+      SELECT ptl.id, ptl.telefono, ptl.trigger_type, ptl.fired_at
       FROM paula_trigger_log ptl
-      WHERE ptl.sent_at IS NOT NULL
+      WHERE ptl.fired_at IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM paula_response_metrics prm
           WHERE prm.trigger_id = ptl.id
         )
-        AND ptl.sent_at >= NOW() - INTERVAL '30 days'
-      ORDER BY ptl.sent_at ASC
+        AND ptl.fired_at >= NOW() - INTERVAL '30 days'
+      ORDER BY ptl.fired_at ASC
       LIMIT 500
     `);
 
+    // paula_trigger_log has fired_at (not sent_at); paula_response_metrics.sent_at
+    // is the destination column and retains its name — only the source reference changes.
     const triggers = unlinked.rows as Array<{
-      id: number; telefono: string; trigger_type: string; sent_at: Date;
+      id: number; telefono: string; trigger_type: string; fired_at: Date;
     }>;
 
     let linked = 0;
@@ -514,8 +516,8 @@ export async function linkPaulaResponseMetrics(): Promise<void> {
         SELECT received_at
         FROM paula_inbound_log
         WHERE telefono = ${trig.telefono}
-          AND received_at > ${trig.sent_at}
-          AND received_at <= ${trig.sent_at}::timestamptz + INTERVAL '7 days'
+          AND received_at > ${trig.fired_at}
+          AND received_at <= ${trig.fired_at}::timestamptz + INTERVAL '7 days'
         ORDER BY received_at ASC
         LIMIT 1
       `);
@@ -529,7 +531,7 @@ export async function linkPaulaResponseMetrics(): Promise<void> {
 
       if (respondedAt) {
         latencyH = Math.round(
-          (new Date(respondedAt).getTime() - new Date(trig.sent_at).getTime()) / 3_600_000
+          (new Date(respondedAt).getTime() - new Date(trig.fired_at).getTime()) / 3_600_000
         );
         if      (latencyH <= 24)  bucket = 'same_day';
         else if (latencyH <= 168) bucket = 'same_week';
@@ -543,7 +545,7 @@ export async function linkPaulaResponseMetrics(): Promise<void> {
           (telefono, trigger_id, trigger_type, sent_at, responded_at,
            response_bucket, response_latency_h)
         VALUES (
-          ${trig.telefono}, ${trig.id}, ${trig.trigger_type}, ${trig.sent_at},
+          ${trig.telefono}, ${trig.id}, ${trig.trigger_type}, ${trig.fired_at},
           ${respondedAt}, ${bucket}, ${latencyH}
         )
         ON CONFLICT DO NOTHING

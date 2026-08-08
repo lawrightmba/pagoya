@@ -59,7 +59,7 @@ export async function computePagoScore(telefono: string): Promise<PagoScoreResul
 
     // Biller diversity — households with multiple biller types = more stable
     const billerRows = await db.execute(sql`
-      SELECT COUNT(DISTINCT empresa)::int AS biller_count
+      SELECT COUNT(DISTINCT service_name)::int AS biller_count
       FROM bill_payments
       WHERE telefono = ${telefono}
     `);
