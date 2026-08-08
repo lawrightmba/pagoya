@@ -30,18 +30,20 @@ export async function checkBonusEligibility(
   | { eligible: false; reason: "duplicate" | "inactive" | "rep_not_eligible" | "config_missing" | "error" }
 > {
   try {
-    // Duplicate check — phone already in users table; also check CURP if one was provided
+    // Duplicate check — only block if the existing row is already OTP-verified.
+    // A pre-created row with otp_verified=false means the user started registration
+    // but never completed it (e.g. session lost on server restart). Allow them to retry.
     const dupConditions = curp
       ? or(eq(usersTable.telefono, phone), eq(usersTable.kycCurp, curp))
       : eq(usersTable.telefono, phone);
     const existing = await db
-      .select({ id: usersTable.id })
+      .select({ id: usersTable.id, otpVerified: usersTable.otpVerified })
       .from(usersTable)
-      .where(dupConditions)
+      .where(and(dupConditions, eq(usersTable.otpVerified, true)))
       .limit(1);
 
     if (existing.length > 0) {
-      logger.info({ phone, curp }, "signupBonusService.checkBonusEligibility: duplicate");
+      logger.info({ phone, curp }, "signupBonusService.checkBonusEligibility: duplicate (verified)");
       return { eligible: false, reason: "duplicate" };
     }
 

@@ -397,7 +397,7 @@ export default function Register() {
         if (data.eligible === false) {
           const reasons: Record<string, string> = {
             inactive: "El programa de bonos no está disponible en este momento. Intenta más tarde.",
-            duplicate: "Este número de teléfono o CURP ya tiene una cuenta en PagoYa. ¿Ya eres usuario? Descarga la app para iniciar sesión.",
+            duplicate: "Este número ya tiene una cuenta activa en PagoYa. Ve a pagoyamx.com desde tu celular para acceder a tu cuenta.",
             rep_not_eligible: "El código de referido no es válido. Pide al representante que te dé un nuevo enlace.",
           };
           setFormError(reasons[data.reason] ?? "Ocurrió un error inesperado. Verifica tu conexión e intenta de nuevo.");

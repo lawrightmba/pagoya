@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { assignNextLndCode } from "./landlords.js";
 import { eq, and, count, sum, sql as drizzleSql } from "drizzle-orm";
-import { db, usersTable, walletsTable, walletTransactionsTable, repsTable, streetTeamTable } from "@workspace/db";
+import { db, usersTable, walletsTable, walletTransactionsTable, repsTable } from "@workspace/db";
 import { scheduleNudge } from "../services/nudgeService.js";
 import { checkBonusEligibility, checkRepVelocity, creditSignupBonus } from "../services/signupBonusService.js";
 import { generateOTP, verifyOTP, clearOTP, writeDeviceProfile } from "../services/otpService.js";
@@ -130,7 +130,10 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       return;
     }
 
-    // ── 3. Store registration payload in session ───────────────────────────
+    // ── 3. Store registration payload in session + street_team ─────────────
+    // Session is in-memory and is lost on server restart. We also write the
+    // essentials to street_team (phone-unique) so verify-bonus-otp can recover
+    // if the session is gone (e.g. server restarted between signup and verify).
     const landlordRef = (req.body as { landlord_ref?: string }).landlord_ref?.trim() || undefined;
     const isGenericLandlord = !!(req.body as { is_generic_landlord?: boolean }).is_generic_landlord;
 
@@ -147,6 +150,22 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
       landing_page: landingPageClean,
     };
 
+    // Persist to street_team as a session-resilient fallback. On conflict
+    // (resend attempt), update the name/city/colonia to latest values.
+    db.execute(
+      drizzleSql`
+        INSERT INTO street_team (name, phone, city, colonia, ref_code)
+        VALUES (${name.trim()}, ${phoneCleaned}, ${city.trim()}, ${colonia.trim()}, ${refCodeResolved})
+        ON CONFLICT (phone) DO UPDATE
+          SET name     = EXCLUDED.name,
+              city     = EXCLUDED.city,
+              colonia  = EXCLUDED.colonia,
+              ref_code = EXCLUDED.ref_code
+      `
+    ).catch((err: unknown) => {
+      logger.warn({ err, phone: phoneCleaned }, "streetTeamBonus: street_team pre-insert failed (non-fatal)");
+    });
+
     // ── 4. Return OTP challenge ────────────────────────────────────────────
     res.status(200).json({ status: "otp_required" });
   } catch (err) {
@@ -162,8 +181,33 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
   const { phone, code } = req.body as { phone?: string; code?: string };
 
   try {
-    // ── 1. Load session payload ────────────────────────────────────────────
-    const pending = req.session.pending_bonus_registration;
+    // ── 1. Load session payload (with street_team fallback) ───────────────
+    // The session is in-memory and is wiped on server restart. If the session
+    // is gone we try to reconstruct `pending` from the street_team row that
+    // was written at signup-with-bonus time.
+    let pending = req.session.pending_bonus_registration;
+
+    if (!pending) {
+      const phoneFallback = toE164((phone ?? "").trim());
+      if (phoneFallback) {
+        const fallbackRow = await db.execute(
+          drizzleSql`SELECT name, phone, city, colonia, ref_code FROM street_team WHERE phone = ${phoneFallback} LIMIT 1`
+        );
+        const r = fallbackRow.rows[0] as { name?: string; phone?: string; city?: string; colonia?: string; ref_code?: string } | undefined;
+        if (r?.phone) {
+          logger.info({ phone: phoneFallback }, "streetTeamBonus: session lost — recovered from street_team");
+          pending = {
+            name:      r.name    ?? "",
+            phone:     r.phone,
+            curp:      "",
+            city:      r.city    ?? "",
+            colonia:   r.colonia ?? "",
+            ref_code:  r.ref_code ?? "",
+          };
+        }
+      }
+    }
+
     if (!pending) {
       res.status(400).json({ error: "session_expired" });
       return;
@@ -320,22 +364,18 @@ router.post("/verify-bonus-otp", async (req: Request, res: Response) => {
       logger.error({ err, phone: pending.phone }, "streetTeamBonus: free token issuance failed (non-fatal)");
     });
 
-    // ── 6. Insert street_team lead row ────────────────────────────────────
-    try {
-      await db
-        .insert(streetTeamTable)
-        .values({
-          name: pending.name,
-          phone: pending.phone,
-          city: pending.city,
-          colonia: pending.colonia,
-          refCode: pending.ref_code,
-        })
-        .onConflictDoNothing();
-    } catch (err) {
-      logger.warn({ err, phone: pending.phone }, "streetTeamBonus: street_team insert failed (non-fatal)");
-      // Non-fatal — lead record is nice-to-have
-    }
+    // ── 6. Ensure street_team lead row is complete ────────────────────────
+    // Row was pre-inserted at signup-with-bonus time. This upsert fills in any
+    // gaps (e.g. first attempt failed) and is otherwise a no-op.
+    db.execute(
+      drizzleSql`
+        INSERT INTO street_team (name, phone, city, colonia, ref_code)
+        VALUES (${pending.name}, ${pending.phone}, ${pending.city}, ${pending.colonia}, ${pending.ref_code})
+        ON CONFLICT (phone) DO NOTHING
+      `
+    ).catch((err: unknown) => {
+      logger.warn({ err, phone: pending.phone }, "streetTeamBonus: street_team ensure-row failed (non-fatal)");
+    });
 
     // ── 7. Credit signup bonus (skip if rep is blocked) ───────────────────
     let bonusCredited = false;
