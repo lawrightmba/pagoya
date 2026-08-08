@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { siprelBalanceCheck } from "./jobs/siprelBalanceCheck.js";
 import { startNudgePollCron } from "./services/nudgeService.js";
 import { startEnrichmentCrons } from "./services/enrichmentCron.js";
+import { startPtiCron } from "./services/ptiCron.js";
 import { checkPaulaTemplateHealth } from "./services/paulaTriggers.js";
 import { logRailModes } from "./services/railModeCheck.js";
 import { ensureBuild1aTables } from "./services/build1a/migrations.js";
@@ -69,6 +70,16 @@ if (sandboxAdminToken) {
     process.exit(1);
   }
 }
+
+// One-time promise that settles (resolves) when the entire Build 2A→3A migration
+// chain has finished — whether every package succeeded or one failed partway through.
+// startPtiCron and startEnrichmentCrons are gated on this so their DB polling
+// cannot compete with the ~380 sequential migration round-trips that otherwise
+// saturate the connection pool and produce "Authentication timed out" errors.
+let migrationsDoneResolve!: () => void;
+const migrationsDone = new Promise<void>((resolve) => {
+  migrationsDoneResolve = resolve;
+});
 
 app.listen(port, (err) => {
   if (err) {
@@ -172,12 +183,24 @@ app.listen(port, (err) => {
           setBuild2a3Failed(err);
         });
       }
+    })
+    .finally(() => {
+      // Resolve the migrationsDone gate regardless of which packages succeeded
+      // or failed. This unblocks startPtiCron and startEnrichmentCrons so they
+      // only begin polling the DB after all migration round-trips are complete.
+      migrationsDoneResolve();
     });
   // Fire-and-forget: log live/sandbox mode of every payment rail at boot.
   logRailModes().catch((err) => logger.error({ err }, "[rail-mode] probe failed"));
   siprelBalanceCheck.start();
   startNudgePollCron();
-  startEnrichmentCrons();
+  // PTI cron and enrichment crons are gated on migrationsDone to prevent their
+  // DB polling from competing with the migration connection pool during startup.
+  migrationsDone.then(() => {
+    logger.info("[startup] migrations complete — starting PTI cron and enrichment crons");
+    startPtiCron();
+    startEnrichmentCrons();
+  });
   // The ±5/±2 fair-lending adjustment layer (fairLendingAdjustment.ts) and
   // its daily retest cron (fairLendingRetestCron.ts) were retired 2026-07-10
   // per phase3-implementation-spec.md §3.2 — always a production no-op

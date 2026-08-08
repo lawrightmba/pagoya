@@ -15,7 +15,9 @@ import { startReminderCron } from "./services/reminders.js";
 import { cleanExpiredPayments } from "./services/pendingPaymentService.js";
 import { startLowBalanceNudgeCron, startBillDiscoveryNudgeCron, startActivation24hNudgeCron, startColoniaBackfillCron } from "./services/lifecycleNudgeService.js";
 import { startWinbackCron, runWinbackSweep } from "./services/winbackCron.js";
-import { startPtiCron } from "./services/ptiCron.js";
+// startPtiCron is intentionally NOT imported here.
+// It is started in index.ts after the migration chain completes to prevent
+// DB connection pool saturation during the ~5-minute migration window.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -169,7 +171,6 @@ startColoniaBackfillCron();
 // 30-day win-back — daily 10 AM MX, targets registered non-payers after 30d
 startWinbackCron();
 console.log("✅ winback-cron: 30d win-back cron registered (daily 10am)");
-// PTI nightly batch — computes Predictive Trust Index + financial snapshots at 2 AM MX
-startPtiCron();
+// startPtiCron() is called in index.ts after migrations complete — see comment above.
 
 export default app;
