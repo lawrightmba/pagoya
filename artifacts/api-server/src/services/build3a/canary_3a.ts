@@ -481,25 +481,68 @@ async function runCanary(): Promise<void> {
   }
 
   // ── Real-data eligibility check ───────────────────────────────────────────
+  // IMPORTANT: this check must exclude ALL engineering fixture claims created
+  // by Build 2A and Build 3A test/canary runs. The exclusion uses
+  // falsifiability_condition prefix patterns. Only claims with no fixture
+  // marker in their falsifiability_condition are candidates for real-data
+  // trajectory computation.
+  //
+  // Excluded prefixes (all confirmed present in live DB as of 2026-08-08):
+  //   - "Build3A test falsifiability: *"   — Build 3A test runner fixtures
+  //   - "Canary3A falsifiability: *"        — Build 3A canary fixtures
+  //   - "[Build3A*"                         — Build 3A marker in brackets
+  //   - "no_gov_test/*"                     — Build 3A no-gov variant fixtures
+  //   - "ambig_gov_test/*"                  — Build 3A ambiguous-gov fixtures
+  //   - "Canary 2A-4 claim for entity A *"  — Build 2A-4 canary fixtures
+  //   - "*canary2a4_*"                      — Build 2A-4 canary run IDs
+  //   - "Pred test falsifiability: *"       — Build 2A-6 prediction fixtures
+  //   - "Canary 2A-6: *"                    — Build 2A-6 canary fixtures
+  //   - "KQ test claim *"                   — Build 2A-5 knowledge qualification fixtures
+  //
+  // The query must also exclude the current CANARY_RUN_ID to prevent a canary
+  // run from counting its own freshly-inserted opinions as real data.
   console.log(`\n${"─".repeat(70)}`);
   console.log("REAL-DATA ELIGIBILITY CHECK (separate from engineering canary)");
+  console.log("Fixture exclusion: all Build2A and Build3A test/canary markers excluded.");
+  console.log(`Current canary run ID excluded: ${CANARY_RUN_ID}`);
   console.log("─".repeat(70));
 
   const claimsRes = await db.execute(sql`
-    SELECT claim_id, COUNT(*) as opinion_count
-    FROM opinions
-    GROUP BY claim_id
+    SELECT o.claim_id, COUNT(*) AS opinion_count
+    FROM opinions o
+    JOIN behavioral_claims bc ON bc.id = o.claim_id
+    WHERE bc.falsifiability_condition NOT ILIKE '%traj_test_%'
+      AND bc.falsifiability_condition NOT ILIKE '%canary_3a_%'
+      AND bc.falsifiability_condition NOT ILIKE '%Build3A%'
+      AND bc.falsifiability_condition NOT ILIKE '%Canary3A%'
+      AND bc.falsifiability_condition NOT ILIKE '%build3a_%'
+      AND bc.falsifiability_condition NOT ILIKE '%[Build3A%'
+      AND bc.falsifiability_condition NOT ILIKE '%no_gov_test/%'
+      AND bc.falsifiability_condition NOT ILIKE '%ambig_gov_test/%'
+      AND bc.falsifiability_condition NOT ILIKE '%Canary 2A-4%'
+      AND bc.falsifiability_condition NOT ILIKE '%canary2a4_%'
+      AND bc.falsifiability_condition NOT ILIKE '%Pred test falsifiability%'
+      AND bc.falsifiability_condition NOT ILIKE '%Canary 2A-6%'
+      AND bc.falsifiability_condition NOT ILIKE '%KQ test claim%'
+      AND bc.falsifiability_condition NOT ILIKE ${`%${CANARY_RUN_ID}%`}
+    GROUP BY o.claim_id
     HAVING COUNT(*) >= 2
     LIMIT 5
   `);
 
   if (claimsRes.rows.length === 0) {
-    console.log("NOT YET EMPIRICALLY ELIGIBLE: No claim has ≥2 opinions in the live database.");
-    console.log("This is the expected, correct outcome at current data volumes — not a Build 3A defect.");
-    console.log("Trajectory computation will become eligible when real Opinion history accumulates.");
+    console.log("NOT YET EMPIRICALLY ELIGIBLE.");
+    console.log("  Build 3A engineering validation is complete.");
+    console.log("  Trajectory mathematics and mechanics are proven with controlled fixtures.");
+    console.log("  Real behavioral trajectory analysis cannot yet be claimed because");
+    console.log("  insufficient pre-existing Opinion history exists in the live database.");
+    console.log("  This is expected and is NOT a Build 3A implementation failure.");
+    console.log("  Eligibility requires: real Claim + ≥2 Opinions from genuine production");
+    console.log("  behavioral events, created independently of any Build 2A/3A test run.");
   } else {
+    console.log(`Found ${claimsRes.rows.length} real pre-existing eligible claim(s):`);
     for (const row of claimsRes.rows as { claim_id: string; opinion_count: string }[]) {
-      console.log(`  Eligible claim: ${row.claim_id} (${row.opinion_count} opinions)`);
+      console.log(`  Real eligible claim: ${row.claim_id} (${row.opinion_count} opinions)`);
       const r = await computeTrajectory({ claimId: row.claim_id, ruleVersionId: seeds.trvId });
       if (r.ok) {
         const tRow = await db.execute(sql`
@@ -507,9 +550,9 @@ async function runCanary(): Promise<void> {
           FROM behavioral_trajectories WHERE id = ${r.trajectoryId}::uuid
         `);
         const t = tRow.rows[0] as Record<string, string | null>;
-        console.log(`  → Trajectory computed: obs=${t.observation_count} delta_belief=${t.delta_belief} velocity_belief=${t.velocity_belief} gov_status=${t.direction_governance_status}`);
+        console.log(`  → Trajectory: obs=${t.observation_count} delta_belief=${t.delta_belief} velocity_belief=${t.velocity_belief} gov_status=${t.direction_governance_status}`);
       } else if (!r.ok && r.reason === "insufficient_history") {
-        console.log(`  → NOT YET ELIGIBLE: insufficient history (${r.observationCount} opinions)`);
+        console.log(`  → NOT YET ELIGIBLE: insufficient history (${(r as { observationCount: number }).observationCount} opinions)`);
       } else {
         console.log(`  → ${JSON.stringify(r)}`);
       }

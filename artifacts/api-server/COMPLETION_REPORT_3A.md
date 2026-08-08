@@ -101,7 +101,23 @@ Missing/ambiguous governance is **never** a refusal — it yields a completed tr
 | G | Exact replay checksum — byte-for-byte match via separate `createHash("sha256")` code path |
 | H | Immutable supersession — prior unchanged, new trajectory chains, `latest_behavioral_trajectory_v` correct |
 
-**Real-data eligibility check:** 5 eligible claims found in live DB (all from test fixtures with ≥2 opinions). Trajectories computed successfully. Production semantic data volumes remain sparse — `NOT YET EMPIRICALLY ELIGIBLE` for real behavioral trajectory patterns. This is expected and correct; no defect.
+**Real-data eligibility check:** NOT YET EMPIRICALLY ELIGIBLE.
+
+Corrected eligibility query (fixture-excluded) returns **0 pre-existing real claims** with ≥2 opinions. Every opinion currently in the live database belongs to a test or canary fixture from a Build 2A or Build 3A implementation session. The complete fixture inventory in the opinions table as of 2026-08-08:
+
+| Fixture type | Origin | Claim count |
+|---|---|---|
+| `Build3A test falsifiability: *` | Build 3A test runner (this session) | 78 claims |
+| `Canary3A falsifiability: *` | Build 3A canary (this session) | varies |
+| `no_gov_test/*`, `ambig_gov_test/*` | Build 3A governance-variant test fixtures | 12 claims |
+| `Canary 2A-4 claim for entity A *` | Build 2A-4 canary runs | 5 claims |
+| `Pred test falsifiability: *` | Build 2A-6 prediction test fixtures | 70 claims |
+| `Canary 2A-6: *` | Build 2A-6 canary fixtures | 50 claims |
+| `KQ test claim *` | Build 2A-5 knowledge qualification fixtures | many |
+
+**Corrected statement:** Build 3A engineering validation is complete. Trajectory mathematics and mechanics are proven with controlled fixtures. Real behavioral trajectory analysis cannot yet be claimed because insufficient pre-existing Opinion history exists in the live database. This is expected and is not a Build 3A implementation failure. Eligibility requires a real Claim with ≥2 Opinions created from genuine production behavioral events, independent of any test or canary run.
+
+The real-data eligibility check in `canary_3a.ts` has been corrected (2026-08-08) to explicitly exclude all known fixture markers before querying for eligible claims. The corrected query also excludes the current canary run ID to prevent a live canary from counting its own freshly-inserted opinions as real data.
 
 ---
 
