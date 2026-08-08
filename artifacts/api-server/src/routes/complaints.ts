@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
+import { normalizePhone } from "../lib/phoneUtils.js";
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
   const VALID_CATEGORIES = ["pagos", "saldo", "cuenta", "bono", "otro"];
   const cat = VALID_CATEGORIES.includes(category) ? category : "otro";
-  const tel = telefono?.replace(/\D/g, "").slice(-10) || null;
+  const tel = telefono ? normalizePhone(telefono) : null;
 
   try {
     const insertRes = await db.execute(sql`
@@ -67,7 +68,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
 // GET /api/complaints/my/:telefono — user sees their own tickets
 router.get("/my/:telefono", async (req: Request, res: Response): Promise<void> => {
-  const raw = req.params.telefono?.replace(/\D/g, "").slice(-10);
+  const raw = req.params.telefono ? normalizePhone(req.params.telefono) : undefined;
   if (!raw || raw.length < 7) {
     res.status(400).json({ error: "telefono inválido" });
     return;

@@ -1,3 +1,5 @@
+import { normalizePhone } from "../lib/phoneUtils.js";
+
 /**
  * loadMethodCounters.ts
  *
@@ -40,7 +42,7 @@ export async function updateLoadMethodCounters(
   method: LoadMethod,
 ): Promise<void> {
   try {
-    const tel10 = telefono.replace(/\D/g, "").slice(-10);
+    const tel10 = normalizePhone(telefono);
     await db.execute(sql`
       UPDATE users SET
         oxxo_load_count = oxxo_load_count + ${method === "oxxo" ? 1 : 0},

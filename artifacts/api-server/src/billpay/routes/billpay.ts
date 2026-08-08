@@ -14,6 +14,7 @@ import { sendPushToUser } from "../../services/pushService.js";
 import { scheduleReferralNudgeIfEligible } from "../../services/lifecycleNudgeService.js";
 import { checkAndUpgradeKycTier } from "../../services/kycUpgradeService.js";
 import { logger } from "../../lib/logger.js";
+import { normalizePhone, toSiprelRef } from "../../lib/phoneUtils.js";
 
 const BILL_PAY_COMMISSION_AMOUNT = "5.00";
 const COMMISSION_HOLD_DAYS = 7;
@@ -82,9 +83,9 @@ router.post("/pay", async (req: Request, res: Response) => {
     return;
   }
 
-  // Gift cards: referencia is not user-supplied — use last 10 digits of phone (SIPREL max 10 chars).
+  // Gift cards: referencia is not user-supplied — use SIPREL reference (last 10 digits, SIPREL ≤10 char limit).
   // monto is fixed to the denomination baked into the catalog entry.
-  const effectiveReferencia = service.isGiftCard ? telefono.replace(/\D/g, "").slice(-10) : referencia;
+  const effectiveReferencia = service.isGiftCard ? toSiprelRef(telefono) : referencia;
   const effectiveMonto = service.isGiftCard && service.fixedAmount != null
     ? service.fixedAmount
     : parseFloat(String(monto));

@@ -31,12 +31,17 @@ declare module "express-session" {
   }
 }
 
+import { toE164 } from "../lib/phoneUtils.js";
+
 // ── Validation helpers ────────────────────────────────────────────────────────
 
-const MX_PHONE_RE = /^\d{10}$/;
+// Accept Mexican (+52) and US/Canadian (+1) E.164 numbers.
+// After toE164(), a 10-digit MX number becomes "+52XXXXXXXXXX" and a
+// US number like +17138052626 becomes "+17138052626".
+const INTL_PHONE_RE = /^\+52[1-9]\d{9}$|^\+1[2-9]\d{9}$/;
 
 function validatePhone(phone: string): boolean {
-  return MX_PHONE_RE.test(phone);
+  return INTL_PHONE_RE.test(phone);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,9 +91,12 @@ router.post("/signup-with-bonus", async (req: Request, res: Response) => {
   const refCodeResolved = attribution.refCode;
 
   // ── Phone format validation ────────────────────────────────────────────────
-  const phoneCleaned = phone.trim().replace(/\D/g, "").slice(-10);
+  const phoneCleaned = toE164(phone.trim());
   if (!validatePhone(phoneCleaned)) {
-    res.status(400).json({ error: "El teléfono debe ser un número mexicano de 10 dígitos.", field: "phone" });
+    res.status(400).json({
+      error: "El teléfono debe ser un número mexicano (+52) o estadounidense/canadiense (+1) válido.",
+      field: "phone",
+    });
     return;
   }
 

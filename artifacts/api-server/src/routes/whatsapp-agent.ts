@@ -321,7 +321,7 @@ const m = {
 // ── WhatsApp registration helpers ────────────────────────────────────────────
 
 async function isRegistered(phoneKey: string): Promise<boolean> {
-  const clean = phoneKey.replace(/\D/g, "").slice(-10);
+  const clean = normalizePhone(phoneKey);
   const [row] = await db
     .select({ id: usersTable.id })
     .from(usersTable)
@@ -336,7 +336,7 @@ async function registerWhatsAppUser(
   colonia?: string,
   repCode?: string,
 ): Promise<{ userId: number; bonusAmount: number }> {
-  const clean = phoneKey.replace(/\D/g, "").slice(-10);
+  const clean = normalizePhone(phoneKey);
 
   // WS1: rep code captured earlier in the session (REP_CODE_PATTERN) is now
   // validated and WRITTEN at user creation — previously it was captured in the
@@ -574,9 +574,10 @@ router.post("/", async (req: Request, res: Response) => {
   const profileName: string = body.ProfileName ?? "";
   const rawWaId: string = body.WaId ?? from;
 
-  // Normalise: strip "whatsapp:+" prefix, keep digits only → session key + reply target
-  // normalizePhone converts +52XXXXXXXXXX / 52XXXXXXXXXX / 521XXXXXXXXXX → 10-digit canonical
-  const phoneKey = normalizePhone(rawWaId.replace(/^whatsapp:\+?/i, ""));
+  // Normalise: extract the E.164 number from Twilio's "whatsapp:+XXXXXXXXXX" format.
+  // Strip "whatsapp:" prefix only (keep the "+"), then toE164() canonicalises any remaining
+  // variation → full E.164 ("+521234567890" for MX, "+17138052626" for US/CA).
+  const phoneKey = normalizePhone(rawWaId.replace(/^whatsapp:/i, ""));
 
   // Paula inbound log — fire-and-forget, same pattern as paula_interaction events
   // topic_category powers financial_curiosity_index in PTI v4.0 (proactive/total ratio)
@@ -844,12 +845,12 @@ router.post("/", async (req: Request, res: Response) => {
           // ── Post-payment growth hooks (fire-and-forget) ───────────────────
           void (async () => {
             try {
-              const clean10 = phoneKey.replace(/\D/g, "").slice(-10);
+              const cleanTel = normalizePhone(phoneKey);
               const pr = await db.execute(drizzleSql`
                 SELECT u.id, COUNT(bp.id)::int AS payment_count
                 FROM users u
                 LEFT JOIN bill_payments bp ON bp.telefono = u.telefono
-                WHERE u.telefono = ${clean10}
+                WHERE u.telefono = ${cleanTel}
                 GROUP BY u.id LIMIT 1
               `);
               const info = pr.rows[0] as { id: number; payment_count: number } | undefined;

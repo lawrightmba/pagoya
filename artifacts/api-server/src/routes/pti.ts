@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { computePTIForUser, getPTITier, type PTIBreakdown } from "../services/pti.js";
 import { buildPTIv2Profile, buildExpectedObligations } from "../services/ptiV2.js";
+import { normalizePhone } from "../lib/phoneUtils.js";
 
 const router = Router();
 
@@ -100,7 +101,7 @@ router.get("/trend/:telefono", async (req: Request, res: Response): Promise<void
 
   try {
     const { db } = await import("@workspace/db");
-    const tel10 = rawTel.replace(/\D/g, "").slice(-10);
+    const tel10 = normalizePhone(rawTel);
 
     const row = await db.execute(sql`
       SELECT pti_score, score_30d_ago, delta_30d, trend_label,

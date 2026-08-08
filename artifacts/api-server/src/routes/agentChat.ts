@@ -3,6 +3,7 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db, billPaymentsTable, walletsTable, walletTransactionsTable, usersTable } from "@workspace/db";
 import { eq, desc, and, gt, sql } from "drizzle-orm";
 import { sendWhatsApp } from "../lib/whatsapp.js";
+import { normalizePhone } from "../lib/phoneUtils.js";
 import { logger } from "../lib/logger.js";
 import { getServiceById } from "../billpay/services/catalog.js";
 import {
@@ -580,7 +581,7 @@ async function executeToolCall(
       }
 
       // Verify sender's stored legal name has 3+ words (nombre + ambos apellidos) — required by STP
-      const senderTelNorm = cleanWTel.replace(/\D/g, "").slice(-10);
+      const senderTelNorm = normalizePhone(cleanWTel);
       const [senderRow] = await db
         .select({ kycFullName: usersTable.kycFullName })
         .from(usersTable)
@@ -644,8 +645,8 @@ async function executeToolCall(
       const amtMxn = Number(input.amount_mxn ?? 0);
       const memo = ((input.memo as string | undefined) ?? "").trim();
 
-      const senderNorm = senderRaw.replace(/\D/g, "").slice(-10);
-      const recipientNorm = recipientRaw.replace(/\D/g, "").slice(-10);
+      const senderNorm = normalizePhone(senderRaw);
+      const recipientNorm = normalizePhone(recipientRaw);
 
       if (recipientNorm.length < 10) {
         return { result: { error: "Número de teléfono del destinatario inválido. Pídele que te confirme su número completo." } };
@@ -775,9 +776,9 @@ router.post("/", async (req: Request, res: Response) => {
 
       // Fetch PTI breakdown + streak for credit counseling context
       try {
-        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const telE164 = normalizePhone(telefono);
         const userRow = await db.execute(
-          sql`SELECT pti_breakdown, pti_score, consecutive_payment_months, coaching_responsiveness FROM users WHERE telefono = ${tel10} LIMIT 1`
+          sql`SELECT pti_breakdown, pti_score, consecutive_payment_months, coaching_responsiveness FROM users WHERE telefono = ${telE164} LIMIT 1`
         );
         if (userRow.rows.length > 0) {
           const u = userRow.rows[0] as Record<string, unknown>;
@@ -793,9 +794,9 @@ router.post("/", async (req: Request, res: Response) => {
 
       // Fetch PTI trend label for momentum-aware coaching
       try {
-        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const telE164 = normalizePhone(telefono);
         const trendRow = await db.execute(
-          sql`SELECT trend_label FROM pti_trend_30d WHERE telefono = ${tel10} LIMIT 1`
+          sql`SELECT trend_label FROM pti_trend_30d WHERE telefono = ${telE164} LIMIT 1`
         );
         if (trendRow.rows.length > 0) {
           ptiTrend = ((trendRow.rows[0] as Record<string, unknown>).trend_label as string) ?? null;
@@ -804,11 +805,11 @@ router.post("/", async (req: Request, res: Response) => {
 
       // Fetch financial literacy progress (Sprint 4)
       try {
-        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const telE164 = normalizePhone(telefono);
         const literacyCountRow = await db.execute(sql`
           SELECT COUNT(*) AS literacy_score
           FROM paula_trigger_log
-          WHERE telefono = ${tel10}
+          WHERE telefono = ${telE164}
             AND trigger_type LIKE 'module_unlock_%'
         `);
         financialLiteracyScore = Number(
@@ -816,7 +817,7 @@ router.post("/", async (req: Request, res: Response) => {
         );
         const modulesRow = await db.execute(sql`
           SELECT trigger_type FROM paula_trigger_log
-          WHERE telefono = ${tel10}
+          WHERE telefono = ${telE164}
             AND trigger_type LIKE 'module_unlock_%'
           ORDER BY fired_at ASC
         `);
@@ -826,9 +827,9 @@ router.post("/", async (req: Request, res: Response) => {
 
       // coaching_responsiveness from users row already fetched above
       try {
-        const tel10 = telefono.replace(/\D/g, "").slice(-10);
+        const telE164 = normalizePhone(telefono);
         const crRow = await db.execute(sql`
-          SELECT coaching_responsiveness FROM users WHERE telefono = ${tel10} LIMIT 1
+          SELECT coaching_responsiveness FROM users WHERE telefono = ${telE164} LIMIT 1
         `);
         if (crRow.rows.length > 0) {
           coachingResponsiveness =

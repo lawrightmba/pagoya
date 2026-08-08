@@ -4,24 +4,13 @@ import { db, usersTable } from "@workspace/db";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
 import { parseDevice } from "./deviceParser.js";
+import { toE164 } from "../lib/phoneUtils.js";
 
 // ─── Twilio Verify client ──────────────────────────────────────────────────────
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN,
 );
-
-function toE164(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  // 10-digit number → assume Mexican, prepend +52
-  return digits.length === 10 ? `+52${digits}` : `+${digits}`;
-}
-
-// WhatsApp-registered users are stored as last-10 digits (no country code).
-// Normalize to last 10 before any DB lookup so +14157972483 → 4157972483.
-function normalizeForDb(phone: string): string {
-  return phone.replace(/\D/g, "").slice(-10);
-}
 
 function verifyServiceSid(): string | null {
   return process.env.TWILIO_VERIFY_SERVICE_SID ?? null;
@@ -32,11 +21,11 @@ function verifyServiceSid(): string | null {
 // Twilio Verify uses its own pre-approved WhatsApp templates — no Meta approval needed.
 export async function generateOTP(phone: string): Promise<{ success: boolean; error?: string }> {
   const sid = verifyServiceSid();
+  const e164 = toE164(phone);
 
   // ── Path A: Twilio Verify ────────────────────────────────────────────────────
   if (sid && process.env.TWILIO_ACCOUNT_SID) {
     try {
-      const e164 = toE164(phone);
       await twilioClient.verify.v2.services(sid).verifications.create({
         to: e164,
         channel: "whatsapp",
@@ -44,7 +33,7 @@ export async function generateOTP(phone: string): Promise<{ success: boolean; er
       logger.info({ phone: e164 }, "otpService.generateOTP: sent via Twilio Verify");
       return { success: true };
     } catch (err) {
-      logger.error({ err, phone }, "otpService.generateOTP: Twilio Verify failed");
+      logger.error({ err, phone: e164 }, "otpService.generateOTP: Twilio Verify failed");
       return { success: false, error: "otp_send_failed" };
     }
   }
@@ -57,25 +46,25 @@ export async function generateOTP(phone: string): Promise<{ success: boolean; er
     const result = await db
       .update(usersTable)
       .set({ otpCode: code, otpExpiresAt: expiresAt, otpAttempts: 0, otpVerified: false })
-      .where(eq(usersTable.telefono, normalizeForDb(phone)))
+      .where(eq(usersTable.telefono, e164))
       .returning({ id: usersTable.id });
 
     if (result.length === 0) {
-      logger.warn({ phone }, "otpService.generateOTP: user not found");
+      logger.warn({ phone: e164 }, "otpService.generateOTP: user not found");
       return { success: false, error: "user_not_found" };
     }
 
     const otpSid = templates.otp();
     if (otpSid) {
-      await sendWhatsAppTemplate(phone, otpSid, { "1": code });
+      await sendWhatsAppTemplate(e164, otpSid, { "1": code });
     } else {
-      await sendWhatsApp(phone, `Tu código de verificación PagoYa es: ${code}. Válido por 5 minutos.`);
+      await sendWhatsApp(e164, `Tu código de verificación PagoYa es: ${code}. Válido por 5 minutos.`);
     }
 
-    logger.info({ phone }, "otpService.generateOTP: sent via legacy path");
+    logger.info({ phone: e164 }, "otpService.generateOTP: sent via legacy path");
     return { success: true };
   } catch (err) {
-    logger.error({ err, phone }, "otpService.generateOTP: error");
+    logger.error({ err, phone: e164 }, "otpService.generateOTP: error");
     return { success: false, error: "internal_error" };
   }
 }
@@ -87,11 +76,11 @@ export async function verifyOTP(
   code: string,
 ): Promise<{ verified: boolean; reason?: "invalid" | "expired" | "max_attempts" }> {
   const sid = verifyServiceSid();
+  const e164 = toE164(phone);
 
   // ── Path A: Twilio Verify ────────────────────────────────────────────────────
   if (sid && process.env.TWILIO_ACCOUNT_SID) {
     try {
-      const e164 = toE164(phone);
       const check = await twilioClient.verify.v2.services(sid).verificationChecks.create({
         to: e164,
         code,
@@ -102,7 +91,7 @@ export async function verifyOTP(
         await db
           .update(usersTable)
           .set({ otpVerified: true })
-          .where(eq(usersTable.telefono, normalizeForDb(phone)));
+          .where(eq(usersTable.telefono, e164));
         logger.info({ phone: e164 }, "otpService.verifyOTP: approved via Twilio Verify");
         return { verified: true };
       }
@@ -118,7 +107,7 @@ export async function verifyOTP(
       if (msg.includes("not found") || msg.includes("expired")) {
         return { verified: false, reason: "expired" };
       }
-      logger.error({ err, phone }, "otpService.verifyOTP: Twilio Verify check failed");
+      logger.error({ err, phone: e164 }, "otpService.verifyOTP: Twilio Verify check failed");
       return { verified: false, reason: "invalid" };
     }
   }
@@ -128,11 +117,11 @@ export async function verifyOTP(
     const [user] = await db
       .select({ otpCode: usersTable.otpCode, otpExpiresAt: usersTable.otpExpiresAt, otpAttempts: usersTable.otpAttempts })
       .from(usersTable)
-      .where(eq(usersTable.telefono, normalizeForDb(phone)))
+      .where(eq(usersTable.telefono, e164))
       .limit(1);
 
     if (!user) {
-      logger.warn({ phone }, "otpService.verifyOTP: user not found");
+      logger.warn({ phone: e164 }, "otpService.verifyOTP: user not found");
       return { verified: false, reason: "invalid" };
     }
 
@@ -141,7 +130,7 @@ export async function verifyOTP(
       return { verified: false, reason: "max_attempts" };
     }
 
-    await db.update(usersTable).set({ otpAttempts: attempts + 1 }).where(eq(usersTable.telefono, normalizeForDb(phone)));
+    await db.update(usersTable).set({ otpAttempts: attempts + 1 }).where(eq(usersTable.telefono, e164));
 
     if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
       return { verified: false, reason: "expired" };
@@ -151,11 +140,11 @@ export async function verifyOTP(
       return { verified: false, reason: "invalid" };
     }
 
-    await db.update(usersTable).set({ otpVerified: true }).where(eq(usersTable.telefono, normalizeForDb(phone)));
-    logger.info({ phone }, "otpService.verifyOTP: verified via legacy path");
+    await db.update(usersTable).set({ otpVerified: true }).where(eq(usersTable.telefono, e164));
+    logger.info({ phone: e164 }, "otpService.verifyOTP: verified via legacy path");
     return { verified: true };
   } catch (err) {
-    logger.error({ err, phone }, "otpService.verifyOTP: error");
+    logger.error({ err, phone: e164 }, "otpService.verifyOTP: error");
     return { verified: false, reason: "invalid" };
   }
 }
@@ -178,7 +167,7 @@ export async function writeDeviceProfile(
   isPwa: boolean,
 ): Promise<void> {
   const profile = parseDevice(userAgent, isPwa);
-  const tel = normalizeForDb(phone);
+  const tel = toE164(phone);
 
   try {
     // First login — write full profile only if not already set
@@ -256,7 +245,7 @@ export async function clearOTP(phone: string): Promise<void> {
     await db
       .update(usersTable)
       .set({ otpCode: null, otpExpiresAt: null })
-      .where(eq(usersTable.telefono, normalizeForDb(phone)));
+      .where(eq(usersTable.telefono, toE164(phone)));
     logger.info({ phone }, "otpService.clearOTP: cleared");
   } catch (err) {
     logger.error({ err, phone }, "otpService.clearOTP: error");

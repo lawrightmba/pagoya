@@ -1,3 +1,5 @@
+import { normalizePhone } from "../lib/phoneUtils.js";
+
 /**
  * readinessGate.ts — Sprint 6
  *
@@ -81,7 +83,7 @@ export async function evaluateReadiness(
   telefono: string,
   ctx: UserContext,
 ): Promise<ReadinessResult> {
-  const tel10 = telefono.replace(/\D/g, "").slice(-10);
+  const tel10 = normalizePhone(telefono);
 
   // ── KYC verified + streak days ────────────────────────────────────────────
   const kycRow = await db.execute(sql`

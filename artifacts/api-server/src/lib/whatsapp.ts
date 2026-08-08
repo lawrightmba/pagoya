@@ -11,11 +11,16 @@ const FROM = rawFrom.startsWith("whatsapp:") ? rawFrom : `whatsapp:${rawFrom}`;
 
 // ─── Phone normalisation ───────────────────────────────────────────────────────
 function formatTo(to: string): string {
+  // Already prefixed by Twilio (e.g. "whatsapp:+521234567890")
   if (to.startsWith("whatsapp:")) {
     return "whatsapp:+" + to.replace(/^whatsapp:\+?/, "").replace(/\D/g, "");
   }
+  // Canonical E.164 (e.g. "+521234567890" or "+17138052626") — strip non-digits, keep country code
+  if (to.startsWith("+")) {
+    return "whatsapp:+" + to.replace(/\D/g, "");
+  }
+  // Legacy: bare 10-digit Mexican number — kept for backward compat with any old caller
   const digits = to.replace(/\D/g, "");
-  // 10-digit Mexican numbers → prepend country code 52
   const withCountry = digits.length === 10 ? `52${digits}` : digits;
   return `whatsapp:+${withCountry}`;
 }

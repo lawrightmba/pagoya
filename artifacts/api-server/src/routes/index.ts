@@ -53,6 +53,7 @@ import { build3aNotReadyMiddleware } from "../services/build3a/build3aReadiness.
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
+import { toE164 } from "../lib/phoneUtils.js";
 
 const router: IRouter = Router();
 
@@ -115,9 +116,11 @@ console.log("✅ PTI routes ready at GET /api/pti/score and POST /api/pti/comput
 // Sends an immediate WhatsApp message inviting the user to complete registration.
 router.post("/notifications/register-interest", async (req: Request, res: Response) => {
   const { phone, language } = req.body as { phone?: string; language?: string };
-  const clean = (phone ?? "").replace(/\D/g, "").slice(-10);
+  // Convert to full E.164 — supports MX (+52) and US/CA (+1)
+  const clean = toE164((phone ?? "").trim());
 
-  if (clean.length !== 10) {
+  // Reject obviously malformed numbers (E.164 is at least 8 chars: +1XXXXXXX)
+  if (!/^\+\d{7,15}$/.test(clean)) {
     res.status(400).json({ error: "invalid_phone" });
     return;
   }
@@ -1689,7 +1692,7 @@ router.post("/admin/test-alert-email", async (_req: Request, res: Response) => {
 router.get("/admin/stripe-payments", async (req: Request, res: Response) => {
   try {
     const limit = Math.min(Number(req.query.limit ?? "50"), 200);
-    const phone = req.query.phone ? String(req.query.phone).replace(/\D/g, "").slice(-10) : null;
+    const phone = req.query.phone ? toE164(String(req.query.phone)) : null;
     const rows = await db.execute(phone
       ? drizzleSql`
           SELECT id, payment_intent_id, telefono, monto, status, categoria, referencia, created_at

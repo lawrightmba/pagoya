@@ -8,6 +8,7 @@ import { routePayment } from "../billpay/services/router.js";
 import { getServiceById } from "../billpay/services/catalog.js";
 import { sendWhatsApp } from "../lib/whatsapp.js";
 import { taecelCheckSkuAvailability, taecelCheckStockAndAlert } from "../billpay/providers/siprel.js";
+import { toSiprelRef } from "../lib/phoneUtils.js";
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -36,8 +37,8 @@ async function deliverGiftCard(payment: {
   if (!service?.isGiftCard) return;
 
   const effectiveMonto = service.fixedAmount ?? parseFloat(payment.monto);
-  // SIPREL referencia max 10 chars — use last 10 numeric digits of phone
-  const effectiveRef = payment.telefono.replace(/\D/g, "").slice(-10);
+  // SIPREL referencia max 10 chars — strip to last 10 digits (SIPREL hard limit)
+  const effectiveRef = toSiprelRef(payment.telefono);
 
   logger.info({ paymentIntentId: payment.paymentIntentId, serviceId: payment.categoria }, "pagoya: triggering gift card SIPREL delivery");
 

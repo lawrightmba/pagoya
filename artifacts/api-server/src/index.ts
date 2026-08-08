@@ -39,6 +39,7 @@ import { startPredictionResolutionPoller } from "./services/build2a/predictionRe
 import { ensureBuild3aTables } from "./services/build3a/migrations3a.js";
 import { setBuild3aReady, setBuild3aFailed } from "./services/build3a/build3aReadiness.js";
 import { startTrajectoryComputationPoller } from "./services/build3a/trajectoryComputationLedger.js";
+import { runPhoneE164Migration } from "./services/migrations_phone_e164.js";
 
 const rawPort = process.env["PORT"];
 
@@ -88,6 +89,13 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Phone E.164 migration — idempotent, runs early so all subsequent code
+  // operates on normalised data. Failure is logged but does NOT block startup.
+  runPhoneE164Migration().catch((err) =>
+    logger.error({ err }, "[phone-e164] migration failed at startup — check logs"),
+  );
+
   // Build 1A: create new tables and seed reference data (idempotent, additive only).
   // C5: Track readiness so Build 1A routes return a controlled 503 while pending/failed.
   // Primary PagoYa app is NEVER affected by Build 1A migration state.
