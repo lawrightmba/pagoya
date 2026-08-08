@@ -1760,4 +1760,133 @@ router.post("/admin/mark-test-accounts", adminAuth, async (req: Request, res: Re
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/cleanup-phone-dupes  (ONE-TIME — remove after use)
+// Resolves all bare-digit / duplicate telefono rows in production:
+//   1. Deletes duplicate rows where the +52 normalised version has more data
+//   2. Normalises ID 14 (has real wallet history) from bare→+52 before the
+//      general E.164 pass would trip on the now-deleted conflict
+//   3. Runs the full E.164 normalisation pass (same logic as startup migration)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/admin/cleanup-phone-dupes", async (req: Request, res: Response) => {
+  const token = req.headers["x-admin-token"] ?? req.body?.token;
+  if (token !== process.env.ADMIN_TOKEN) {
+    res.status(403).json({ error: "forbidden" }); return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const log: string[] = [];
+
+    // ── Step 1: Delete child rows for user rows we are about to remove ──────
+    // Rows to delete (bare-digit duplicates of already-normalised +52 versions):
+    //   ID 20 (+528143141695 — empty, keep ID 14 which has wallet history)
+    //   ID 21 (8115592100    — empty, keep ID 23 Karina which has the name)
+    //   ID 32 (6676607078    — empty, keep ID 34 the +52 version)
+    //   ID 18 (3222304213    — 2 PTI rows, keep ID 2 which has 29 PTI rows)
+    //   ID 39 (7138052626    — empty, keep ID 40 the correct +1 US number)
+
+    const deletePhones = ['+528143141695','8115592100','6676607078','3222304213','7138052626'];
+    const deleteIds    = [20, 21, 32, 18, 39];
+
+    for (const p of deletePhones) {
+      await client.query(`DELETE FROM pti_score_history         WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM pti_score_input_snapshots WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM pti_behavioral_signals    WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM paula_trigger_log         WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM paula_send_queue          WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM loyalty_transactions      WHERE phone    = $1`, [p]);
+      await client.query(`DELETE FROM loyalty_accounts          WHERE phone    = $1`, [p]);
+      await client.query(`DELETE FROM bill_payments             WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM complaint_log             WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM push_subscriptions        WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM street_team               WHERE phone    = $1`, [p]);
+      await client.query(`DELETE FROM rep_velocity_flags        WHERE user_phone = $1`, [p]);
+      await client.query(`DELETE FROM user_events               WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM scratch_card_plays        WHERE telefono = $1`, [p]);
+      await client.query(`DELETE FROM bonus_fraud_flags         WHERE telefono = $1`, [p]);
+      // Delete wallet transactions then wallet
+      await client.query(`
+        DELETE FROM wallet_transactions wt
+        USING wallets w WHERE wt.wallet_id = w.id AND w.user_id = $1
+      `, [p]);
+      await client.query(`DELETE FROM wallets WHERE user_id = $1`, [p]);
+      await client.query(`DELETE FROM saved_cards WHERE user_telefono = $1`, [p]);
+    }
+    log.push(`Deleted child rows for: ${deletePhones.join(', ')}`);
+
+    // Delete the user rows
+    await client.query(`DELETE FROM users WHERE id = ANY($1::int[])`, [deleteIds]);
+    log.push(`Deleted duplicate user rows: IDs ${deleteIds.join(', ')}`);
+
+    // ── Step 2: Normalise ID 14 (8143141695 → +528143141695) ───────────────
+    // ID 14 has real wallet + PTI history. Rename it now that the +52 conflict
+    // (ID 20) has been removed.
+    const oldPhone = '8143141695';
+    const newPhone = '+528143141695';
+    await client.query(`UPDATE pti_score_history         SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE pti_score_input_snapshots SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE pti_behavioral_signals    SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE paula_trigger_log         SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE paula_send_queue          SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE loyalty_transactions      SET phone     = $2 WHERE phone     = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE loyalty_accounts          SET phone     = $2 WHERE phone     = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE bill_payments             SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE complaint_log             SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE push_subscriptions        SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE street_team               SET phone     = $2 WHERE phone     = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE rep_velocity_flags        SET user_phone= $2 WHERE user_phone= $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE user_events               SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE scratch_card_plays        SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE bonus_fraud_flags         SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE saved_cards               SET user_telefono = $2 WHERE user_telefono = $1`, [oldPhone, newPhone]);
+    // wallets FK: update before users
+    await client.query(`UPDATE wallets SET user_id = $2 WHERE user_id = $1`, [oldPhone, newPhone]);
+    // users row
+    await client.query(`UPDATE users SET telefono = $2 WHERE telefono = $1`, [oldPhone, newPhone]);
+    log.push(`Normalised ID 14: ${oldPhone} → ${newPhone}`);
+
+    // ── Step 3: Full E.164 normalisation pass for all remaining bare 10-digit rows ──
+    // At this point there are no conflicts left, so the UPDATE is safe.
+    const tables: Array<{ sql: string; label: string }> = [
+      { sql: `UPDATE users          SET telefono      = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "users.telefono" },
+      { sql: `UPDATE wallets        SET user_id       = '+52' || user_id       WHERE user_id       ~ '^\\d{10}$'`, label: "wallets.user_id" },
+      { sql: `UPDATE saved_cards    SET user_telefono = '+52' || user_telefono WHERE user_telefono ~ '^\\d{10}$'`, label: "saved_cards.user_telefono" },
+      { sql: `UPDATE bill_payments  SET telefono      = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "bill_payments.telefono" },
+      { sql: `UPDATE bonus_fraud_flags SET telefono   = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "bonus_fraud_flags.telefono" },
+      { sql: `UPDATE pagoya_payments  SET telefono    = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "pagoya_payments.telefono" },
+      { sql: `UPDATE loyalty_accounts SET phone       = '+52' || phone         WHERE phone         ~ '^\\d{10}$'`, label: "loyalty_accounts.phone" },
+      { sql: `UPDATE loyalty_transactions SET phone   = '+52' || phone         WHERE phone         ~ '^\\d{10}$'`, label: "loyalty_transactions.phone" },
+      { sql: `UPDATE scratch_card_plays SET telefono  = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "scratch_card_plays.telefono" },
+      { sql: `UPDATE user_events    SET telefono      = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "user_events.telefono" },
+      { sql: `UPDATE complaint_log  SET telefono      = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "complaint_log.telefono" },
+      { sql: `UPDATE push_subscriptions SET telefono  = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "push_subscriptions.telefono" },
+      { sql: `UPDATE pti_behavioral_signals SET telefono = '+52' || telefono   WHERE telefono      ~ '^\\d{10}$'`, label: "pti_behavioral_signals.telefono" },
+      { sql: `UPDATE pti_score_history SET telefono   = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "pti_score_history.telefono" },
+      { sql: `UPDATE pti_score_input_snapshots SET telefono = '+52' || telefono WHERE telefono     ~ '^\\d{10}$'`, label: "pti_score_input_snapshots.telefono" },
+      { sql: `UPDATE paula_trigger_log SET telefono   = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "paula_trigger_log.telefono" },
+      { sql: `UPDATE paula_send_queue SET telefono    = '+52' || telefono      WHERE telefono      ~ '^\\d{10}$'`, label: "paula_send_queue.telefono" },
+      { sql: `UPDATE street_team    SET phone         = '+52' || phone         WHERE phone         ~ '^\\d{10}$'`, label: "street_team.phone" },
+      { sql: `UPDATE rep_velocity_flags SET user_phone = '+52' || user_phone   WHERE user_phone    ~ '^\\d{10}$'`, label: "rep_velocity_flags.user_phone" },
+    ];
+
+    for (const { sql, label } of tables) {
+      const r = await client.query(sql);
+      log.push(`  ${label}: ${r.rowCount ?? 0} rows normalised`);
+    }
+
+    await client.query("COMMIT");
+    logger.info({ log }, "admin/cleanup-phone-dupes: complete");
+    res.json({ ok: true, log });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    logger.error({ err }, "admin/cleanup-phone-dupes: ROLLBACK");
+    res.status(500).json({ error: String(err) });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;
