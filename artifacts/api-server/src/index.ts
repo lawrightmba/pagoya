@@ -35,6 +35,9 @@ import { startOpinionPoller } from "./services/build2a/opinionPoller.js";
 import { startKnowledgeQualificationPoller } from "./services/build2a/knowledgeQualificationLedger.js";
 import { startPredictionFormationPoller } from "./services/build2a/predictionFormationLedger.js";
 import { startPredictionResolutionPoller } from "./services/build2a/predictionResolutionLedger.js";
+import { ensureBuild3aTables } from "./services/build3a/migrations3a.js";
+import { setBuild3aReady, setBuild3aFailed } from "./services/build3a/build3aReadiness.js";
+import { startTrajectoryComputationPoller } from "./services/build3a/trajectoryComputationLedger.js";
 
 const rawPort = process.env["PORT"];
 
@@ -126,6 +129,12 @@ app.listen(port, (err) => {
       // Start the Prediction Formation and Resolution pollers only when ENABLE_EVIDENCE_ENGINE=true
       startPredictionFormationPoller();
       startPredictionResolutionPoller();
+      // Chain Build 3A only after 2A-6 succeeds
+      return ensureBuild3aTables();
+    })
+    .then(() => {
+      setBuild3aReady();
+      startTrajectoryComputationPoller();
     })
     .catch((err) => {
       // Determine which package failed by checking readiness states in order
@@ -156,6 +165,9 @@ app.listen(port, (err) => {
             setBuild2a6Failed(err);
             logger.error({ err }, "[Build2A] Package 2A-6 schema migration failed — 2A-6 routes will return 503, app continues");
           }
+          // Build 3A failures are independent of Build 2A
+          setBuild3aFailed(err);
+          logger.error({ err }, "[Build3A] Trajectory Foundation schema migration failed — Build 3A routes will return 503, app continues");
         }).catch(() => {
           setBuild2a3Failed(err);
         });

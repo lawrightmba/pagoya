@@ -48,6 +48,8 @@ import build1aAdminRouter from "./build1aAdmin.js";
 import { build1aNotReadyMiddleware } from "../services/build1a/build1aReadiness.js";
 import build2aAdminRouter from "./build2aAdmin.js";
 import { build2aNotReadyMiddleware } from "../services/build2a/build2aReadiness.js";
+import build3aAdminRouter from "./build3aAdmin.js";
+import { build3aNotReadyMiddleware } from "../services/build3a/build3aReadiness.js";
 import { getLoyaltyAdminStats } from "../services/loyalty.js";
 import { sendWhatsApp, sendWhatsAppTemplate, templates } from "../lib/whatsapp.js";
 import { logger } from "../lib/logger.js";
@@ -91,6 +93,7 @@ router.use("/admin/build1a", build1aNotReadyMiddleware, adminAuth, build1aAdminR
 // build2aNotReadyMiddleware returns 503 while migration is pending/failed.
 // Primary PagoYa app and Build 1A routes are completely unaffected.
 router.use("/admin/build2a", build2aNotReadyMiddleware, adminAuth, build2aAdminRouter);
+router.use("/admin/build3a", build3aNotReadyMiddleware, adminAuth, build3aAdminRouter);
 router.use("/whatsapp-agent", whatsappAgentRouter);
 router.use("/kyc", kycRouter);
 router.use("/push", pushRouter);

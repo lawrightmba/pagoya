@@ -1260,20 +1260,31 @@ describe("Package 2A-6 regression — actual 2A-6 tables present; Build 3+ defer
     }
   });
 
-  it("Build 3+ tables do NOT yet exist (trajectory/state deferred)", async () => {
-    const build3Tables = [
+  it("Build 3A trajectory tables exist (Build 3A now implemented) and Build 4+ state tables do not", async () => {
+    // Build 3A (Trajectory Foundation) is now implemented — these tables must exist
+    const build3aTables = [
       "behavioral_trajectories",
-      "trajectory_segments",
       "trajectory_governance_contexts",
-      "state_records",
-      "state_governance_contexts",
     ];
-    for (const name of build3Tables) {
+    for (const name of build3aTables) {
       const result = await db.execute(sql`
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = ${name}
       `);
-      expect(result.rows.length, `Build 3+ table ${name} exists but Build 3 not yet implemented`).toBe(0);
+      expect(result.rows.length, `Build 3A table ${name} should exist`).toBe(1);
+    }
+    // Build 4+ (State/Markov) tables must still not exist
+    const futureTables = [
+      "trajectory_segments",
+      "state_records",
+      "state_governance_contexts",
+    ];
+    for (const name of futureTables) {
+      const result = await db.execute(sql`
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = ${name}
+      `);
+      expect(result.rows.length, `Build 4+ table ${name} exists but is not yet implemented`).toBe(0);
     }
   });
 });
