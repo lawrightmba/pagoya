@@ -100,6 +100,30 @@ export async function runPhoneE164Migration(): Promise<void> {
       }
     }
 
+    // ── US/CA number correction pass ─────────────────────────────────────────
+    // If a US/CA user registered before this migration ran, their 10-digit number
+    // would have been incorrectly prefixed with +52 in the general backfill above.
+    // Known case: +17138052626 (Houston 713) registered 2026-08-08 via web flow.
+    // Correct +527138052626 → +17138052626 for registrations after 2026-08-07
+    // (the date constraint prevents touching any existing MX Querétaro 713 users).
+    const knownUSCorrections: Array<{ wrong: string; correct: string; since: string }> = [
+      { wrong: "+527138052626", correct: "+17138052626", since: "2026-08-07" },
+    ];
+    for (const { wrong, correct, since } of knownUSCorrections) {
+      await client.query(`
+        UPDATE users SET telefono = $1 WHERE telefono = $2 AND created_at >= $3::date
+      `, [correct, wrong, since]);
+      await client.query(`
+        UPDATE wallets SET user_id = $1
+        WHERE user_id = $2
+          AND EXISTS (SELECT 1 FROM users WHERE telefono = $1)
+      `, [correct, wrong]);
+      await client.query(`
+        UPDATE saved_cards SET user_telefono = $1 WHERE user_telefono = $2
+      `, [correct, wrong]);
+      logger.info(`[phone-e164] US/CA correction applied: ${wrong} → ${correct}`);
+    }
+
     await client.query("COMMIT");
     logger.info("[phone-e164] migration complete — all phone columns normalised to E.164");
   } catch (err) {
