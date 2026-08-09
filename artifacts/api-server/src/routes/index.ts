@@ -1837,10 +1837,9 @@ router.post("/admin/cleanup-phone-dupes", async (req: Request, res: Response) =>
     await client.query(`UPDATE scratch_card_plays        SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
     await client.query(`UPDATE bonus_fraud_flags         SET telefono  = $2 WHERE telefono  = $1`, [oldPhone, newPhone]);
     await client.query(`UPDATE saved_cards               SET user_telefono = $2 WHERE user_telefono = $1`, [oldPhone, newPhone]);
-    // wallets FK: update before users
-    await client.query(`UPDATE wallets SET user_id = $2 WHERE user_id = $1`, [oldPhone, newPhone]);
-    // users row
+    // users is the FK parent — must be updated before wallets (the child)
     await client.query(`UPDATE users SET telefono = $2 WHERE telefono = $1`, [oldPhone, newPhone]);
+    await client.query(`UPDATE wallets SET user_id = $2 WHERE user_id = $1`, [oldPhone, newPhone]);
     log.push(`Normalised ID 14: ${oldPhone} → ${newPhone}`);
 
     // ── Step 3: Full E.164 normalisation pass for all remaining bare 10-digit rows ──
