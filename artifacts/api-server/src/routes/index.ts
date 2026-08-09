@@ -1769,11 +1769,6 @@ router.post("/admin/mark-test-accounts", adminAuth, async (req: Request, res: Re
 //   3. Runs the full E.164 normalisation pass (same logic as startup migration)
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/admin/cleanup-phone-dupes", async (req: Request, res: Response) => {
-  const token = req.headers["x-admin-token"] ?? req.body?.token;
-  if (token !== process.env.ADMIN_TOKEN) {
-    res.status(403).json({ error: "forbidden" }); return;
-  }
-
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
