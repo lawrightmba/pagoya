@@ -1791,29 +1791,27 @@ router.post("/admin/cleanup-phone-dupes", async (req: Request, res: Response) =>
     //   ID 39 (7138052626    — keep ID 40 +17138052626  Houston US number)
     const deleteIds = [18, 20, 21, 32, 39];
 
-    // Delete wallet_transactions via wallets, joined on users.id so we catch
-    // whatever phone format is stored.
-    await client.query(`
-      DELETE FROM wallet_transactions wt
-      USING wallets w
-      JOIN users u ON u.telefono = w.user_id
-      WHERE wt.wallet_id = w.id
-        AND u.id = ANY($1::int[])
-    `, [deleteIds]);
-    log.push("Deleted wallet_transactions for duplicate user IDs");
-
-    await client.query(`
-      DELETE FROM wallets w
-      USING users u ON u.telefono = w.user_id
-      WHERE u.id = ANY($1::int[])
-    `, [deleteIds]);
-    log.push("Deleted wallets for duplicate user IDs");
-
-    // Delete remaining child tables by telefono (look up from users first).
+    // Look up the exact telefono values for the rows we're deleting first —
+    // then use those to find and remove wallets/wallet_transactions.
     const { rows: delPhoneRows } = await client.query<{ telefono: string }>(
       `SELECT telefono FROM users WHERE id = ANY($1::int[])`, [deleteIds]
     );
     const delPhones = delPhoneRows.map(r => r.telefono);
+    log.push(`Phones for deleted rows: ${delPhones.join(', ')}`);
+
+    // wallet_transactions → wallets → users (innermost first)
+    await client.query(`
+      DELETE FROM wallet_transactions
+      WHERE wallet_id IN (
+        SELECT id FROM wallets WHERE user_id = ANY($1::text[])
+      )
+    `, [delPhones]);
+    log.push("Deleted wallet_transactions for duplicate user IDs");
+
+    await client.query(`
+      DELETE FROM wallets WHERE user_id = ANY($1::text[])
+    `, [delPhones]);
+    log.push("Deleted wallets for duplicate user IDs");
     log.push(`Phones for deleted rows: ${delPhones.join(', ')}`);
 
     for (const p of delPhones) {
